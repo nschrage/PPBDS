@@ -1,0 +1,143 @@
+--- 
+title: Preceptor's Primer for Bayesian Data Science
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+site: bookdown::bookdown_site
+bibliography: [bib/books.bib, bib/packages.bib, bib/articles.bib]
+biblio-style: apalike
+link-citations: yes
+colorlinks: yes
+lot: false
+lof: false
+always_allow_html: yes
+github-repo: davidkane9/PPBDS
+graphics: yes
+---
+
+
+```{r set-options, include=FALSE}
+
+# Set output options
+
+options(width = 80, digits = 7, bookdown.clean_book = TRUE, knitr.kable.NA = 'NA')
+
+knitr::opts_chunk$set(
+  tidy = FALSE, 
+  out.width = '\\textwidth', 
+  fig.align = "center", 
+  comment = NA) 
+
+# CRAN packages needed
+
+needed_CRAN_pkgs <- c(
+  # Data packages:
+  "nycflights13", "ggplot2movies", "fivethirtyeight", "gapminder", "ISLR",
+  
+  # Explicitly used packages:
+  "tidyverse", "rmarkdown", "knitr", "janitor", #"skimr",
+  "infer",
+  "moderndive",
+  
+  # Internally used packages:
+  "webshot", "mvtnorm", "remotes", "devtools", "dygraphs", "gridExtra",
+  "kableExtra", "scales", "viridis", "ggrepel", "patchwork"
+  ) 
+
+new_pkgs <- needed_CRAN_pkgs[!(needed_CRAN_pkgs %in% installed.packages())]
+if(length(new_pkgs)) {
+  install.packages(new_pkgs, repos = "http://cran.rstudio.com")
+}
+
+if(!"skimr" %in% installed.packages()){
+  # Install non-2.0 version of skimr so that histograms can be removed easily
+  remotes::install_version("skimr", version = "1.0.6")
+}
+
+
+needed_pkgs <- unique(c(needed_CRAN_pkgs, 
+                        "skimr",  "moderndive", "infer", "bookdown"))
+
+# Check that phantomjs is installed to create screenshots of apps
+
+if(is.null(webshot:::find_phantom()))
+  webshot::install_phantomjs()
+
+# Automatically create a bib database for R packages
+
+knitr::write_bib(
+  c(.packages(), "bookdown", "knitr", "rmarkdown", "nycflights13",
+    "ggplot2", "webshot", "dygraphs", "dplyr",
+    "ggplot2movies", "fivethirtyeight", "tibble", "readr", "tidyr",
+    "janitor", "infer", "skimr", "kableExtra", "moderndive", "tidyverse",
+    "broom"),
+   "bib/packages.bib"
+)
+
+# Add all simulation results here
+
+if(!dir.exists("rds")) dir.create("rds")
+
+# Create empty docs folder
+
+if(!dir.exists("docs")) dir.create("docs")
+
+# Make sure all images copy to docs folder
+
+if(!dir.exists("docs/images")) dir.create("docs/images")
+
+system("cp -r images/* docs/images/")
+
+# Should switch to use purrr here at some point
+  
+dir.create("docs/data")
+
+file.copy("data/dem_score.csv", "docs/data/dem_score.csv", overwrite = TRUE)
+file.copy("data/dem_score.xlsx", "docs/data/dem_score.xlsx", overwrite = TRUE)
+file.copy("data/le_mess.csv", "docs/data/le_mess.csv", overwrite = TRUE)
+file.copy("data/ideology.csv", "docs/data/ideology.csv", overwrite = TRUE)
+
+```
+
+```{r images, include=FALSE}
+include_image <- function(path,                           
+                          html_opts = "width=45%", 
+                          latex_opts = html_opts,
+                          alt_text = ""){
+  if(knitr:::is_html_output()){
+    glue::glue("![{alt_text}]({path}){{ {html_opts} }}")
+  } else if(knitr:::is_latex_output()){
+    glue::glue("![{alt_text}]({path}){{ {latex_opts} }}")    
+  }
+}
+
+image_link <- function(path,
+                       link,
+                       html_opts = "height: 200px;",
+                       latex_opts = "width=0.2\\textwidth",
+                       alt_text = "",
+                       centering = TRUE){
+  if(knitr:::is_html_output()){
+    if(centering){
+      glue::glue('
+      <center><a target="_blank" class="page-link" href="{link}"><img src="{path}" style="{html_opts}"/></a></center>')
+    } else {
+      glue::glue('
+      <a target="_blank" class="page-link" href="{link}"><img src="{path}" style="{html_opts}"/></a>')
+    }
+  }
+  else if(knitr:::is_latex_output()){
+    if(centering){
+      glue::glue('\\begin{{center}}
+        \\href{{{link}}}{{\\includegraphics[{latex_opts}]{{{path}}}}}
+        \\end{{center}}')
+    } else
+      glue::glue('\\href{{{link}}}{{\\includegraphics[{latex_opts}]{{{path}}}}}')
+  }
+}
+```
+
+<a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-sa/4.0/88x31.png" /></a><br />This work is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>.
+
+
+# Acknowledgements {-}
+
+This work builds on the contributions of many people in the R and Open Source communities. In particular, I would like to acknowledge extensive material taken from *[STAT 545: Data wrangling, exploration, and analysis with R](https://stat545.com/)* by Jenny Bryan, *[Intro Stat with Randomization and Simulation](https://www.openintro.org/stat/textbook.php?stat_book=isrs)* by David M. Diez, Christopher D. Barr and Mine Cetinkaya-Rundel, *[ModernDive: Statistical Inference via Data Science](https://moderndive.com/)* by Chester Ismay and Albert Y. Kim,  *[Think Bayes: Bayesian Statistics Made Simple](https://greenteapress.com/wp/think-bayes/)* by Allen B. Downey, and *[Introduction to Data Science: Data Analysis and Prediction Algorithms with R](https://rafalab.github.io/dsbook/)* by Rafael A. Irizarry.
