@@ -1,0 +1,111 @@
+# Shiny
+
+\section*{About This Guide}
+This guide explores the basics of Shiny App, specifically as it pertains to the final project for \textbf{Gov 1005: Data}, which I took in the Fall of 2019. I use the Preceptor's  \href{https://github.com/davidkane9/nra}{sample repository on the NRA} for example.
+
+\section*{Helpful Resources}
+As the Preceptor points out in the syllabus, there are a number of resources on Shiny to get you started, so definitely take a look at the following materials in addition to using this guide:
+
+\begin{enumerate}
+  \item \href{https://shiny.rstudio.com/tutorial/}{Shiny Video Tutorials}: this is a comprehensive video tutorial that goes through all of the basics of building a Shiny app and adding customization. It is 2 and a half hours long, but individual chapters can be found at the same link for walk throughs on smaller topics. The first 40 or so minutes of the tutorial are particularly helpful in getting a basic app running and available on shinyapps.io. 
+  
+  \item \href{https://shiny.rstudio.com/tutorial/written-tutorial/lesson1/}{Shiny Written Tutorials}: this tutorial is also quite comprehensive, and walks through templates for the example Shiny document. It breaks down the set up of UI, control widgets, reactive output (like dropdown variables), using R scripts and data, using reactive expressions, and sharing the app.
+  
+  \item \href{https://mastering-shiny.org/}{\textit{Mastering Shiny} by Hadley Wickham}: this book is a really nice guide to using Shiny and best practices for higher-quality apps, including reducing code duplication.
+
+\end{enumerate}
+
+\section*{Set Up and Getting Started}
+\begin{itemize}
+  \item Sign up for a Shiny account at \href{https://www.shinyapps.io/}{https://www.shinyapps.io/}.
+  
+  \item Install the Shiny package with: \texttt{install.packages("shiny")}
+  
+  \item Create a Shiny app from RStudio with: \texttt{File > New File > Shiny Web App...}
+  
+  \begin{itemize}
+    \item In the popup, choose Single File (app.R) - this doesn't particularly matter, but is the way that the Preceptor taught in class, and is the way that his example is set up. If you would prefer to have two separate files for ui and server, this is also valid and might allow for cleaner code. 
+  \end{itemize}
+  
+  \item You should now have a functioning example Shiny App - click \texttt{Run App} or use the keyboard shortcut \texttt{Cmd/Ctrl + Shift + Enter} to see this app in action! You can view it in a new window, or in an external web browser (see the dropdown arrow next to \texttt{Run App} for the options). Notice that the example includes a slider that allows the viewer to change the number of the bins that the histogram has.
+  
+\end{itemize}
+
+\section*{Building Your Basic App}
+Now that you have your functioning Shiny App up and running, let's take a closer look at our files and directories. Notice that the app.R file has been created within a directory. It is important to remember that only the files within this directory will be accessible to the app when it is online. Taking a look at the app.R file, we can see that there are four necessary elements in this file that create the working app:
+\begin{enumerate}
+\item First, it calls \texttt{library(shiny)}
+\item Then, it defines a user interface with \texttt{ui <- fluidPage(...)}
+\item It also defines server logic, which takes in an input from the UI, and produces an output based on that input, as defined by \texttt{server <- function(input, output) \{...\}}
+\item Finally, it calls \texttt{shinyApp(ui, server)} to run the app.
+\end{enumerate}
+
+\subsection*{Setting Up the Basic UI}
+
+According to the Preceptor, the Gov 1005 Final Projects should be formatted such that they have three tabs, as well as an embedded video. A basic set up for that might be something like this:
+\begin{verbatim}
+ui <- navbarPage(
+  "Final Project Title",
+  tabPanel("Model",
+           fluidPage(
+              titlePanel("Model Title"),
+              sidebarLayout(
+                  sidebarPanel(
+                      selectInput(
+                          "plot_type",
+                          "Plot Type",
+                          c("Option A" = "a", "Option B" = "b")
+                      )),
+                  mainPanel(plotOutput("line_plot")))
+             )),
+  tabPanel("Discussion",
+           titlePanel("Discussion Title"),
+           p("Tour of the modeling choices you made and 
+              an explanation of why you made them")),
+  tabPanel("About", 
+          titlePanel("About"),
+          h3("Project Background and Motivations"),
+          p("Hello, this is where I talk about my project."),
+          h3("About Me"),
+          p("My name is ______ and I study ______. 
+             You can reach me at ______@college.harvard.edu.")))
+\end{verbatim}
+You can run the example app in this repo to see this code in action. Breaking this code down, we have created a navigation bar page with three tabs. The first tab will display the model, and has two potential input options, Option A or Option B. This can be customized based on your model, and the number of inputs desired. Note that this is wrapped inside of a \texttt{fluidPage()}, which simply creates a basic page layout that can support rows and columns if so desired. Breaking down this tab further, we have \texttt{sidebarLayout()} defining the layout of this page with a sidebar panel and a main panel. Within the sidebar panel, we have inserted a \texttt{selectInput}, which will allow us to have reactive pages.
+
+Note that I have used HTML formatting for the Discussion and About pages.
+
+\subsection*{Setting up the Server}
+The server function is where we perform our backend logic for our app. We can put any R code there to create plots or tables as needed. The inputs come from UI definitions, like \texttt{selectInput()} or \texttt{sliderInput()}. In our UI example, we used a select input named "plot_type", which had two options: A or B. The outputs are defined within the server function, and then rendered as defined in the UI. In our UI example, we want to render a \texttt{plotOutput} named "line_plot".
+
+So our server function would ideally use the \texttt{plot_type} input to create a \texttt{line_plot}. An example of a basic server function might be something like this:
+\begin{verbatim}
+server <- function(input, output) {
+    output$line_plot <- renderPlot({
+        # generate type based on input$plot_type from ui
+        ifelse(
+            input$plot_type == "a",
+            # if input$plot_type is "a", plot histogram of "waiting" column 
+            # from the faithful dataframe
+            x   <- faithful[, 2],
+            # if input$plot_type is "b", plot histogram of "eruptions" column
+            # from the faithful dataframe
+            x   <- faithful[, 1]
+        )
+        # draw the histogram with the specified number of bins
+        hist(x, col = 'darkgray', border = 'white')
+    })
+}
+\end{verbatim}
+
+\section*{Organization}
+Now that we have the basic app running, let's talk about organization. One common problem that shows up a lot is that people tend to throw all of their code into their app.R file, causing it to grow to be hundreds or even thousands of lines of code long. This happens easily because not only can backend logic be written into the server function, but additionally entire HTML or markdown pages can be formatted in the UI section. Here are a few ways to stop the app.R file from becoming incredibly messy.
+\begin{enumerate}
+\item First, you can put all large blocks of text into separate files. For example, we could take the HTML formatting from the "About" tab section and put it into a separate about.html file, or similarly format the same section using markdown. Then you would simply use the shiny function \texttt{includeHTML()} or \texttt{includeMarkdown()} to insert your file contents. See the Preceptor's NRA repository for an example of this.
+\item Second, put as much prep work as possible into a separate (or multiple separate) R file. This is helpful for readability, as it will generate more small files, but it is also helpful in that the app will not have to run all of the heavy prep calculations while it's trying to load. For this, a tip is to perform heavy operations in a document titled prep-shiny.R, for example, and to save any helpful outputs as graphic images or gifs, or as rds files that can then be loaded into the app.R file. 
+\item Third, keep your repository clean. Do not save unneccessary raw data files or the like to your repository, as this may just create clutter. Make sure to update your .gitignore file with anything that you would not like to have on your Github repository or on the Shiny App. This includes the .Rproj file, raw data files, and cache files.
+\end{enumerate}
+
+\section*{Customizations}
+Finally, we can take a look at a simple way to customize the look of your Shiny App. The package \texttt{shinythemes} can easily be added to give your app a theme. The \href{http://rstudio.github.io/shinythemes/}{shinythemes website} displays the various themes quite nicely, and you can use the \href{https://shiny.rstudio.com/gallery/shiny-theme-selector.html}{theme selector} to click through different themes.
+
+The \href{https://shiny.rstudio.com/gallery/}{Shiny gallery} is helpful for browsing through different layouts and types of visualization for inspiration.
