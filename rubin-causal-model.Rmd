@@ -19,7 +19,6 @@ Model, which must be added to the attributions page. -->
 <!-- confounding -->
 <!-- survey sampling -->
 <!-- selection bias -->
-<!-- permutation test -->
 
 <!-- There is no need for any R code. We are just explaining things. No need, this pass, for any real data. Just use the fake data from Wikipedia page. -->
 
@@ -344,6 +343,64 @@ The difference in means is thus no longer a good estimate of the ATE. In fact, i
 If you are interested in causal inference, randomized experiments are the best approach. In many circumstances, however, randomized experiments are not possible due to ethical or practical concerns. In such scenarios there is by necessity a non-random assignment mechanism.
 
 For instance, let's say you were interested in the effect of college attendence on earnings. People are not randomly assigned to attend college. Rather, people may choose to attend college based on their financial situation, parents' education, and so on. Many statistical methods have been developed for causal inference, such as propensity score matching. These methods attempt to correct for the assignment mechanism by finding control units similar to treatment units. What you should not do is naively compare the sample means under treatment and control and assume that is a good estimate of the ATE.  Without randomization, this could be very misleading!
+
+## Permutation tests
+
+<!-- This section attempts to describe permutation tests in a non-frequentist
+way; thus, there are no references to a "test statistic" or to the "sharp null."
+-->
+
+Let's say we observed the following results, which we know came from a random treatment assignment:
+
+```{r permutation_setup, echo = FALSE}
+# First, we create a tibble with the values we want for the table
+
+tibble(`subject` = c("Mary", "Sally", "Bob", "James", "MEAN"),
+       `$Y_t(u)$` = c("$120$", "$100$", "$?$", "$?$", "$110$"),
+       `$Y_c(u)$` = c("$?$", "$?$", "$130$", "$120$", "$125$"),
+       `$Y_t(u) - Y_c(u)$` = c("$?$", "$?$", "$?$", "$?$", "$-15$")) %>%
+  
+  # Then, we use the kable function to make it pretty
+  
+  kable() %>%
+  kable_styling(bootstrap_options = "striped",
+                full_width = FALSE,
+                position = "left") %>%
+  column_spec(1,
+              bold = TRUE,
+              border_right = TRUE)
+```
+
+The drug looks very useful!  However, how likely is it that we would observe these results if the drug did nothing at all?  That is, how confident should we be that the drug is actually helpful?
+
+To answer this question, we can use a **permutation test**.^[See [this post](https://www.r-bloggers.com/what-is-a-permutation-test/) for a longer discussion.]  The intuition behind a permutation test is simple.  We observed four outcomes, two of which were assigned to treatment and two that were assigned to control.  To conduct a permutation test, we calculate our quantity of interest (here, the difference in means between treated and control) for every possible arrangement of the labels "treatment" and "control" across these four numbers.
+
+This is easiest to understand visually:
+
+```{r all_permutations, echo = FALSE}
+# First, we create a tibble with the values we want for the table
+
+tibble(`permutation` = c("#1", "#2", "#3", "#4", "#5", "#6"),
+       `$120$` = c("T", "T", "T", "C", "C", "C"),
+       `$100$` = c("T", "C", "C", "T", "T", "C"),
+       `$130$` = c("C", "T", "C", "T", "C", "T"),
+       `$120$ ` = c("C", "C", "T", "C", "T", "T"),
+       `ATE` = c("$-15$", "$+15$", "$+5$", "$-5$", "$-15$", "$+15$")) %>%
+       
+  # Then, we use the kable function to make it pretty
+  
+  kable() %>%
+  kable_styling(bootstrap_options = "striped",
+                full_width = FALSE,
+                position = "left") %>%
+  column_spec(1,
+              bold = TRUE,
+              border_right = TRUE)
+```
+
+Here, permutation #1 is what we actually observed, and permutations #2-6 are all the possible rearrangement of the two "treatment" labels and the two "control" labels.  What do we see?  4/6 (67%) of the permutations produce calculated ATEs are at least as large as the effect we actually observed ($-15$), and two of them are the opposite sign!  We therefore should not have much confidence from these data alone that the drug really lowers blood pressure, even though the effect size appeared large.  The moral of the story?  Don't conduct an experiment on only four people!
+
+Let's say that we had a larger experiment.  We can no longer calculate the results of the permutation test by hand, since the number of possible permutations will quickly become very large.  However, you can use R to calculate far more permutations than you can do by hand.  Furthermore, if the number of permutations becomes too much even for your computer, you can take a random sample of all the possible permutations instead; if the random sample is large enough, this will give you a result very close to what you would get if you considered all the permutations.
 
 ## Internal and external validity
 
