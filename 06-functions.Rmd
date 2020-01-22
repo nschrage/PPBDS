@@ -525,28 +525,73 @@ defaulting to NULL then checking is.null() and take it from there
 
 -->
 
-## List columns and  map_* functions
+## List columns and `map_*` functions
+
+### What are list columns?
 
 <!-- Write unfinished end of 06-functions.Rmd, portion devoted to list columns and map_ functions.  See https://r4ds.had.co.nz/many-models.html for a discussion about list columns. This topic is also difficult, first because we are teaching it in week 5 of the semester. Second, because it is hard! Third, because we only need to understand a subset of its usage --- the part that is useful for simple simulation exercises. R4DS is good: https://r4ds.had.co.nz/iteration.html.  RStudio Webinar titled "[How to Work with List Columns](https://resources.rstudio.com/webinars/how-to-work-with-list-columns-garrett-grolemund)" by Garrett Grolemund is useful. Maybe the this purrr tutorial: https://jennybc.github.io/purrr-tutorial/index.html? -->
 
 <!-- 1) Begin by describing a list column with simple examples, just like https://r4ds.had.co.nz/many-models.html#list-columns-1. Just the simplest examples. Nothing about nest() yet. Simplest way to create a list column is by using mutate(new_col = list(1, 2, 3). These examples can all be tibbles with one or two rows. -->
 
+We are now going to learn about [*list columns*](https://r4ds.had.co.nz/many-models.html#list-columns-1), a powerful tool that we will be using throughout the book.  A list column is a column of your data in which each entry is a list rather than a single value.  (A [list](https://adv-r.hadley.nz/vectors-chap.html#lists) is just a special kind of vector.) The best way to understand this is by creating one yourself:
+
 ```{r simple_list_col, message = FALSE}
 library(tidyverse)
-tibble(new_col = list(1:2, 3:4)) %>%
+
+tibble(new_col = list(1:2, 3:5)) %>%
   str()
 ```
 
 
-(By the way, `str()` is a helpful function for looking at the contents of a tibble with list columns.)
+(`str()` is a helpful function for looking at the contents of a tibble with list columns.)  Here we see that our tibble has one column (`new_col`) and two observations.  The first observation is a list that contains a vector of the numbers 1 and 2 and the second observation is a list that contains a vector of the numbers 3, 4, and 5.  
+
+Note that this is a case where it is crucial to use `tibble()`, not `data.frame()`!  If we had used `data.frame()` in the last example, it wouldn't have worked:
+
+```{r data_frame, error = TRUE}
+data.frame(new_col = list(1:2, 3:5)) %>%
+  str()
+```
+
+Lists are very flexible.  For example, each element of a list can contain its own data types:
+
+```{r mulitple_types}
+tibble(new_col = list(1:2,
+                      c("Alice", "Bob"))) %>%
+  str()
+```
+
+Now our first observation consists of the integers 1 and 2 while the second is a charcter vector containing "Alice" and "Bob".  Note how we wrapped "Alice" and "Bob" in the function `c()` in order to make it clear that this was a vector.  If we hadn't done that, we would have three observations: the vector with 1 and 2, "Alice", and "Bob":
+
+```{r no_c}
+tibble(new_col = list(1:2,
+                      "Alice",
+                      "Bob")) %>%
+  str()
+```
+
+### Creating list columns with `mutate()`
 
 <!-- 2) Then show how any function which returns more than one value can be used to create a list column. The simplest example uses str_split, as in https://r4ds.had.co.nz/many-models.html#creating-list-columns. Use the same approach. The next step is to use a group_by() so that there are "enough" values to run summary() or quantile() on. Use the gapminder data. -->
+
+Any function that returns multiple values can be used to create a list column.  For example, consider the following tibble:
 
 ```{r function_list_col}
 tibble(col_1 = c("Alice and Bob", "Carol and Dan")) %>%
   mutate(col_2 = str_split(col_1, " and ")) %>%
   str()
 ```
+
+`col_1` contains the strings "Alice and Bob" and "Carol and Dan".  It may be more useful to present these as vectors of names, without the annoying "and" in between.  That's exactly what we do with `str_split()` in this example.  After using `str_split()` within a mutate, we have created a new column, and that new column is now a list.  We have a list column!
+
+This is often how we will go about creating list columns.  
+
+```{r gapminder_list_column}
+gapminder %>%
+  group_by(year) %>%
+  summarize(lifeExpQuantile = list(quantile(lifeExp)))
+```
+
+### `map_*` functions
 
 <!-- 3) What can we do with a list column? That is tricky! Lists are hard to work with. But the most natural thing to do with a list is to feed it to a map_* function. So, introduce map_ functions (which means we need the purrr package.) We can also use map functions to transform a list into a single variable. Point out map_lgl and friends. -->
 
@@ -562,9 +607,11 @@ tibble(col_1 = list(1:2, 3:4)) %>%
 
 <!-- 6) End with problem set 5, question 5 from last semester, or something similar. These are the key concepts I want students to have. Steal that example for this chapter and walk students slowly through it, with extra backgound information. At the end (maybe?), show how the use of tibble() to start is a hack which can be replaced with imap. -->
 
-So, let’s practice `map_*` functions and list columns! (If I were going to give a normal lecture on these topics, it would look like [this one](https://resources.rstudio.com/webinars/how-to-work-with-list-columns-garrett-grolemund).) We recommend that you follow along step by step so that you understand how each part works.
+### Practice with `map_*` functions and list columns
 
-We will use the same `dice()` and `roll_dice()` functions.
+So, let’s practice `map_*` functions and list columns! (If I were going to give a lecture on these topics, it would look like [this one](https://resources.rstudio.com/webinars/how-to-work-with-list-columns-garrett-grolemund).) We recommend that you follow along step by step so that you understand how each part works.
+
+We will start by creating two functinos: `dice()` and `roll_dice()`.  `dice()` will roll a single 6-sided die and `roll_dice()` will roll a pair of dice as many times as the user specifies.
 
 ```{r roll_dice_function}
 dice <- function() {
@@ -576,11 +623,12 @@ roll_dice <- function(n = 1) {
   # Return a vector where each element of the vector is the result of rolling
   # two dice.
   
+  stopifnot(is.numeric(n))
   map_int(1:n, ~ dice() + dice())
 }
 ```
 
-a. Create a tibble named `x` with two variables: `replication` and `throws`. `replication` is an integer from 1 to 10. `throws` is a list column, each element of which is three throws of the dice pair, i.e., the result of calling `roll_dice(n = 3)`.
+a. Create a tibble named `x` with two variables: `replication` and `throws`. `replication` is an integer from 1 to 10. `throws` is a list column, each element of which is three throws of the dice pair, i.e., the result of calling `roll_dice(n = 3)`.  Thus, our tibble will have ten rows and two columns.
 
 ```{r throw_dice}
 x <- tibble(replication = 1:10,
