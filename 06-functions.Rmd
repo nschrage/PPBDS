@@ -543,7 +543,9 @@ tibble(new_col = list(1:2, 3:5)) %>%
 ```
 
 
-(`str()` is a helpful function for looking at the contents of a tibble with list columns.)  Here we see that our tibble has one column (`new_col`) and two observations.  The first observation is a list that contains a vector of the numbers 1 and 2 and the second observation is a list that contains a vector of the numbers 3, 4, and 5.  
+(`str()` is a helpful function for looking at the contents of a tibble with list columns.)
+
+Here we see that our tibble has one column (`new_col`) and two observations.  The first observation is a list that contains a vector of the numbers 1 and 2 and the second observation is a list that contains a vector of the numbers 3, 4, and 5.  
 
 Note that this is a case where it is crucial to use `tibble()`, not `data.frame()`!  If we had used `data.frame()` in the last example, it wouldn't have worked:
 
@@ -552,7 +554,7 @@ data.frame(new_col = list(1:2, 3:5)) %>%
   str()
 ```
 
-Lists are very flexible.  For example, each element of a list can contain its own data types:
+Lists are very flexible.  For example, each element of a list can have its own data type:
 
 ```{r mulitple_types}
 tibble(new_col = list(1:2,
@@ -575,43 +577,126 @@ tibble(new_col = list(1:2,
 
 Any function that returns multiple values can be used to create a list column.  For example, consider the following tibble:
 
+```{r alice_and_bob, eval = FALSE}
+tibble(col_1 = c("Alice and Bob", "Carol and Dan"))
+```
+
+`col_1` contains the strings "Alice and Bob" and "Carol and Dan".  It may be more useful to present these as vectors of names, without the annoying "and" in between.  That's exactly what we can do with `str_split()`:
+
 ```{r function_list_col}
 tibble(col_1 = c("Alice and Bob", "Carol and Dan")) %>%
   mutate(col_2 = str_split(col_1, " and ")) %>%
   str()
 ```
 
-`col_1` contains the strings "Alice and Bob" and "Carol and Dan".  It may be more useful to present these as vectors of names, without the annoying "and" in between.  That's exactly what we do with `str_split()` in this example.  After using `str_split()` within a mutate, we have created a new column, and that new column is now a list.  We have a list column!
+After using `str_split()` within a mutate, we have created a new column, and that new column is now a list.  We have a list column!
 
-This is often how we will go about creating list columns.  
+This is often how we will go about creating list columns.  Let's practice with the `gapminder` dataset.  How could we add a column to the dataset that included the quantiles of the `lifeExp` variable?
 
-```{r gapminder_list_column}
+```{r gapminder_list_column, eval = FALSE}
 gapminder %>%
   group_by(year) %>%
-  summarize(lifeExpQuantile = list(quantile(lifeExp)))
+  mutate(lifeExpQuantile = list(quantile(lifeExp)))
+```
+
+Note: `str_split()` was a particularly easy function for using with `mutate()` and `summarize()` because it returns a list.  You can check this by running `typeof()` on the output of `str_split()`: e.g., `str_split("Alice and Bob", " and ") %>% typeof()`.  If a function returns multiple values as a vector, like `quantile()`, you can't use it directly in mutate, but you can wrap it around `list()` in order to get the same behavior, like we just did.
+
+Or let's say that we wanted 1) to subset the dataset to the most recent year, 2) group by continent, and 3) get a `summary()` of the `gdpPercap` variable by continent:
+
+```{r continent_summary, eval = FALSE}
+gapminder %>%
+  filter(year == max(year)) %>%
+  group_by(continent) %>%
+  summarize(gdpSummary = list(summary(gdpPercap)))
 ```
 
 ### `map_*` functions
 
 <!-- 3) What can we do with a list column? That is tricky! Lists are hard to work with. But the most natural thing to do with a list is to feed it to a map_* function. So, introduce map_ functions (which means we need the purrr package.) We can also use map functions to transform a list into a single variable. Point out map_lgl and friends. -->
 
-```{r map_list_col}
-tibble(col_1 = list(1:2, 3:4)) %>%
-  mutate(col_2 = map_dbl(col_1, mean)) %>%
-  str()
+What can we do with a list column? That is tricky! Lists are hard to work with. But the most natural thing to do with a list is to feed it to a `map_*` function.  What are these functions?
+
+Let's say that you wanted to generate 10 random integers between 1 and 10 and then add 1 to each of them.  You could accomplish this with a `for()` loop:
+
+```{r for_loop_example, eval = FALSE}
+x <- sample(1:10, size = 10, replace = TRUE)
+
+for (i in 1:length(x)) {
+  x[i] <- x[i] + 1
+}
 ```
+
+Don't worry if this syntax doesn't make sense to you -- it isn't the best way to do it!  We should instead create a function that adds 1 to a number.  Then, we can use `map()` to apply this to our sample:
+
+```{r map_simple, eval = FALSE}
+x <- sample(1:10, size = 10, replace = TRUE)
+
+increment <- function(x) x <- x + 1
+
+# The map() function is part of the purrr package, which you will have loaded if
+# you have loaded the tidyverse.
+
+x <- map(x, increment)
+```
+
+This is much easier to read than the `for()` loop code  What happened is that `map()` took the function `increment()` and applied it to each element of `x`.  `map()` applies the same function to every element of the object.
+
+The syntax can get even simpler than this if we use ["anonymous functions."](https://coolbutuseless.github.io/2019/03/13/anonymous-functions-in-r-part-1/).  The following code snippet shows two ways to use anonymous functions.  The first one, using base R, creates a function within `map()` using `function()`.  The second, using the purrr package of which `map()` is a part, uses the `~` operator and then uses `.` to represent the current element:
+
+
+```{r map_anonymous, eval = FALSE}
+x <- sample(1:10, size = 10, replace = TRUE) %>%
+  map(function(x) x + 1)
+
+x <- sample(1:10, size = 10, replace = TRUE) %>%
+  map(~ . + 1)
+```
+
+The latter shorthand is very convenient once you get used to it.  Note that we are piping `x` directly into `map()`, which we can do because like other tidyverse functions, `map()` takes its data as the first argument.
+
+We called these `map_*` *functions* (plural) before.  You may have noticed that `map()` always returns a list.  If you know the desired output of `map()`, you can have it return a different kind of vector:
+
+- `map_lgl()`: logical
+- `map_int()`: integer
+- `map_dbl()`: double
+- `map_chr()`: character
+- `map_df()`: data frame
+
+So, since in our above code, we are outputting a number, we can use `map_dbl()` instead of `map()`:^[You may wonder why we aren't using `map_int()` instead.  We could, but we'd have to write the code a little differently.  R uses `L` to mark integers, so we'd have to say `map_int(~ . + 1L)`.]
+
+```{r map_dbl, eval = FALSE}
+x <- sample(1:10, size = 10, replace = TRUE) %>%
+  map_dbl(~ . + 1)
+```
+
+### Using `map_*` functions to create list columns
 
 <!-- 4) Now that we understand map_* functions, we can also use them to create list columns. In fact, working with a chain of map_* functions, each one taking as input a list column and producing a new list column as output is a very natural process, similar to piping a tibble from one dplyr function to another. Make that analogy clear. -->
 
-<!-- 5) Throughout we are leaving lots of stuff out. No broom, for example. We are purposely keeping to the simplest possible use, which involves simulation games of various kinds. I don't think we need nest() or unnest() at this stage. -->
+Now that we understand `map_*` functions, we can also use them to create list columns.  We'll use the `weather` dataset in the nycflights13 package.
 
-<!-- 6) End with problem set 5, question 5 from last semester, or something similar. These are the key concepts I want students to have. Steal that example for this chapter and walk students slowly through it, with extra backgound information. At the end (maybe?), show how the use of tibble() to start is a hack which can be replaced with imap. -->
+
+```{r map_list_col, eval = FALSE}
+library(nycflights13)
+
+weather %>%
+  group_by(origin, year, month, day) %>%
+  summarize(temps_F = list(c(temp))) %>%
+  mutate(temps_C = map(temps_F, ~ (. - 32) * 5/9),
+         mean_C = map_dbl(temps_C, mean, na.rm = TRUE),
+         quantile_C = map(temps_C, quantile, na.rm = TRUE),
+         top5_C = map(temps_C, ~ sort(unlist(.), decreasing = TRUE)[1:5]))
+```
+
+<!-- 5) Throughout we are leaving lots of stuff out. No broom, for example. We are purposely keeping to the simplest possible use, which involves simulation games of various kinds. I don't think we need nest() or unnest() at this stage. -->
 
 ### Practice with `map_*` functions and list columns
 
-So, let’s practice `map_*` functions and list columns! (If I were going to give a lecture on these topics, it would look like [this one](https://resources.rstudio.com/webinars/how-to-work-with-list-columns-garrett-grolemund).) We recommend that you follow along step by step so that you understand how each part works.
+<!-- 6) End with problem set 5, question 5 from last semester, or something similar. These are the key concepts I want students to have. Steal that example for this chapter and walk students slowly through it, with extra backgound information. At the end (maybe?), show how the use of tibble() to start is a hack which can be replaced with imap. -->
 
-We will start by creating two functinos: `dice()` and `roll_dice()`.  `dice()` will roll a single 6-sided die and `roll_dice()` will roll a pair of dice as many times as the user specifies.
+Let’s practice `map_*` functions and list columns! (If I were going to give a lecture on these topics, it would look like [this one](https://resources.rstudio.com/webinars/how-to-work-with-list-columns-garrett-grolemund).) We recommend that you follow along step by step so that you understand how each part works.
+
+We will start by creating two functions: `dice()` and `roll_dice()`.  `dice()` will roll a single 6-sided die and `roll_dice()` will roll a pair of dice as many times as the user specifies.
 
 ```{r roll_dice_function}
 dice <- function() {
@@ -635,25 +720,23 @@ x <- tibble(replication = 1:10,
             throws = map(1:10, ~ roll_dice(n = 3)))
 ```
 
-b. Add a variable to `x` called `first_seven` which is TRUE if the first roll in `throws` is a 7. I recommend the use of “anonymous functions,” which you can read about [here](https://coolbutuseless.github.io/2019/03/13/anonymous-functions-in-r-part-1/).
+b. Add a variable to `x` called `first_seven` which is TRUE if the first roll in `throws` is a 7.
 
-```{r first_seven}
+```{r first_seven, message = FALSE}
 library(magrittr)
 
 # The magrittr package allows us to use the compound assignment pipe operator,
 # which (as its name suggests) both assigns and pipes
 
 x %<>% 
-  mutate(first_seven = map_lgl(throws,
-                               function(x) ifelse(7 == x[[1]], TRUE, FALSE)))
+  mutate(first_seven = map_lgl(throws, ~ ifelse(7 == .[[1]], TRUE, FALSE)))
 ```
 
 c. Add a variable to `x` called `a_winner` which is TRUE if at least one of the three throws is a 7 or an 11 and is FALSE otherwise.
 
 ```{r a_winner}
 x %<>% 
-  mutate(a_winner = map_lgl(throws, 
-                            function(x) ifelse(any(c(7, 11) %in% unlist(x)), TRUE, FALSE)))
+  mutate(a_winner = map_lgl(throws, ~ ifelse(any(c(7, 11) %in% unlist(.)), TRUE, FALSE)))
 ```
 
 d. Run `str()` on `x` and show us the results.
@@ -667,8 +750,7 @@ e. Calculate how “surpised” you should be if someone rolls three winners in 
 ```{r surprised}
 surprised <- tibble(replication = 1:10000,
             throws = map(1:10000, ~ roll_dice(n = 3))) %>% 
-  mutate(perfection = map_lgl(throws,
-                              function(x){ifelse(all(unlist(x) %in% c(7, 11)), TRUE, FALSE)}))
+  mutate(perfection = map_lgl(throws, ~ ifelse(all(unlist(.) %in% c(7, 11)), TRUE, FALSE)))
 
 surprised %>%
   pull(perfection) %>%
@@ -677,14 +759,14 @@ surprised %>%
 
 Approximately 1.1% of three rolls of a pair of fair dice are all equal to either 7 or 11.
 
-f. Your friend proposes the following bet. You will roll a pair of fair dice 10 times. Side A gets the second highest of the first 4 rolls. Side B gets 1 plus the the median of the remaining 6 rolls. Complete these Mad Libs:
+f. Your friend proposes the following bet. You will roll a pair of fair dice 10 times. Side A gets the second highest of the first 4 rolls. Side B gets 1 plus the the median of the remaining 6 rolls. Which side is more likely to win?  What's the chance of a tie?
 
 ```{r a_vs_b}
 bet <- tibble(replication = 1:10000,
             throws = map(1:10000, ~ roll_dice(n = 10))) %>% 
-  mutate(A = map_dbl(throws, function(x){sort(unlist(x)[1:4])[3]})) %>% 
-  mutate(B = map_dbl(throws, function(x){1 + median(unlist(x)[5:10])})) %>% 
-  mutate(winner = case_when(A > B ~ "A",
+  mutate(A = map_dbl(throws, ~ sort(unlist(.)[1:4])[3]),
+         B = map_dbl(throws, ~ 1 + median(unlist(.)[5:10])),
+         winner = case_when(A > B ~ "A",
                             B > A ~ "B",
                             TRUE ~ "tie"))
 
@@ -697,9 +779,9 @@ sum(bet$winner == "tie")/length(bet$winner)
 
 Side B is more likely to win.
 
-The odds of a tie are approximately 11%.
+The chance of a tie is approximately 11%.
 
-At some point, we need our own description of map_* functions and list columns. Till them, read about [iteration](https://r4ds.had.co.nz/iteration.html) and [list columns](https://r4ds.had.co.nz/many-models.html) in [*R for Data Science*](https://r4ds.had.co.nz).
+<!-- At some point, we need our own description of map_* functions and list columns. Till them, read about [iteration](https://r4ds.had.co.nz/iteration.html) and [list columns](https://r4ds.had.co.nz/many-models.html) in [*R for Data Science*](https://r4ds.had.co.nz). -->
 
 ## Resources
 
