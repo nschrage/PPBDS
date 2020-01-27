@@ -54,9 +54,6 @@ Notice how we used `computer_code` font to describe the actions we want to take 
 
 There is a further benefit to learning to use the `dplyr` package for data wrangling: its similarity to the database querying language [SQL](https://en.wikipedia.org/wiki/SQL) (pronounced "sequel" or spelled out as "S", "Q", "L"). SQL (which stands for "Structured Query Language") is used to manage large databases quickly and efficiently and is widely used by many institutions with a lot of data. While SQL is a topic left for a book or a course on database management, keep in mind that once you learn `dplyr`, you can learn SQL easily. We'll talk more about their similarities in Subsection \@ref(normal-forms).
 
-
-### Needed packages {-}
-
 Let's load all the packages needed for this chapter (this assumes you've already installed them). If needed, read Section \@ref(packages) for information on how to install and load R packages.
 
 ```{r, message=FALSE}
@@ -72,10 +69,6 @@ library(kableExtra)
 library(readr)
 library(stringr)
 ```
-
-
-
-
 
 
 
@@ -483,7 +476,7 @@ freq_dest %>%
 ```
 
 
-## Factors: where they fit in
+## Factors
 
 We've spent a lot of time working with big, beautiful data frames, like the Gapminder data. But we also need to manage the individual variables housed within.
 
@@ -500,27 +493,16 @@ Good articles about how the factor fiasco came to be:
 * [stringsAsFactors: An unauthorized biography][bio-strings-as-factors] by Roger Peng
 * [stringsAsFactors = \<sigh\>][blog-strings-as-factors] by Thomas Lumley
 
-## The forcats package
+### The **forcats** package
 
 [forcats][forcats-web] is a core package in the tidyverse. It is installed via `install.packages("tidyverse")`, and loaded with `library(tidyverse)`. You can also install via `install.packages("forcats")`and load it yourself separately as needed via `library(forcats)`. Main functions start with `fct_`. There really is no coherent family of base functions that forcats replaces -- that's why it's such a welcome addition.
 
-Currently this lesson will be mostly code vs prose. See the previous lesson for more discussion during the transition.
-
-## Load forcats and gapminder
-
-I choose to load the tidyverse, which will load forcats, among other packages we use incidentally below. 
-
-```{r start_factors}
-library(tidyverse)
-```
-
-Also load gapminder.
+Load tidyverse (which include forcats) and gapminder.
 
 ```{r message = FALSE, warning = FALSE}
+library(tidyverse)
 library(gapminder)
 ```
-
-## Factor inspection
 
 Get to know your factor before you start touching it! It's polite. Let's use `gapminder$continent` as our example.
 
@@ -539,7 +521,7 @@ gapminder %>%
 fct_count(gapminder$continent)
 ```
 
-## Dropping unused levels
+### Dropping unused levels
 
 Just because you drop all the rows corresponding to a specific factor level, the levels of the factor itself do not change. Sometimes all these unused levels can come back to haunt you later, e.g., in figure legends.
 
@@ -590,7 +572,7 @@ low_pop %>%
   summarize(max_pop = max(pop))
 ```
 
-## Change order of the levels, principled {#reorder-factors}
+### Change order of the levels, principled {#reorder-factors}
 
 By default, factor levels are ordered alphabetically. Which might as well be random, when you think about it! It is preferable to order the levels according to some principle:
 
@@ -681,7 +663,7 @@ ggplot(h_gap, aes(x = year, y = lifeExp,
   labs(color = "country")
 ```
 
-## Change order of the levels, "because I said so"
+### Change order of the levels, "because I said so"
 
 Sometimes you just want to hoist one or more levels to the front. Why? Because I said so. This resembles what we do when we move variables to the front with `dplyr::select(special_var, everything())`.
 
@@ -692,7 +674,7 @@ h_gap$country %>% fct_relevel("Romania", "Haiti") %>% levels()
 
 This might be useful if you are preparing a report for, say, the Romanian government. The reason for always putting Romania first has nothing to do with the *data*, it is important for external reasons and you need a way to express this.
 
-## Recode the levels
+### Recode the levels
 
 Sometimes you have better ideas about what certain levels should be. This is called recoding.
 
@@ -705,9 +687,8 @@ i_gap$country %>%
   fct_recode("USA" = "United States", "Oz" = "Australia") %>% levels()
 ```
 
-__Exercise:__ Isolate the data for `"Australia"`, `"Korea, Dem. Rep."`, and `"Korea, Rep."` in the 2000x. Revalue the country factor levels to `"Oz"`, `"North Korea"`, and `"South Korea"`.
 
-## Grow a factor
+### Grow a factor
 
 Let's create two data frames, each with data from two countries, dropping unused factor levels.
 
@@ -739,14 +720,8 @@ Umm, no. That is wrong on many levels! Use `fct_c()` to do this.
 fct_c(df1$country, df2$country)
 ```
 
-__Exercise:__ Explore how different forms of row binding work behave here, in terms of the `country` variable in the result.
 
-```{r end_factors}
-bind_rows(df1, df2)
-rbind(df1, df2)
-```
-
-## Character vectors: where they fit in
+## Character Vectors
 
 We've spent a lot of time working with big, beautiful data frames. That are clean and wholesome, like the Gapminder data.
 
@@ -758,9 +733,7 @@ But real life will be much nastier. You will bring data into R from the outside 
 
 Here we discuss common remedial tasks for cleaning and transforming character data, also known as "strings". A data frame or tibble will consist of one or more *atomic vectors* of a certain class. This lesson deals with things you can do with vectors of class `character`.
 
-## Resources
-
-I start with this because we cannot possibly do this topic justice in a short amount of time. Our goal is to make you aware of broad classes of problems and their respective solutions. Once you have a character problem in real life, these resources will be extremely helpful as you delve deeper.
+Here are some resources:
 
 ### Manipulating character vectors
 
@@ -803,16 +776,16 @@ A God-awful and powerful language for expressing patterns to match in text or fo
 
 ### Character vectors that live in a data frame
 
-* Certain operations are facilitated by tidyr. These are described below.
-* For a general discussion of how to work on variables that live in a data frame, see [Vectors versus tibbles](#oldies) (Appendix \@ref(oldies)).
+* Certain operations are facilitated by tidyr. These are described below.  
+* For a general discussion of how to work on variables that live in a data frame, see [Vectors versus tibbles](#oldies) (Appendix \@ref(oldies)).  
 
-## Load the tidyverse, which includes stringr
+Load the tidyverse, which includes stringr
 
 ```{r start_char_vectors}
 library(tidyverse)
 ```
 
-## Regex-free string manipulation with stringr and tidyr
+### Regex-free string manipulation with stringr and tidyr
 
 Basic string manipulation tasks:
 
@@ -962,13 +935,11 @@ tibble(melons) %>%
 
 And that concludes our treatment of regex-free manipulations of character data!
 
-## Regular expressions with stringr
+### Regular expressions with stringr
 
 ```{r echo = FALSE, fig.cap = "From [\\@ThePracticalDev](https://twitter.com/ThePracticalDev/status/774309983467016193)", out.width = "50%"}
 knitr::include_graphics("img/regexbytrialanderror-big-smaller.png")
 ```
-
-### Load gapminder
 
 The country names in the `gapminder` dataset are convenient for examples. Load it now and store the `r nlevels(gapminder::gapminder$country)` unique country names to the object `countries`.
 
@@ -1009,7 +980,7 @@ str_subset(fruit, pattern = "\\Bmelon")
 
 ### Character classes
 
-Characters can be specified via classes. You can make them explicitly "by hand" or use some pre-existing ones.  The [2014 STAT 545 regex lesson](#oldies) (Appendix \@ref(oldies)) has a good list of character classes. Character classes are usually given inside square brackets, `[]` but a few come up so often that we have a metacharacter for them, such as `\d` for a single digit.
+Characters can be specified via classes. You can make them explicitly "by hand" or use some pre-existing ones.  Character classes are usually given inside square brackets, `[]` but a few come up so often that we have a metacharacter for them, such as `\d` for a single digit.
 
 Here we match `ia` at the end of the country name, preceded by one of the characters in the class. Or, in the negated class, preceded by anything but one of those characters.
 
@@ -1133,7 +1104,9 @@ For now, this lesson will refer you to other place to read up on this:
 * STAT 545 [2014 Intro to regular expressions](#oldies) by TA Gloria Li (Appendix \@ref(oldies)).
 * The [Strings chapter][r4ds-strings] of [R for Data Science][r4ds] [@wickham2016].
 
-## Typology of data combination tasks
+## Combining Data
+
+There are many ways to bring data together.
 
 __Bind__ - This is basically smashing ~~rocks~~ tibbles together. You can smash things together row-wise ("row binding") or column-wise ("column binding"). Why do I characterize this as rock-smashing? They're often fairly crude operations, with lots of responsibility falling on the analyst for making sure that the whole enterprise even makes sense.
 
@@ -1145,22 +1118,11 @@ __Join__ - Here you designate a variable (or a combination of variables) as a **
 
 A variety of row- and column-wise operations fit into this framework, which implies there are many different flavors of join. The concepts and vocabulary around joins come from the database world. The relevant functions in dplyr follow this convention and all mention `join`. The most relevant base R function is `merge()`.
 
-__Lookup__ - Lookups are really just a special case of join. But it's a special case worth making for two reasons:
-
-* If you've ever used `LOOKUP()` and friends in Excel, you already have a mental model for this. Let's exploit that!
-* Joins are defined in terms of two tables or data frames. But sometimes this task has a "vector" vibe. You might be creating a vector or variable. Or maybe the secondary data source is a named vector. In any case, there's at least one vector in the mix. I call that a lookup.
-
 Let's explore each type of operation with a few examples.
 
-First, let's load the tidyverse (and expose version information).
+### Bind
 
-```{r start_multi_tibbles}
-library(tidyverse)
-```
-
-## Bind
-
-### Row binding
+#### Row binding
 
 We used word count data from the Lord of the Rings trilogy to explore the concept of tidy data. That kicked off with a quiet, successful row bind. Let's revisit that.
 
@@ -1208,7 +1170,7 @@ I invite you to experiment with other realistic, challenging scenarios, e.g.:
 
 In conclusion, row binding usually works when it should (especially with `dplyr::bind_rows()`) and usually doesn't when it shouldn't. The biggest risk is being aggravated.
 
-### Column binding
+#### Column binding
 
 Column binding is much more dangerous because it often "works" when it should not. It's **your job** to the rows are aligned and it's all too easy to screw this up.
 
@@ -1256,7 +1218,7 @@ This data frame isn't obviously wrong, but it is wrong. See how the Canada's pop
 
 Bottom line: Row bind when you need to, but inspect the results re: coercion. Column bind only if you must and be extremely paranoid.
 
-## Joins in dplyr
+### Joins in dplyr
 
 Visit Chapter \@ref(join-cheatsheet) to see concrete examples of all the joins implemented in dplyr, based on comic characters and publishers.
 
@@ -1271,11 +1233,7 @@ gapminder %>%
   left_join(country_codes)
 ```
 
-## Table Lookup
-
-See Chapter \@ref(lookup) for examples.
-
-## Joining
+### Joining
 
 Join (a.k.a. merge) two tables: dplyr join cheatsheet with comic characters and publishers.
 
@@ -1333,17 +1291,12 @@ make_three_gt <- function(gt_left, gt_mid, gt_right, ...) {
 ```
 
 
-## Why the cheatsheet
-
-Examples for those of us who don't speak SQL so good. There are lots of [Venn diagrams re: SQL joins on the internet][google-sql-join], but I wanted R examples. Those diagrams also utterly fail to show what's really going on vis-a-vis rows AND columns.
-
-
 Other great places to read about joins:
 
 * The dplyr vignette on [Two-table verbs][dplyr-vignette-two-table].
 * The [Relational data chapter][r4ds-relational-data] in [R for Data Science][r4ds] [@wickham2016]. Excellent diagrams.
   
-## The data
+#### The data
 
 Working with two small data frames: `superheroes` and `publishers`.
 
@@ -1387,7 +1340,7 @@ pub_gt <- style_table(publishers, "publishers") %>%
   )
 ```
 
-## `inner_join(superheroes, publishers)`
+#### `inner_join(superheroes, publishers)`
 
 > `inner_join(x, y)`: Return all rows from `x` where there are matching values in `y`, and all columns from `x` and `y`. If there are multiple matches between `x` and `y`, all combination of the matches are returned. This is a mutating join.
 
@@ -1407,7 +1360,7 @@ make_three_gt(super_gt, pub_gt, ijsp_gt)
 
 
 
-## `semi_join(superheroes, publishers)`
+#### `semi_join(superheroes, publishers)`
 
 > `semi_join(x, y)`: Return all rows from `x` where there are matching values in `y`, keeping just columns from `x`. A semi join differs from an inner join because an inner join will return one row of `x` for each matching row of `y`, where a semi join will never duplicate rows of `x`. This is a filtering join.
 
@@ -1426,7 +1379,7 @@ make_three_gt(super_gt, pub_gt, sjsp_gt)
 ```
 
 
-## `left_join(superheroes, publishers)`
+#### `left_join(superheroes, publishers)`
 
 > `left_join(x, y)`: Return all rows from `x`, and all columns from `x` and `y`. If there are multiple matches between `x` and `y`, all combination of the matches are returned. This is a mutating join.
 
@@ -1445,7 +1398,7 @@ make_three_gt(super_gt, pub_gt, ljsp_gt)
 ```
 
 
-## `anti_join(superheroes, publishers)`
+#### `anti_join(superheroes, publishers)`
 
 > `anti_join(x, y)`: Return all rows from `x` where there are not matching values in `y`, keeping just columns from `x`. This is a filtering join.
 
@@ -1464,7 +1417,7 @@ make_three_gt(super_gt, pub_gt, ajsp_gt)
 ```
 
 
-## `inner_join(publishers, superheroes)`
+#### `inner_join(publishers, superheroes)`
 
 > `inner_join(x, y)`: Return all rows from `x` where there are matching values in `y`, and all columns from `x` and `y`. If there are multiple matches between `x` and `y`, all combination of the matches are returned. This is a mutating join.
 
@@ -1483,7 +1436,7 @@ make_three_gt(pub_gt, super_gt, ijps_gt, super_first = FALSE)
 ```
 
 
-## `semi_join(publishers, superheroes)`
+#### `semi_join(publishers, superheroes)`
 
 > `semi_join(x, y)`: Return all rows from `x` where there are matching values in `y`, keeping just columns from `x`. A semi join differs from an inner join because an inner join will return one row of `x` for each matching row of `y`, where a semi join will never duplicate rows of `x`. This is a filtering join.
 
@@ -1502,7 +1455,7 @@ make_three_gt(pub_gt, super_gt, sjps_gt, super_first = FALSE)
 ```
 
 
-## `left_join(publishers, superheroes)`
+#### `left_join(publishers, superheroes)`
 
 > `left_join(x, y)`: Return all rows from `x`, and all columns from `x` and `y`. If there are multiple matches between `x` and `y`, all combination of the matches are returned. This is a mutating join.
 
@@ -1520,7 +1473,7 @@ ljps_gt <- style_table(ljps, "left_join(x = publishers, y = superheroes)")
 make_three_gt(pub_gt, super_gt, ljps_gt, super_first = FALSE)
 ```
 
-## `anti_join(publishers, superheroes)`
+#### `anti_join(publishers, superheroes)`
 
 > `anti_join(x, y)`: Return all rows from `x` where there are not matching values in `y`, keeping just columns from `x`. This is a filtering join.
 
@@ -1538,7 +1491,7 @@ ajps_gt <- style_table(ajps, "anti_join(x = publishers, y = superheroes)")
 make_three_gt(pub_gt, super_gt, ajps_gt, super_first = FALSE)
 ```
 
-## `full_join(superheroes, publishers)`
+#### `full_join(superheroes, publishers)`
 
 > `full_join(x, y)`: Return all rows and all columns from both `x` and `y`. Where there are not matching values, returns `NA` for the one missing. This is a mutating join.
 
@@ -1557,9 +1510,9 @@ make_three_gt(super_gt, pub_gt, fjsp_gt)
 ```
 
 
-## `join` data frames {#joins}
+#### `join` data frames {#joins}
 
-Another common data transformation task is "joining" or "merging" two different datasets. For example, in the `flights` data frame, the variable `carrier` lists the carrier code for the different flights. While the corresponding airline names for `"UA"` and `"AA"` might be somewhat easy to guess (United and American Airlines), what airlines have codes `"VX"`, `"HA"`, and `"B6"`? This information is provided in a separate data frame `airlines`.
+"Joining" or "merging" two different datasets is tricky stuff. Let's go through some more examples while reviewing the basic concepts. In the `flights` data frame, the variable `carrier` lists the carrier code for the different flights. While the corresponding airline names for `"UA"` and `"AA"` might be somewhat easy to guess (United and American Airlines), what airlines have codes `"VX"`, `"HA"`, and `"B6"`? This information is provided in a separate data frame `airlines`.
 
 ```{r eval=FALSE}
 View(airlines)
@@ -1666,13 +1619,16 @@ Both `dplyr` and [SQL](https://en.wikipedia.org/wiki/SQL) we mentioned in the in
 
 
 
-## Other verbs {#other-verbs}
+## Other Verbs {#other-verbs}
+
+<!-- DDK: Could add stuff here. -->
 
 Here are some other useful data wrangling verbs:
 
-* `select()` only a subset of variables/columns.
-* `rename()` variables/columns to have new names.
-* Return only the `top_n()` values of a variable.
+* `select()` only a subset of variables/columns.  
+* `rename()` variables/columns to have new names.  
+* Return only the `top_n()` values of a variable.  
+* `slice()` and `pull()` specific rows and columns.  
 
 ### `select` variables {#select}
 
@@ -1845,14 +1801,5 @@ if(knitr::is_html_output())
 ```
 
 On top of the data wrangling verbs and examples we presented in this section, if you'd like to see more examples of using the `dplyr` package for data wrangling, check out [Chapter 5](http://r4ds.had.co.nz/transform.html) of *R for Data Science* [@rds2016].
-
-
-### What's to come?
-
-So far in this book, we've explored, visualized, and wrangled data saved in data frames. These data frames were saved in a spreadsheet-like format: in a rectangular shape with a certain number of rows corresponding to observations and a certain number of columns corresponding to variables describing these observations. 
-
-We'll see in the upcoming Chapter \@ref(tidy) that there are actually two ways to represent data in spreadsheet-type rectangular format: (1) "wide" format and (2) "tall/narrow" format. The tall/narrow format is also known as *"tidy"* format in R user circles. While the distinction between "tidy" and non-"tidy" formatted data is subtle, it has immense implications for our data science work. This is because almost all the packages used in this book, including the `ggplot2` package for data visualization and the `dplyr` package for data wrangling, all assume that all data frames are in "tidy" format. 
-
-Furthermore, up until now we've only explored, visualized, and wrangled data saved within R packages. But what if you want to analyze data that you have saved in a Microsoft Excel, a Google Sheets, or a "Comma-Separated Values" (CSV) file? In Section \@ref(csv), we'll show you how to import this data into R using the `readr` package. 
 
 
