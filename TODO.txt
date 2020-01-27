@@ -21,13 +21,26 @@ First, we do not want to use any of the MD-specific functions, like get_regressi
 Second, we need to use bootstrap resampling, just like we did in the confidence interval chapter. Make that connection explicitly. Then do it. rep_sample_n, followed by group_by(replication), followed by run a regression and store the model results in a list column.  Then gather up and show confidence intervals for intercept and regression cofficient. Surprise! Those ranges are just like those provided by lm(). So, all we need is to use lm(). Then, continue with all the current explanations for what lm() results means, except that the chapter currently includes no inference! That is because, in MD, they do regression before they do confidence intervals. So, they don't get to inference for regression until later chapters. We, on the other hand, can do inference now.
 
 library(infer)
+library(broom)
 library(tidyverse)
 x <- mtcars %>% 
   select(mpg, disp) %>% 
-  rep_sample_n(size = 32, replace = TRUE, reps = 3) %>% 
+  rep_sample_n(size = 32, replace = TRUE, reps = 1000) %>% 
   group_by(replicate) %>% 
   nest() %>% 
-  mutate(mod = map(data, ~ lm(mpg ~ disp, data = data))   # Not working!
+  mutate(mod = map(data, ~ lm(mpg ~ disp, data = .x))) %>% 
+  mutate(reg_results = map(mod, ~ tidy(.x))) %>% 
+  mutate(disp_coef = map_dbl(reg_results, ~ slice(.x, 2) %>% pull(estimate)))
+  
+Not sure this is the best approach. And lots of explaining the steps needs to be done! But, x now has a column, disp_coef, which are 1,000 draws from the posterior distribution --- more or less! Then we can:
+
+quantile(x$disp_coef, c(0.025, 0.5, 0.975))
+
+And compare those numbers with the resut of:
+
+summary(lm(mpg ~ disp, data = mtcars))
+
+And see that the percentiles match --- more or less. The Bayesian interpretation of lm results is justified. And so we can just use lm going forward when we run regressions for each county or whatever.
 
 Third, the text descriptions, in later chapters, are frequentist. For us, everything is Bayesian. The confidence interval for a regression means that there is a 95% chance that the true value lies within that interval. And so on. We use the bootstrap to show that lm() produces the same answers, and then just use lm() because it is quicker.
 
