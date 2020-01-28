@@ -1,3 +1,203 @@
 # Animation
 
+<!-- AR: This takes forever to build.  Is there a way to fix that? -->
+
+## gganimate: How to Create Plots with Beautiful Animation in R
+
+***Note***: this section is written by Alboukadel Kassambara and was originally published [here](https://www.datanovia.com/en/blog/gganimate-how-to-create-plots-with-beautiful-animation-in-r/).
+
+This article describes how to create animation in R using the **gganimate** R package.
+
+gganimate is an extension of the ggplot2 package for creating animated ggplots. It provides a range of new functionality that can be added to the plot object in order to customize how it should change with time.
+
+Key features of gganimate:
+
+- **transitions**: you want your data to change
+- **views**: you want your viewpoint to change
+- **shadows**: you want the animation to have memory
+
+### Prerequisites
+
+gganimate stable version is available on CRAN and can be installed with `install.packages('gganimate')`. The latest development version can be installed as follow: `devtools::install_github('thomasp85/gganimate')`.
+
+Note that, in this tutorial, we used the latest developmental version.
+
+Load required packages and set the default ggplot2 theme to `theme_bw()`:
+
+```{r prerequisite}
+library(ggplot2)
+library(gganimate)
+theme_set(theme_bw())
+```
+
+### Demo dataset
+
+```{r demo}
+library(gapminder)
+head(gapminder)
+```
+
+### Static plot
+
+```{r static_plot}
+p <- ggplot(
+  gapminder, 
+  aes(x = gdpPercap, y=lifeExp, size = pop, colour = country)
+  ) +
+  geom_point(show.legend = FALSE, alpha = 0.7) +
+  scale_color_viridis_d() +
+  scale_size(range = c(2, 12)) +
+  scale_x_log10() +
+  labs(x = "GDP per capita", y = "Life expectancy")
+p
+```
+
+### Transition through distinct states in time
+
+#### Basics
+
+Key R function: `transition_time()`. The transition length between the states will be set to correspond to the actual time difference between them.
+
+Label variables: `frame_time`. Gives the time that the current frame corresponds to.
+
+```{r basics, cache = TRUE}
+p + transition_time(year) +
+  labs(title = "Year: {frame_time}")
+```
+
+Create facets by continent:
+
+```{r facet_continent, cache = TRUE}
+p + facet_wrap(~continent) +
+  transition_time(year) +
+  labs(title = "Year: {frame_time}")
+```
+
+#### Let the view follow the data in each frame
+
+```{r view_follow_data, cache = TRUE}
+p + transition_time(year) +
+  labs(title = "Year: {frame_time}") +
+  view_follow(fixed_y = TRUE)
+```
+
+#### Show preceding frames with gradual falloff
+
+This shadow is meant to draw a small wake after data by showing the latest frames up to the current. You can choose to gradually diminish the size and/or opacity of the shadow. The length of the wake is not given in absolute frames as that would make the animation susceptible to changes in the framerate. Instead it is given as a proportion of the total length of the animation.
+
+```{r gradual_falloff, cache = TRUE}
+p + transition_time(year) +
+  labs(title = "Year: {frame_time}") +
+  shadow_wake(wake_length = 0.1, alpha = FALSE)
+```
+
+#### Show the original data as background marks
+
+This shadow lets you show the raw data behind the current frame. Both past and/or future raw data can be shown and styled as you want.
+
+```{r background_marks, cache = TRUE}
+p + transition_time(year) +
+  labs(title = "Year: {frame_time}") +
+  shadow_mark(alpha = 0.3, size = 0.5)
+```
+
+### Reveal data along a given dimension
+
+This transition allows you to let data gradually appear, based on a given time dimension.
+
+#### Static plot
+
+```{r reveal_static}
+p <- ggplot(
+  airquality,
+  aes(Day, Temp, group = Month, color = factor(Month))
+  ) +
+  geom_line() +
+  scale_color_viridis_d() +
+  labs(x = "Day of Month", y = "Temperature") +
+  theme(legend.position = "top")
+p
+```
+
+#### Let data gradually appear
+
+- Reveal by day (x-axis)
+
+```{r reveal_by_day, cache = TRUE}
+p + transition_reveal(Day)
+```
+
+- Show points:
+
+```{r show_points, cache = TRUE}
+p + 
+  geom_point() +
+  transition_reveal(Day)
+```
+
+- Points can be kept by giving them a unique group:
+
+```{r unique_group, cache = TRUE}
+p + 
+  geom_point(aes(group = seq_along(Day))) +
+  transition_reveal(Day)
+```
+
+### Transition between several distinct stages of the data
+
+Data preparation:
+
+```{r data_prep}
+library(dplyr)
+mean.temp <- airquality %>%
+  group_by(Month) %>%
+  summarise(Temp = mean(Temp))
+mean.temp
+```
+
+Create a bar plot of mean temperature:
+
+```{r bar_plot}
+p <- ggplot(mean.temp, aes(Month, Temp, fill = Temp)) +
+  geom_col() +
+  scale_fill_distiller(palette = "Reds", direction = 1) +
+  theme_minimal() +
+  theme(
+    panel.grid = element_blank(),
+    panel.grid.major.y = element_line(color = "white"),
+    panel.ontop = TRUE
+  )
+p
+```
+
+- transition_states():
+
+```{r transition_states, cache = TRUE}
+p + transition_states(Month, wrap = FALSE) +
+  shadow_mark()
+```
+
+- enter_grow() + enter_fade()
+
+```{r enter_grow, cache = TRUE}
+p + transition_states(Month, wrap = FALSE) +
+  shadow_mark() +
+  enter_grow() +
+  enter_fade()
+```
+
+### Save animation
+
+If you need to save the animation for later use you can use the ``anim_save()`` function.
+
+It works much like ``ggsave()`` from ggplot2 and automatically grabs the last rendered animation if you do not specify one directly.
+
+Example of usage:
+
+### Read more
+
+- [gganimate official documentation website](https://gganimate.com/index.html)
+
+<!-- AR: the blog post has no example! -->
+
 <!-- Self-contained introduction to animation.  We will only be using gganimate. Start with this introduction: https://www.datanovia.com/en/blog/gganimate-how-to-create-plots-with-beautiful-animation-in-r/. You may copy it exactly (I have permission) but we should provide a link back to the original. Make sure to cover anim_save() since students need to save their anmations and then deply them to Shiny. The gganimate official page is OK: https://gganimate.com/index.html. The section "Where is my animation?" is definitely important, as is understanding that the default creation is a gif. Should also cover how to post one's gif on Facebook/Twitter/etc. -->
