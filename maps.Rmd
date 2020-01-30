@@ -8,8 +8,207 @@
 
 <!-- This chapter is important because there is no simple, modern self-contained introduction to mapping, using geom_sf(),  that I can find. And lots of students will want to use maps in their final project. But this does need to be simple since students will be going through it during week 4. -->
 
-In order to make maps, we first need some data.
+In order to make maps, we first need some data.^[This section remixes some material from https://github.com/andrewbtran/NICAR-2019-mapping by Andrew Tran.]
 
 ## Tidycensus
 
+The **tidycensus** package is a great way to load interesting data for mapping.  Note that to use this package, **you'll need a Census API key.**  You can request a key [here](https://api.census.gov/data/key_signup.html).  Once you have a key, you'll need the following two commands to use the package:
 
+```{r api_key, eval = FALSE}
+library(tidycensus)
+
+census_api_key("API KEY")
+```
+
+```{r load_tidycensus, echo = FALSE}
+library(tidycensus)
+```
+
+<!-- AR: For this code to work, you have to have an actual API key in here. So we don't have to worry about keys expiring, etc., I've saved the RDS files and will load them in the script. -->
+
+where `"API KEY"` is replaced with your API key.^[If you run the `census_api_key()` function with the option `install = TRUE`, it will save your API key in `.Renviron` so you don't have to remember it.]
+
+To get data from the decennial census, you can use the function `get_decennial()`.^[You can also get data from the American Community Survey using the **tidycensus** package, using the similar `get_acs()` function.] How can we use `get_decennial()` to retrieve each state's population from the 2010 Census? It only takes three arguments to get the data we want:
+
+- `geography` determines the unit of analysis.  Here, we use "state", but there are many other [geographies](https://walkerke.github.io/tidycensus/articles/basic-usage.html#geography-in-tidycensus) you could use, such as "us" for the entire country, "county" for counties, and so on.
+- `variables` selects which Census variables you want.  Unfortunately, they have rather opaque names.  If you didn't know that "P001001" was the variable name for population, you can find that out either by using the `load_variables()` function in **tidycensus** to generate a tibble of variable names (described [here](https://walkerke.github.io/tidycensus/articles/basic-usage.html#searching-for-variables)) or by searching on [data.census.gov](https://data.census.gov) and downloading the results of the search; the variable name will be in the .csv file.
+- `year` is the year.  `get_decennial()` can obtain data from the 1990, 2000, and 2010 Census.
+
+```{r pop_code, eval = FALSE}
+library(tidyverse)
+
+pop <- get_decennial(geography = "state",
+                     variables = "P001001",
+                     year = 2010)
+glimpse(pop)
+```
+
+```{r pop_object, echo = FALSE, message = FALSE}
+library(tidyverse)
+
+pop <- read_rds(path = "rds/maps_pop.rds")
+glimpse(pop)
+```
+
+The output is a tibble with four columns:
+
+- `GEOID` is part of the FIPS code, which is short for Federal Information Processing Standard. It's a standardized way to identify states, counties, census tracts, etc. In this instance it's only two digits wide. The more specific you get into the Census boundaries, the longer the number gets.
+- `NAME` is the generic name `get_decennial()` gives to the unit you selected with `geography`; here, they are state names.  Note that there are 52 observations; the "state" geography includes D.C. and Puerto Rico along with the 50 states.
+- `variable` is the name of the variable you selected.
+- `value` is the value of the variable you selected (here, population).
+
+What if you wanted to select more than one variable?  By default, `get_decennial()` will stack all the variables on top of each other, identifying them with the `variable` column.  So let's say that you wanted to know the proportion of the population of each state that lives in rural areas.  You would select two variables (total population and rural population) and would receive a tibble with 104 observations, with each state appearing once per variable.  This isn't the most helpful way to receive the data, especially for plotting.  You can request the data in wide format by using the option `output = "wide"`:
+
+```{r rural_code, eval = FALSE}
+rural <- get_decennial(geography = "state",
+                       variables = c("P001001", "P002005"),
+                       year = 2010,
+                       output = "wide")
+glimpse(rural)
+```
+
+```{r rural_object, echo = FALSE}
+# We'll make the object we actually load in already have the geometry we'll need
+# later
+
+# rural created with:
+# get_decennial(geography = "state",
+#               variables = c("P001001", "P002005"),
+#               year = 2010,
+#               output = "wide",
+#               geometry = TRUE) %>%
+#   write_rds(path = "rds/maps_rural.rds")
+
+rural <- read_rds(path = "rds/maps_rural.rds")
+
+rural %>%
+  as_tibble %>%
+  select(-geometry) %>%
+  glimpse()
+```
+
+Here, we created a tibble with states in the rows and total population ("P001001") and rural population ("P002005") in the columns.  To plot the proportion of each state's population is that lives in rural areas is now a simple application of **tidyverse** functions we know and love.  First, let's create a variable for rural population proportion and order the states by that variable:
+
+<!-- AR: at some point it would be good to introduce the compound assignment
+pipe operator %<>% from magrittr so we don't have to type things like rural <-
+rural -->
+
+```{r rural_rename}
+rural <- rural %>%
+  rename(state = NAME) %>%
+  mutate(prop_rural = P002005/P001001,
+         state = reorder(state, prop_rural))
+```
+
+Next, let's plot this using `ggplot()`:
+
+```{r rural_plot}
+rural %>%
+  ggplot(aes(x = prop_rural, y = state)) +
+  geom_point() +
+  ylab("") +
+  xlab("Rural Population Proportion")
+```
+
+This kind of plot is great if we want to visualize which states are the most rural and which states are the least.  We see immediately that Maine and Vermont are very rural and that D.C. is entirely urban (as one expect, given that it is a city).  But what if we wanted a sense of how the proportion of rural residents varied geographically?  We could figure this out from a plot like the one above if we know something about U.S. geography. It would be so much easier, however, if we could see this information directly on a map of the United States.  As we'll see, R makes this easy to do.
+
+## Conceptual introduction to mapping
+
+There are two underlying important pieces of information for spatial data: the coordinates of the object and how the coordinates relate to a physical location on Earth, which is also known as a coordinate reference system or **CRS**.  
+
+The coordinates are familiar from geography.  A CRS uses a three-dimensional model of the earth to define specific locations on the surface of the grid. An object can be defined in relation to longitude (East/West) and latitude (North/South).
+
+Where this gets complicated is when attempting to create a projection.  A projection is a translation of the three-dimensional grid onto a two-dimensional plane.  The animation below demonstrates this process.
+
+![](images/gifs/projection_tween.gif)
+
+Thus, the CRS determines how a geometric object will look when displayed on your two-dimensional screen.  As we will see, you usually don't need to select a CRS when working with **tidycensus**, but it is good to know about the concept if you ever work with other spatial data.
+
+### Vector versus spatial data
+
+Spatial data with a defined CRS can either be vector or raster data. Vector data is based on points that can be connected to form lines and polygons.  It is located with in a *coordinate reference system.*  An example is a road map.
+
+Raster data, however, are values within a *grid system,* such as satellite imagery. In this book, we will only be dealing with vector data, which is the format in which we get data from the **tidycensus** package.
+
+### **sf** vs **sp**
+
+An older package, **sp**, lets a user handle both vector and raster data.  This class will focus on vector data and the **sf** package.  The main differences between the **sp** and **sf** packages are how they store CRS information. While **sp** uses spatial sub classes, **sf** stores data in data frames, allowing it to interact with **dplyr** methods we've learned so far. I encourage you to check out other spatial data analysis and modeling [classes](http://www.rspatial.org/) if you remain interested in this afterward.
+
+### Shape files
+
+R can handle importing different kinds of file formats for spatial data, including KML and geojson. We'll focus on shape files, which was created by ESRI in the '90s.  Though we refer to a "shape file" in the singular, it's actually a collection of at least three basic files: 
+
+* .shp - lists shape and vertices
+* .shx - has index with offsets
+* .dbf - relationship file between geometry and attributes (data)
+
+All files must be present in the directory and named the same (except for the file extension) to import correctly.  Thankfully, **tidycensus** will grab the geometric information from the Census shape file for you.
+
+## Mapping with **tidycensus** and `geom_sf()`
+
+<!-- Explain how to use tidycensus to get geographic information -->
+
+<!-- Explain how to create blank map -->
+
+```{r plot_fifty_states}
+rural %>%
+  ggplot() +
+  geom_sf()
+```
+
+Well, that's interesting. We have the boundaries of each state, including Alaska and Hawaii. But there are some problems. **ggplot2** is doing its best to fit everything on one image, which is taxing on the system. We can't see any particular state very well, because the map is zoomed far out.  Also, there are no colors because we didn't fill it with our data.
+
+So, let's create a new map with `geom_sf()` and fill it with `prop_rural`. And we'll filter out Alaska, Hawaii, and Puerto Rico for now.
+
+```{r rural_map}
+rural %>%
+  filter(! state %in% c("Alaska", "Hawaii", "Puerto Rico")) %>%
+  ggplot(aes(fill = prop_rural)) +
+  geom_sf() + 
+  theme_void()
+```
+
+### Making maps pretty
+
+<!-- Discuss ways to make map prettier -->
+
+```{r rural_map_pretty}
+rural %>%
+  filter(! state %in% c("Alaska", "Hawaii", "Puerto Rico")) %>%
+  ggplot(aes(fill = prop_rural * 100)) +
+  geom_sf() + 
+  scale_fill_viridis_c(option = "plasma",
+                       direction = -1) +
+  labs(fill = "Percent Rural") +
+  theme_void()
+```
+
+### Adding back Alaska and Hawaii
+
+<!-- Discuss how to show Alaska and Hawaii -->
+
+```{r rural_shifted, echo = FALSE}
+# rural_shifted created with:
+# get_decennial(geography = "state",
+#               variables = c("P001001", "P002005"),
+#               year = 2010,
+#               output = "wide",
+#               geometry = TRUE,
+#               shift_geo = TRUE) %>%
+#   write_rds(path = "rds/maps_rural_shifted.rds")
+
+rural_shifted <- read_rds(path = "rds/maps_rural_shifted.rds") %>%
+  rename(state = NAME) %>%
+  mutate(prop_rural = P002005/P001001,
+         state = reorder(state, prop_rural))
+```
+
+```{r alaska_hawaii}
+rural_shifted %>%
+  ggplot(aes(fill = prop_rural * 100)) +
+  geom_sf() + 
+  scale_fill_viridis_c(option = "plasma",
+                       direction = -1) +
+  labs(fill = "Percent Rural") +
+  theme_void()
+```
