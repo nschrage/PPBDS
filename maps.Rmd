@@ -32,7 +32,7 @@ How can we retrieve each state's population from the 2010 Census? To get data fr
 
 - `geography` determines the unit of analysis.  Here, we use "state", but there are many other [geographies](https://walkerke.github.io/tidycensus/articles/basic-usage.html#geography-in-tidycensus) you could use, such as "us" for the entire country, "county" for counties, and so on.
 - `variables` selects which Census variables you want.  Unfortunately, they have rather opaque names.  If you didn't know that "P001001" was the variable name for population, you have a couple of options:
-    - Use the `load_variables()` function in **tidycensus** to generate a tibble of variable names (described [here](https://walkerke.github.io/tidycensus/articles/basic-usage.html#searching-for-variables))
+    - Use the `load_variables()` function in **tidycensus** to generate a tibble of variable names (described [here](https://walkerke.github.io/tidycensus/articles/basic-usage.html#searching-for-variables)).
     - Search on [data.census.gov](https://data.census.gov) for the variable you want and download the results of the search; the variable name will be in the .csv file.
 - `year` is the year.  `get_decennial()` can obtain data from the 1990, 2000, and 2010 Census.
 
@@ -59,7 +59,7 @@ The output is a tibble with four columns:
 - `variable` is the name of the variable you selected.
 - `value` is the value of the variable you selected (here, population).
 
-What if you wanted to select more than one variable?  By default, `get_decennial()` will stack all the variables on top of each other, identifying them with the `variable` column.  So let's say that you wanted to know the proportion of the population of each state that lives in rural areas.  You would select two variables (total population and rural population) and would receive a tibble with 104 observations, with each state appearing once per variable.  This isn't the most helpful way to receive the data, especially for plotting.  You can request the data in wide format by using the option `output = "wide"`:
+What if you wanted to select more than one variable?  By default, `get_decennial()` will stack all the variables on top of each other, identifying them with the `variable` column.  So let's say that you wanted to know the proportion of the population of each state that lives in rural areas.  You would select two variables (total population and rural population) and would receive a tibble with 104 observations, with each state appearing once per variable.  This may not be the most helpful way to receive the data, depending on your purposes. (When faceting, you may want the data in a long format like this, as we'll see below.)  You can request the data in wide format instead by using the option `output = "wide"`. 
 
 ```{r rural_code, eval = FALSE}
 rural <- get_decennial(geography = "state",
@@ -115,6 +115,12 @@ rural %>%
 This kind of plot is great if we want to visualize which states are the most rural and which states are the least.  We see immediately that Maine and Vermont are very rural and that D.C. is entirely urban (as one expect, given that it is a city).  But what if we wanted a sense of how the proportion of rural residents varied geographically?  We could figure this out from a plot like the one above if we know something about U.S. geography. It would be so much easier, however, if we could see this information directly on a map of the United States.  As we'll see, R makes this easy to do.
 
 ## Conceptual introduction to mapping
+
+<!-- AR: This section and the next takes a lot of material from Andrew Tran.  I
+skipped the parts about why to use R (this book is all about R!) and the
+material that is irrelevant since we started with tidycensus.  Also, I left out
+leaflet at the end, which was discussed very quickly, but I provide a link to a
+blog post that goes into more detail about using leaflet with tidycensus. -->
 
 There are two underlying important pieces of information for spatial data: the coordinates of the object and how the coordinates relate to a physical location on Earth, which is also known as a coordinate reference system or **CRS**.  
 
@@ -197,11 +203,11 @@ There are a few ways we can aesthetically improve this map:
 - Make the fill colors easier to distinguish
 - Make it so that darker colors map onto higher values of `prop_rural`
 - Remove the gray background
-- Give the legend an informative title
+- Give the legend an informative title and add a title and caption
 
 A great function for providing the fill colors for maps is `scale_fill_viridis_c()`.  This has a few different color palettes that can be selected with the `option` argument, all of which are easily distinguishable both when displayed in black and white and for people with common forms of colorblindness.  You can also reverse the default order of the colors with the `direction = -1` option.  This function is for continuous variables such as `prop_rural`; if you have a discrete variable, you can use the analogous `scale_fill_viridis_d()`.
 
-We'll also use `theme_void()`, a great theme for maps that gets rid of the gray background.  Finally, we'll give the legend the title "Percent Rural" (and multiply the values of the variable by 100).
+We'll also use `theme_void()`, a great theme for maps that gets rid of the gray background.  Finally, we'll use `labs()` to give the legend the title "Percent Rural" (and multiply the values of the variable by 100) and add an overall title and caption.
 
 ```{r rural_map_pretty}
 rural %>%
@@ -210,15 +216,15 @@ rural %>%
   geom_sf() + 
   scale_fill_viridis_c(option = "plasma",
                        direction = -1) +
-  labs(fill = "Percent Rural") +
+  labs(title = "Rural geography of the United States",
+       caption = "Source: Census 2010",
+       fill = "Percent Rural") +
   theme_void()
 ```
 
 With this map, it is clear that the more rural states are concentrated in the Great Plains, the South, and parts of New England, while the (South)west and Northeast are less rural.
 
 ### Adding back Alaska and Hawaii
-
-<!-- Discuss how to show Alaska and Hawaii -->
 
 But what about Alaska and Hawaii?  If you want to display those on your map without having to zoom out, you can take advantage of an argument in `get_decennial()`, `shift_geo = TRUE`:
 
@@ -256,8 +262,76 @@ rural_shifted %>%
   geom_sf() + 
   scale_fill_viridis_c(option = "plasma",
                        direction = -1) +
-  labs(fill = "Percent Rural") +
+  labs(title = "Rural geography of the United States",
+       caption = "Source: Census 2010",
+       fill = "Percent Rural") +
   theme_void()
 ```
 
 Now, Alaska and Hawaii can be displayed near the lower 48 states.  Note that this option removes Puerto Rico from your tibble altogether, so this is not a good option if you want to show data from Puerto Rico.
+
+## Faceting maps
+
+A powerful tool in **ggplot2** to use with maps is faceting.  Let's grab data from the ACS on the population in Harris County, Texas census tracts by race:
+
+```{r facet, eval = FALSE}
+racevars <- c(White = "B02001_002", 
+              Black = "B02001_003", 
+              Asian = "B02001_005",
+              Hispanic = "B03003_003")
+harris <- get_acs(geography = "tract",
+                  variables = racevars, 
+                  year = 2018,
+                  state = "TX",
+                  county = "Harris County",
+                  geometry = TRUE,
+                  summary_var = "B02001_001") 
+```
+
+```{r load_harris, echo = FALSE}
+# From the above code
+
+harris <- read_rds("rds/harris.rds")
+```
+
+This code is very similar to what we've used before, except here we are retrieving the data from the American Community Survey using `get_acs()` instead of from the decennial census.  Some new features worth pointing out:
+
+- The `year` for `get_acs()` is the last year of a five year sample.  Thus, our data will be from 2014--2018.  You can choose `year`s from 2009--2018.
+- Since our geography is "tract", we are further specifying the `state` and `county`. 
+- We are obtaining the data in a long format, which makes faceting easier.
+- We added a `summary_var`, "B02001_001", which is the total population.  As we'll see, this appears as a separate column, which is helpful to us.  (As an exercise, try going back to the code that created `rural` and see how you would do that in a long format with `summary_var`.)
+
+Let's take a look at `harris`:
+
+```{r glimpse_harris}
+glimpse(harris)
+```
+
+These are similar to what we've seen before.  Note that we now have `moe` and `summary_moe` columns, which stand for "margin of error."  This is because, unlike the decennial census, the ACS is a survey and thus the values we get are estimates of the true value.^[Even the decennial census, of course, is an estimate, given the possibility of nonresponse and other errors, but it is closer to the true value than a survey.]
+
+### Transforming and mapping the data
+
+Now we can use `facet_wrap()` to look at our race variables side-by-side:
+
+```{r faceting}
+harris %>%
+  mutate(Percent = 100 * (estimate / summary_est)) %>%
+  ggplot(aes(fill = Percent, color = Percent)) +
+  facet_wrap(~ variable) +
+  geom_sf() +
+  scale_fill_viridis_c(direction = -1) +
+  scale_color_viridis_c(direction = -1) +
+  labs(title = "Racial geography of Harris County, Texas",
+       caption = "Source: American Community Survey 2014-2018") +
+  theme_void()
+```
+
+Note how easy it was to create the percentages using `summary_est`.  We also used `color = Percent` and `scale_color_viridis_c()` to avoid having annoying borders around each of the census tracts.  Otherwise, this doesn't differ much from our code before, yet it is much easier to make comparisons across variables.  Faceting is a powerful tool to use with maps.
+
+## Want to explore further?
+
+- Take a look at the [**tidycensus** website](https://walkerke.github.io/tidycensus/).
+- If you have shapefiles from a place other than **tidycensus**, you can read them in using `st_read()` in the **sf** package, join them with other data using **dplyr** functions, and then map them with `geom_sf()` as we have shown above.
+    - You may have to look into using [`coord_sf()`](https://ggplot2.tidyverse.org/reference/ggsf.html) if you have trouble displaying your data.
+- Want to add interactivity to your maps?  Check out the **leaflet** package.  [Here's](https://juliasilge.com/blog/using-tidycensus/) a good introduction to using **leaflet** with **tidycensus**.
+- Practice your skills with [Andrew Tran's case study slides](https://andrewbtran.github.io/NICAR/2019/mapping/02_case_study_slides.html), where you can replicate a graphic from the Washington Post. Note: this involves some packages we haven't shown you in this book, but if you follow along step by step you will be able to see how they are used.
