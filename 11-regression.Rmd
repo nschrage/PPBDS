@@ -398,21 +398,35 @@ So all you need to worry about is what the inputs look like and what the outputs
 
 You might be wondering what the remaining five columns in Table \@ref(tab:regtable) are: `std.error`, `statistic`, `p.value`, `conf.low` and `conf.high`. They are the _standard error_, _test statistic_, _p-value_, _lower 95% confidence interval bound_, and _upper 95% confidence interval bound_. <!-- They tell us about both the *statistical significance* and *practical significance* of our results. This is loosely the "meaningfulness" of our results from a statistical perspective. Let's put aside these ideas for now and revisit them in Chapter \@ref(inference-for-regression) on (statistical) inference for regression. We'll do this after we've had a chance to cover standard errors in Chapter \@ref(sampling), confidence intervals in Chapter \@ref(confidence-intervals), and hypothesis testing and $p$-values in Chapter \@ref(hypothesis-testing). -->  We will focus on the confidence interval bounds. We have already explored the concept of confidence intervals in Chapter @ref(confidence-intervals).  These are the same concept, but applied to the our simple linear regression estimate.
 
+Let's load the **infer** package.  We're going to use the function `rep_sample_n()` to reample our rows 1000 times:
+
 ```{r}
 library(infer)
 
 x <- evals %>% 
   select(score, bty_avg) %>% 
-  rep_sample_n(size = nrow(evals), replace = TRUE, reps = 1000) %>% 
+  rep_sample_n(size = nrow(evals), replace = TRUE, reps = 1000)
+```
+
+Next, we are going to introduce a new function: `nest()`:
+
+```{r}
+x <- x %>% 
   group_by(replicate) %>% 
-  nest() %>% 
+  nest()
+```
+
+`nest()` comes from the **tidyr** package.  After grouping by `replicate` and using `nest()`, we now have a dataset of 1000 rows and a list column named `data`.  What's in this list column?  Each element of `data` is a tibble consisting of one of the resampled data sets we created using `rep_sample_n()`.
+
+```{r}
+x <- x %>% 
   mutate(mod = map(data, ~ lm(score ~ bty_avg, data = .))) %>% 
   mutate(reg_results = map(mod, ~ tidy(.))) %>% 
   mutate(disp_coef = map_dbl(reg_results, ~ filter(., term == "bty_avg") %>% pull(estimate)))
 
 x %>%
   pull(disp_coef) %>%
-  quantile(c(0.025, 0.975))
+  quantile(c(0.025, 0.5, 0.975))
 ```
 
 
