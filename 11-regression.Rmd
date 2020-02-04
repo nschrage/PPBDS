@@ -398,7 +398,7 @@ So all you need to worry about is what the inputs look like and what the outputs
 
 You might be wondering what the remaining five columns in Table \@ref(tab:regtable) are: `std.error`, `statistic`, `p.value`, `conf.low` and `conf.high`. They are the _standard error_, _test statistic_, _p-value_, _lower 95% confidence interval bound_, and _upper 95% confidence interval bound_. <!-- They tell us about both the *statistical significance* and *practical significance* of our results. This is loosely the "meaningfulness" of our results from a statistical perspective. Let's put aside these ideas for now and revisit them in Chapter \@ref(inference-for-regression) on (statistical) inference for regression. We'll do this after we've had a chance to cover standard errors in Chapter \@ref(sampling), confidence intervals in Chapter \@ref(confidence-intervals), and hypothesis testing and $p$-values in Chapter \@ref(hypothesis-testing). -->  We will focus on the confidence interval bounds. We have already explored the concept of confidence intervals in Chapter @ref(confidence-intervals).  These are the same concept, but applied to the our simple linear regression estimate.
 
-Let's load the **infer** package.  We're going to use the function `rep_sample_n()` to reample our rows 1000 times:
+Let's load the **infer** package.  We're going to use the function `rep_sample_n()` to reample from our data 1000 times:
 
 ```{r}
 library(infer)
@@ -416,12 +416,26 @@ x <- x %>%
   nest()
 ```
 
-`nest()` comes from the **tidyr** package.  After grouping by `replicate` and using `nest()`, we now have a dataset of 1000 rows and a list column named `data`.  What's in this list column?  Each element of `data` is a tibble consisting of one of the resampled data sets we created using `rep_sample_n()`.
+`nest()` comes from the **tidyr** package.  After grouping by `replicate` and using `nest()`, we now have a dataset of 1000 rows and a list column named `data`.  What's in this list column?  Each element of `data` is a tibble consisting of one of the resampled datasets we created using `rep_sample_n()`.
+
+Now, we can use `map()` to run our linear regression for each dataset:
 
 ```{r}
 x <- x %>% 
-  mutate(mod = map(data, ~ lm(score ~ bty_avg, data = .))) %>% 
-  mutate(reg_results = map(mod, ~ tidy(.))) %>% 
+  mutate(mod = map(data, ~ lm(score ~ bty_avg, data = .)))
+```
+
+Now we have a new list column, `mod`, that contains the model objects created by `lm()`.  We can then use `map()` again to `tidy()` our model objects in order to make it easier to obtain the results:
+
+```{r}
+x <- x %>% 
+  mutate(reg_results = map(mod, ~ tidy(.)))
+```
+
+We still need a column that consists of just the estimates of `bty_avg`.  We can use `map_dbl()` to obtain this:
+
+```{r}
+x <- x %>% 
   mutate(disp_coef = map_dbl(reg_results, ~ filter(., term == "bty_avg") %>% pull(estimate)))
 
 x %>%
