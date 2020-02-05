@@ -30,12 +30,14 @@ Now that we are equipped with data visualization skills from Chapter \@ref(viz),
 * an *outcome variable* $y$, also called a *dependent variable* or response variable, \index{variables!response / outcome / dependent} and
 * an *explanatory/predictor variable* $x$, also called an *independent variable* or \index{variables!explanatory / predictor / independent} covariate.
 
-Another way to state this is using mathematical terminology: we will model the outcome variable $y$ "as a function" of the explanatory/predictor variable $x$. When we say "function" here, we aren't referring to functions in R like the `ggplot()` function, but rather as a mathematical function. But, why do we have two different labels, explanatory and predictor, for the variable $x$? That's because even though the two terms are often used interchangeably, roughly speaking data modeling serves one of two purposes:
+Another way to state this is using mathematical terminology: we will model the outcome variable $y$ "as a function" of the explanatory/predictor variable $x$. When we say "function" here, we aren't referring to functions in R like the `ggplot()` function, but rather a mathematical function. But, why do we have two different labels, explanatory and predictor, for the variable $x$? That's because even though the two terms are often used interchangeably, roughly speaking data modeling serves one of two purposes:
 
-1. **Modeling for explanation**: When you want to explicitly describe and quantify the relationship between the outcome variable $y$ and a set of explanatory variables $x$, determine the significance of any relationships, have measures summarizing these relationships, and possibly identify any *causal* relationships between the variables. 
+1. **Modeling for explanation**: When you want to explicitly describe and quantify the relationship between the outcome variable $y$ and an explanatory variable $x$, determine the importance of any relationships, have measures summarizing these relationships, and possibly identify any *causal* relationships between the variables.  (What's a causal relationship? Remember the Rubin Causal Model! The *causal effect* of $x$ on $y$ is the difference in *potential outcomes* of $y$ given different values of $x$.)
 1. **Modeling for prediction**: When you want to predict an outcome variable $y$ based on the information contained in a set of predictor variables $x$. Unlike modeling for explanation, however, you don't care so much about understanding how all the variables relate and interact with one another, but rather only whether you can make good predictions about $y$ using the information in $x$.
 
-For example, say you are interested in an outcome variable $y$ of whether patients develop lung cancer and information $x$ on their risk factors, such as smoking habits, age, and socioeconomic status. If we are modeling for explanation, we would be interested in both describing and quantifying the effects of the different risk factors. One reason could be that you want to design an intervention to reduce lung cancer incidence in a population, such as targeting smokers of a specific age group with advertising for smoking cessation programs. If we are modeling for prediction, however, we wouldn't care so much about understanding how all the individual risk factors contribute to lung cancer, but rather only whether we can make good predictions of which people will contract lung cancer.
+For example, say you are interested in an outcome variable $y$ of whether patients develop lung cancer and information $x$ on their risk factors, such as smoking habits, age, and socioeconomic status. If we are modeling for explanation, we would be interested in both describing and quantifying the effects of the different risk factors. One reason could be that you want to design an intervention to reduce lung cancer incidence in a population, such as targeting smokers of a specific age group with advertising for smoking cessation programs.  In that case, you would want to know the causal effect of age on the incidence of lung cancer for smokers.
+
+If we are modeling for prediction, however, we wouldn't care so much about understanding how all the individual risk factors contribute to lung cancer, but rather only whether we can make good predictions of which people will contract lung cancer.
 
 In this book, we'll focus on modeling for explanation and hence refer to $x$ as *explanatory variables*. If you are interested in learning about modeling for prediction, we suggest you check out books and courses on the field of *machine learning* such as [*An Introduction to Statistical Learning with Applications in R (ISLR)*](http://www-bcf.usc.edu/~gareth/ISL/) [@islr2017]. Furthermore, while there exist many techniques for modeling, such as tree-based models and neural networks, in this book we'll focus on one particular technique: *linear regression*. \index{regression!linear} Linear regression is one of the most commonly-used and easy-to-understand approaches to modeling.
 
@@ -44,8 +46,6 @@ Linear regression involves a *numerical* outcome variable $y$ and explanatory va
 In Chapter \@ref(regression) on basic regression, we'll only consider models with a single explanatory variable $x$. In Section \@ref(model1), the explanatory variable will be numerical. This scenario is known as *simple linear regression*. In Section \@ref(model2), the explanatory variable will be categorical.
 
 In Chapter \@ref(multiple-regression) on multiple regression, we'll extend the ideas behind basic regression and consider models with two explanatory variables $x_1$ and $x_2$.  In Section \@ref(model4), we'll have two numerical explanatory variables. In Section \@ref(model3), we'll have one numerical and one categorical explanatory variable. In particular, we'll consider two such models: *interaction* and *parallel slopes* models.
-
-<!-- In Chapter \@ref(inference-for-regression) on inference for regression, we'll revisit our regression models and analyze the results using the tools for *statistical inference* you'll develop in Chapters \@ref(sampling), \@ref(confidence-intervals), and \@ref(hypothesis-testing) on sampling, bootstrapping and confidence intervals, and hypothesis testing and $p$-values, respectively. -->
 
 Let's now begin with basic regression, \index{regression!basic} which refers to linear regression models with a single explanatory variable $x$. We'll also discuss important statistical concepts like the *correlation coefficient*, that "correlation isn't necessarily causation," and what it means for a line to be "best-fitting."
 
@@ -101,12 +101,12 @@ In this section, we'll keep things simple for now and try to explain differences
 
 ### Exploratory data analysis {#model1EDA}
 
-The data on the 463 courses at UT Austin can be found in the `evals` data frame included in the `moderndive` package. However, to keep things simple, let's `select()` only the subset of the variables we'll consider in this chapter, and save this data in a new data frame called `evals`:
+The data on the 463 courses at UT Austin can be found in the `evals` data frame included in the `moderndive` package. However, to keep things simple, let's `select()` only the subset of the variables we'll consider in this chapter, and save this data in a new data frame called `evals_ch11`:
 
 ```{r}
 library(moderndive)
 
-evals <- evals %>%
+evals_ch11 <- evals %>%
   select(ID, score, bty_avg, age)
 ```
 
@@ -121,26 +121,26 @@ Let's perform the first common step in an exploratory data analysis: looking at 
 You can do this by using RStudio's spreadsheet viewer or by using the `glimpse()` function as introduced in Subsection \@ref(exploredataframes) on exploring data frames:
 
 ```{r}
-glimpse(evals)
+glimpse(evals_ch11)
 ```
 
-Observe that `Observations: 463` indicates that there are 463 rows/observations in `evals`, where each row corresponds to one observed course at UT Austin. It is important to note that the *observational unit* \index{observational unit} is an individual course and not an individual instructor. Recall from Subsection \@ref(exploredataframes) that the observational unit is the "type of thing" that is being measured by our variables. Since instructors teach more than one course in an academic year, the same instructor will appear more than once in the data. Hence there are fewer than 463 unique instructors being represented in `evals`. We'll revisit this idea <!-- in Section \@ref(regression-conditions),--> when we talk about the "independence assumption" for inference for regression.
+Observe that `Observations: 463` indicates that there are 463 rows/observations in `evals_ch11`, where each row corresponds to one observed course at UT Austin. It is important to note that the *observational unit* \index{observational unit} is an individual course and not an individual instructor. Recall from Subsection \@ref(exploredataframes) that the observational unit is the "type of thing" that is being measured by our variables. Since instructors teach more than one course in an academic year, the same instructor will appear more than once in the data. Hence there are fewer than 463 unique instructors being represented in `evals_ch11`. We'll revisit this idea when we talk about the "independence assumption" for inference for regression.
 
-A full description of all the variables included in `evals` can be found at [openintro.org](https://www.openintro.org/stat/data/?data=evals) or by reading the associated help file (run `?evals` in the console). However, let's fully describe only the `r ncol(evals)` variables we selected in `evals`:
+A full description of all the variables included in `evals` can be found at [openintro.org](https://www.openintro.org/stat/data/?data=evals) or by reading the associated help file (run `?evals` in the console). However, let's fully describe only the `r ncol(evals_ch11)` variables we selected in `evals_ch11`:
 
 1. `ID`: An identification variable used to distinguish between the 1 through 463 courses in the dataset.
 1. `score`: A numerical variable of the course instructor's average teaching score, where the average is computed from the evaluation scores from all students in that course.  Teaching scores of 1 are lowest and 5 are highest. This is the outcome variable $y$ of interest.
 1. `bty_avg`: A numerical variable of the course instructor's average "beauty" score, where the average is computed from a separate panel of six students. "Beauty" scores of 1 are lowest and 10 are highest. This is the explanatory variable $x$ of interest.
 1. `age`: A numerical variable of the course instructor's age. 
 
-An alternative way to look at the raw data values is by choosing a random sample of the rows in `evals` by piping it into the `sample_n()` \index{dplyr!sample\_n()} function from the `dplyr` package. Here we set the `size` argument to be `5`, indicating that we want a random sample of 5 rows. We display the results in Table \@ref(tab:five-random-courses). Note that due to the random nature of the sampling, you will likely end up with a different subset of 5 rows.
+An alternative way to look at the raw data values is by choosing a random sample of the rows in `evals_ch11` by piping it into the `sample_n()` \index{dplyr!sample\_n()} function from the `dplyr` package. Here we set the `size` argument to be `5`, indicating that we want a random sample of 5 rows. We display the results in Table \@ref(tab:five-random-courses). Note that due to the random nature of the sampling, you will likely end up with a different subset of 5 rows.
 
 ```{r, eval=FALSE}
-evals %>%
+evals_ch11 %>%
   sample_n(size = 5)
 ```
 ```{r five-random-courses, echo=FALSE}
-evals %>%
+evals_ch11 %>%
   sample_n(5) %>%
   knitr::kable(
     digits = 3,
@@ -152,20 +152,22 @@ evals %>%
                 latex_options = c("hold_position"))
 ```
 
-Now that we've looked at the raw values in our `evals` data frame and got a preliminary sense of the data, let's move on to the next common step in an exploratory data analysis: computing summary statistics. Let's start by computing the mean and median of our numerical outcome variable `score` and our numerical explanatory variable "beauty" score denoted as `bty_avg`. We'll do this by using the `summarize()` function from `dplyr` along with the `mean()` and `median()` summary functions we saw in Section \@ref(summarize).
+Now that we've looked at the raw values in our `evals_ch11` data frame and got a preliminary sense of the data, let's move on to the next common step in an exploratory data analysis: computing summary statistics. Let's start by computing the mean and median of our numerical outcome variable `score` and our numerical explanatory variable "beauty" score denoted as `bty_avg`. We'll do this by using the `summarize()` function from `dplyr` along with the `mean()` and `median()` summary functions we saw in Section \@ref(summarize).
 
 ```{r eval=TRUE}
-evals %>%
+evals_ch11 %>%
   summarize(mean_bty_avg = mean(bty_avg), mean_score = mean(score),
             median_bty_avg = median(bty_avg), median_score = median(score))
 ```
 
 However, what if we want other summary statistics as well, such as the standard deviation (a measure of spread), the minimum and maximum values, and various percentiles? 
 
-Typing out all these summary statistic functions in `summarize()` would be long and tedious. Instead, let's use the convenient `skim()` function from the `skimr` \index{R packages!skimr!skim()} package. This function takes in a data frame, "skims" it, and returns commonly used summary statistics. Let's take our `evals` data frame, `select()` only the outcome and explanatory variables teaching `score` and `bty_avg`, and pipe them into the `skim()` function:
+Typing out all these summary statistic functions in `summarize()` would be long and tedious. Instead, let's use the convenient `skim()` function from the `skimr` \index{R packages!skimr!skim()} package. This function takes in a data frame, "skims" it, and returns commonly used summary statistics. Let's take our `evals_ch11` data frame, `select()` only the outcome and explanatory variables teaching `score` and `bty_avg`, and pipe them into the `skim()` function:
 
 ```{r}
-evals %>% select(score, bty_avg) %>% skim()
+evals_ch11 %>% 
+  select(score, bty_avg) %>% 
+  skim()
 ```
 
 
@@ -234,12 +236,12 @@ if(knitr::is_latex_output()){
 The correlation coefficient can be computed using the `cor()` summary function within a `summarize()`:
 
 ```{r, eval=FALSE}
-evals %>% 
+evals_ch11 %>% 
   summarize(correlation = cor(score, bty_avg))
 ```
 
 ```{r echo=FALSE}
-cor_ch5 <- evals %>%
+cor_ch5 <- evals_ch11 %>%
   summarize(correlation = cor(score, bty_avg)) %>% 
   round(3) %>% 
   pull()
@@ -250,7 +252,8 @@ In our case, the correlation coefficient of `r cor_ch5` indicates that the relat
 Let's now perform the last of the steps in an exploratory data analysis: creating data visualizations. Since both the `score` and `bty_avg` variables are numerical, a scatterplot is an appropriate graph to visualize this data. Let's do this using `geom_point()` and display the result in Figure \@ref(fig:numxplot1). Furthermore, let's highlight the six points in the top right of the visualization in a box.
 
 ```{r, eval=FALSE}
-ggplot(evals, aes(x = bty_avg, y = score)) +
+evals_ch11 %>%
+  ggplot(aes(x = bty_avg, y = score)) +
   geom_point() +
   labs(x = "Beauty Score", 
        y = "Teaching Score",
@@ -266,7 +269,8 @@ box <- tibble(
   y = c(4.6, 4.6, 5, 5, 4.6) + c(-1, -1, 1, 1, -1) * margin_y
   )
 
-ggplot(evals, aes(x = bty_avg, y = score)) +
+evals_ch11 %>%
+  ggplot(aes(x = bty_avg, y = score)) +
   geom_point() +
   labs(x = "Beauty Score", 
        y = "Teaching Score",
@@ -279,25 +283,27 @@ Observe that most "beauty" scores lie between 2 and 8, while most teaching score
 Furthermore, there appear to be six points in the top-right of this plot highlighted in the box. However, this is not actually the case, as this plot suffers from *overplotting*. Recall from Subsection \@ref(overplotting) that overplotting occurs when several points are stacked directly on top of each other, making it difficult to distinguish them. So while it may appear that there are only six points in the box, there are actually more.  This fact is only apparent when using `geom_jitter()` in place of `geom_point()`. We display the resulting plot in Figure \@ref(fig:numxplot2) along with the same small box as in Figure \@ref(fig:numxplot1).
 
 ```{r, eval=FALSE}
-ggplot(evals, aes(x = bty_avg, y = score)) +
+evals_ch11 %>%
+  ggplot(aes(x = bty_avg, y = score)) +
   geom_jitter() +
   labs(x = "Beauty Score", y = "Teaching Score",
        title = "Scatterplot of relationship of teaching and beauty scores")
 ```
 ```{r numxplot2, warning=FALSE, echo=FALSE, fig.cap="Instructor evaluation scores at UT Austin.", fig.height=4.2}
-ggplot(evals, aes(x = bty_avg, y = score)) +
+ggplot(evals_ch11, aes(x = bty_avg, y = score)) +
   geom_jitter() +
   labs(x = "Beauty Score", y = "Teaching Score",
        title = "(Jittered) Scatterplot of relationship of teaching and beauty scores") +
   geom_path(data = box, aes(x = x, y = y), col = "orange", size = 1)
 ```
 
-It is now apparent that there are `r evals %>% filter(score > 4.5 & bty_avg > 7.5) %>% nrow()` points in the area highlighted in the box and not six as originally suggested in Figure \@ref(fig:numxplot1). Recall from Subsection \@ref(overplotting) on overplotting that jittering adds a little random "nudge" to each of the points to break up these ties. Furthermore, recall that jittering is strictly a visualization tool; it does not alter the original values in the data frame `evals`. To keep things simple going forward, however, we'll only present regular scatterplots rather than their jittered counterparts.
+It is now apparent that there are `r evals_ch11 %>% filter(score > 4.5 & bty_avg > 7.5) %>% nrow()` points in the area highlighted in the box and not six as originally suggested in Figure \@ref(fig:numxplot1). Recall from Subsection \@ref(overplotting) on overplotting that jittering adds a little random "nudge" to each of the points to break up these ties. Furthermore, recall that jittering is strictly a visualization tool; it does not alter the original values in the data frame `evals_ch11`. To keep things simple going forward, however, we'll only present regular scatterplots rather than their jittered counterparts.
 
 Let's build on the unjittered scatterplot in Figure \@ref(fig:numxplot1) by adding a "best-fitting" line: of all possible lines we can draw on this scatterplot, it is the line that "best" fits through the cloud of points. We do this by adding a new `geom_smooth(method = "lm", se = FALSE)` layer to the `ggplot()` code that created the scatterplot in Figure \@ref(fig:numxplot1). The `method = "lm"` argument sets the line to be a "`l`inear `m`odel." The `se = FALSE` \index{ggplot2!geom\_smooth()} argument suppresses _standard error_ uncertainty bars. (We'll define the concept of _standard error_ later in Subsection \@ref(sampling-definitions).)
 
 ```{r numxplot3, warning=FALSE, fig.cap="Regression line."}
-ggplot(evals, aes(x = bty_avg, y = score)) +
+evals_ch11 %>%
+  ggplot(aes(x = bty_avg, y = score)) +
   geom_point() +
   labs(x = "Beauty Score", y = "Teaching Score",
        title = "Relationship between teaching and beauty scores") +  
@@ -325,13 +331,16 @@ We can obtain the values of the intercept $b_0$ and the slope for `btg_avg` $b_1
 
 ```{r, eval=FALSE}
 # Fit regression model:
-score_model <- lm(score ~ bty_avg, data = evals)
+
+score_model <- lm(score ~ bty_avg, data = evals_ch11)
+
 # Get regression table:
-tidy(score_model,
-     conf.int = TRUE)
+
+score_model %>% 
+  tidy(conf.int = TRUE)
 ```
 ```{r, echo=FALSE}
-score_model <- lm(score ~ bty_avg, data = evals)
+score_model <- lm(score ~ bty_avg, data = evals_ch11)
 evals_line <- score_model %>%
   tidy() %>%
   pull(estimate)
@@ -371,41 +380,38 @@ Furthermore, we say that this associated increase is *on average* `r evals_line[
 
 Now that we've learned how to compute the equation for the regression line in Figure \@ref(fig:numxplot3) using the values in the `estimate` column of Table \@ref(tab:regtable), and how to interpret the resulting intercept and slope, let's revisit the code that generated this table:
 
-```{r, eval=FALSE}
+```{r, eval = FALSE}
 # Fit regression model:
-score_model <- lm(score ~ bty_avg, data = evals)
+
+score_model <- lm(score ~ bty_avg, data = evals_ch11)
+
 # Get regression table:
-tidy(score_model,
-     conf.int = TRUE)
+
+score_model %>%
+  tidy(conf.int = TRUE)
 ```
 
 First, we "fit" the linear regression model to the `data` using the `lm()` \index{lm()} function and save this as `score_model`. When we say "fit", we mean  "find the best fitting line to this data." `lm()` stands for "linear model" and is used as follows: `lm(y ~ x, data = data_frame_name)` where:
 
 * `y` is the outcome variable, followed by a tilde `~`. In our case, `y` is set to `score`.
 * `x` is the explanatory variable. In our case, `x` is set to `bty_avg`.
-* The combination of `y ~ x` is called a *model formula*. (Note the order of `y` and `x`.) In our case, the model formula is `score ~ bty_avg`.  <!-- We saw such model formulas earlier when we computed the correlation coefficient using the `get_correlation()` function in Subsection \@ref(model1EDA). -->
-* `data_frame_name` is the name of the data frame that contains the variables `y` and `x`. In our case, `data_frame_name` is the `evals` data frame.
+* The combination of `y ~ x` is called a *model formula*. (Note the order of `y` and `x`.) In our case, the model formula is `score ~ bty_avg`.
+* `data_frame_name` is the name of the data frame that contains the variables `y` and `x`. In our case, `data_frame_name` is the `evals_ch11` data frame.
 
-Second, we take the saved model in `score_model` and apply the `tidy()` function from the `broom` package to it to obtain the regression table in Table \@ref(tab:regtable). <!-- This function is an example of what's known in computer programming as a *wrapper function*. \index{functions!wrapper} They take other pre-existing functions and "wrap" them into a single function that hides its inner workings.  This concept is illustrated in Figure \@ref(fig:moderndive-figure-wrapper).
-
-```{r moderndive-figure-wrapper, echo=FALSE, fig.align='center', fig.cap="The concept of a wrapper function.", out.height="60%", out.width="60%"}
-knitr::include_graphics("images/shutterstock/wrapper_function.png")
-```
-
-So all you need to worry about is what the inputs look like and what the outputs look like; you leave all the other details "under the hood of the car." In our regression modeling example, the `get_regression_table()` function takes a saved `lm()` linear regression model as input and returns a data frame of the regression table as output. If you're interested in learning more about the `get_regression_table()` function's inner workings, check out Subsection \@ref(underthehood). -->
+Second, we take the saved model in `score_model` and apply the `tidy()` function from the `broom` package to it to obtain the regression table in Table \@ref(tab:regtable). 
 
 ### Uncertainty in simple linear regressions
 
-You might be wondering what the remaining five columns in Table \@ref(tab:regtable) are: `std.error`, `statistic`, `p.value`, `conf.low` and `conf.high`. They are the _standard error_, _test statistic_, _p-value_, _lower 95% confidence interval bound_, and _upper 95% confidence interval bound_. <!-- They tell us about both the *statistical significance* and *practical significance* of our results. This is loosely the "meaningfulness" of our results from a statistical perspective. Let's put aside these ideas for now and revisit them in Chapter \@ref(inference-for-regression) on (statistical) inference for regression. We'll do this after we've had a chance to cover standard errors in Chapter \@ref(sampling), confidence intervals in Chapter \@ref(confidence-intervals), and hypothesis testing and $p$-values in Chapter \@ref(hypothesis-testing). -->  We will focus on the confidence interval bounds. We have already explored the concept of confidence intervals in Chapter @ref(confidence-intervals).  These are the same concept, but applied to the our simple linear regression estimate.
+You might be wondering what the remaining five columns in Table \@ref(tab:regtable) are: `std.error`, `statistic`, `p.value`, `conf.low` and `conf.high`. They are the _standard error_, _test statistic_, _p-value_, _lower 95% confidence interval bound_, and _upper 95% confidence interval bound_. We will focus on the confidence interval bounds. We have already explored the concept of confidence intervals in Chapter @ref(confidence-intervals).  These are the same concept, but applied to the slope of our simple linear regression.
 
 Let's load the **infer** package.  We're going to use the function `rep_sample_n()` to reample from our data 1000 times:
 
 ```{r}
 library(infer)
 
-x <- evals %>% 
+x <- evals_ch11 %>% 
   select(score, bty_avg) %>% 
-  rep_sample_n(size = nrow(evals), replace = TRUE, reps = 1000)
+  rep_sample_n(size = nrow(evals_ch11), replace = TRUE, reps = 1000)
 ```
 
 Next, we are going to introduce a new function: `nest()`:
@@ -437,19 +443,33 @@ We still need a column that consists of just the estimates of `bty_avg`.  We can
 ```{r}
 x <- x %>% 
   mutate(disp_coef = map_dbl(reg_results, ~ filter(., term == "bty_avg") %>% pull(estimate)))
+```
 
+Now that we have 1000 estimates from our bootstrap samples, we can construct a percentile-based confidence interval easily:
+
+```{r}
 x %>%
   pull(disp_coef) %>%
   quantile(c(0.025, 0.5, 0.975))
 ```
 
+While this process is relatively straightforward, there's a simple shortcut we can use.  Take a look at the results from `score_model %>% tidy(conf.int = TRUE)`:
+
+```{r}
+score_model %>% 
+  tidy(conf.int = TRUE) %>%
+  filter(term == "bty_avg") %>%
+  select(estimate, conf.low, conf.high)
+```
+
+The confidence intervals reported by `lm()` and `tidy()` are very similar to our bootstrap confidence intervals.  Thus, we can interpret these confidence intervals the same way we did in Chapter @ref(confidence-intervals).  <!-- AR: right now the confidence interval chapter appears to have a frequentist interpretation -- that should be changed. -->  In 95\% of our samples, the estimate was between the lower confidence interval bound and the higher confidence interval bound; our interpretation is that the true value of the coefficient of `bty_avg` (which we are trying to estimate) has a 95\% chance of falling within these bounds.^[This Bayesian interpretation of the bootstrap confidence interval is often called a [credible interval](https://en.wikipedia.org/wiki/Credible_interval) in the academic literature; you may find yourself in a statistics class that uses the phrase "confidence interval" to refer only to the [frequentist](https://en.wikipedia.org/wiki/Frequentist_inference) concept wherein the interpretation is that 95\% of the *intervals* constructed using this method in repeated samples will contain the true but unknown population parameter.  For this book, we will stick with the phrase "confidence interval" and use the Bayesian interpretation.] <!-- AR: this footnote can probably be moved to wherever confidence intervals are first discussed. -->
 
 ### Observed/fitted values and residuals {#model1points}
 
-We just saw how to get the value of the intercept and the slope of a regression line from the `estimate` column of a regression table generated by the `augment()` function. Now instead say we want information on individual observations. For example, let's focus on the 21st of the 463 courses in the `evals` data frame in Table \@ref(tab:instructor-21):
+We just saw how to get the value of the intercept and the slope of a regression line from the `estimate` column of a regression table generated by the `augment()` function. Now instead say we want information on individual observations. For example, let's focus on the 21st of the 463 courses in the `evals_ch11` data frame in Table \@ref(tab:instructor-21):
 
 ```{r instructor-21, echo=FALSE}
-index <- which(evals$bty_avg == 7.333 & evals$score == 4.9)
+index <- which(evals_ch11$bty_avg == 7.333 & evals_ch11$score == 4.9)
 target_point <- score_model %>%
   augment() %>%
   slice(index)
@@ -457,7 +477,7 @@ x <- target_point$bty_avg
 y <- target_point$score
 y_hat <- target_point$.fitted
 resid <- target_point$.resid
-evals %>%
+evals_ch11 %>%
   slice(index) %>%
   knitr::kable(
     digits = 4,
@@ -479,7 +499,7 @@ $$\widehat{y} = b_0 + b_1 \cdot x = `r evals_line[1]` + `r evals_line[2]` \cdot 
 * Arrow: The length of this arrow is the *residual* \index{regression!residual} and is computed by subtracting the fitted value $\widehat{y}$ from the observed value $y$. The residual can be thought of as a model's error or "lack of fit" for a particular observation.  In the case of this course's instructor, it is $y - \widehat{y}$ = `r y` - `r y_hat` = `r resid`.
 
 ```{r numxplot4, echo=FALSE, warning=FALSE, fig.cap="Example of observed value, fitted value, and residual.", fig.height=2.8}
-best_fit_plot <- ggplot(evals, aes(x = bty_avg, y = score)) +
+best_fit_plot <- ggplot(evals_ch11, aes(x = bty_avg, y = score)) +
   geom_point(color = "grey") +
   labs(x = "Beauty Score", y = "Teaching Score",
        title = "Relationship of teaching and beauty scores") +
@@ -491,12 +511,13 @@ best_fit_plot <- ggplot(evals, aes(x = bty_avg, y = score)) +
 best_fit_plot
 ```
 
-Now say we want to compute both the fitted value $\widehat{y} = b_0 + b_1 \cdot x$ and the residual $y - \widehat{y}$ for *all* 463 courses in the study. Recall that each course corresponds to one of the 463 rows in the `evals` data frame and also one of the 463 points in the regression plot in Figure \@ref(fig:numxplot4).
+Now say we want to compute both the fitted value $\widehat{y} = b_0 + b_1 \cdot x$ and the residual $y - \widehat{y}$ for *all* 463 courses in the study. Recall that each course corresponds to one of the 463 rows in the `evals_ch11` data frame and also one of the 463 points in the regression plot in Figure \@ref(fig:numxplot4).
 
-We could repeat the previous calculations we performed by hand 463 times, but that would be tedious and time consuming. Instead, let's do this using a computer with the `augment()` function. <!-- Just like the `get_regression_table()` function, the `get_regression_points()` function is a "wrapper" function. However, this function returns a different output. --> Let's apply the `augment()` function to `score_model`, which is where we saved our `lm()` model in the previous section. In Table \@ref(tab:regression-points-1) we present the results of only the 21st through 24th courses for brevity's sake.
+We could repeat the previous calculations we performed by hand 463 times, but that would be tedious and time consuming. Instead, let's do this using a computer with the `augment()` function. Let's apply the `augment()` function to `score_model`, which is where we saved our `lm()` model in the previous section. In Table \@ref(tab:regression-points-1) we present the results of only the 21st through 24th courses for brevity's sake.
 
 ```{r, eval=FALSE}
-regression_points <- augment(score_model) %>%
+regression_points <- score_model %>%
+  augment() %>%
   select(score, bty_avg, .fitted, .resid)
 regression_points
 ```
@@ -522,7 +543,7 @@ Let's inspect the individual columns and match them with the elements of Figure 
 * The `.fitted` column represents the fitted values $\widehat{y}$. This is the corresponding value on the regression line for the `r nrow(regression_points)` $x$ values.
 * The `.resid` column represents the residuals $y - \widehat{y}$. This is the `r nrow(regression_points)` vertical distances between the `r nrow(regression_points)` black points and the regression line.
 
-Just as we did for the instructor of the 21st course in the `evals` dataset (in the first row of the table), let's repeat the calculations for the instructor of the 24th course (in the fourth row of Table \@ref(tab:regression-points-1)):
+Just as we did for the instructor of the 21st course in the `evals_ch11` dataset (in the first row of the table), let's repeat the calculations for the instructor of the 24th course (in the fourth row of Table \@ref(tab:regression-points-1)):
 
 * `score` = 4.4 is the observed teaching `score` $y$ for this course's instructor.
 * `bty_avg` = 5.50 is the value of the explanatory variable `bty_avg` $x$ for this course's instructor.
@@ -623,7 +644,8 @@ Turning our attention to the summary statistics of the numerical variable `lifeE
 We can answer this question by performing the last of the three common steps in an exploratory data analysis: creating data visualizations. Let's visualize the distribution of our outcome variable $y$ = `lifeExp` in Figure \@ref(fig:lifeExp2007hist).
 
 ```{r lifeExp2007hist, echo=TRUE, warning=FALSE, fig.cap="Histogram of life expectancy in 2007.", fig.height=5.2}
-ggplot(gapminder2007, aes(x = lifeExp)) +
+gapminder2007 %>%
+  ggplot(aes(x = lifeExp)) +
   geom_histogram(binwidth = 5, color = "white") +
   labs(x = "Life expectancy", y = "Number of countries",
        title = "Histogram of distribution of worldwide life expectancies")
@@ -634,7 +656,8 @@ We see that this data is *left-skewed*, also known as *negatively* \index{skew} 
 Remember, however, that we want to compare life expectancies both between continents and within continents. In other words, our visualizations need to incorporate some notion of the variable `continent`. We can do this easily with a faceted histogram. Recall from Section \@ref(facets) that facets allow us to split a visualization by the different values of another variable. We display the resulting visualization in Figure \@ref(fig:catxplot0b) by adding a \index{ggplot2!facet\_wrap()} `facet_wrap(~ continent, nrow = 2)` layer.
 
 ```{r eval=FALSE} 
-ggplot(gapminder2007, aes(x = lifeExp)) +
+gapminder2007 %>%
+  ggplot(aes(x = lifeExp)) +
   geom_histogram(binwidth = 5, color = "white") +
   labs(x = "Life expectancy", 
        y = "Number of countries",
@@ -732,8 +755,8 @@ As we did in Subsection \@ref(model1table) when studying the relationship betwee
 
 ```{r, eval=FALSE}
 lifeExp_model <- lm(lifeExp ~ continent, data = gapminder2007)
-tidy(lifeExp_model,
-     conf.int = TRUE)
+lifeExp_model %>%
+  tidy(conf.int = TRUE)
 ```
 ```{r, echo=FALSE}
 lifeExp_model <- lm(lifeExp ~ continent, data = gapminder2007)
@@ -859,7 +882,8 @@ Recall in Subsection \@ref(model1points), we defined the following three concept
 We obtained these values and other values using the `get_regression_points()` function from the `moderndive` package. This time, however, let's add an argument setting `ID = "country"`: this is telling the function to use the variable `country` in `gapminder2007` as an *identification variable* in the output. This will help contextualize our analysis by matching values to countries.
 
 ```{r, eval=FALSE}
-regression_points <- augment(lifeExp_model, ID = "country")
+regression_points <- lifeExp_model %>%
+  augment(ID = "country")
 regression_points
 ```
 ```{r model2-residuals, echo=FALSE}
@@ -917,7 +941,7 @@ Regression lines are also known as "best-fitting" lines. But what do we mean by 
 
 ```{r best-fitting-line, fig.height=5.5, echo=FALSE, warning=FALSE, fig.cap="Example of observed value, fitted value, and residual."}
 # First residual
-best_fit_plot <- ggplot(evals, aes(x = bty_avg, y = score)) +
+best_fit_plot <- ggplot(evals_ch11, aes(x = bty_avg, y = score)) +
   geom_point(size = 0.8, color = "grey") +
   labs(x = "Beauty Score", y = "Teaching Score") +
   geom_smooth(method = "lm", se = FALSE) +
@@ -928,7 +952,7 @@ best_fit_plot <- ggplot(evals, aes(x = bty_avg, y = score)) +
 p1 <- best_fit_plot + labs(title = "First instructor's residual")
 
 # Second residual
-index <- which(evals$bty_avg == 2.333 & evals$score == 2.7)
+index <- which(evals_ch11$bty_avg == 2.333 & evals_ch11$score == 2.7)
 target_point <- augment(score_model) %>%
   slice(index)
 x <- target_point$bty_avg
@@ -944,8 +968,8 @@ best_fit_plot <- best_fit_plot +
 p2 <- best_fit_plot + labs(title = "Adding second instructor's residual")
 
 # Third residual
-index <- which(evals$bty_avg == 3.667 & evals$score == 4.4)
-score_model <- lm(score ~ bty_avg, data = evals)
+index <- which(evals_ch11$bty_avg == 3.667 & evals_ch11$score == 4.4)
+score_model <- lm(score ~ bty_avg, data = evals_ch11)
 target_point <- augment(score_model) %>%
   slice(index)
 x <- target_point$bty_avg
@@ -961,8 +985,8 @@ best_fit_plot <- best_fit_plot +
            arrow = arrow(type = "closed", length = unit(0.02, "npc")))
 p3 <- best_fit_plot + labs(title = "Adding third instructor's residual")
 
-index <- which(evals$bty_avg == 6 & evals$score == 3.8)
-score_model <- lm(score ~ bty_avg, data = evals)
+index <- which(evals_ch11$bty_avg == 6 & evals_ch11$score == 3.8)
+score_model <- lm(score ~ bty_avg, data = evals_ch11)
 target_point <- augment(score_model) %>%
   slice(index)
 x <- target_point$bty_avg
@@ -1002,128 +1026,22 @@ Let's use our data wrangling tools from Chapter \@ref(wrangling) to compute the 
 ```{r}
 # Fit regression model:
 score_model <- lm(score ~ bty_avg, 
-                  data = evals)
+                  data = evals_ch11)
 
 # Get regression points:
-regression_points <- augment(score_model)
+
+regression_points <- score_model %>%
+  augment()
 regression_points
+
 # Compute sum of squared residuals
+
 regression_points %>%
   mutate(squared_residuals = .resid^2) %>%
   summarize(sum_of_squared_residuals = sum(squared_residuals))
 ```
 
 Any other straight line drawn in the figure would yield a sum of squared residuals greater than 132. This is a mathematically guaranteed fact that you can prove using calculus and linear algebra. That's why alternative names for the linear regression line are the *best-fitting line* and the *least-squares line*. Why do we square the residuals (i.e., the arrow lengths)? So that both positive and negative deviations of the same amount are treated equally.
-
-
-
-<!-- ### `get_regression_x()` functions {#underthehood} -->
-
-<!-- Recall in this chapter we introduced two functions from the `moderndive` package: -->
-
-<!-- 1. `get_regression_table()` that returns a regression table in Subsection \@ref(model1table) and -->
-<!-- 1. `get_regression_points()` that returns point-by-point information from a regression model in Subsection \@ref(model1points). -->
-
-<!-- What is going on behind the scenes with the `get_regression_table()` and `get_regression_points()` functions? We mentioned in Subsection \@ref(model1table) that these were examples of *wrapper functions*. Such functions take other pre-existing functions and "wrap" them into single functions that hide the user from their inner workings. This way all the user needs to worry about is what the inputs look like and what the outputs look like. In this subsection, we'll "get under the hood" of these functions and see how the "engine" of these wrapper functions works. -->
-
-<!-- Recall our two-step process to generate a regression table from Subsection \@ref(model1table): -->
-
-<!-- ```{r, eval=FALSE} -->
-<!-- # Fit regression model: -->
-<!-- score_model <- lm(formula = score ~ bty_avg, data = evals) -->
-<!-- # Get regression table: -->
-<!-- get_regression_table(score_model) -->
-<!-- ``` -->
-
-<!-- ```{r recall-table, echo=FALSE} -->
-<!-- score_model <- lm(score ~ bty_avg, data = evals) -->
-<!-- get_regression_table(score_model) %>% -->
-<!--   knitr::kable( -->
-<!--     digits = 3, -->
-<!--     caption = "Regression table", -->
-<!--     booktabs = TRUE, -->
-<!--     linesep = "" -->
-<!--   ) %>% -->
-<!--   kable_styling(font_size = ifelse(knitr:::is_latex_output(), 10, 16), -->
-<!--                 latex_options = c("hold_position")) -->
-<!-- ``` -->
-
-<!-- The `get_regression_table()` wrapper function takes two pre-existing functions in other R packages: -->
-
-<!-- * `tidy()` \index{R packages!broom!tidy()} from the [`broom` package](https://broom.tidyverse.org/) [@R-broom] and  -->
-<!-- * `clean_names()` \index{R packages!janitor!clean\_names()} from the [`janitor` package](https://github.com/sfirke/janitor) [@R-janitor] -->
-
-<!-- and "wraps" them into a single function that takes in a saved `lm()` linear model model, here `score_model`, and returns a regression table saved as a "tidy" data frame. Here is how we used the `tidy()` and `clean_names()` functions to produce Table \@ref(tab:regtable-broom): -->
-
-<!-- ```{r, eval=FALSE} -->
-<!-- library(broom) -->
-<!-- library(janitor) -->
-<!-- score_model %>% -->
-<!--   tidy(conf.int = TRUE) %>% -->
-<!--   mutate_if(is.numeric, round, digits = 3) %>% -->
-<!--   clean_names() %>% -->
-<!--   rename(lower_ci = conf_low, upper_ci = conf_high) -->
-<!-- ``` -->
-<!-- ```{r regtable-broom, echo=FALSE, message=FALSE, warning=FALSE} -->
-<!-- library(broom) -->
-<!-- library(janitor) -->
-<!-- score_model %>% -->
-<!--   tidy(conf.int = TRUE) %>% -->
-<!--   mutate_if(is.numeric, round, digits = 3) %>% -->
-<!--   clean_names() %>% -->
-<!--   rename(lower_ci = conf_low, -->
-<!--          upper_ci = conf_high) %>% -->
-<!--   knitr::kable( -->
-<!--     digits = 3, -->
-<!--     caption = "Regression table using tidy() from broom package", -->
-<!--     booktabs = TRUE, -->
-<!--     linesep = "" -->
-<!--   ) %>% -->
-<!--   kable_styling(font_size = ifelse(knitr:::is_latex_output(), 10, 16), -->
-<!--                 latex_options = c("hold_position")) -->
-<!-- ``` -->
-
-<!-- Yikes! That's a lot of code! So, in order to simplify your lives, we made the editorial decision to "wrap" all the code into `get_regression_table()`, freeing you from the need to understand the inner workings of the function. Note that the `mutate_if()` function is from the `dplyr` package and applies the `round()` function to three significant digits precision only to those variables that are numerical. -->
-
-<!-- Similarly, the `get_regression_points()` function is another wrapper function, but this time returning information about the individual points involved in a regression model like the fitted values, observed values, and the residuals. `get_regression_points()` \index{moderndive!get\_regression\_points()} uses the `augment()` \index{R packages!broom!augment()} function in the [`broom` package](https://broom.tidyverse.org/) instead of the `tidy()` function as with `get_regression_table()` to produce the data shown in Table \@ref(tab:regpoints-augment): -->
-
-<!-- ```{r, eval=FALSE} -->
-<!-- library(broom) -->
-<!-- library(janitor) -->
-<!-- score_model %>% -->
-<!--   augment() %>% -->
-<!--   mutate_if(is.numeric, round, digits = 3) %>% -->
-<!--   clean_names() %>% -->
-<!--   select(-c("se_fit", "hat", "sigma", "cooksd", "std_resid")) -->
-<!-- ``` -->
-<!-- ```{r regpoints-augment, echo=FALSE} -->
-<!-- library(broom) -->
-<!-- library(janitor) -->
-<!-- score_model %>% -->
-<!--   augment() %>% -->
-<!--   mutate_if(is.numeric, round, digits = 3) %>% -->
-<!--   clean_names() %>% -->
-<!--   select(-c("se_fit", "hat", "sigma", "cooksd", "std_resid")) %>% -->
-<!--   slice(1:10) %>% -->
-<!--   knitr::kable( -->
-<!--     digits = 3, -->
-<!--     caption = "Regression points using augment() from broom package", -->
-<!--     booktabs = TRUE, -->
-<!--     linesep = "" -->
-<!--   ) %>% -->
-<!--   kable_styling(font_size = ifelse(knitr:::is_latex_output(), 10, 16), -->
-<!--                 latex_options = c("hold_position")) -->
-<!-- ``` -->
-
-<!-- In this case, it outputs only the variables of interest to students learning regression: the outcome variable $y$ (`score`), all explanatory/predictor variables (`bty_avg`), all resulting `fitted` values $\hat{y}$ used by applying the equation of the regression line to `bty_avg`, and the `resid`ual $y - \hat{y}$. -->
-
-<!-- If you're even more curious about how these and other wrapper functions work, take a look at the source code for these functions on [GitHub](https://github.com/moderndive/moderndive/blob/master/R/regression_functions.R). -->
-
-
-
-
-
-
 
 ## Conclusion
 
