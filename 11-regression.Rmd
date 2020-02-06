@@ -314,7 +314,7 @@ evals_ch11 %>%
 
 The line in the resulting Figure \@ref(fig:numxplot3) is called a "regression line." The regression line \index{regression!line} is a visual summary of the relationship between two numerical variables, in our case the outcome variable `score` and the explanatory variable `bty_avg`. The positive slope of the blue line is consistent with our earlier observed correlation coefficient of `r cor_ch11` suggesting that there is a positive relationship between these two variables: as instructors have higher "beauty" scores, so also do they receive higher teaching evaluations. We'll see later, however, that while the correlation coefficient and the slope of a regression line always have the same sign (positive or negative), they typically do not have the same value.
 
-Furthermore, a regression line is "best-fitting" in that it minimizes some mathematical criteria. We present these mathematical criteria in Subsection \@ref(leastsquares), but we suggest you read this subsection only after first reading the rest of this section on regression with one numerical explanatory variable.
+Furthermore, a regression line is "best-fitting" in that it minimizes some mathematical criteria. We present these mathematical criteria in Section \@ref(leastsquares), but we suggest you read this subsection only after first reading the rest of this section on regression with one numerical explanatory variable.
 
 
 ### Simple linear regression {#model1table}
@@ -362,7 +362,18 @@ tidy(score_model,
 
 Note that we used the argument `conf.int = TRUE` in the `tidy()` function; that will be important for later.
 
-Let's first focus on interpreting the regression table output in Table \@ref(tab:regtable), and then we'll later revisit the code that produced it. In the `estimate` column of Table \@ref(tab:regtable) are the intercept $b_0$ = `r evals_line[1]` and the slope $b_1$ = `r evals_line[2]` for `bty_avg`. Thus the equation of the regression line in Figure \@ref(fig:numxplot3) follows:
+How did this code work?  First, we "fit" the linear regression model to the `data` using the `lm()` \index{lm()} function and save this as `score_model`. When we say "fit", we mean  "find the best fitting line to this data." `lm()` stands for "linear model" and is used as follows: `lm(y ~ x, data = data_frame_name)` where:
+
+* `y` is the outcome variable, followed by a tilde `~`. In our case, `y` is set to `score`.
+* `x` is the explanatory variable. In our case, `x` is set to `bty_avg`.
+* The combination of `y ~ x` is called a *model formula*. (Note the order of `y` and `x`.) In our case, the model formula is `score ~ bty_avg`.
+* `data_frame_name` is the name of the data frame that contains the variables `y` and `x`. In our case, `data_frame_name` is the `evals_ch11` data frame.
+
+Second, we take the saved model in `score_model` and apply the `tidy()` function from the **broom** package to it to obtain the regression table in Table \@ref(tab:regtable). 
+
+### Interpreting regression coefficients
+
+In the `estimate` column of Table \@ref(tab:regtable) are the intercept $b_0$ = `r evals_line[1]` and the slope $b_1$ = `r evals_line[2]` for `bty_avg`. Thus the equation of the regression line in Figure \@ref(fig:numxplot3) follows:
 
 $$
 \begin{aligned}
@@ -378,37 +389,41 @@ Of greater interest is the \index{regression!equation of a line!slope} slope $b_
 
 > For every increase of 1 unit in `bty_avg`, there is an *associated* increase of, *on average*, `r evals_line[2]` units of `score`.
 
-We only state that there is an *associated* increase and not necessarily a *causal* increase. For example, perhaps it's not that higher "beauty" scores directly cause higher teaching scores per se. Instead, the following could hold true: individuals from wealthier backgrounds tend to have stronger educational backgrounds and hence have higher teaching scores, while at the same time these wealthy individuals also tend to have higher "beauty" scores. In other words, just because two variables are strongly associated, it doesn't necessarily mean that one causes the other. This is summed up in the often quoted phrase, "correlation is not necessarily causation."  We discuss this idea further in Subsection \@ref(correlation-is-not-causation).  
+We say that this associated increase is *on average* `r evals_line[2]` units of teaching `score`, because you might have two instructors whose `bty_avg` scores differ by 1 unit, but their difference in teaching scores won't necessarily be exactly `r evals_line[2]`. What the slope of `r evals_line[2]` is saying is that across all possible courses, the *average* difference in teaching score between two instructors whose "beauty" scores differ by one is `r evals_line[2]`.
 
-Furthermore, we say that this associated increase is *on average* `r evals_line[2]` units of teaching `score`, because you might have two instructors whose `bty_avg` scores differ by 1 unit, but their difference in teaching scores won't necessarily be exactly `r evals_line[2]`. What the slope of `r evals_line[2]` is saying is that across all possible courses, the *average* difference in teaching score between two instructors whose "beauty" scores differ by one is `r evals_line[2]`.
+Furthermore, we only state that there is an *associated* increase and not necessarily a *causal* increase. For example, perhaps it's not that higher "beauty" scores directly cause higher teaching scores per se. Instead, the following could hold true: individuals from wealthier backgrounds tend to have stronger educational backgrounds and hence have higher teaching scores, while at the same time these wealthy individuals also tend to have higher "beauty" scores. In other words, just because two variables are strongly associated, it doesn't necessarily mean that one causes the other. This is summed up in the often quoted phrase, "correlation is not necessarily causation."
 
-Let's say, however, that we were confident that there is no confounding: that is, that there are no variables such as socioeconomic background that correlate both with a teacher's "beauty" score and teaching score.  (We shouldn't be confident in this, but let's play along for the moment.)  Then, we can interpret the slope in terms of the Rubin Causal Model.  The slope coefficient on `bty_avg` of `r evals_line[2]` then means that the *average treatment effect* of increasing a teacher's "beauty" score by 1 is `r evals_line[2]`.  In the absence of randomization, however, this is likely not a good interpretation of this regression!  Adding additional variables, as we'll do in Chapter \ref{multiple-regression}, may make it more plausible to interpret the regression causally.
+Here is another example: a not-so-great medical doctor goes through medical records and finds that patients who slept with their shoes on tended to wake up more with headaches. So this doctor declares, "Sleeping with shoes on causes headaches!"
 
-Now that we've learned how to compute the equation for the regression line in Figure \@ref(fig:numxplot3) using the values in the `estimate` column of Table \@ref(tab:regtable), and how to interpret the resulting intercept and slope, let's revisit the code that generated this table:
-
-```{r, eval = FALSE}
-# Fit regression model:
-
-score_model <- lm(score ~ bty_avg, data = evals_ch11)
-
-# Get regression table:
-
-score_model %>%
-  tidy(conf.int = TRUE)
+```{r moderndive-figure-causal-graph-2, echo=FALSE, fig.align='center', fig.cap="Does sleeping with shoes on cause headaches?", out.width="60%", out.height="60%"}
+knitr::include_graphics("images/shutterstock/shoes_headache.png")
 ```
 
-First, we "fit" the linear regression model to the `data` using the `lm()` \index{lm()} function and save this as `score_model`. When we say "fit", we mean  "find the best fitting line to this data." `lm()` stands for "linear model" and is used as follows: `lm(y ~ x, data = data_frame_name)` where:
+However, there is a good chance that if someone is sleeping with their shoes on, it's potentially because they are intoxicated from alcohol. Furthermore, higher levels of drinking leads to more hangovers, and hence more headaches. The amount of alcohol consumption here is what's known as a *confounding* variable\index{confounding variable}. It "lurks" behind the scenes, confounding the causal relationship (if any) of "sleeping with shoes on" with "waking up with a headache." We can summarize this in Figure \@ref(fig:moderndive-figure-causal-graph) with a *causal graph* where:
 
-* `y` is the outcome variable, followed by a tilde `~`. In our case, `y` is set to `score`.
-* `x` is the explanatory variable. In our case, `x` is set to `bty_avg`.
-* The combination of `y ~ x` is called a *model formula*. (Note the order of `y` and `x`.) In our case, the model formula is `score ~ bty_avg`.
-* `data_frame_name` is the name of the data frame that contains the variables `y` and `x`. In our case, `data_frame_name` is the `evals_ch11` data frame.
+* Y is a *response* variable; here it is "waking up with a headache." \index{variables!response / outcome / dependent}
+* X is a *treatment* variable whose causal effect we are interested in; here it is "sleeping with shoes on."\index{variables!treatment}
 
-Second, we take the saved model in `score_model` and apply the `tidy()` function from the **broom** package to it to obtain the regression table in Table \@ref(tab:regtable). 
+```{r moderndive-figure-causal-graph, echo=FALSE, fig.align='center', out.width="50%", fig.cap="Causal graph."}
+knitr::include_graphics("images/flowcharts/flowchart.009-cropped.png")
+```
+
+To study the relationship between Y and X, we could use a regression model where the outcome variable is set to Y and the explanatory variable is set to be X, as you've been doing throughout this chapter. However, Figure \@ref(fig:moderndive-figure-causal-graph) also includes a third variable with arrows pointing at both X and Y:
+
+* Z is a *confounding* variable \index{variables!confounding} that affects both X and Y, thereby "confounding" their relationship. Here the confounding variable is alcohol.
+
+Alcohol will cause people to be both more likely to sleep with their shoes on as well as be more likely to wake up with a headache. We can see why this is a problem under the potential outcomes framework: both whether you receive the treatment "sleeping with shoes on" and your potential outcome depends on whether you consumed alcohol, which means that you can't estimate the treatment effect of "sleeping with shoes on" simply by comparing the observed outcome under treatment and the observed outcome under control.  Thus any regression model of the relationship between X and Y should also use Z as an explanatory variable. In other words, our doctor needs to take into account who had been drinking the night before. In the next chapter, we'll start covering multiple regression models that allow us to incorporate more than one variable in our regression models.
+
+Establishing causation is a tricky problem and frequently takes either randomized controlled trials or methods to adjust for the effects of confounding variables. Both these approaches attempt, as best they can, either to take all possible confounding variables into account or negate their impact. This allows researchers to focus only on the relationship of interest: the relationship between the outcome variable Y and the treatment variable X.
+
+As you read news stories, be careful not to fall into the trap of thinking that correlation necessarily implies causation.  Check out the [Spurious Correlations](http://www.tylervigen.com/spurious-correlations) website for some rather comical examples of variables that are correlated, but are definitely not causally related.
+
+Let's say, however, that we were confident that there is no confounding: that is, that there are no variables such as socioeconomic background that correlate both with a teacher's "beauty" score and teaching score.  (We shouldn't be confident in this, but let's play along for the moment.)  Then, we can interpret the slope in terms of the Rubin Causal Model.  The slope coefficient on `bty_avg` of `r evals_line[2]` then means that the *average treatment effect* of increasing a teacher's "beauty" score by 1 is `r evals_line[2]`.  In the absence of randomization, however, this is likely not a good interpretation of this regression!  Adding additional variables, as we'll do in Chapter \@ref{multiple-regression}, may make it more plausible to interpret the regression causally.
+
 
 ### Uncertainty in simple linear regressions
 
-You might be wondering what the remaining five columns in Table \@ref(tab:regtable) are: `std.error`, `statistic`, `p.value`, `conf.low` and `conf.high`. They are the _standard error_, _test statistic_, _p-value_, _lower 95% confidence interval bound_, and _upper 95% confidence interval bound_. We will focus on the confidence interval bounds. We have already explored the concept of confidence intervals in Chapter \@ref(confidence-intervals).  These are the same concept, but applied to the slope of our simple linear regression.
+You might be wondering what the remaining five columns in Table \@ref(tab:regtable) are: `std.error`, `statistic`, `p.value`, `conf.low` and `conf.high`. They are the _standard error_, _test statistic_, _p-value_, _lower 95% confidence interval bound_, and _upper 95% confidence interval bound_. We will focus on the confidence interval bounds. We have already explored the concept of confidence intervals in Chapter \@ref(confidence-intervals).  These bounds are an application the same concept, but applied to the slope of our simple linear regression.
 
 Let's load the **infer** package.  We're going to use the function `rep_sample_n()` to reample from our data 1000 times:
 
@@ -428,7 +443,7 @@ x <- x %>%
   nest()
 ```
 
-`nest()` comes from the **tidyr** package.  After grouping by `replicate` and using `nest()`, we now have a dataset of 1000 rows and a list column named `data`.  What's in this list column?  Each element of `data` is a tibble consisting of one of the resampled datasets we created using `rep_sample_n()`.
+`nest()` comes from the **tidyr** package.  It's easiest to understand what `nest()` does by looking at its output. After grouping by `replicate` and using `nest()`, we now have a dataset of 1000 rows and a list column named `data`.  What's in this list column?  Each element of `data` is a tibble consisting of one of the resampled datasets we created using `rep_sample_n()`.  `nest()` is thus a useful function when you have a series of bootstrapped samples and want to run the same function on each sample.
 
 Now, we can use `map()` to run our linear regression for each dataset:
 
@@ -448,7 +463,8 @@ We still need a column that consists of just the estimates of `bty_avg`.  We can
 
 ```{r}
 x <- x %>% 
-  mutate(disp_coef = map_dbl(reg_results, ~ filter(., term == "bty_avg") %>% pull(estimate)))
+  mutate(disp_coef = map_dbl(reg_results,
+                             ~ filter(., term == "bty_avg") %>% pull(estimate)))
 ```
 
 Now that we have 1000 estimates from our bootstrap samples, we can construct a percentile-based confidence interval easily:
@@ -469,6 +485,10 @@ score_model %>%
 ```
 
 The confidence intervals reported by `lm()` and `tidy()` are very similar to our bootstrap confidence intervals.  Thus, we can interpret these confidence intervals the same way we did in Chapter \@ref(confidence-intervals).  <!-- AR: right now the confidence interval chapter appears to have a frequentist interpretation -- that should be changed. -->  In 95\% of our samples, the estimate was between the lower confidence interval bound and the higher confidence interval bound; our interpretation is that the effect of `bty_avg` on `score`, which we are trying to estimate, has a 95\% chance of falling within these bounds.^[This Bayesian interpretation of the bootstrap confidence interval is often called a [credible interval](https://en.wikipedia.org/wiki/Credible_interval) in the academic literature; you may find yourself in a statistics class that uses the phrase "confidence interval" to refer only to the [frequentist](https://en.wikipedia.org/wiki/Frequentist_inference) concept wherein the interpretation is that 95\% of the *intervals* constructed using this method in repeated samples will contain the true but unknown population parameter.  For this book, we will stick with the phrase "confidence interval" and use the Bayesian interpretation.] <!-- AR: this footnote can probably be moved to wherever confidence intervals are first discussed. -->  From now on, we'll just use `lm()` because it is simpler, but when considering how to interpret the confidence intervals, remember that you'd obtain very similar results from the bootstrap method.
+
+Instead of looking at confidence intervals, a common alternative approach is to conduct *hypothesis tests*, where one hypothesis is called the "null hypothesis" (in a regression context, generally that the regression coefficient is equal to zero) and the result of the test is either *rejecting* the null hypothesis (so you'd conclude that the regression coefficient probably is not zero) or *failing to reject* the null hypothesis.  The decision whether to reject the null hypothesis is generally made with reference to a *p-value*, a measure of how likely one would observe results at least as extreme as the results actually observed if the null hypothesis were true.  A *p*-value cutoff, often 0.05, is employed: if the *p*-value is lower, the null hypothesis is rejected, otherwise the hypothesis is not rejected.
+
+We think this is a bad way to make decisions.  Two very similar datasets could produce *p*-values of $p = 0.04$ and $p = 0.06$ for a coefficient of interest. If you would make one decision in the former case and a totally different decision in the latter case, then there's something wrong with your decision-making process!  Rather, we think it is more sensible to look at the data, construct models to summarize important features of the data, and make decisions based on those models that take into account the uncertainty in the model's estimates.
 
 ### Observed/fitted values and residuals {#model1points}
 
@@ -556,7 +576,7 @@ Just as we did for the instructor of the 21st course in the `evals_ch11` dataset
 * `.fitted` = 4.25 = `r evals_line[1]` + `r evals_line[2]` $\cdot$ 5.50 is the fitted value $\widehat{y}$ on the regression line for this course's instructor.
 * `.resid` = 0.153 =  4.4 - 4.25 is the value of the residual for this instructor. In other words, the model's fitted value was off by 0.153 teaching score units for this course's instructor.
 
-At this point, you can skip ahead if you like to Subsection \@ref(leastsquares) to learn about the processes behind what makes "best-fitting" regression lines. As a primer, a "best-fitting" line refers to the line that minimizes the *sum of squared residuals* out of all possible lines we can draw through the points. In Section \@ref(model2), we'll discuss another common scenario of having a categorical explanatory variable and a numerical outcome variable.
+At this point, you can skip ahead if you like to Section \@ref(leastsquares) to learn about the processes behind what makes "best-fitting" regression lines. As a primer, a "best-fitting" line refers to the line that minimizes the *sum of squared residuals* out of all possible lines we can draw through the points. In Section \@ref(model2), we'll discuss another common scenario of having a categorical explanatory variable and a numerical outcome variable.
 
 
 ## One categorical explanatory variable {#model2}
@@ -758,12 +778,13 @@ In Subsection \@ref(model1table) we introduced simple linear regression, which i
 As we did in Subsection \@ref(model1table) when studying the relationship between teaching scores and "beauty" scores, let's output the regression table for this model. Recall that this is done in two steps:
 
 1. We first "fit" the linear regression model using the `lm(y ~ x, data)` function and save it in `lifeExp_model`.
-1. We get the regression table by applying the `tidy()` function from the **broom** package to `lifeExp_model`.
+1. We get the regression table by applying the `tidy()` function from the **broom** package to `lifeExp_model`.  We'll print the `term`, `estimate`, `conf.low`, and `conf.high` columns.
 
 ```{r, eval=FALSE}
 lifeExp_model <- lm(lifeExp ~ continent, data = gapminder2007)
 lifeExp_model %>%
-  tidy(conf.int = TRUE)
+  tidy(conf.int = TRUE) %>%
+  select(term, estimate, conf.low, conf.high)
 ```
 ```{r, echo=FALSE}
 lifeExp_model <- lm(lifeExp ~ continent, data = gapminder2007)
@@ -771,6 +792,7 @@ lifeExp_model <- lm(lifeExp ~ continent, data = gapminder2007)
 ```{r catxplot4b, echo=FALSE}
 tidy(lifeExp_model,
      conf.int = TRUE) %>%
+  select(term, estimate, conf.low, conf.high) %>%
   knitr::kable(
     digits = 3,
     caption = "Linear regression table",
@@ -781,9 +803,9 @@ tidy(lifeExp_model,
                 latex_options = c("hold_position"))
 ```
 
-Let's once again focus on the values in the `term` and `estimate` columns of Table \@ref(tab:catxplot4b). Why are there now 5 rows? Let's break them down one-by-one:
+Why are there now 5 rows? Let's break them down one-by-one:
 
-1. `intercept` corresponds to the mean life expectancy of countries in Africa of 54.8 years.
+1. `intercept` corresponds to the mean life expectancy of countries in Africa of 54.8 years (from the `estimate` column).
 1. `continentAmericas` corresponds to countries in the Americas and the value +18.8 is the same difference in mean life expectancy relative to Africa we displayed in Table \@ref(tab:continent-mean-life-expectancies). In other words, the mean life expectancy of countries in the Americas is $54.8 + 18.8 = 73.6$.
 1. `continentAsia` corresponds to countries in Asia and the value +15.9 is the same difference in mean life expectancy relative to Africa we displayed in Table \@ref(tab:continent-mean-life-expectancies). In other words, the mean life expectancy of countries in Asia is $54.8 + 15.9 = 70.7$.
 1. `continentEurope` corresponds to countries in Europe and the value +22.8 is the same difference in mean life expectancy relative to Africa we displayed in Table \@ref(tab:continent-mean-life-expectancies). In other words, the mean life expectancy of countries in Europe is $54.8 + 22.8 = 77.6$.
@@ -792,6 +814,8 @@ Let's once again focus on the values in the `term` and `estimate` columns of Tab
 To summarize, the 5 values in the `estimate` column in Table \@ref(tab:catxplot4b) correspond to the "baseline for comparison" continent Africa (the intercept) as well as four "offsets" from this baseline for the remaining 4 continents: the Americas, Asia, Europe, and Oceania.
 
 You might be asking at this point why was Africa chosen as the "baseline for comparison" group. This is the case for no other reason than it comes first alphabetically of the five continents; by default R arranges factors/categorical variables in alphanumeric order. You can change this baseline group to be another continent if you manipulate the variable `continent`'s factor "levels" using the **forcats** package. See [Chapter 15](https://r4ds.had.co.nz/factors.html) of *R for Data Science* [@rds2016] for examples. 
+
+It is also important to take a look at the confidence intervals to get a sense of how uncertain our estimates are.  Note that the confidence interval for the Oceania estimate is the widest.  Why is that?  There are only two countries in Oceania (Australia and New Zealand), and thus we have a great deal of uncertainty around these estimates.  In contrast, there are `r gapminder2007 %>% count(continent) %>% filter(continent == "Africa") %>% pull(n)` countries in Africa, and thus it has the narrowest confidence interval.
 
 Let's now write the equation for our fitted values $\widehat{y} = \widehat{\text{life exp}}$.
 
@@ -875,8 +899,7 @@ Let's generalize this idea a bit. If we fit a linear regression model using a ca
 
 <!--Phew! That was a lot of work! --> Understanding a regression table output when you're using a categorical explanatory variable is a topic those new to regression often struggle with. The only real remedy for these struggles is practice, practice, practice. However, once you equip yourselves with an understanding of how to create regression models using categorical explanatory variables, you'll be able to incorporate many new variables into your models, given the large amount of the world's data that is categorical. If you feel like you're still struggling at this point, however, we suggest you closely compare Tables \@ref(tab:continent-mean-life-expectancies) and \@ref(tab:catxplot4b) and note how you can compute all the values from one table using the values in the other.
 
-
-
+Can we interpret these coefficients causally, using the Rubin Causal Model?  Remember the phrase *no causation without manipulation*.  If we interpreted the coefficient on Asia causally, we would be saying that a country being in Asia (rather than Africa) has a *causal effect* of 15.9 years on life expectancy: the potential outcome when "treatment" is Asia is 15.9 years higher than when "treatment" is Africa.  But does this make sense?  It's hard to imagine manipulating the continent a country is in.  Thus, it is hard to conceptualize these estimates as being the "causal effect" of being in one country versus another.
 
 ### Observed/fitted values and residuals {#model2points}
 
@@ -911,38 +934,58 @@ Observe in Table \@ref(tab:model2-residuals) that `.fitted` contains the fitted 
 
 The `.resid` column is simply $y - \widehat{y}$ = `lifeExp - .fitted`. These values can be interpreted as the deviation of a country's life expectancy from its continent's average life expectancy. For example, look at the first row of Table \@ref(tab:model2-residuals) corresponding to Afghanistan. The residual of $y - \widehat{y} = 43.8 - 70.7 = -26.9$ is telling us that Afghanistan's life expectancy is a whopping 26.9 years lower than the mean life expectancy of all Asian countries. This can in part be explained by the many years of war that country has suffered.
 
+## Fitting multiple models using `map()`
 
-## Related topics
+<!-- AR: beginning of working with list columns -->
 
-### Correlation is not necessarily causation {#correlation-is-not-causation}
+Now that we know how to run simple linear regressions, let's run many at once!  
 
-Throughout this chapter we've been cautious when interpreting regression slope coefficients. We always discussed the "associated" effect of an explanatory variable $x$ on an outcome variable $y$. For example, our statement from Subsection \@ref(model1table) that "for every increase of 1 unit in `bty_avg`, there is an *associated* increase of on average `r evals_line[2]` units of `score`." We include the term "associated" to be extra careful not to suggest we are making a *causal* statement. So while "beauty" score of `bty_avg` is positively correlated with teaching `score`, we can't necessarily make any statements about "beauty" scores' direct causal effect  on teaching score without more information on how this study was conducted. Here is another example: a not-so-great medical doctor goes through medical records and finds that patients who slept with their shoes on tended to wake up more with headaches. So this doctor declares, "Sleeping with shoes on causes headaches!"
+We'll use the `governor_state_forecast` data from the **fivethirtyeight** package.  This dataset has the day-by-day forecasts FiveThirtyEight published in the 2018 gubernatorial races from October 11 to November 6.  Which Republican candidate saw his or her probability of winning increase the most during that time?  We can get a sense of this by running a series of linear models, with the outcome variable being FiveThirtyEight's predicted probability of the Republican candidate winning and the explanatory variable being the number of days since the forecast began.
 
-```{r moderndive-figure-causal-graph-2, echo=FALSE, fig.align='center', fig.cap="Does sleeping with shoes on cause headaches?", out.width="60%", out.height="60%"}
-knitr::include_graphics("images/shutterstock/shoes_headache.png")
+Let's first load the `governor_state_forecast` data and get it in the form we'll need:
+
+```{r}
+library(fivethirtyeight)
+
+gov <- governor_state_forecast %>%
+  filter(model == "classic",
+         party == "R") %>%
+  select(forecastdate, state, candidate, party, win_probability) %>%
+  mutate(days = as.numeric(forecastdate) - min(as.numeric(forecastdate)),
+         statecand = paste(candidate, " (", state, ")", sep = ""))
+
+glimpse(gov)
 ```
 
-However, there is a good chance that if someone is sleeping with their shoes on, it's potentially because they are intoxicated from alcohol. Furthermore, higher levels of drinking leads to more hangovers, and hence more headaches. The amount of alcohol consumption here is what's known as a *confounding/lurking* variable\index{confounding variable}. It "lurks" behind the scenes, confounding the causal relationship (if any) of "sleeping with shoes on" with "waking up with a headache." We can summarize this in Figure \@ref(fig:moderndive-figure-causal-graph) with a *causal graph* where:
 
-* Y is a *response* variable; here it is "waking up with a headache." \index{variables!response / outcome / dependent}
-* X is a *treatment* variable whose causal effect we are interested in; here it is "sleeping with shoes on."\index{variables!treatment}
-
-```{r moderndive-figure-causal-graph, echo=FALSE, fig.align='center', out.width="50%", fig.cap="Causal graph."}
-knitr::include_graphics("images/flowcharts/flowchart.009-cropped.png")
+```{r}
+gov <- gov %>%
+  group_by(statecand) %>%
+  nest() %>%
+  mutate(mod = map(data, ~ lm(win_probability ~ days, data = .)),
+         reg_results = map(mod, ~ tidy(.)),
+         disp_coef = map_dbl(reg_results,
+                             ~ filter(., term == "days") %>% pull(estimate)),
+         glance = map(mod, glance)) %>%
+  unnest(glance)
 ```
 
-To study the relationship between Y and X, we could use a regression model where the outcome variable is set to Y and the explanatory variable is set to be X, as you've been doing throughout this chapter. However, Figure \@ref(fig:moderndive-figure-causal-graph) also includes a third variable with arrows pointing at both X and Y:
+```{r}
+gov %>%
+  ungroup() %>%
+  top_n(5, disp_coef) %>%
+  unnest(data) %>%
+  ggplot(aes(x = days, y = win_probability)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_wrap(~ statecand) +
+  labs(x = "Days since forecast began",
+       y = "FiveThirtyEight's win probability",
+       caption = "Data source: FiveThirtyEight") +
+  theme_classic()
+```
 
-* Z is a *confounding* variable \index{variables!confounding} that affects both X and Y, thereby "confounding" their relationship. Here the confounding variable is alcohol.
-
-Alcohol will cause people to be both more likely to sleep with their shoes on as well as be more likely to wake up with a headache. Thus any regression model of the relationship between X and Y should also use Z as an explanatory variable. In other words, our doctor needs to take into account who had been drinking the night before. In the next chapter, we'll start covering multiple regression models that allow us to incorporate more than one variable in our regression models.
-
-Establishing causation is a tricky problem and frequently takes either carefully designed experiments or methods to control for the effects of confounding variables. Both these approaches attempt, as best they can, either to take all possible confounding variables into account or negate their impact. This allows researchers to focus only on the relationship of interest: the relationship between the outcome variable Y and the treatment variable X.
-
-As you read news stories, be careful not to fall into the trap of thinking that correlation necessarily implies causation.  Check out the [Spurious Correlations](http://www.tylervigen.com/spurious-correlations) website for some rather comical examples of variables that are correlated, but are definitely not causally related.
-
-
-### Best-fitting line {#leastsquares}
+## Best-fitting line {#leastsquares}
 
 Regression lines are also known as "best-fitting" lines. But what do we mean by "best"? Let's unpack the criteria that is used in regression to determine "best." Recall Figure \@ref(fig:numxplot4), where for an instructor with a beauty score of $x = 7.333$ we mark the *observed value* $y$ with a circle, the *fitted value* $\widehat{y}$ with a square, and the *residual* $y - \widehat{y}$ with an arrow. We re-display Figure \@ref(fig:numxplot4) in the top-left plot of Figure \@ref(fig:best-fitting-line) in addition to three more arbitrarily chosen course instructors:
 
@@ -1067,18 +1110,3 @@ knitr::include_graphics("images/copyright/guess_the_correlation.png")
 ### What's to come?
 
 In this chapter, you've studied the term _basic regression_, where you fit models that only have one explanatory variable. In Chapter \@ref(multiple-regression), we'll study *multiple regression*, where our regression models can now have more than one explanatory variable! In particular, we'll consider two scenarios: regression models with one numerical and one categorical explanatory variable and regression models with two numerical explanatory variables. This will allow you to construct more sophisticated and more powerful models, all in the hopes of better explaining your outcome variable $y$.
-
-<!-- AR: beginning of working with list columns -->
-<!-- library(fivethirtyeight) -->
-
-<!-- x <- governor_state_forecast %>% -->
-<!--   filter(model == "classic", -->
-<!--          party == "R") %>% -->
-<!--   mutate(days = as.numeric(forecastdate) - min(as.numeric(forecastdate))) %>% -->
-<!--   group_by(state) %>% -->
-<!--   nest() %>% -->
-<!--   mutate(mod = map(data, ~ lm(win_probability ~ days, data = .)), -->
-<!--          reg_results = map(mod, ~ tidy(.)), -->
-<!--          disp_coef = map_dbl(reg_results, ~ filter(., term == "days") %>% pull(estimate)), -->
-<!--          glance = map(mod, glance)) %>% -->
-<!--   unnest(glance) -->
