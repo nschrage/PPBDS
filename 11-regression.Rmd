@@ -452,20 +452,14 @@ x <- x %>%
   mutate(mod = map(data, ~ lm(score ~ bty_avg, data = .)))
 ```
 
-Now we have a new list column, `mod`, that contains the model objects created by `lm()`.  We can then use `map()` again to `tidy()` our model objects in order to make it easier to obtain the results:
+Now we have a new list column, `mod`, that contains the model objects created by `lm()`.  We can then use the `pluck()` function on our model objects in order to obtain the coefficient we want:
 
 ```{r}
 x <- x %>% 
-  mutate(reg_results = map(mod, ~ tidy(.)))
+  mutate(disp_coef = map_dbl(mod, ~ pluck(coef(.), "bty_avg")))
 ```
 
-We still need a column that consists of just the estimates of `bty_avg`.  We can use `map_dbl()` to obtain this:
-
-```{r}
-x <- x %>% 
-  mutate(disp_coef = map_dbl(reg_results,
-                             ~ filter(., term == "bty_avg") %>% pull(estimate)))
-```
+Calling `coef()` on an `lm` model object produces a named vector of the coefficients. `pluck()` then pulls the element of that vector named "bty_avg", which is what we want.
 
 Now that we have 1000 estimates from our bootstrap samples, we can construct a percentile-based confidence interval easily:
 
@@ -488,7 +482,7 @@ The confidence intervals reported by `lm()` and `tidy()` are very similar to our
 
 Instead of looking at confidence intervals, a common alternative approach is to conduct *hypothesis tests*, where one hypothesis is called the "null hypothesis" (in a regression context, generally that the regression coefficient is equal to zero) and the result of the test is either *rejecting* the null hypothesis (so you'd conclude that the regression coefficient probably is not zero) or *failing to reject* the null hypothesis.  The decision whether to reject the null hypothesis is generally made with reference to a *p-value*, a measure of how likely one would observe results at least as extreme as the results actually observed if the null hypothesis were true.  A *p*-value cutoff, often 0.05, is employed: if the *p*-value is lower, the null hypothesis is rejected, otherwise the hypothesis is not rejected.
 
-We think this is a bad way to make decisions.  Two very similar datasets could produce *p*-values of $p = 0.04$ and $p = 0.06$ for a coefficient of interest. If you would make one decision in the former case and a totally different decision in the latter case, then there's something wrong with your decision-making process!  Rather, we think it is more sensible to look at the data, construct models to summarize important features of the data, and make decisions based on those models that take into account the uncertainty in the model's estimates.
+We think this is a bad way to make decisions.  Two very similar datasets could produce *p*-values of $p = 0.04$ and $p = 0.06$ for a coefficient of interest. If you would make one decision in the former case and a totally different decision in the latter case, then there's something wrong with your decision-making process!  Rather, we think it is more sensible to look at the data, construct models to summarize important features of the data, and make decisions based on those models that take into account the uncertainty in the models' estimates.
 
 ### Observed/fitted values and residuals {#model1points}
 
@@ -957,23 +951,50 @@ gov <- governor_state_forecast %>%
 glimpse(gov)
 ```
 
+We `filter`ed to Republicans as well as to `model == "classic"` because FiveThirtyEight presented three versions of their model and we want to limit our analysis to one.  We also `mutate`d to create a variable `days` that is the number of days since the forecast began (October 11) and `statecand` which combines the name of the Republican candidate with the state abbreviation, which will be useful for plotting.
+
+Next, we need to use `nest()` like we did when creating bootstrapped confidence intervals, except this time we are `nest`ing the data by `statecand`:
 
 ```{r}
 gov <- gov %>%
   group_by(statecand) %>%
-  nest() %>%
-  mutate(mod = map(data, ~ lm(win_probability ~ days, data = .)),
-         reg_results = map(mod, ~ tidy(.)),
-         disp_coef = map_dbl(reg_results,
-                             ~ filter(., term == "days") %>% pull(estimate)),
-         glance = map(mod, glance)) %>%
-  unnest(glance)
+  nest()
 ```
 
+Now each observation in our dataset is a candidate and we have a list column `data` that consists of the rest of the data for each candidate.  We can use `map_*` functions just as in the bootstrapping example to get the coefficient on `days` for each candidate:
+
 ```{r}
-gov %>%
+gov <- gov %>%
+  mutate(mod = map(data, ~ lm(win_probability ~ days, data = .)),
+         disp_coef = map_dbl(mod, ~ pluck(coef(.), "days")))
+
+glimpse(gov)
+```
+
+We now have the data to answer the question about which candidate saw his or her estimated probability go up the most.  Let's use the `slice()` function in the **dplyr** package to answer this.  Note that because we have grouped data, we'll have to `ungroup()` before we can `slice()`:
+
+```{r}
+gov_top5 <- gov %>%
   ungroup() %>%
-  top_n(5, disp_coef) %>%
+  arrange(desc(disp_coef)) %>%
+  slice(1:5)
+
+gov_top5 %>%
+  select(statecand, disp_coef)
+```
+
+We can show so much more, however, if we presented the results graphically.  To do this, we'll need to learn the companion function to `nest()`: `unnest()`.  While `nest()` collapsed the data so that each observation was a `statecand`, `unnest(data)` will return the data to its original unit of analysis, with each row one day's forecast for a particular candidate:
+
+```{r}
+gov_top5 %>%
+  unnest(data) %>%
+  glimpse()
+```
+
+Note that `unnest`ing flattens out the `data` list column but keeps everything else we've created.  With the data in this form, it's easy to use `ggplot()` to create a scatterplot for each of the five candidates with the greatest `disp_coef`:
+
+```{r}
+gov_top5 %>%
   unnest(data) %>%
   ggplot(aes(x = days, y = win_probability)) +
   geom_point() +
@@ -984,6 +1005,25 @@ gov %>%
        caption = "Data source: FiveThirtyEight") +
   theme_classic()
 ```
+
+We could easily replicate this process if we wanted to find the five candidates who saw their fortunes decline the most:
+
+```{r}
+gov %>%
+  ungroup() %>%
+  arrange(disp_coef) %>%
+  slice(1:5) %>%
+  unnest(data) %>%
+  ggplot(aes(x = days, y = win_probability)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_wrap(~ statecand) +
+  labs(x = "Days since forecast began",
+       y = "FiveThirtyEight's win probability",
+       caption = "Data source: FiveThirtyEight") +
+  theme_classic()
+```
+
 
 ## Best-fitting line {#leastsquares}
 
