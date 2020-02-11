@@ -25,10 +25,10 @@ set.seed(76)
 ```
 
 
-Now that we are equipped with data visualization skills from Chapter \@ref(viz), data wrangling skills from Chapter \@ref(wrangling), and an understanding of how to import data and the concept of a "tidy" data format from Chapter \@ref(tidy), let's now proceed with data modeling. The fundamental premise of data modeling is to make explicit the relationship between:
+The fundamental goal of data modeling is to make explicit the relationship between:
 
-* an *outcome variable* $y$, also called a *dependent variable* or response variable, \index{variables!response / outcome / dependent} and
-* an *explanatory/predictor variable* $x$, also called an *independent variable* or \index{variables!explanatory / predictor / independent} covariate.
+* an *outcome variable* $y$, also called a *dependent variable* or response variable, and  
+* an *explanatory/predictor variable* $x$, also called an *independent variable* or  covariate.
 
 Another way to state this is using mathematical terminology: we will model the outcome variable $y$ "as a function" of the explanatory/predictor variable $x$. When we say "function" here, we aren't referring to functions in R like the `ggplot()` function, but rather to a mathematical function. But, why do we have two different labels, explanatory and predictor, for the variable $x$? That's because even though the two terms are often used interchangeably, roughly speaking data modeling serves one of two purposes:
 
@@ -139,7 +139,7 @@ An alternative way to look at the raw data values is by choosing a random sample
 evals_ch11 %>%
   sample_n(size = 5)
 ```
-```{r five-random-courses, echo=FALSE}
+```{r, echo=FALSE}
 evals_ch11 %>%
   sample_n(5) %>%
   knitr::kable(
@@ -154,7 +154,7 @@ evals_ch11 %>%
 
 Now that we've looked at the raw values in our `evals_ch11` data frame and got a preliminary sense of the data, let's move on to the next common step in an exploratory data analysis: computing summary statistics. Let's start by computing the mean and median of our numerical outcome variable `score` and our numerical explanatory variable "beauty" score denoted as `bty_avg`. We'll do this by using the `summarize()` function from `dplyr` along with the `mean()` and `median()` summary functions we saw in Section \@ref(summarize).
 
-```{r eval=TRUE}
+```{r, eval=TRUE}
 evals_ch11 %>%
   summarize(mean_bty_avg = mean(bty_avg),
             mean_score = mean(score),
@@ -164,7 +164,7 @@ evals_ch11 %>%
 
 However, what if we want other summary statistics as well, such as the standard deviation (a measure of spread), the minimum and maximum values, and various percentiles? 
 
-Typing out all these summary statistic functions in `summarize()` would be long and tedious. Instead, let's use the convenient `skim()` function from the **skimr** \index{R packages!skimr!skim()} package. This function takes in a data frame, "skims" it, and returns commonly used summary statistics. Let's take our `evals_ch11` data frame, `select()` only the outcome and explanatory variables teaching `score` and `bty_avg`, and pipe them into the `skim()` function:
+Typing out all these summary statistic functions in `summarize()` would be long and tedious. Instead, let's use the convenient `skim()` function from the **skimr** package. This function takes in a data frame, "skims" it, and returns commonly used summary statistics. Let's take our `evals_ch11` data frame, `select()` only the outcome and explanatory variables teaching `score` and `bty_avg`, and pipe them into the `skim()` function:
 
 ```{r}
 evals_ch11 %>% 
@@ -195,7 +195,7 @@ The `skim()` function only returns what are known as *univariate* \index{univari
 
 Figure \@ref(fig:correlation1) gives examples of 9 different correlation coefficient values for hypothetical numerical variables $x$ and $y$. For example, observe in the top right plot that for a correlation coefficient of -0.75 there is a negative linear relationship between $x$ and $y$, but it is not as strong as the negative linear relationship between $x$ and $y$ when the correlation coefficient is -0.9 or -1.
 
-```{r correlation1, echo=FALSE, fig.cap="Nine different correlation coefficients.", fig.height=2.6}
+```{r, echo=FALSE, fig.cap="Nine different correlation coefficients.", fig.height=2.6}
 correlation <- c(-0.9999, -0.9, -0.75, -0.3, 0, 0.3, 0.75, 0.9, 0.9999)
 n_sim <- 100
 values <- NULL
@@ -242,7 +242,7 @@ evals_ch11 %>%
   summarize(correlation = cor(score, bty_avg))
 ```
 
-```{r echo=FALSE}
+```{r, echo=FALSE}
 cor_ch11 <- evals_ch11 %>%
   summarize(correlation = cor(score, bty_avg)) %>% 
   round(3) %>% 
@@ -262,7 +262,7 @@ evals_ch11 %>%
        title = "Scatterplot of relationship of teaching and beauty scores")
 ```
 
-```{r numxplot1, warning=FALSE, echo=FALSE, fig.cap="Instructor evaluation scores at UT Austin.", fig.height=4.5}
+```{r, warning=FALSE, echo=FALSE, fig.cap="Instructor evaluation scores at UT Austin.", fig.height=4.5}
 # Define orange box
 margin_x <- 0.15
 margin_y <- 0.075
@@ -291,7 +291,7 @@ evals_ch11 %>%
   labs(x = "Beauty Score", y = "Teaching Score",
        title = "Scatterplot of relationship of teaching and beauty scores")
 ```
-```{r numxplot2, warning=FALSE, echo=FALSE, fig.cap="Instructor evaluation scores at UT Austin.", fig.height=4.2}
+```{r, warning=FALSE, echo=FALSE, fig.cap="Instructor evaluation scores at UT Austin.", fig.height=4.2}
 ggplot(evals_ch11, aes(x = bty_avg, y = score)) +
   geom_jitter() +
   labs(x = "Beauty Score", y = "Teaching Score",
@@ -303,7 +303,7 @@ It is now apparent that there are `r evals_ch11 %>% filter(score > 4.5 & bty_avg
 
 Let's build on the unjittered scatterplot in Figure \@ref(fig:numxplot1) by adding a "best-fitting" line: of all possible lines we can draw on this scatterplot, it is the line that "best" fits through the cloud of points. We do this by adding a new `geom_smooth(method = "lm", se = FALSE)` layer to the `ggplot()` code that created the scatterplot in Figure \@ref(fig:numxplot1). The `method = "lm"` argument sets the line to be a "`l`inear `m`odel." The `se = FALSE` \index{ggplot2!geom\_smooth()} argument suppresses _standard error_ uncertainty bars. (We defined the concept of _standard error_ in Subsection \@ref(sampling-definitions).)
 
-```{r numxplot3, warning=FALSE, fig.cap="Regression line."}
+```{r, warning=FALSE, fig.cap="Regression line."}
 evals_ch11 %>%
   ggplot(aes(x = bty_avg, y = score)) +
   geom_point() +
@@ -347,7 +347,7 @@ evals_line <- score_model %>%
   tidy() %>%
   pull(estimate)
 ```
-```{r regtable, echo=FALSE}
+```{r, echo=FALSE}
 tidy(score_model,
      conf.int = TRUE) %>%
   knitr::kable(
@@ -395,7 +395,7 @@ Furthermore, we only state that there is an *associated* increase and not necess
 
 Here is another example: a not-so-great medical doctor goes through medical records and finds that patients who slept with their shoes on tended to wake up more with headaches. So this doctor declares, "Sleeping with shoes on causes headaches!"
 
-```{r moderndive-figure-causal-graph-2, echo=FALSE, fig.align='center', fig.cap="Does sleeping with shoes on cause headaches?", out.width="60%", out.height="60%"}
+```{r, echo=FALSE, fig.align='center', fig.cap="Does sleeping with shoes on cause headaches?", out.width="60%", out.height="60%"}
 knitr::include_graphics("images/shutterstock/shoes_headache.png")
 ```
 
@@ -404,7 +404,7 @@ However, there is a good chance that if someone is sleeping with their shoes on,
 * Y is a *response* variable; here it is "waking up with a headache." \index{variables!response / outcome / dependent}
 * X is a *treatment* variable whose causal effect we are interested in; here it is "sleeping with shoes on."\index{variables!treatment}
 
-```{r moderndive-figure-causal-graph, echo=FALSE, fig.align='center', out.width="50%", fig.cap="Causal graph."}
+```{r, echo=FALSE, fig.align='center', out.width="50%", fig.cap="Causal graph."}
 knitr::include_graphics("images/flowcharts/flowchart.009-cropped.png")
 ```
 
@@ -447,16 +447,16 @@ x <- x %>%
 
 Now, we can use `map()` to run our linear regression for each dataset:
 
-```{r}
+```{r works_OK}
 x <- x %>% 
   mutate(mod = map(data, ~ lm(score ~ bty_avg, data = .)))
 ```
 
 Now we have a new list column, `mod`, that contains the model objects created by `lm()`.  We can then use the `pluck()` function on our model objects in order to obtain the coefficient we want:
 
-```{r}
+```{r does_not_work}
 x <- x %>% 
-  mutate(disp_coef = map_dbl(mod, ~ pluck(coef(.), "bty_avg")))
+  mutate(disp_coef = map_dbl(mod, ~ purrr::pluck(coef(.), "bty_avg")))
 ```
 
 Calling `coef()` on an `lm` model object produces a named vector of the coefficients. `pluck()` then pulls the element of that vector named "bty_avg", which is what we want.
@@ -465,8 +465,8 @@ Now that we have 1000 estimates from our bootstrap samples, we can construct a p
 
 ```{r}
 x %>%
-  pull(disp_coef) %>%
-  quantile(c(0.025, 0.5, 0.975))
+ pull(disp_coef) %>%
+ quantile(c(0.025, 0.5, 0.975))
 ```
 
 While this process is relatively straightforward, there's a simple shortcut we can use.  Take a look at the results from `score_model %>% tidy(conf.int = TRUE)`:
@@ -478,7 +478,7 @@ score_model %>%
   select(estimate, conf.low, conf.high)
 ```
 
-The confidence intervals reported by `lm()` and `tidy()` are very similar to our bootstrap confidence intervals.  Thus, we can interpret these confidence intervals the same way we did in Chapter \@ref(confidence-intervals).  <!-- AR: right now the confidence interval chapter appears to have a frequentist interpretation -- that should be changed. -->  In 95\% of our samples, the estimate was between the lower confidence interval bound and the higher confidence interval bound; our interpretation is that the effect of `bty_avg` on `score`, which we are trying to estimate, has a 95\% chance of falling within these bounds.^[This Bayesian interpretation of the bootstrap confidence interval is often called a [credible interval](https://en.wikipedia.org/wiki/Credible_interval) in the academic literature; you may find yourself in a statistics class that uses the phrase "confidence interval" to refer only to the [frequentist](https://en.wikipedia.org/wiki/Frequentist_inference) concept wherein the interpretation is that 95\% of the *intervals* constructed using this method in repeated samples will contain the true but unknown population parameter.  For this book, we will stick with the phrase "confidence interval" and use the Bayesian interpretation.] <!-- AR: this footnote can probably be moved to wherever confidence intervals are first discussed. -->  From now on, we'll just use `lm()` because it is simpler, but when considering how to interpret the confidence intervals, remember that you'd obtain very similar results from the bootstrap method.
+The confidence intervals reported by `lm()` and `tidy()` are very similar to our bootstrap confidence intervals.  Thus, we can interpret these confidence intervals the same way we did in Chapter \@ref(confidence-intervals).  In 95\% of our samples, the estimate was between the lower confidence interval bound and the higher confidence interval bound; our interpretation is that the effect of `bty_avg` on `score`, which we are trying to estimate, has a 95\% chance of falling within these bounds.^[This Bayesian interpretation of the bootstrap confidence interval is often called a [credible interval](https://en.wikipedia.org/wiki/Credible_interval) in the academic literature; you may find yourself in a statistics class that uses the phrase "confidence interval" to refer only to the [frequentist](https://en.wikipedia.org/wiki/Frequentist_inference) concept wherein the interpretation is that 95\% of the *intervals* constructed using this method in repeated samples will contain the true but unknown population parameter.  For this book, we will stick with the phrase "confidence interval" and use the Bayesian interpretation.] <!-- AR: this footnote can probably be moved to wherever confidence intervals are first discussed. -->  From now on, we'll just use `lm()` because it is simpler, but when considering how to interpret the confidence intervals, remember that you'd obtain very similar results from the bootstrap method.
 
 Instead of looking at confidence intervals, a common alternative approach is to conduct *hypothesis tests*, where one hypothesis is called the "null hypothesis" (in a regression context, generally that the regression coefficient is equal to zero) and the result of the test is either *rejecting* the null hypothesis (so you'd conclude that the regression coefficient probably is not zero) or *failing to reject* the null hypothesis.  The decision whether to reject the null hypothesis is generally made with reference to a *p-value*, a measure of how likely one would observe results at least as extreme as the results actually observed if the null hypothesis were true.  A *p*-value cutoff, often 0.05, is employed: if the *p*-value is lower, the null hypothesis is rejected, otherwise the hypothesis is not rejected.
 
@@ -488,7 +488,7 @@ We think this is a bad way to make decisions.  Two very similar datasets could p
 
 We just saw how to get the value of the intercept and the slope of a regression line from the `estimate` column of a regression table generated by the `tidy()` function. Now instead say we want information on individual observations. For example, let's focus on the 21st of the 463 courses in the `evals_ch11` data frame in Table \@ref(tab:instructor-21):
 
-```{r instructor-21, echo=FALSE}
+```{r, echo=FALSE}
 index <- which(evals_ch11$bty_avg == 7.333 & evals_ch11$score == 4.9)
 target_point <- score_model %>%
   augment() %>%
@@ -518,7 +518,7 @@ $$\widehat{y} = b_0 + b_1 \cdot x = `r evals_line[1]` + `r evals_line[2]` \cdot 
 
 * Arrow: The length of this arrow is the *residual* \index{regression!residual} and is computed by subtracting the fitted value $\widehat{y}$ from the observed value $y$. The residual can be thought of as a model's error or "lack of fit" for a particular observation.  In the case of this course's instructor, it is $y - \widehat{y}$ = `r y` - `r y_hat` = `r resid`.
 
-```{r numxplot4, echo=FALSE, warning=FALSE, fig.cap="Example of observed value, fitted value, and residual.", fig.height=2.8}
+```{r, echo=FALSE, warning=FALSE, fig.cap="Example of observed value, fitted value, and residual.", fig.height=2.8}
 best_fit_plot <- ggplot(evals_ch11, aes(x = bty_avg, y = score)) +
   geom_point(color = "grey") +
   labs(x = "Beauty Score", y = "Teaching Score",
@@ -542,7 +542,7 @@ regression_points <- score_model %>%
 regression_points
 ```
 
-```{r regression-points-1, echo=FALSE}
+```{r, echo=FALSE}
 set.seed(76)
 regression_points <- augment(score_model) %>%
   select(score, bty_avg, .fitted, .resid)
@@ -631,7 +631,7 @@ Let's look at a random sample of five out of the `r nrow(gapminder2007)` countri
 ```{r, eval=FALSE}
 gapminder2007 %>% sample_n(size = 5)
 ```
-```{r model2-data-preview, echo=FALSE}
+```{r, echo=FALSE}
 gapminder2007 %>%
   sample_n(5) %>%
   knitr::kable(
@@ -663,7 +663,7 @@ Turning our attention to the summary statistics of the numerical variable `lifeE
 
 We can answer this question by performing the last of the three common steps in an exploratory data analysis: creating data visualizations. Let's visualize the distribution of our outcome variable $y$ = `lifeExp` in Figure \@ref(fig:lifeExp2007hist).
 
-```{r lifeExp2007hist, echo=TRUE, warning=FALSE, fig.cap="Histogram of life expectancy in 2007.", fig.height=5.2}
+```{r, echo=TRUE, warning=FALSE, fig.cap="Histogram of life expectancy in 2007.", fig.height=5.2}
 gapminder2007 %>%
   ggplot(aes(x = lifeExp)) +
   geom_histogram(binwidth = 5, color = "white") +
@@ -675,7 +675,7 @@ We see that this data is *left-skewed*, also known as *negatively* \index{skew} 
 
 Remember, however, that we want to compare life expectancies both between continents and within continents. In other words, our visualizations need to incorporate some notion of the variable `continent`. We can do this easily with a faceted histogram. Recall from Section \@ref(facets) that facets allow us to split a visualization by the different values of another variable. We display the resulting visualization in Figure \@ref(fig:catxplot0b) by adding a \index{ggplot2!facet\_wrap()} `facet_wrap(~ continent, nrow = 2)` layer.
 
-```{r eval=FALSE} 
+```{r, eval=FALSE} 
 gapminder2007 %>%
   ggplot(aes(x = lifeExp)) +
   geom_histogram(binwidth = 5, color = "white") +
@@ -685,7 +685,7 @@ gapminder2007 %>%
   facet_wrap(~ continent, nrow = 2)
 ```
 
-```{r catxplot0b, echo=FALSE, warning=FALSE, fig.cap="Life expectancy in 2007.", fig.height=4.3}
+```{r, echo=FALSE, warning=FALSE, fig.cap="Life expectancy in 2007.", fig.height=4.3}
 faceted_life_exp <- ggplot(gapminder2007, aes(x = lifeExp)) +
   geom_histogram(binwidth = 5, color = "white") +
   labs(x = "Life expectancy", y = "Number of countries",
@@ -709,7 +709,7 @@ Observe that unfortunately the distribution of African life expectancies is much
 
 Recall that an alternative method to visualize the distribution of a numerical variable split by a categorical variable is by using a side-by-side boxplot. We map the categorical variable `continent` to the $x$-axis and the different life expectancies within each continent on the $y$-axis in Figure \@ref(fig:catxplot1).
 
-```{r catxplot1, warning=FALSE, fig.cap="Life expectancy in 2007.", fig.height=3.4}
+```{r, warning=FALSE, fig.cap="Life expectancy in 2007.", fig.height=3.4}
 gapminder2007 %>%
   ggplot(aes(x = continent, y = lifeExp)) +
   geom_boxplot() +
@@ -729,7 +729,7 @@ lifeExp_by_continent <- gapminder2007 %>%
   summarize(median = median(lifeExp), 
             mean = mean(lifeExp))
 ```
-```{r catxplot0, echo=FALSE}
+```{r, echo=FALSE}
 lifeExp_by_continent %>%
   knitr::kable(
     digits = 3,
@@ -748,7 +748,7 @@ Let's now turn our attention to the values in the third column `mean`. Using Afr
 1. For Europe, it is 77.6 - 54.8 = 22.8 years higher.
 1. For Oceania, it is 80.7 - 54.8 = 25.9 years higher.
 
-```{r continent-mean-life-expectancies, echo=FALSE}
+```{r, echo=FALSE}
 gapminder2007 %>%
   group_by(continent) %>%
   summarize(mean = mean(lifeExp)) %>%
@@ -783,7 +783,7 @@ lifeExp_model %>%
 ```{r, echo=FALSE}
 lifeExp_model <- lm(lifeExp ~ continent, data = gapminder2007)
 ```
-```{r catxplot4b, echo=FALSE}
+```{r, echo=FALSE}
 tidy(lifeExp_model,
      conf.int = TRUE) %>%
   select(term, estimate, conf.low, conf.high) %>%
@@ -966,7 +966,7 @@ Now each observation in our dataset is a candidate and we have a list column `da
 ```{r}
 gov <- gov %>%
   mutate(mod = map(data, ~ lm(win_probability ~ days, data = .)),
-         disp_coef = map_dbl(mod, ~ pluck(coef(.), "days")))
+         disp_coef = map_dbl(mod, ~ purrr::pluck(coef(.), "days")))
 
 glimpse(gov)
 ```
@@ -1029,7 +1029,7 @@ gov %>%
 
 Regression lines are also known as "best-fitting" lines. But what do we mean by "best"? Let's unpack the criteria that is used in regression to determine "best." Recall Figure \@ref(fig:numxplot4), where for an instructor with a beauty score of $x = 7.333$ we mark the *observed value* $y$ with a circle, the *fitted value* $\widehat{y}$ with a square, and the *residual* $y - \widehat{y}$ with an arrow. We re-display Figure \@ref(fig:numxplot4) in the top-left plot of Figure \@ref(fig:best-fitting-line) in addition to three more arbitrarily chosen course instructors:
 
-```{r best-fitting-line, fig.height=5.5, echo=FALSE, warning=FALSE, fig.cap="Example of observed value, fitted value, and residual."}
+```{r, fig.height=5.5, echo=FALSE, warning=FALSE, fig.cap="Example of observed value, fitted value, and residual."}
 # First residual
 best_fit_plot <- ggplot(evals_ch11, aes(x = bty_avg, y = score)) +
   geom_point(size = 0.8, color = "grey") +
@@ -1142,7 +1142,7 @@ As we suggested in Subsection \@ref(model1EDA), interpreting coefficients that a
 
 (ref:guess-corr) Preview of "Guess the Correlation" game.
 
-```{r guess-the-correlation, echo=FALSE, fig.cap='(ref:guess-corr)', purl=FALSE, out.width = "70%"}
+```{r, echo=FALSE, fig.cap='(ref:guess-corr)', purl=FALSE, out.width = "70%"}
 knitr::include_graphics("images/copyright/guess_the_correlation.png")
 ```
 
