@@ -615,359 +615,32 @@ standard_error_ci
 
 ## Interpreting confidence intervals {#one-prop-ci}
 
-Now that we've shown you how to construct confidence intervals using a sample drawn from a population, let's now focus on how to interpret them.^[This Bayesian interpretation of the bootstrap confidence interval is often called a [credible interval](https://en.wikipedia.org/wiki/Credible_interval) in the academic literature; you may find yourself in a statistics class that uses the phrase "confidence interval" to refer only to the [frequentist](https://en.wikipedia.org/wiki/Frequentist_inference) concept wherein the interpretation is that 95\% of the *intervals* constructed using this method in repeated samples will contain the true but unknown population parameter.  For this book, we will stick with the phrase "confidence interval" and use the Bayesian interpretation.] The effectiveness of a confidence interval is judged by whether or not it contains the true value of the population parameter. Going back to our fishing analogy in Section \@ref(ci-build-up), this is like asking, "Did our net capture the fish?".
+Now that we've shown you how to construct confidence intervals using a sample drawn from a population, let's now focus on how to interpret them.^[This Bayesian interpretation of the bootstrap confidence interval is often called a [credible interval](https://en.wikipedia.org/wiki/Credible_interval) in the academic literature; you may find yourself in a statistics class that uses the phrase "confidence interval" to refer only to the [frequentist](https://en.wikipedia.org/wiki/Frequentist_inference) concept wherein the interpretation is that 95\% of the *intervals* constructed using this method in repeated samples will contain the true but unknown population parameter.  For this book, we will stick with the phrase "confidence interval" and use the Bayesian interpretation.] 
 
-So, for example, does our percentile-based confidence interval of (`r percentile_ci[["2.5%"]] %>% round(2)`, `r percentile_ci[["97.5%"]] %>% round(2)`) "capture" the true mean year $\mu$ of *all* US pennies? Alas, we'll never know, because we don't know what the true value of $\mu$ is. After all, we're sampling to estimate it!
+Does our percentile-based confidence interval of (`r percentile_ci[["2.5%"]] %>% round(2)`, `r percentile_ci[["97.5%"]] %>% round(2)`) "capture" the true mean year $\mu$ of *all* US pennies? Alas, we'll never know, because we don't know what the true value of $\mu$ is. After all, we're sampling to estimate it!
 
-In order to interpret a confidence interval's effectiveness, we need to *know* what the value of the population parameter is. That way we can say whether or not a confidence interval "captured" this value. 
+However, we can answer a different question.  Given that we've observed the 50 pennies that we did, what's the *chance* that the true value falls within (`r percentile_ci[["2.5%"]] %>% round(2)`, `r percentile_ci[["97.5%"]] %>% round(2)`)?  If the answer is 95%, then we can call this a 95% interval.
 
-Let's revisit our sampling bowl from Chapter \@ref(sampling). What proportion of the bowl's 2400 balls are red? Let's compute this:
+<!-- AR: commenting out vast frequentist section for now -->
+<!-- Had to delete some outright because references to certain R objects even in
+comments caused build problems (?) -->
 
-```{r}
-bowl %>% 
-  summarize(p_red = mean(color == "red"))
-```
+<!-- The effectiveness of a confidence interval is judged by whether or not it contains the true value of the population parameter. Going back to our fishing analogy in Section \@ref(ci-build-up), this is like asking, "Did our net capture the fish?". -->
+
+
+<!-- In order to interpret a confidence interval's effectiveness, we need to *know* what the value of the population parameter is. That way we can say whether or not a confidence interval "captured" this value.  -->
+
+<!-- Let's revisit our sampling bowl from Chapter \@ref(sampling). What proportion of the bowl's 2400 balls are red? Let's compute this: -->
+
+<!-- ```{r} -->
+<!-- bowl %>%  -->
+<!--   summarize(p_red = mean(color == "red")) -->
+<!-- ``` -->
 ```{r, echo=FALSE}
-p_red <- bowl %>% 
-  summarize(prop_red = mean(color == "red")) %>% 
+p_red <- bowl %>%
+  summarize(prop_red = mean(color == "red")) %>%
   pull(prop_red)
 ```
-
-In this case, we *know* what the value of the population parameter is: we know that the population proportion $p$ is 0.375. In other words, we know that 37.5% of the bowl's balls are red. 
-
-As we stated in Subsection \@ref(moral-of-the-story), the sampling bowl exercise doesn't really reflect how sampling is done in real life, but rather was an *idealized* activity. In real life, we won't know what the true value of the population parameter is, hence the need for estimation.
-
-Let's now construct confidence intervals for $p$ using our 33 groups of friends' samples from the bowl in Chapter \@ref(sampling). We'll then see if the confidence intervals "captured" the true value of $p$, which we know to be 37.5%. That is to say, "Did the net capture the fish?".
-
-
-### Did the net capture the fish? {#ilyas-yohan}
-
-Recall that we had 33 groups of friends each take samples of size 50 from the bowl and then compute the sample proportion of red balls $\widehat{p}$. This resulted in 33 such estimates of $p$. Let's focus on Ilyas and Yohan's sample, which is saved in the `bowl_sample_1` data frame in the **moderndive** package:
-
-```{r}
-bowl_sample_1
-```
-
-They observed 21 red balls out of 50 and thus their sample proportion $\widehat{p}$ was 21/50 = 0.42 = 42\%. Think of this as the "spear" from our fishing analogy. 
-
-Let's now follow the `infer` package workflow from Subsection \@ref(infer-workflow) to create a percentile-method-based 95% confidence interval for $p$ using Ilyas and Yohan's sample. Think of this as the "net."
-
-#### 1. `specify` variables {-}
-
-First, we `specify()` the `response` variable of interest `color`:
-
-```{r, eval=FALSE}
-bowl_sample_1 %>% 
-  specify(response = color)
-```
-```
-Error: A level of the response variable `color` needs to be specified for the `success`
-argument in `specify()`.
-```
-
-Whoops! We need to define which event is of interest! `red` or `white` balls? Since we are interested in the proportion red, let's set `success` to be `"red"`:
-
-```{r}
-bowl_sample_1 %>% 
-  specify(response = color, success = "red")
-```
-
-#### 2. `generate` replicates {-}
-
-Second, we `generate()` 1000 replicates of *bootstrap resampling with replacement* from `bowl_sample_1` by setting `reps = 1000` and `type = "bootstrap"`. 
-
-```{r eval=FALSE}
-bowl_sample_1 %>% 
-  specify(response = color, success = "red") %>% 
-  generate(reps = 1000, type = "bootstrap")
-```
-```{r echo=FALSE}
-if(!file.exists("rds/bowl_sample_1_generate.rds")){
-   bowl_sample_1_generate <- bowl_sample_1 %>% 
-    specify(response = color, success = "red") %>% 
-    generate(reps = 1000, type = "bootstrap")
-   write_rds(bowl_sample_1_generate, 
-             "rds/bowl_sample_1_generate.rds")
-} else {
-  bowl_sample_1_generate <- read_rds("rds/bowl_sample_1_generate.rds")
-}
-bowl_sample_1_generate
-```
-
-Observe that the resulting data frame has 50,000 rows. This is because we performed resampling of 50 balls with replacement 1000 times and thus 50,000 = 50 $\cdot$ 1000. The variable `replicate` indicates which resample each row belongs to. So it has the value `1` 50 times, the value `2` 50 times, all the way through to the value `1000` 50 times. 
-
-#### 3. `calculate` summary statistics {-}
-
-Third, we summarize each of the 1000 resamples of size 50 with the proportion of _successes_. In other words, the proportion of the balls that are `"red"`. We can set the summary statistic to be calculated as the proportion by setting the `stat` argument to be `"prop"`. Let's save the result as `sample_1_bootstrap`:
-
-```{r eval=FALSE}
-sample_1_bootstrap <- bowl_sample_1 %>% 
-  specify(response = color, success = "red") %>% 
-  generate(reps = 1000, type = "bootstrap") %>% 
-  calculate(stat = "prop")
-sample_1_bootstrap
-```
-
-```{r calculate_prop, echo=FALSE}
-# Note this takes a few minutes to run
-if(!file.exists("rds/sample_1_bootstrap.rds")){
-  sample_1_bootstrap <- bowl_sample_1_generate %>% 
-    calculate(stat = "prop")
-  write_rds(sample_1_bootstrap, "rds/sample_1_bootstrap.rds")
-} else {
-  sample_1_bootstrap <- read_rds("rds/sample_1_bootstrap.rds")
-}
-sample_1_bootstrap
-```
-
-Observe there are 1000 rows in this data frame and thus 1000 values of the variable `stat`. These 1000 values of `stat` represent our 1000 replicated values of the proportion, each based on a different resample.
-
-#### 4. `visualize` the results {-}
-
-Fourth and lastly, let's compute the resulting 95% confidence interval. 
-
-```{r}
-percentile_ci_1 <- sample_1_bootstrap %>% 
-  get_confidence_interval(level = 0.95, type = "percentile")
-percentile_ci_1
-```
-
-Let's visualize the bootstrap distribution along with the `percentile_ci_1` percentile-based 95% confidence interval for $p$ in Figure \@ref(fig:shovel-bootstrap-1-infer). We'll adjust the number of bins to better see the resulting shape. Furthermore, we'll add a dashed vertical line at Ilyas and Yohan's observed $\widehat{p}$ = 21/50 = 0.42 = 42\% using `geom_vline()`.
-
-```{r eval=FALSE}
-sample_1_bootstrap %>% 
-  visualize(bins = 15) + 
-  shade_confidence_interval(endpoints = percentile_ci_1) +
-  geom_vline(xintercept = 0.375, linetype = "dashed")
-```
-
-```{r shovel-bootstrap-1-infer, echo=FALSE, fig.show='hold', fig.cap="Bootstrap distribution.", fig.height=2.5, purl=FALSE}
-# Will need to make a tweak to the {infer} package so that it doesn't always display "Null" here
-# (added to `develop` branch on 2019-10-26)
-if(knitr::is_html_output()){
-  sample_1_bootstrap %>% 
-    visualize(bins = 15) + 
-    shade_confidence_interval(endpoints = percentile_ci_1) +
-#    ggtitle("Simulation-Based Bootstrap Distribution") +
-    geom_vline(xintercept = 0.42, linetype = "dashed")
-} else {
-  sample_1_bootstrap %>% 
-    visualize(bins = 15) + 
-    shade_confidence_interval(endpoints = percentile_ci_1,
-                              fill = "grey40", color = "grey30") +
-#    ggtitle("Simulation-Based Bootstrap Distribution") +
-    geom_vline(xintercept = 0.42, linetype = "dashed")
-}
-```
-
-Did Ilyas and Yohan's net capture the fish? Did their 95% confidence interval for $p$ based on their sample contain the true value of $p$ of 0.375? Yes! `r p_red` is between the endpoints of their confidence interval (`r percentile_ci_1[[1]]`, `r percentile_ci_1[[2]]`).
-
-However, will *every* 95% confidence interval for $p$ capture this value? In other words, if we had a different sample of  50 balls and constructed a different confidence interval, would it necessarily contain $p$ = 0.375 as well? Let's see!
-
-Let's first take a different sample from the bowl, this time using the computer as we did in Chapter \@ref(sampling):
-
-```{r}
-bowl_sample_2 <- bowl %>% rep_sample_n(size = 50)
-bowl_sample_2
-```
-
-Let's reapply the same `infer` functions on `bowl_sample_2` to generate a different 95% confidence interval for $p$. First, we create the new bootstrap distribution and save the results in `sample_2_bootstrap`:
-
-```{r eval=FALSE}
-sample_2_bootstrap <- bowl_sample_2 %>% 
-  specify(response = color, 
-          success = "red") %>% 
-  generate(reps = 1000, 
-           type = "bootstrap") %>% 
-  calculate(stat = "prop")
-sample_2_bootstrap
-```
-
-```{r echo=FALSE}
-if(!file.exists("rds/sample_2_bootstrap.rds")){
-  sample_2_bootstrap <- bowl_sample_2 %>% 
-    specify(response = color, 
-            success = "red") %>% 
-    generate(reps = 1000, 
-             type = "bootstrap") %>% 
-    calculate(stat = "prop")
-  write_rds(sample_2_bootstrap, "rds/sample_2_bootstrap.rds")
-} else {
-  sample_2_bootstrap <- read_rds("rds/sample_2_bootstrap.rds")
-}
-sample_2_bootstrap
-```
-
-We once again compute a percentile-based 95% confidence interval for $p$: 
-
-```{r}
-percentile_ci_2 <- sample_2_bootstrap %>% 
-  get_confidence_interval(level = 0.95, type = "percentile")
-percentile_ci_2
-```
-
-Does this new net capture the fish? In other words, does the 95% confidence interval for $p$ based on the new sample contain the true value of $p$ of 0.375? Yes again! `r p_red` is between the endpoints of our confidence interval (`r percentile_ci_2[[1]]`, `r percentile_ci_2[[2]]`).
-
-Let's now repeat this process 100 more times: we take 100 virtual samples from the bowl and construct 100 95% confidence intervals. Let's visualize the results in Figure \@ref(fig:reliable-percentile) where:
-
-1. We mark the true value of $p = 0.375$ with a vertical line.
-1. We mark each of the 100 95% confidence intervals with horizontal lines. These are the "nets."
-1. The horizontal line is colored grey if the confidence interval "captures" the true value of $p$ marked with the vertical line. The horizontal line is colored black otherwise.
-
-(ref:reliable-perc) 100 percentile-based 95% confidence intervals for $p$.
-
-```{r reliable-percentile, fig.cap='(ref:reliable-perc)', echo=FALSE, fig.height=4.2}
-if(!file.exists("rds/balls_percentile_cis.rds")){
-  set.seed(4)
-
-  # Function to run infer pipeline
-  bootstrap_pipeline <- function(sample_data){
-    sample_data %>% 
-      specify(formula = color ~ NULL, success = "red") %>% 
-      generate(reps = 1000, type = "bootstrap") %>% 
-      calculate(stat = "prop")
-  }
-  
-  # Compute nested data frame with sampled data, sample proportions, all 
-  # bootstrap replicates, and percentile_ci
-  balls_percentile_cis <- bowl %>% 
-    rep_sample_n(size = 50, reps = 100, replace = FALSE) %>% 
-    group_by(replicate) %>% 
-    nest() %>% 
-    mutate(sample_prop = map_dbl(data, ~mean(.x$color == "red"))) %>%
-    # run infer pipeline on each nested tibble to generated bootstrap replicates
-    mutate(bootstraps = map(data, bootstrap_pipeline)) %>% 
-    group_by(replicate) %>% 
-    # Compute 95% percentile CI's for each nested element
-    mutate(percentile_ci = map(bootstraps, get_ci, type = "percentile", level = 0.95))
-  
-  # Save output to rds object
-  saveRDS(object = balls_percentile_cis, "rds/balls_percentile_cis.rds")
-} else {
-  balls_percentile_cis <- readRDS("rds/balls_percentile_cis.rds")
-}
-
-# Identify if confidence interval captured true p
-percentile_cis <- balls_percentile_cis %>% 
-  unnest(percentile_ci) %>% 
-  mutate(captured = `2.5%` <= p_red & p_red <= `97.5%`)
-    
-# Plot them!
-ggplot(percentile_cis) +
-  geom_segment(aes(
-    y = replicate, yend = replicate, x = `2.5%`, xend = `97.5%`, 
-    alpha = factor(captured, levels = c("TRUE", "FALSE"))
-  )) +
-  # Removed point estimates since it doesn't necessarily act as center for 
-  # percentile-based CI's
-  # geom_point(aes(x = sample_prop, y = replicate, color = captured)) +
-  labs(x = expression("Proportion of red balls"), 
-       y = "Confidence interval number", 
-       alpha = "Captured") +
-  geom_vline(xintercept = p_red, color = "red") + 
-  coord_cartesian(xlim = c(0.1, 0.7)) + 
-  theme_light() + 
-  theme(panel.grid.major.y = element_blank(), 
-        panel.grid.minor.y = element_blank(),
-        panel.grid.minor.x = element_blank())
-```
-
-Of the 100 95% confidence intervals, `r percentile_cis[["captured"]] %>% sum()` of them captured the true value $p = `r p_red`$, whereas `r 100 - percentile_cis[["captured"]] %>% sum()` of them didn't. In other words, `r percentile_cis[["captured"]] %>% sum()` of our nets caught the fish, whereas `r 100 - percentile_cis[["captured"]] %>% sum()` of our nets didn't. 
-
-This is where the "95% confidence level" we defined in Section \@ref(ci-build-up) comes into play: for every 100 95% confidence intervals, we *expect* that 95 of them will capture $p$ and that five of them won't. 
-
-Note that "expect" is a probabilistic statement referring to a long-run average. In other words, for every 100 confidence intervals, we will observe *about* 95 confidence intervals that capture $p$, but not necessarily exactly 95. In Figure \@ref(fig:reliable-percentile) for example, `r percentile_cis[["captured"]] %>% sum()` of the confidence intervals capture $p$.
-
-To further accentuate our point about confidence levels, let's generate a figure similar to Figure \@ref(fig:reliable-percentile), but this time constructing 80% standard-error method based confidence intervals instead. Let's visualize the results in Figure \@ref(fig:reliable-se) with the scale on the x-axis being the same as in Figure \@ref(fig:reliable-percentile) to make comparison easy. Furthermore, since all standard-error method 95% confidence intervals for $p$ are centered at their respective point estimates $\widehat{p}$, we mark this value on each line with dots.  
-
-(ref:rel-se) 100 SE-based 80% confidence intervals for $p$ with point estimate center marked with dots.
-
-```{r reliable-se, fig.cap='(ref:rel-se)', echo=FALSE, fig.height=6.6}
-if(!file.exists("rds/balls_se_cis.rds")){
-  # Set random number generator seed value.
-  set.seed(9)
-  
-  # Function to run infer pipeline
-  bootstrap_pipeline <- function(sample_data){
-    sample_data %>% 
-      specify(formula = color ~ NULL, success = "red") %>% 
-      generate(reps = 1000, type = "bootstrap") %>% 
-      calculate(stat = "prop")
-  }
-  
-  # Compute nested data frame with sampled data, sample proportions, all 
-  # bootstrap replicates, and se_ci
-  balls_se_cis <- bowl %>% 
-    rep_sample_n(size = 50, reps = 100, replace = FALSE) %>% 
-    group_by(replicate) %>% 
-    nest() %>% 
-    mutate(sample_prop = map_dbl(data, ~mean(.x$color == "red"))) %>%
-    # run infer pipeline on each nested tibble to generated bootstrap replicates
-    mutate(bootstraps = map(data, bootstrap_pipeline)) %>% 
-    group_by(replicate) %>% 
-    # Compute 80% se CI's for each nested element
-    mutate(se_ci = map(bootstraps, get_ci, type = "se", level = 0.80,
-                       point_estimate = sample_prop))
-  
-  # Save output to rds object
-  saveRDS(object = balls_se_cis, "rds/balls_se_cis.rds")
-} else {
-  balls_se_cis <- readRDS("rds/balls_se_cis.rds")
-}
-
-# Identify if confidence interval captured true p
-se_cis <- balls_se_cis %>% 
-  unnest(se_ci) %>% 
-  mutate(captured = lower <= p_red & p_red <= upper)
-
-# Plot them!
-ggplot(se_cis) +
-  geom_segment(aes(
-    y = replicate, yend = replicate, x = lower, xend = upper, 
-    alpha = factor(captured, levels = c("TRUE", "FALSE"))
-  )) +
-  geom_point(
-    aes(
-      x = sample_prop, y = replicate,
-      alpha = factor(captured, levels = c("TRUE", "FALSE"))
-    ), 
-    show.legend = FALSE, size = 1) +
-  labs(x = expression("Proportion of red balls"), y = "Confidence interval number", 
-       alpha = "Captured") +
-  geom_vline(xintercept = p_red, color = "red") + 
-  coord_cartesian(xlim = c(0.1, 0.7)) + 
-  theme_light() + 
-  theme(panel.grid.major.y = element_blank(), panel.grid.minor.y = element_blank(),
-        panel.grid.minor.x = element_blank())
-```
-
-Observe how the 80% confidence intervals are narrower than the 95% confidence intervals, reflecting our lower degree of confidence. Think of this as using a smaller "net." We'll explore other determinants of confidence interval width in the upcoming Subsection \@ref(ci-width).
-
-Furthermore, observe that of the 100 80% confidence intervals, `r se_cis[["captured"]] %>% sum()` of them captured the population proportion $p$ = `r p_red`, whereas `r 100 - sum(se_cis[["captured"]])` of them did not. Since we lowered the confidence level from 95% to 80%, we now have a much larger number of confidence intervals that failed to "catch the fish."
-
-
-
-### Precise and shorthand interpretation {#shorthand}
-
-\index{confidence interval!interpretation}
-
-Let's return our attention to 95% confidence intervals. The precise and mathematically correct interpretation of a 95% confidence interval is a little long-winded:
-
-> Precise interpretation: If we repeated our sampling procedure a large number of times, we expect about 95% of the resulting confidence intervals to capture the value of the population parameter. 
-
-This is what we observed in Figure \@ref(fig:reliable-percentile). Our confidence interval construction procedure is 95% _reliable_. That is to say, we can expect our confidence intervals to include the true population parameter about 95% of the time.
-
-A common but incorrect interpretation is: "There is a 95% probability that the confidence interval contains $p$."  Looking at Figure \@ref(fig:reliable-percentile), each of the confidence intervals either does or doesn't contain $p$. In other words, the probability is either a 1 or a 0. 
-
-So if the 95% confidence level only relates to the reliability of the confidence interval construction procedure and not to a given confidence interval itself, what insight can be derived from a given confidence interval? For example, going back to the pennies example, we found that the percentile method 95% confidence interval for $\mu$ was (`r percentile_ci[["2.5%"]] %>% round(2)`, `r percentile_ci[["97.5%"]] %>% round(2)`), whereas the standard error method 95% confidence interval was (`r standard_error_ci[["lower"]] %>% round(2)`, `r standard_error_ci[["upper"]] %>% round(2)`). What can be said about these two intervals?
-
-Loosely speaking, we can think of these intervals as our "best guess" of a plausible range of values for the mean year $\mu$ of *all* US pennies. For the rest of this book, we'll use the following shorthand summary of the precise interpretation. 
-
-> Short-hand interpretation: We are 95% "confident" that a 95% confidence interval captures the value of the population parameter. 
-
-We use quotation marks around "confident" to emphasize that while 95% relates to the reliability of our confidence interval construction procedure, ultimately a constructed confidence interval is our best guess of an interval that contains the population parameter. In other words, it's our best net.
-
-So returning to our pennies example and focusing on the percentile method, we are 95% "confident" that the true mean year of pennies in circulation in 2019 is somewhere between `r percentile_ci[["2.5%"]] %>% round(2)` and `r percentile_ci[["97.5%"]] %>% round(2)`.
 
 
 ### Width of confidence intervals {#ci-width}
@@ -976,7 +649,7 @@ Now that we know how to interpret confidence intervals, let's go over some facto
 
 #### Impact of confidence level {-}
 
-One factor that determines confidence interval widths is the pre-specified confidence level. For example, in Figures \@ref(fig:reliable-percentile) and \@ref(fig:reliable-se), we compared the widths of 95% and 80% confidence intervals and observed that the 95% confidence intervals were wider. The quantification of the confidence level should match what many expect of the word "confident." In order to be more confident in our best guess of a range of values, we need to widen the range of values.
+One factor that determines confidence interval widths is the pre-specified confidence level. <!-- For example, in Figures \@ref(fig:reliable-percentile) and \@ref(fig:reliable-se), we compared the widths of 95% and 80% confidence intervals and observed that the 95% confidence intervals were wider. --> The quantification of the confidence level should match what many expect of the word "confident." In order to be more confident in our best guess of a range of values, we need to widen the range of values.
 
 To elaborate on this, imagine we want to guess the forecasted high temperature in Seoul, South Korea on August 15th. Given Seoul's temperate climate with four distinct seasons, we could say somewhat confidently that the high temperature would be between 50&deg;F - 95&deg;F (10&deg;C - 35&deg;C). However, if we wanted a temperature range we were *absolutely* confident about, we would need to widen it. 
 
@@ -986,7 +659,7 @@ Let's revisit our sampling bowl from Chapter \@ref(sampling). Let's compare $10 
 
 Specifically, we'll first take 30 different random samples of size $n$ = 50 balls from the bowl. Then we'll construct 10 percentile-based confidence intervals using each of the three different confidence levels. 
 
-Finally, we'll compare the widths of these intervals. We visualize the resulting confidence intervals in Figure \@ref(fig:reliable-percentile-80-95-99) along with a vertical line marking the true value of $p$ = `r p_red`.
+Finally, we'll compare the widths of these intervals. <!-- We visualize the resulting confidence intervals in Figure \@ref(fig:reliable-percentile-80-95-99) along with a vertical line marking the true value of $p$ = `r p_red`. -->
 
 <!-- 
 Chester says: Should we load the perc_cis_by_level and percentile_cis_by_n data
@@ -1088,33 +761,33 @@ percentile_cis_by_level %>%
 We see that the sample proportion of reds varies in the `point_estimate` column with varying `lower` and `upper` bounds as well depending on the variability of the bootstrap distribution. The width of the confidence intervals appears to increase from left to right going from 80% confidence levels to 95% and then to 99%. Let's now compute the confidence interval (CI) width for each of these intervals and then get the median and mean length.
 -->
 
-(ref:many-percs) Ten 80, 95, and 99% confidence intervals for $p$ based on $n = 50$.
+<!-- (ref:many-percs) Ten 80, 95, and 99% confidence intervals for $p$ based on $n = 50$. -->
 
-```{r reliable-percentile-80-95-99, fig.cap='(ref:many-percs)', echo=FALSE, fig.height=3}
-sample_of_cis <- percentile_cis_by_level %>% 
-  group_by(confidence_level) %>% 
-  mutate(sample_row = 1:10)
+<!-- ```{r reliable-percentile-80-95-99, fig.cap='(ref:many-percs)', echo=FALSE, fig.height=3} -->
+<!-- sample_of_cis <- percentile_cis_by_level %>%  -->
+<!--   group_by(confidence_level) %>%  -->
+<!--   mutate(sample_row = 1:10) -->
 
-perc_interval_plot <- ggplot(sample_of_cis) +
-  # Doesn't make sense to show point_estimate center for percentile confidence 
-  # intervals:
-  # geom_point(aes(x = point_estimate, y = sample_row)) +
-  geom_segment(aes(y = sample_row, yend = sample_row, x = lower, xend = upper)) +
-  labs(x = expression("Proportion of red balls"), y = "") +
-  scale_y_continuous(breaks = 1:10) +
-  facet_wrap(~ confidence_level) + 
-  geom_vline(xintercept = p_red, color = "red")
+<!-- perc_interval_plot <- ggplot(sample_of_cis) + -->
+<!--   # Doesn't make sense to show point_estimate center for percentile confidence  -->
+<!--   # intervals: -->
+<!--   # geom_point(aes(x = point_estimate, y = sample_row)) + -->
+<!--   geom_segment(aes(y = sample_row, yend = sample_row, x = lower, xend = upper)) + -->
+<!--   labs(x = expression("Proportion of red balls"), y = "") + -->
+<!--   scale_y_continuous(breaks = 1:10) + -->
+<!--   facet_wrap(~ confidence_level) +  -->
+<!--   geom_vline(xintercept = p_red, color = "red") -->
 
-if(knitr::is_latex_output()){
-  perc_interval_plot  +
-  theme(
-    strip.text = element_text(colour = 'black'),
-    strip.background = element_rect(fill = "grey93")
-  )
-} else {
-  perc_interval_plot
-}
-```
+<!-- if(knitr::is_latex_output()){ -->
+<!--   perc_interval_plot  + -->
+<!--   theme( -->
+<!--     strip.text = element_text(colour = 'black'), -->
+<!--     strip.background = element_rect(fill = "grey93") -->
+<!--   ) -->
+<!-- } else { -->
+<!--   perc_interval_plot -->
+<!-- } -->
+<!-- ``` -->
 
 Observe that as the confidence level increases from 80% to 95% to 99%, the confidence intervals tend to get wider as seen in Table \@ref(tab:perc-cis-average-width) where we compare their average widths.
 
@@ -1141,7 +814,7 @@ The moral of the story is: \index{confidence interval!impact of confidence level
 
 #### Impact of sample size {-}
 
-This time, let's fix the confidence level at 95%, but consider three different sample sizes for $n$: 25, 50, and 100. Specifically, we'll first take 10 different random samples of size 25, 10 different random samples of size 50, and 10 different random samples of size 100. We'll then construct 95% percentile-based confidence intervals for each sample. Finally, we'll compare the widths of these intervals. We visualize the resulting 30 confidence intervals in Figure \@ref(fig:reliable-percentile-n-25-50-100). Note also the vertical line marking the true value of $p$ = `r p_red`.
+This time, let's fix the confidence level at 95%, but consider three different sample sizes for $n$: 25, 50, and 100. Specifically, we'll first take 10 different random samples of size 25, 10 different random samples of size 50, and 10 different random samples of size 100. We'll then construct 95% percentile-based confidence intervals for each sample. Finally, we'll compare the widths of these intervals. <!-- We visualize the resulting 30 confidence intervals in Figure \@ref(fig:reliable-percentile-n-25-50-100). Note also the vertical line marking the true value of $p$ = `r p_red`. -->
 
 ```{r perc-sizes-2, echo=FALSE}
 if(!file.exists("rds/balls_perc_cis_n_25_50_100.rds")){
@@ -1209,35 +882,35 @@ if(!file.exists("rds/balls_perc_cis_n_25_50_100.rds")){
 }
 ```
 
-(ref:rel-perc-n) Ten 95% confidence intervals for $p$ with $n = 25, 50,$ and $100$.
+<!-- (ref:rel-perc-n) Ten 95% confidence intervals for $p$ with $n = 25, 50,$ and $100$. -->
 
-```{r reliable-percentile-n-25-50-100, fig.cap='(ref:rel-perc-n)', echo=FALSE, fig.height=2.5}
-sample_of_cis <- percentile_cis_by_n %>% 
-  group_by(sample_size) %>% 
-  mutate(sample_row = 1:10)
+<!-- ```{r reliable-percentile-n-25-50-100, fig.cap='(ref:rel-perc-n)', echo=FALSE, fig.height=2.5} -->
+<!-- sample_of_cis <- percentile_cis_by_n %>%  -->
+<!--   group_by(sample_size) %>%  -->
+<!--   mutate(sample_row = 1:10) -->
 
-cis_plot <- ggplot(sample_of_cis) +
-  # Doesn't make sense to show point_estimate center for percentile confidence 
-  # intervals:
-  # geom_point(aes(x = point_estimate, y = sample_row)) +
-  geom_segment(aes(y = sample_row, yend = sample_row, x = lower, xend = upper)) +
-  labs(x = expression("Proportion of red balls"), y = "") +
-  scale_y_continuous(breaks = 1:10) +
-  facet_wrap(~sample_size) + 
-  geom_vline(xintercept = p_red, color = "red")
+<!-- cis_plot <- ggplot(sample_of_cis) + -->
+<!--   # Doesn't make sense to show point_estimate center for percentile confidence  -->
+<!--   # intervals: -->
+<!--   # geom_point(aes(x = point_estimate, y = sample_row)) + -->
+<!--   geom_segment(aes(y = sample_row, yend = sample_row, x = lower, xend = upper)) + -->
+<!--   labs(x = expression("Proportion of red balls"), y = "") + -->
+<!--   scale_y_continuous(breaks = 1:10) + -->
+<!--   facet_wrap(~sample_size) +  -->
+<!--   geom_vline(xintercept = p_red, color = "red") -->
 
-if(knitr::is_latex_output()){
-  cis_plot  +
-  theme(
-    strip.text = element_text(colour = 'black'),
-    strip.background = element_rect(fill = "grey93")
-  )
-} else {
-  cis_plot
-}
-```
+<!-- if(knitr::is_latex_output()){ -->
+<!--   cis_plot  + -->
+<!--   theme( -->
+<!--     strip.text = element_text(colour = 'black'), -->
+<!--     strip.background = element_rect(fill = "grey93") -->
+<!--   ) -->
+<!-- } else { -->
+<!--   cis_plot -->
+<!-- } -->
+<!-- ``` -->
 
-Observe that as the confidence intervals are constructed from larger and larger sample sizes, they tend to get narrower. Let's compare the average widths in Table \@ref(tab:perc-cis-average-width-2).
+Let's compare the average widths in Table \@ref(tab:perc-cis-average-width-2). Observe that as the confidence intervals are constructed from larger and larger sample sizes, they tend to get narrower. 
 
 ```{r perc-cis-average-width-2, echo=FALSE}
 percentile_cis_by_n %>% 
