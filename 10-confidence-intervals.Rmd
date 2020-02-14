@@ -646,6 +646,8 @@ Specifically, we'll first take 30 different random samples of size $n$ = 50 ball
 
 Finally, we'll compare the widths of these intervals. 
 
+We'll start by walking through the process for the 80% confidence intervals.  We begin by taking 10 random samples from the bowl of size $n$ = 50:
+
 ```{r}
 set.seed(9)
 
@@ -654,23 +656,48 @@ set.seed(9)
 # Get 10 random samples
 
 perc_cis_80 <- bowl %>%
-  rep_sample_n(size = 50, reps = 10) %>%
+  rep_sample_n(size = 50, reps = 10)
+perc_cis_80
+```
+
+Next, we'll construct a confidence interval for each one.  This will require `nest`ing the data by sample and then `map`ping to construct each confidence interval.  Let's grab 1000 bootstrap replicates for each sample:
+
+```{r}
+perc_cis_80 <- perc_cis_80 %>%
   
   # For each one, construct a CI
   
   group_by(replicate) %>%
   nest() %>%
-  mutate(boots = map(data, ~ rep_sample_n(., size = 50, replace = TRUE, reps = 1000)),
-         prop_red = map(boots, ~ group_by(., replicate) %>%
-                          summarize(prop_red = mean(color == "red")) %>%
-                          pull(prop_red)),
-         lower = map_dbl(prop_red, ~ quantile(., probs = 0.1)),
+  mutate(boots = map(data, ~ rep_sample_n(., size = 50, replace = TRUE, reps = 1000)))
+
+perc_cis_80
+```
+
+Now that we have a list column called `boots` for each of our original 10 samples, we can now get 1000 estimates per sample of `prop_red` from the bootstrap:
+
+```{r}
+perc_cis_80 <- perc_cis_80 %>%
+  mutate(prop_red_results = map(boots, ~ group_by(., replicate) %>%
+                                  summarize(prop_red = mean(color == "red"))),
+         prop_red = map(prop_red_results, ~ pull(., prop_red)))
+perc_cis_80
+```
+
+Finally, we will use the list column `prop_red` to get the lower and upper bounds of our confidence intervals and note the level of confidence we used:
+   
+```{r}
+perc_cis_80 <- perc_cis_80 %>%
+  mutate(lower = map_dbl(prop_red, ~ quantile(., probs = 0.1)),
          upper = map_dbl(prop_red, ~ quantile(., probs = 0.9)),
          confidence_level = "80%") %>%
-  ungroup() %>%
-  select(lower, upper, confidence_level)
+  select(replicate, lower, upper, confidence_level)
+perc_cis_80
+```
 
+Now we can do the same for the 95% and 99% confidence intervals:
 
+```{r}
 # Compute 95% confidence intervals
 
 # Get 10 random samples
@@ -683,14 +710,13 @@ perc_cis_95 <- bowl %>%
   group_by(replicate) %>%
   nest() %>%
   mutate(boots = map(data, ~ rep_sample_n(., size = 50, replace = TRUE, reps = 1000)),
-         prop_red = map(boots, ~ group_by(., replicate) %>%
-                          summarize(prop_red = mean(color == "red")) %>%
-                          pull(prop_red)),
+         prop_red_results = map(boots, ~ group_by(., replicate) %>%
+                                  summarize(prop_red = mean(color == "red"))),
+         prop_red = map(prop_red_results, ~ pull(., prop_red)),
          lower = map_dbl(prop_red, ~ quantile(., probs = 0.025)),
          upper = map_dbl(prop_red, ~ quantile(., probs = 0.975)),
          confidence_level = "95%") %>%
-  ungroup() %>%
-  select(lower, upper, confidence_level)
+  select(replicate, lower, upper, confidence_level)
 
 
 # Compute 99% confidence intervals
@@ -705,14 +731,13 @@ perc_cis_99 <- bowl %>%
   group_by(replicate) %>%
   nest() %>%
   mutate(boots = map(data, ~ rep_sample_n(., size = 50, replace = TRUE, reps = 1000)),
-         prop_red = map(boots, ~ group_by(., replicate) %>%
-                          summarize(prop_red = mean(color == "red")) %>%
-                          pull(prop_red)),
+         prop_red_results = map(boots, ~ group_by(., replicate) %>%
+                                  summarize(prop_red = mean(color == "red"))),
+         prop_red = map(prop_red_results, ~ pull(., prop_red)),
          lower = map_dbl(prop_red, ~ quantile(., probs = 0.005)),
          upper = map_dbl(prop_red, ~ quantile(., probs = 0.995)),
          confidence_level = "99%") %>%
-  ungroup() %>%
-  select(lower, upper, confidence_level)
+  select(replicate, lower, upper, confidence_level)
 
 # Combine into single data frame
 
@@ -742,82 +767,114 @@ So in order to have a higher confidence level, our confidence intervals must be 
 
 The moral of the story is: \index{confidence interval!impact of confidence level on interval width} **Higher confidence levels tend to produce wider confidence intervals.**  When looking at Table \@ref(tab:perc-cis-average-width) it is important to keep in mind that we kept the sample size fixed at $n$ = 50. Thus, all $10 \cdot 3 = 30$ random samples from the `bowl` had the same sample size. What happens if instead we took samples of different sizes? Recall that we did this in Subsection \@ref(different-shovels) using virtual shovels with 25, 50, and 100 slots. <!-- We delve into this next. -->
 
+Note that we used the same code three times.  That means we should write a function!  Let's adapt the code from the last section to take 10 samples of an arbitrary size and construct confidence intervals of an arbitrary level:
+
+```{r}
+bowl_confidence <- function(n = 50, level = 0.95) {
+  
+  # Get lower and upper probabilities
+  
+  lower_prob = (1 - level) / 2
+  upper_prob = level + lower_prob
+  
+  # Get 10 random samples
+  
+  bowl %>%
+    rep_sample_n(size = n, reps = 10) %>%
+    
+      # For each one, construct a CI
+    
+    group_by(replicate) %>%
+    nest() %>%
+    mutate(boots = map(data, ~ rep_sample_n(., size = n, replace = TRUE, reps = 1000)),
+           prop_red_results = map(boots, ~ group_by(., replicate) %>%
+                                    summarize(prop_red = mean(color == "red"))),
+           prop_red = map(prop_red_results, ~ pull(., prop_red)),
+           lower = map_dbl(prop_red, ~ quantile(., probs = lower_prob)),
+           upper = map_dbl(prop_red, ~ quantile(., probs = upper_prob)),
+           sample_size = n,
+           confidence_level = level) %>%
+    select(replicate, lower, upper, sample_size, confidence_level)
+}
+```
+
+Note that we saved the sample size as `sample_size` and the confidence level as `confidence_level` for convenient display later.
+
+So we now could create our objects like so:
+
+```{r}
+perc_cis_80 <- bowl_confidence(50, 0.80)
+perc_cis_95 <- bowl_confidence(50, 0.95)
+perc_cis_99 <- bowl_confidence(50, 0.99)
+
+# Combine into single data frame
+
+percentile_cis_by_level <- bind_rows(perc_cis_80, perc_cis_95, perc_cis_99)
+percentile_cis_by_level
+```
+
+But this still isn't the best way.  Note that we have three objects we need to deal with.  Furthermore, we don't actually know that the names are accurate! Perhaps we made a mistake and created `perc_cis_99` with the code `perc_cis_99 <- bowl_confidence(50, 0.95)`; our object name will now be misleading as to what's actually in the object.
+
+Instead, let's store our results in a single tibble by using `map()` to create a list column.
+
+```{r}
+tibble(level = c(0.80, 0.95, 0.99)) %>%
+  mutate(data = map(level, ~ bowl_confidence(n = 50, level = .)))
+```
+
+Now that we have a list column, we want to `unnest()` it so we can see our actual data.  Further, we won't need the redundant column `level` any more:
+
+```{r}
+tibble(level = c(0.80, 0.95, 0.99)) %>%
+  mutate(data = map(level, ~ bowl_confidence(n = 50, level = .))) %>%
+  unnest(data) %>%
+  select(-level)
+```
+
+Now that we can create an object with any confidence level we please, why not calculate the widths for confidence levels from 0.50 to 0.99 and plot the results?
+
+```{r}
+# Same code as before, but for more levels
+
+tibble(level = seq(0.50, 0.99, by = 0.01)) %>%
+  mutate(data = map(level, ~ bowl_confidence(n = 50, level = .))) %>%
+  unnest(data) %>%
+  select(-level) %>%
+  
+  # Calculate mean widths
+  
+  mutate(width = upper - lower) %>%
+  group_by(confidence_level) %>%
+  summarize(mean_width = mean(width)) %>%
+  
+  # Plot results
+  
+  ggplot(aes(x = confidence_level, y = mean_width)) +
+  geom_point() +
+  labs(x = "Confidence level",
+       y = "Mean width",
+       title = "Change in mean width of CI as level increase")
+```
+
+As the confidence level gets larger, the width of the interval gets larger too.
+
 #### Impact of sample size {-}
 
 This time, let's fix the confidence level at 95%, but consider three different sample sizes for $n$: 25, 50, and 100. Specifically, we'll first take 10 different random samples of size 25, 10 different random samples of size 50, and 10 different random samples of size 100. We'll then construct 95% percentile-based confidence intervals for each sample. Finally, we'll compare the widths of these intervals.
 
+Note that now that we have a function, `bowl_confidence()`, we can do this very easily!
+
 ```{r}
 set.seed(9)
 
-# n = 25
 
-# Get 10 random samples
-
-perc_cis_n_25 <- bowl %>%
-  rep_sample_n(size = 25, reps = 10) %>%
-  
-  # For each one, construct a CI
-  
-  group_by(replicate) %>%
-  nest() %>%
-  mutate(boots = map(data, ~ rep_sample_n(., size = 25, replace = TRUE, reps = 1000)),
-         prop_red = map(boots, ~ group_by(., replicate) %>%
-                          summarize(prop_red = mean(color == "red")) %>%
-                          pull(prop_red)),
-         lower = map_dbl(prop_red, ~ quantile(., probs = 0.025)),
-         upper = map_dbl(prop_red, ~ quantile(., probs = 0.975)),
-         sample_size = "n = 25") %>%
-  ungroup() %>%
-  select(lower, upper, sample_size)
-
-
-# n = 50
-
-# Get 10 random samples
-
-perc_cis_n_50 <- bowl %>%
-  rep_sample_n(size = 50, reps = 10) %>%
-  
-  # For each one, construct a CI
-  
-  group_by(replicate) %>%
-  nest() %>%
-  mutate(boots = map(data, ~ rep_sample_n(., size = 50, replace = TRUE, reps = 1000)),
-         prop_red = map(boots, ~ group_by(., replicate) %>%
-                          summarize(prop_red = mean(color == "red")) %>%
-                          pull(prop_red)),
-         lower = map_dbl(prop_red, ~ quantile(., probs = 0.025)),
-         upper = map_dbl(prop_red, ~ quantile(., probs = 0.975)),
-         sample_size = "n = 50") %>%
-  ungroup() %>%
-  select(lower, upper, sample_size)
-
-
-# n = 100
-
-# Get 10 random samples
-
-perc_cis_n_100 <- bowl %>%
-  rep_sample_n(size = 100, reps = 10) %>%
-  
-  # For each one, construct a CI
-  
-  group_by(replicate) %>%
-  nest() %>%
-  mutate(boots = map(data, ~ rep_sample_n(., size = 100, replace = TRUE, reps = 1000)),
-         prop_red = map(boots, ~ group_by(., replicate) %>%
-                          summarize(prop_red = mean(color == "red")) %>%
-                          pull(prop_red)),
-         lower = map_dbl(prop_red, ~ quantile(., probs = 0.025)),
-         upper = map_dbl(prop_red, ~ quantile(., probs = 0.975)),
-         sample_size = "n = 100") %>%
-  ungroup() %>%
-  select(lower, upper, sample_size)
+perc_cis_n_25 <- bowl_confidence(n = 25, level = 0.95)
+perc_cis_n_50 <- bowl_confidence(n = 50, level = 0.95)
+perc_cis_n_100 <- bowl_confidence(n = 100, level = 0.95)
 
 # Combine into single data frame
 
-percentile_cis_by_n <- bind_rows(perc_cis_n_25, perc_cis_n_50, perc_cis_n_100) %>%
-  mutate(sample_size = factor(sample_size, levels = c("n = 25", "n = 50", "n = 100")))
+percentile_cis_by_n <- bind_rows(perc_cis_n_25, perc_cis_n_50, perc_cis_n_100)
 ```
 
 Let's compare the average widths in Table \@ref(tab:perc-cis-average-width-2). Observe that as the confidence intervals are constructed from larger and larger sample sizes, they tend to get narrower. 
@@ -842,9 +899,32 @@ percentile_cis_by_n %>%
 
 The moral of the story is: \index{confidence interval!impact of sample size on interval width} **Larger sample sizes tend to produce narrower confidence intervals.**   Recall that this was a key message in Subsection \@ref(moral-of-the-story). As we used larger and larger shovels for our samples, the sample proportions red $\widehat{p}$ tended to vary less. In other words, our estimates got more and more *precise*. 
 
-Recall that we visualized these results in Figure \@ref(fig:comparing-sampling-distributions-3), where we compared the *sampling distributions* for $\widehat{p}$ based on samples of size $n$ equal 25, 50, and 100. We also quantified the sampling variation of these sampling distributions using their standard deviation, which has that special name: the *standard error*. So as the sample size increases, the standard error decreases. 
+Recall that we visualized these results in Figure \@ref(fig:comparing-sampling-distributions-3), where we compared the *sampling distributions* for $\widehat{p}$ based on samples of size $n$ equal 25, 50, and 100. We also quantified the sampling variation of these sampling distributions using their standard deviation, which has that special name: the *standard error*. So as the sample size increases, the standard error decreases.
 
-In fact, the standard error is another related factor in determining confidence interval width. We'll explore this fact in Subsection \@ref(theory-ci) when we discuss theory-based methods for constructing confidence intervals using mathematical formulas. Such methods are an alternative to the computer-based methods we've been using so far. 
+Let's do this again, but creating everything in a single tibble so we can look at sample sizes from 25 to 200:
+
+```{r}
+# Same code as before, but for more sample sizes
+
+tibble(n = seq(25, 200, by = 5)) %>%
+  mutate(data = map(n, ~ bowl_confidence(n = ., level = 0.95))) %>%
+  unnest(data) %>%
+  select(-n) %>%
+  
+  # Calculate mean widths
+  
+  mutate(width = upper - lower) %>%
+  group_by(sample_size) %>%
+  summarize(mean_width = mean(width)) %>%
+  
+  # Plot results
+  
+  ggplot(aes(x = sample_size, y = mean_width)) +
+  geom_point() +
+  labs(x = "Sample size",
+       y = "Mean width",
+       title = "Change in mean width of CI as sample size decreases")
+```
 
 <!-- 
 A good Learning check might be to have the readers calculate confidence intervals when n = 1000, 2000, 2400. To their astonishment (maybe), they'll see that the size of the confidence interval is 0 when they get to 2400. 
@@ -1023,7 +1103,7 @@ This distribution was called the *bootstrap distribution* of $\overline{x}$. We 
 Let's show you that this is the case by now comparing these two types of distributions. Specifically, we'll compare
 
 1. the sampling distribution of $\widehat{p}$ based on 1000 virtual samples from the `bowl` from Subsection \@ref(shovel-1000-times) to
-1. the bootstrap distribution of $\widehat{p}$ based on 1000 virtual resamples with replacement from Ilyas and Yohan's single sample `bowl_sample_1` from Subsection \@ref(ilyas-yohan).
+1. the bootstrap distribution of $\widehat{p}$ based on 1000 virtual resamples with replacement from Ilyas and Yohan's single sample `bowl_sample_1`.
 
 
 #### Sampling distribution {-}
@@ -1036,15 +1116,21 @@ set.seed(76)
 
 ```{r sampling-distribution-part-deux, fig.show='hold', fig.cap="Previously seen sampling distribution of sample proportion red for $n = 1000$.", echo=TRUE, fig.height=2}
 # Take 1000 virtual samples of size 50 from the bowl:
+
 virtual_samples <- bowl %>% 
   rep_sample_n(size = 50, reps = 1000)
+
 # Compute the sampling distribution of 1000 values of p-hat
+
 sampling_distribution <- virtual_samples %>% 
   group_by(replicate) %>% 
   summarize(red = sum(color == "red")) %>% 
   mutate(prop_red = red / 50)
+
 # Visualize sampling distribution of p-hat
-ggplot(sampling_distribution, aes(x = prop_red)) +
+
+sampling_distribution %>%
+  ggplot(aes(x = prop_red)) +
   geom_histogram(binwidth = 0.05, boundary = 0.4, color = "white") +
   labs(x = "Proportion of 50 balls that were red", 
        title = "Sampling distribution")
@@ -1066,46 +1152,32 @@ se_samp <- sampling_distribution %>%
 
 #### Bootstrap distribution {-}
 
-Here is the code you previously saw in Subsection \@ref(ilyas-yohan) to construct the bootstrap distribution of $\widehat{p}$ based on Ilyas and Yohan's original sample of 50 balls saved in `bowl_sample_1`.
+Here is the code to construct the bootstrap distribution of $\widehat{p}$ based on Ilyas and Yohan's original sample of 50 balls saved in `bowl_sample_1`.
 
 ```{r,echo=FALSE}
 set.seed(76)
 ```
 
-```{r eval=FALSE}
+```{r}
 bootstrap_distribution <- bowl_sample_1 %>% 
-  specify(response = color, success = "red") %>% 
-  generate(reps = 1000, type = "bootstrap") %>% 
-  calculate(stat = "prop")
+  rep_sample_n(size = 50, reps = 1000, replace = TRUE) %>%
+  summarize(prop_red = mean(color == "red"))
 ```
 
-```{r echo=FALSE}
-if(!file.exists("rds/bootstrap_distribution_balls.rds")){
-  bootstrap_distribution <- bowl_sample_1 %>% 
-    specify(response = color, success = "red") %>% 
-    generate(reps = 1000, type = "bootstrap") %>% 
-    calculate(stat = "prop")
-  write_rds(bootstrap_distribution, 
-            "rds/bootstrap_distribution_balls.rds")
-} else {
-  bootstrap_distribution <- read_rds("rds/bootstrap_distribution_balls.rds")
-}
-```
-
-```{r bootstrap-distribution-part-deux, echo=FALSE, fig.show='hold', fig.cap="Bootstrap distribution of proportion red for $n = 1000$.", purl=FALSE, fig.height=2.5}
-# Visualize bootstrap distribution of p-hat
-bootstrap_distribution %>% 
-  visualize(binwidth = 0.05, boundary = 0.4, color = "white") + 
-  labs(x = "Proportion of 50 balls that were red", 
+```{r bootstrap-distribution-part-deux, fig.show='hold', fig.cap="Bootstrap distribution of proportion red for $n = 1000$.", purl=FALSE, fig.height=2.5}
+bootstrap_distribution %>%
+  ggplot(aes(x = prop_red)) +
+  geom_histogram(binwidth = 0.05, boundary = 0.4, color = "white") +
+  labs(x = "Proportion of 50 balls that were red",
        title = "Bootstrap distribution")
 ```
 
 ```{r}
-bootstrap_distribution %>% summarize(se = sd(stat))
+bootstrap_distribution %>% summarize(se = sd(prop_red))
 ```
 ```{r, echo=FALSE}
 se_boot <- bootstrap_distribution %>% 
-  summarize(se = sd(stat)) %>% 
+  summarize(se = sd(prop_red)) %>% 
   pull(se)
 ```
 
@@ -1126,7 +1198,7 @@ p_samp <- ggplot(sampling_distribution, aes(x = prop_red)) +
                      breaks = seq(from = 0.15, to = 0.65, by = 0.1)) + 
   scale_y_continuous(limits = c(0, 350), 
                      breaks = seq(from = 0, to = 400, by = 100))
-p_boot <- ggplot(bootstrap_distribution, aes(x = stat)) +
+p_boot <- ggplot(bootstrap_distribution, aes(x = prop_red)) +
   geom_histogram(binwidth = 0.05, boundary = 0.4, fill = "blue", 
                  color = "white") + 
   labs(x = "Proportion of 50 balls that were red", 
@@ -1171,172 +1243,175 @@ Notice that the bootstrap distribution's standard error is a rather good *approx
 
 Thus, using the fact that the bootstrap distribution and sampling distributions have similar spreads, we can build confidence intervals using bootstrapping as we've done all throughout this chapter!
 
+<!-- AR: commenting this last bit out -- both because a) it's frequentist and b)
+it introduces yet another way to calculate CIs but we want to focus on the
+bootstrap -->
 
-### Theory-based confidence intervals {#theory-ci}
+<!-- ### Theory-based confidence intervals {#theory-ci} -->
 
-So far in this chapter, we've constructed confidence intervals using two methods: the percentile method and the standard error method. Recall also from Subsection \@ref(se-method) that we can only use the standard-error method if the bootstrap distribution is bell-shaped (i.e., normally distributed). 
+<!-- So far in this chapter, we've constructed confidence intervals using two methods: the percentile method and the standard error method. Recall also from Subsection \@ref(se-method) that we can only use the standard-error method if the bootstrap distribution is bell-shaped (i.e., normally distributed).  -->
 
-In a similar vein, if the sampling distribution is normally shaped, there is another method for constructing confidence intervals that does not involve using your computer. You can use a *theory-based method* involving a mathematical formulas!
+<!-- In a similar vein, if the sampling distribution is normally shaped, there is another method for constructing confidence intervals that does not involve using your computer. You can use a *theory-based method* involving a mathematical formulas! -->
 
-The formula uses the rule of thumb that 95% of values in a normal distribution are within $\pm 1.96$ standard deviations of the mean. In the case of sampling and bootstrap distributions, recall that the standard deviation has a special name: the *standard error*. 
+<!-- The formula uses the rule of thumb that 95% of values in a normal distribution are within $\pm 1.96$ standard deviations of the mean. In the case of sampling and bootstrap distributions, recall that the standard deviation has a special name: the *standard error*.  -->
 
-#### Theory-based method for computing standard errors {-}
+<!-- #### Theory-based method for computing standard errors {-} -->
 
-There exists in many cases a formula that approximates the standard error! In the case of our `bowl` where we used the sample proportion red $\widehat{p}$ to estimate the proportion of the bowl's balls that are red, the formula that approximates the standard error is:
+<!-- There exists in many cases a formula that approximates the standard error! In the case of our `bowl` where we used the sample proportion red $\widehat{p}$ to estimate the proportion of the bowl's balls that are red, the formula that approximates the standard error is: -->
 
-$$\text{SE}_{\widehat{p}} \approx \sqrt{\frac{\widehat{p}(1-\widehat{p})}{n}}$$
+<!-- $$\text{SE}_{\widehat{p}} \approx \sqrt{\frac{\widehat{p}(1-\widehat{p})}{n}}$$ -->
 
-For example, recall from `bowl_sample_1` that Yohan and Ilyas sampled $n = 50$ balls and observed a sample proportion $\widehat{p}$ of 21/50 = 0.42. So, using the formula, an approximation of the standard error of $\widehat{p}$ is
+<!-- For example, recall from `bowl_sample_1` that Yohan and Ilyas sampled $n = 50$ balls and observed a sample proportion $\widehat{p}$ of 21/50 = 0.42. So, using the formula, an approximation of the standard error of $\widehat{p}$ is -->
 
-$$\text{SE}_{\widehat{p}} \approx \sqrt{\frac{0.42(1-0.42)}{50}} = \sqrt{0.004872} = 0.0698 \approx 0.070$$
+<!-- $$\text{SE}_{\widehat{p}} \approx \sqrt{\frac{0.42(1-0.42)}{50}} = \sqrt{0.004872} = 0.0698 \approx 0.070$$ -->
 
-The key observation to make here is that there is an $n$ in the denominator. So as the sample size $n$ increases, the standard error decreases. We've demonstrated this fact using our virtual shovels in Subsection \@ref(moral-of-the-story). If you don't recall this demonstration, we highly recommend you go back and read that subsection. 
+<!-- The key observation to make here is that there is an $n$ in the denominator. So as the sample size $n$ increases, the standard error decreases. We've demonstrated this fact using our virtual shovels in Subsection \@ref(moral-of-the-story). If you don't recall this demonstration, we highly recommend you go back and read that subsection.  -->
 
-Let's compare this theory-based standard error to the standard error of the sampling and bootstrap distributions you computed previously in Subsection \@ref(bootstrap-vs-sampling) in Table \@ref(tab:comparing-se-2). Notice how they are all similar!
+<!-- Let's compare this theory-based standard error to the standard error of the sampling and bootstrap distributions you computed previously in Subsection \@ref(bootstrap-vs-sampling) in Table \@ref(tab:comparing-se-2). Notice how they are all similar! -->
 
-```{r comparing-se-2, echo=FALSE, message=FALSE}
-tibble(
-  `Distribution type` = c("Sampling distribution", "Bootstrap distribution", 
-                          "Formula approximation"),
-  `Standard error` = c(se_samp, se_boot, 0.0698)
-) %>% 
-  kable(
-    caption = "Comparing standard errors", 
-    digits = 3, 
-    booktabs = TRUE,
-    escape = FALSE,
-    linesep = ""
-  ) %>% 
-  kable_styling(font_size = ifelse(knitr:::is_latex_output(), 10, 16),
-                latex_options = c("hold_position", "repeat_header"))
-```
+<!-- ```{r comparing-se-2, echo=FALSE, message=FALSE} -->
+<!-- tibble( -->
+<!--   `Distribution type` = c("Sampling distribution", "Bootstrap distribution",  -->
+<!--                           "Formula approximation"), -->
+<!--   `Standard error` = c(se_samp, se_boot, 0.0698) -->
+<!-- ) %>%  -->
+<!--   kable( -->
+<!--     caption = "Comparing standard errors",  -->
+<!--     digits = 3,  -->
+<!--     booktabs = TRUE, -->
+<!--     escape = FALSE, -->
+<!--     linesep = "" -->
+<!--   ) %>%  -->
+<!--   kable_styling(font_size = ifelse(knitr:::is_latex_output(), 10, 16), -->
+<!--                 latex_options = c("hold_position", "repeat_header")) -->
+<!-- ``` -->
 
-Going back to Yohan and Ilyas' sample proportion of $\widehat{p}$ of 21/50 = 0.42, say this were based on a sample of size $n$ = 100 instead of 50. Then the standard error would be:
+<!-- Going back to Yohan and Ilyas' sample proportion of $\widehat{p}$ of 21/50 = 0.42, say this were based on a sample of size $n$ = 100 instead of 50. Then the standard error would be: -->
 
-$$\text{SE}_{\widehat{p}} \approx \sqrt{\frac{0.42(1-0.42)}{100}} = \sqrt{0.002436} = 0.0494$$
+<!-- $$\text{SE}_{\widehat{p}} \approx \sqrt{\frac{0.42(1-0.42)}{100}} = \sqrt{0.002436} = 0.0494$$ -->
 
-Observe that the standard error has gone down from 0.0698 to 0.0494. In other words, the "typical" error of our estimates using $n$ = 100 will go down and hence be more *precise*. Recall that we illustrated the difference between accuracy and precision of estimates in Figure \@ref(fig:accuracy-vs-precision).
+<!-- Observe that the standard error has gone down from 0.0698 to 0.0494. In other words, the "typical" error of our estimates using $n$ = 100 will go down and hence be more *precise*. Recall that we illustrated the difference between accuracy and precision of estimates in Figure \@ref(fig:accuracy-vs-precision). -->
 
-Why is this formula true? Unfortunately, we don't have the tools at this point to prove this; you'll need to take a more advanced course in probability and statistics. (It is related to the concepts of Bernoulli and Binomial Distributions. You can read more about its derivation [here](http://onlinestatbook.com/2/sampling_distributions/samp_dist_p.html) if you like.)
+<!-- Why is this formula true? Unfortunately, we don't have the tools at this point to prove this; you'll need to take a more advanced course in probability and statistics. (It is related to the concepts of Bernoulli and Binomial Distributions. You can read more about its derivation [here](http://onlinestatbook.com/2/sampling_distributions/samp_dist_p.html) if you like.) -->
 
-#### Theory-based method for constructing confidence intervals {-}
+<!-- #### Theory-based method for constructing confidence intervals {-} -->
 
-Using these theory-based standard errors, let's present a theory-based method for constructing 95% confidence intervals that does not involve using a computer, but rather mathematical formulas. Note that this theory-based method only holds if the sampling distribution is normally shaped, so that we can use the 95% rule of thumb about normal distributions.
+<!-- Using these theory-based standard errors, let's present a theory-based method for constructing 95% confidence intervals that does not involve using a computer, but rather mathematical formulas. Note that this theory-based method only holds if the sampling distribution is normally shaped, so that we can use the 95% rule of thumb about normal distributions. -->
 
-1. Collect a single representative sample of size $n$ that's as large as possible.
-2. Compute the *point estimate*: the *sample proportion* $\widehat{p}$. Think of this as the center of your "net."
-3. Compute the approximation to the standard error 
+<!-- 1. Collect a single representative sample of size $n$ that's as large as possible. -->
+<!-- 2. Compute the *point estimate*: the *sample proportion* $\widehat{p}$. Think of this as the center of your "net." -->
+<!-- 3. Compute the approximation to the standard error  -->
 
-$$\text{SE}_{\widehat{p}} \approx \sqrt{\frac{\widehat{p}(1-\widehat{p})}{n}}$$
+<!-- $$\text{SE}_{\widehat{p}} \approx \sqrt{\frac{\widehat{p}(1-\widehat{p})}{n}}$$ -->
 
-4. Compute a quantity known as the *margin of error* (more on this later after we list the five steps):
+<!-- 4. Compute a quantity known as the *margin of error* (more on this later after we list the five steps): -->
 
-$$\text{MoE}_{\widehat{p}} = 1.96 \cdot \text{SE}_{\widehat{p}} =  1.96 \cdot \sqrt{\frac{\widehat{p}(1-\widehat{p})}{n}}$$
+<!-- $$\text{MoE}_{\widehat{p}} = 1.96 \cdot \text{SE}_{\widehat{p}} =  1.96 \cdot \sqrt{\frac{\widehat{p}(1-\widehat{p})}{n}}$$ -->
 
-5. Compute both endpoints of the confidence interval. 
-    + The lower end-point. Think of this as the left end-point of the net: 
-    $$\widehat{p} - \text{MoE}_{\widehat{p}} = \widehat{p} - 1.96 \cdot \text{SE}_{\widehat{p}} = \widehat{p} - 1.96 \cdot \sqrt{\frac{\widehat{p}(1-\widehat{p})}{n}}$$
-    
-    + The upper endpoint. Think of this as the right end-point of the net: 
-    $$\widehat{p} + \text{MoE}_{\widehat{p}} = \widehat{p} + 1.96 \cdot \text{SE}_{\widehat{p}} = \widehat{p} + 1.96 \cdot \sqrt{\frac{\widehat{p}(1-\widehat{p})}{n}}$$
-    
-    + Alternatively, you can succinctly summarize a 95% confidence interval for $p$ using the $\pm$ symbol: 
-    
-    $$\widehat{p} \pm \text{MoE}_{\widehat{p}} = \widehat{p} \pm (1.96 \cdot \text{SE}_{\widehat{p}}) = \widehat{p} \pm \left( 1.96 \cdot \sqrt{\frac{\widehat{p}(1-\widehat{p})}{n}} \right)$$
+<!-- 5. Compute both endpoints of the confidence interval.  -->
+<!--     + The lower end-point. Think of this as the left end-point of the net:  -->
+<!--     $$\widehat{p} - \text{MoE}_{\widehat{p}} = \widehat{p} - 1.96 \cdot \text{SE}_{\widehat{p}} = \widehat{p} - 1.96 \cdot \sqrt{\frac{\widehat{p}(1-\widehat{p})}{n}}$$ -->
 
-So going back to Yohan and Ilyas' sample of $n = 50$ balls that had 21 red balls, the 95% confidence interval for $p$ is 
+<!--     + The upper endpoint. Think of this as the right end-point of the net:  -->
+<!--     $$\widehat{p} + \text{MoE}_{\widehat{p}} = \widehat{p} + 1.96 \cdot \text{SE}_{\widehat{p}} = \widehat{p} + 1.96 \cdot \sqrt{\frac{\widehat{p}(1-\widehat{p})}{n}}$$ -->
 
-$$
-\begin{aligned}
-0.41 \pm 1.96 \cdot 0.0698 &= 0.41 \, \pm \, 0.137 \\ &= (0.41 - 0.137, \, 0.41 + 0.137) \\ &= (0.273, \, 0.547).
-\end{aligned}
-$$
+<!--     + Alternatively, you can succinctly summarize a 95% confidence interval for $p$ using the $\pm$ symbol:  -->
 
-Yohan and Ilyas are 95% "confident" that the true proportion red of the bowl's balls is between 28.3% and 55.7%. Given that the true population proportion $p$ was `r p_red`, in this case they successfully captured the fish.
+<!--     $$\widehat{p} \pm \text{MoE}_{\widehat{p}} = \widehat{p} \pm (1.96 \cdot \text{SE}_{\widehat{p}}) = \widehat{p} \pm \left( 1.96 \cdot \sqrt{\frac{\widehat{p}(1-\widehat{p})}{n}} \right)$$ -->
 
-In Step 4, we defined a statistical quantity known as the *margin of error*.\index{margin of error} You can think of this quantity as how much the net extends to the left and to the right of the center of our net. The 1.96 multiplier is rooted in the 95% rule of thumb we introduced earlier and the fact that we want the confidence level to be 95%. The value of the margin of error entirely determines the width of the confidence interval. Recall from Subsection \@ref(ci-width) that confidence interval widths are determined by an interplay of the confidence level, the sample size $n$, and the standard error.
+<!-- So going back to Yohan and Ilyas' sample of $n = 50$ balls that had 21 red balls, the 95% confidence interval for $p$ is  -->
 
-Let's revisit the poll of President Obama's approval rating among young Americans aged 18-29 which we introduced in Section \@ref(sampling-case-study). Pollsters found that based on a representative sample of $n$ = 2089 young Americans, $\widehat{p}$ = 0.41 = 41% supported President Obama. 
+<!-- $$ -->
+<!-- \begin{aligned} -->
+<!-- 0.41 \pm 1.96 \cdot 0.0698 &= 0.41 \, \pm \, 0.137 \\ &= (0.41 - 0.137, \, 0.41 + 0.137) \\ &= (0.273, \, 0.547). -->
+<!-- \end{aligned} -->
+<!-- $$ -->
 
-If you look towards the end of the article, it also states: "The poll's margin of error was plus or minus 2.1 percentage points." This is precisely the $\text{MoE}$:
+<!-- Yohan and Ilyas are 95% "confident" that the true proportion red of the bowl's balls is between 28.3% and 55.7%. Given that the true population proportion $p$ was `r p_red`, in this case they successfully captured the fish. -->
 
-$$
-\begin{aligned}
-\text{MoE} &= 1.96 \cdot \text{SE} =  1.96 \cdot \sqrt{\frac{\widehat{p}(1-\widehat{p})}{n}} = 1.96 \cdot \sqrt{\frac{0.41(1-0.41)}{2089}} \\
-&= 1.96 \cdot 0.0108 = 0.021 = 2.1\%
-\end{aligned}
-$$
+<!-- In Step 4, we defined a statistical quantity known as the *margin of error*.\index{margin of error} You can think of this quantity as how much the net extends to the left and to the right of the center of our net. The 1.96 multiplier is rooted in the 95% rule of thumb we introduced earlier and the fact that we want the confidence level to be 95%. The value of the margin of error entirely determines the width of the confidence interval. Recall from Subsection \@ref(ci-width) that confidence interval widths are determined by an interplay of the confidence level, the sample size $n$, and the standard error. -->
 
-Their poll results are based on a confidence level of 95% and the resulting 95% confidence interval for the proportion of all young Americans who support Obama is: 
+<!-- Let's revisit the poll of President Obama's approval rating among young Americans aged 18-29 which we introduced in Section \@ref(sampling-case-study). Pollsters found that based on a representative sample of $n$ = 2089 young Americans, $\widehat{p}$ = 0.41 = 41% supported President Obama.  -->
 
-$$\widehat{p} \pm \text{MoE} = 0.41 \pm 0.021 = (0.389, \, 0.431) = (38.9\%, \, 43.1\%).$$ 
+<!-- If you look towards the end of the article, it also states: "The poll's margin of error was plus or minus 2.1 percentage points." This is precisely the $\text{MoE}$: -->
 
-#### Confidence intervals based on 33 tactile samples {-}
+<!-- $$ -->
+<!-- \begin{aligned} -->
+<!-- \text{MoE} &= 1.96 \cdot \text{SE} =  1.96 \cdot \sqrt{\frac{\widehat{p}(1-\widehat{p})}{n}} = 1.96 \cdot \sqrt{\frac{0.41(1-0.41)}{2089}} \\ -->
+<!-- &= 1.96 \cdot 0.0108 = 0.021 = 2.1\% -->
+<!-- \end{aligned} -->
+<!-- $$ -->
 
-Let's revisit our 33 friends' samples from the `bowl` from Subsection \@ref(student-shovels). We'll use their 33 samples to construct 33 theory-based 95% confidence intervals for $p$. Recall this data was saved in the `tactile_prop_red` data frame included in the **moderndive** package:
+<!-- Their poll results are based on a confidence level of 95% and the resulting 95% confidence interval for the proportion of all young Americans who support Obama is:  -->
 
-1. `rename()` the variable `prop_red` to `p_hat`, the statistical name of the sample proportion $\widehat{p}$.
-1. `mutate()` a new variable `n` making explicit the sample size of 50.
-1. `mutate()` other new variables computing:
-    * The standard error `SE` for $\widehat{p}$ using the previous formula.
-    * The margin of error `MoE` by multiplying the `SE` by 1.96
-    * The left endpoint of the confidence interval `lower_ci`
-    * The right endpoint of the confidence interval `upper_ci`
+<!-- $$\widehat{p} \pm \text{MoE} = 0.41 \pm 0.021 = (0.389, \, 0.431) = (38.9\%, \, 43.1\%).$$  -->
 
-```{r, message=FALSE, warning=FALSE, }
-conf_ints <- tactile_prop_red %>% 
-  rename(p_hat = prop_red) %>% 
-  mutate(
-    n = 50,
-    SE = sqrt(p_hat * (1 - p_hat) / n),
-    MoE = 1.96 * SE,
-    lower_ci = p_hat - MoE,
-    upper_ci = p_hat + MoE
-  )
-```
+<!-- #### Confidence intervals based on 33 tactile samples {-} -->
 
-```{r echo=FALSE}
-if(!knitr::is_latex_output())
-  conf_ints
-```
+<!-- Let's revisit our 33 friends' samples from the `bowl` from Subsection \@ref(student-shovels). We'll use their 33 samples to construct 33 theory-based 95% confidence intervals for $p$. Recall this data was saved in the `tactile_prop_red` data frame included in the **moderndive** package: -->
 
-In Figure \@ref(fig:tactile-conf-int), let's plot the 33 confidence intervals for $p$ saved in `conf_ints` along with a vertical line at $p$ = `r p_red` indicating the true proportion of the `bowl`'s balls that are red. Furthermore, let's mark the sample proportions $\widehat{p}$ with dots since they represent the centers of these confidence intervals.
+<!-- 1. `rename()` the variable `prop_red` to `p_hat`, the statistical name of the sample proportion $\widehat{p}$. -->
+<!-- 1. `mutate()` a new variable `n` making explicit the sample size of 50. -->
+<!-- 1. `mutate()` other new variables computing: -->
+<!--     * The standard error `SE` for $\widehat{p}$ using the previous formula. -->
+<!--     * The margin of error `MoE` by multiplying the `SE` by 1.96 -->
+<!--     * The left endpoint of the confidence interval `lower_ci` -->
+<!--     * The right endpoint of the confidence interval `upper_ci` -->
 
-```{r tactile-conf-int, echo=FALSE, message=FALSE, warning=FALSE, fig.cap= "33 confidence intervals at the 95\\% level based on 33 tactile samples of size $n = 50$.", fig.height=6}
-conf_ints <- conf_ints %>% 
-  mutate(
-    y = 1:n(),
-    p = 900 / 2400,
-    captured = lower_ci <= p & p <= upper_ci
-  )
-groups <- conf_ints$group
+<!-- ```{r, message=FALSE, warning=FALSE, } -->
+<!-- conf_ints <- tactile_prop_red %>%  -->
+<!--   rename(p_hat = prop_red) %>%  -->
+<!--   mutate( -->
+<!--     n = 50, -->
+<!--     SE = sqrt(p_hat * (1 - p_hat) / n), -->
+<!--     MoE = 1.96 * SE, -->
+<!--     lower_ci = p_hat - MoE, -->
+<!--     upper_ci = p_hat + MoE -->
+<!--   ) -->
+<!-- ``` -->
 
-ggplot(conf_ints) +
-  geom_point(
-    aes(
-      x = p_hat, y = y, 
-      alpha = factor(captured, levels = c("TRUE", "FALSE"))
-    ),
-    show.legend = FALSE
-  ) +
-  geom_vline(xintercept = 900 / 2400, col = "red") +
-  geom_segment(aes(
-    y = y, yend = y, x = lower_ci, xend = upper_ci, 
-    alpha = factor(captured, levels = c("TRUE", "FALSE"))
-  )) +
-  scale_y_continuous(breaks = 1:33, labels = groups) +
-  labs(x = expression("Proportion of red balls"), y = "", 
-       alpha = "Captured") + 
-  theme_light() + 
-  theme(panel.grid.major.y = element_blank(), panel.grid.minor.y = element_blank(),
-        panel.grid.minor.x = element_blank())
-```
+<!-- ```{r echo=FALSE} -->
+<!-- if(!knitr::is_latex_output()) -->
+<!--   conf_ints -->
+<!-- ``` -->
 
-Observe that 31 of the 33 confidence intervals "captured" the true value of $p$, for a success rate of 31 / 33 = `r round(31 / 33 * 100, 2)`%. While this is not quite 95%, recall that we *expect* about 95% of such confidence intervals to capture $p$. The actual observed success rate will vary slightly. 
+<!-- In Figure \@ref(fig:tactile-conf-int), let's plot the 33 confidence intervals for $p$ saved in `conf_ints` along with a vertical line at $p$ = `r p_red` indicating the true proportion of the `bowl`'s balls that are red. Furthermore, let's mark the sample proportions $\widehat{p}$ with dots since they represent the centers of these confidence intervals. -->
 
-Theory-based methods like this have largely been used in the past because we didn't have the computing power to perform simulation-based methods such as bootstrapping. They are still commonly used, however, and if the sampling distribution is normally distributed, we have access to an alternative method for constructing confidence intervals.
+<!-- ```{r tactile-conf-int, echo=FALSE, message=FALSE, warning=FALSE, fig.cap= "33 confidence intervals at the 95\\% level based on 33 tactile samples of size $n = 50$.", fig.height=6} -->
+<!-- conf_ints <- conf_ints %>%  -->
+<!--   mutate( -->
+<!--     y = 1:n(), -->
+<!--     p = 900 / 2400, -->
+<!--     captured = lower_ci <= p & p <= upper_ci -->
+<!--   ) -->
+<!-- groups <- conf_ints$group -->
 
-The kind of computer-based statistical inference we've seen so far has a particular name in the field of statistics: *simulation-based inference*. This is because we are performing statistical inference using computer simulations.\index{simulation-based inference} In our opinion, two large benefits of simulation-based methods over theory-based methods are that (1) they are easier for people new to statistical inference to understand and (2) they also work in situations where theory-based methods and mathematical formulas don't exist. 
+<!-- ggplot(conf_ints) + -->
+<!--   geom_point( -->
+<!--     aes( -->
+<!--       x = p_hat, y = y,  -->
+<!--       alpha = factor(captured, levels = c("TRUE", "FALSE")) -->
+<!--     ), -->
+<!--     show.legend = FALSE -->
+<!--   ) + -->
+<!--   geom_vline(xintercept = 900 / 2400, col = "red") + -->
+<!--   geom_segment(aes( -->
+<!--     y = y, yend = y, x = lower_ci, xend = upper_ci,  -->
+<!--     alpha = factor(captured, levels = c("TRUE", "FALSE")) -->
+<!--   )) + -->
+<!--   scale_y_continuous(breaks = 1:33, labels = groups) + -->
+<!--   labs(x = expression("Proportion of red balls"), y = "",  -->
+<!--        alpha = "Captured") +  -->
+<!--   theme_light() +  -->
+<!--   theme(panel.grid.major.y = element_blank(), panel.grid.minor.y = element_blank(), -->
+<!--         panel.grid.minor.x = element_blank()) -->
+<!-- ``` -->
+
+<!-- Observe that 31 of the 33 confidence intervals "captured" the true value of $p$, for a success rate of 31 / 33 = `r round(31 / 33 * 100, 2)`%. While this is not quite 95%, recall that we *expect* about 95% of such confidence intervals to capture $p$. The actual observed success rate will vary slightly.  -->
+
+<!-- Theory-based methods like this have largely been used in the past because we didn't have the computing power to perform simulation-based methods such as bootstrapping. They are still commonly used, however, and if the sampling distribution is normally distributed, we have access to an alternative method for constructing confidence intervals. -->
+
+<!-- The kind of computer-based statistical inference we've seen so far has a particular name in the field of statistics: *simulation-based inference*. This is because we are performing statistical inference using computer simulations.\index{simulation-based inference} In our opinion, two large benefits of simulation-based methods over theory-based methods are that (1) they are easier for people new to statistical inference to understand and (2) they also work in situations where theory-based methods and mathematical formulas don't exist.  -->
 
 <!--
 Albert: This section is getting hella long, so will comment this out for now. Let's consider adding 
