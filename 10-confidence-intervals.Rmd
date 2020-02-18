@@ -320,21 +320,13 @@ What we just demonstrated in this activity is the statistical procedure known as
 
 In fact, the histogram of sample means from 35 resamples in Figure \@ref(fig:tactile-resampling-6) is called the \index{bootstrap!distribution} *bootstrap distribution*. It is an *approximation* to the *sampling distribution* of the sample mean, in the sense that both distributions will have a similar shape and similar spread. In fact in the upcoming Section \@ref(ci-conclusion), we'll show you that this is the case. Using this bootstrap distribution, we can study the effect of sampling variation on our estimates. In particular, we'll study the typical "error" of our estimates, known as the \index{standard error} *standard error*. 
 
-In Section \@ref(resampling-simulation) we'll mimic our tactile resampling activity virtually on the computer, allowing us to quickly perform the resampling many more than 35 times. In Section \@ref(ci-build-up) we'll define the statistical concept of a *confidence interval*, which builds off the concept of bootstrap distributions.
+Starting in Subsection \@ref(resampling-simulation), we'll mimic our tactile resampling activity virtually on the computer, allowing us to quickly perform the resampling many more than 35 times. In Section \@ref(ci-build-up) we'll define the statistical concept of a *confidence interval*, which builds off the concept of bootstrap distributions.
 
 As we did in Chapter \@ref(sampling), we'll tie all these ideas together with a real-life case study in Section \@ref(case-study-two-prop-ci). This time we'll look at data from an experiment about yawning from the US television show *Mythbusters*.  
 
-
-
-
-
-
-
-## Computer simulation of resampling {#resampling-simulation}
-
 Let's now mimic our tactile resampling activity virtually with a computer.
 
-### Virtually resampling once
+### Virtually resampling once {#resampling-simulation}
 
 First, let's perform the virtual analog of resampling once. Recall that the `pennies_sample` data frame included in the **moderndive** package contains the years of our original sample of 50 pennies from the bank. Furthermore, recall in Chapter \@ref(sampling) on sampling that we used the `rep_sample_n()` function in the **infer** package as a virtual shovel to sample balls from our virtual bowl of `r nrow(bowl)` balls as follows: 
 
@@ -345,7 +337,7 @@ virtual_shovel <- bowl %>%
   rep_sample_n(size = 50)
 ```
 
-Let's modify this code to perform the resampling with replacement of the 50 slips of paper representing our original sample 50 pennies:
+Let's modify this code to perform the resampling with replacement of the 50 slips of paper representing our original sample of 50 pennies:
 
 ```{r, echo = FALSE}
 library(infer)
@@ -479,7 +471,7 @@ The mean of these 1000 means is `r mean_of_means`, which is quite close to the m
 Congratulations! You've just constructed your first bootstrap distribution! In the next section, you'll see how to use this bootstrap distribution to construct *confidence intervals*.
 
 
-## Understanding confidence intervals {#ci-build-up}
+## Measuring uncertainty with confidence intervals {#ci-build-up}
 
 Let's start this section with an analogy involving fishing. Say you are trying to catch a fish. On the one hand, you could use a spear, while on the other you could use a net. Using the net will probably allow you to catch more fish! 
 
@@ -518,9 +510,13 @@ percentile_ci <- virtual_resampled_means %>%
   get_ci(level = 0.95, type = "percentile")
 ```
 
-One method to construct a confidence interval is to use the middle 95% of values of the bootstrap distribution. We can do this by computing the 2.5th and 97.5th percentiles, which are `r percentile_ci[["2.5%"]]` and `r percentile_ci[["97.5%"]]`, respectively. This is known as the *percentile method* for constructing confidence intervals. 
+One method to construct a confidence interval is to use the middle 95% of values of the bootstrap distribution. We can do this by computing the 2.5th and 97.5th percentiles, which are `r percentile_ci[["2.5%"]]` and `r percentile_ci[["97.5%"]]`, respectively. This is known as the *percentile method* for constructing confidence intervals. You can get these values using the `quantile()` function on the `mean_year` column of `virtual_resampled_means`:
 
-For now, let's focus only on the concepts behind a percentile method constructed confidence interval; we'll show you the code that computes these values in the next section.
+```{r}
+virtual_resampled_means %>%
+  pull(mean_year) %>%
+  quantile(c(0.025, 0.975))
+```
 
 Let's mark these percentiles on the bootstrap distribution with vertical lines in Figure \@ref(fig:percentile-method). About 95% of the `mean_year` variable values in `virtual_resampled_means` fall between `r percentile_ci[["2.5%"]]` and `r percentile_ci[["97.5%"]]`, with 2.5% to the left of the leftmost line and 2.5% to the right of the rightmost line. 
 
@@ -593,27 +589,7 @@ ggplot(virtual_resampled_means, aes(x = mean_year)) +
 
 We see that both methods produce nearly identical 95% confidence intervals for $\mu$ with the percentile method yielding $(`r round(percentile_ci[["2.5%"]], 2)`, `r round(percentile_ci[["97.5%"]], 2)`)$ while the standard error method produces $(`r round(standard_error_ci[["lower"]], 2)`, `r round(standard_error_ci[["upper"]],2)`)$. Thus, the standard error method can be a good quick way to construct confidence intervals when you already have an estimate of the standard error and don't want to go through the steps to obtain a confidence interval by the percentile method.  It is particularly handy since $1.96 \approx 2$, and thus it is easy to calculate in one's head.  However, recall that we can only use the standard error rule when the bootstrap distribution is roughly normally shaped. If you have an unusually shaped distribution, it is better to use the percentile method.
 
-Now that we've introduced the concept of confidence intervals and laid out the intuition behind two methods for constructing them, let's explore the code that allows us to construct them. 
-
-<!--
-The variability of the sampling distribution may be approximated by the variability of the resampling distribution. Traditional theory-based methodologies for inference also have formulas for standard errors, assuming some conditions are met.
-
-This is done by using the formula where $\bar{x}$ is our original sample mean and $SE$ stands for **standard error** and corresponds to the standard deviation of the resampling distribution.  The value of $multiplier$ here is the appropriate percentile of the standard normal distribution. We'll go into this further in Section \@ref(ci-conclusion).
-
-These are automatically calculated when `level` is provided with `level = 0.95` being the default. (95% of the values in a standard normal distribution fall within 1.96 standard deviations of the mean, so $multiplier = 1.96$ for `level = 0.95`, for example.)  As mentioned, this formula assumes that the bootstrap distribution is symmetric and bell-shaped. This is often the case with bootstrap distributions, especially those in which the original distribution of the sample is not highly skewed.
-
-This $\bar{x} \pm (multiplier * SE)$ formula is implemented in the `get_ci()` function as shown with our pennies problem using the bootstrap distribution's variability as an approximation for the sampling distribution's variability. We'll see more on this approximation shortly.
-
-Note that the center of the confidence interval (the `point_estimate`) must be provided for the standard error confidence interval.
-
-```{r eval=FALSE}
-standard_error_ci <- bootstrap_distribution %>% 
-  get_ci(type = "se", point_estimate = x_bar)
-standard_error_ci
-```
--->
-
-## Interpreting confidence intervals {#one-prop-ci}
+### Interpreting confidence intervals {#one-prop-ci}
 
 Now that we've shown you how to construct confidence intervals using a sample drawn from a population, let's now focus on how to interpret them.^[This Bayesian interpretation of the bootstrap confidence interval is often called a [credible interval](https://en.wikipedia.org/wiki/Credible_interval) in the academic literature; you may find yourself in a statistics class that uses the phrase "confidence interval" to refer only to the [frequentist](https://en.wikipedia.org/wiki/Frequentist_inference) concept wherein the interpretation is that 95\% of the *intervals* constructed using this method in repeated samples will contain the true but unknown population parameter.  For this book, we will stick with the phrase "confidence interval" and use the Bayesian interpretation.] 
 
@@ -632,11 +608,11 @@ We think this is a bad way to make decisions.  Two very similar datasets could p
 
 
 
-### Width of confidence intervals {#ci-width}
+## Width of confidence intervals {#ci-width}
 
 Now that we know how to interpret confidence intervals, let's go over some factors that determine their width.
 
-#### Impact of confidence level {-}
+### Impact of confidence level
 
 One factor that determines confidence interval widths is the pre-specified confidence level. The quantification of the confidence level should match what many expect of the word "confident." In order to be more confident in our best guess of a range of values, we need to widen the range of values.
 
@@ -769,7 +745,9 @@ percentile_cis_by_level %>%
 
 So in order to have a higher confidence level, our confidence intervals must be wider. Ideally, we would have both a high confidence level and narrow confidence intervals. However, we cannot have it both ways. If we want to _be more confident_, we need to allow for wider intervals. Conversely, if we would like a narrow interval, we must tolerate a lower confidence level. 
 
-The moral of the story is: \index{confidence interval!impact of confidence level on interval width} **Higher confidence levels tend to produce wider confidence intervals.**  When looking at Table \@ref(tab:perc-cis-average-width) it is important to keep in mind that we kept the sample size fixed at $n$ = 50. Thus, all $10 \cdot 3 = 30$ random samples from the `bowl` had the same sample size. What happens if instead we took samples of different sizes? Recall that we did this in Subsection \@ref(different-shovels) using virtual shovels with 25, 50, and 100 slots. <!-- We delve into this next. -->
+The moral of the story is: \index{confidence interval!impact of confidence level on interval width} **Higher confidence levels tend to produce wider confidence intervals.**  When looking at Table \@ref(tab:perc-cis-average-width) it is important to keep in mind that we kept the sample size fixed at $n$ = 50. Thus, all $10 \cdot 3 = 30$ random samples from the `bowl` had the same sample size. What happens if instead we took samples of different sizes? Recall that we did this in Subsection \@ref(different-shovels) using virtual shovels with 25, 50, and 100 slots.
+
+### Fitting multiple models using `map()`
 
 Note that we used the same code three times.  That means we should write a function!  Let's adapt the code from the last section to take 10 samples of an arbitrary size and construct confidence intervals of an arbitrary level:
 
@@ -862,7 +840,7 @@ tibble(level = seq(0.50, 0.99, by = 0.01)) %>%
 
 As the confidence level gets larger, the width of the interval gets larger too.
 
-#### Impact of sample size {-}
+### Impact of sample size
 
 This time, let's fix the confidence level at 95%, but consider three different sample sizes for $n$: 25, 50, and 100. Specifically, we'll first take 10 different random samples of size 25, 10 different random samples of size 50, and 10 different random samples of size 100. We'll then construct 95% percentile-based confidence intervals for each sample. Finally, we'll compare the widths of these intervals.
 
@@ -936,11 +914,46 @@ As the sample size gets larger, the width of the interval gets smaller.
 A good Learning check might be to have the readers calculate confidence intervals when n = 1000, 2000, 2400. To their astonishment (maybe), they'll see that the size of the confidence interval is 0 when they get to 2400. 
 -->
 
+## Using `lm()` and `tidy()` as a shortcut
 
+Recall the confidence interval we constructed for the mean year of the pennies using the percentile method:
 
+```{r}
+virtual_resampled_means %>%
+  pull(mean_year) %>%
+  quantile(c(0.025, 0.975))
+```
 
+Is there a way to construct that interval *without* engaging in the bootstrap resampling?  That is, can we approximate this by using the `pennies_sample` tibble directly?
 
+It turns out that we can, using the `lm()` function.  `lm()` stands for `l`inear `m`odel, and we will be using it a lot more in the next two chapters.  This function can get the mean of a variable using the following syntax:
 
+```{r}
+lm(year ~ 1, data = pennies_sample)
+```
+
+Once we learn about regression, we'll learn why this is labeled the "intercept."  The key thing to note right now is that `lm()` takes two main arguments, `formula` and `data`.  The notation `year ~ 1` will get the mean of `year`.
+
+The **broom** package makes it a lot easier to work with `lm()` model objects.  In particular, the function `tidy()` has the option `conf.int = TRUE`, which we can use to get a confidence interval:
+
+```{r}
+library(broom)
+
+lm(year ~ 1, data = pennies_sample) %>%
+  tidy(conf.int = TRUE)
+```
+
+This presents a lot of columns that we don't care about, so we will `select()` the relevant ones:
+
+```{r}
+library(broom)
+
+lm(year ~ 1, data = pennies_sample) %>%
+  tidy(conf.int = TRUE) %>%
+  select(estimate, conf.low, conf.high)
+```
+
+These are not identical to our bootstrap confidence interval estimates, but they are similar.  Thus, if you are interested in constructing a confidence interval for a mean, you can use `lm()` and `tidy()` as a shortcut.
 
 ## Case study: Is yawning contagious? {#case-study-two-prop-ci}
 
@@ -1086,11 +1099,34 @@ Say, on the other hand, the 95% confidence interval was entirely above zero. Thi
 
 Furthermore, if the 50 participants were randomly allocated to the `"seed"` and `"control"` groups, then this would be suggestive that being exposed to yawning doesn't not *cause* yawning. In other words, yawning is not contagious. However, no information on how participants were assigned to be exposed to yawning or not could be found, so we cannot make such a causal statement. 
 
+### Using `lm()` and `tidy()` as a shortcut
 
+We have learned that you can use `lm()` as a shortcut to construct confidence interval for a mean.  You can also use it to construct a confidence interval for a difference in means.  Recall that you'll need the **broom** package loaded in order to use the `tidy()` function.  Let's start by considering the `lm()` syntax:
 
+```{r}
+lm(yawn == "yes" ~ group, data = mythbusters_yawn)
+```
 
+There are two differences from what we've seen before.  First, since `yawn` is a character variable, we had to specify that our outcome is "yes" by using `yawn == "yes"`.  Second, since we are interested in the difference in means by group, we used `group` instead of `1` on the right side of the `~`.
 
+Next, let's `tidy()` this object:
 
+```{r}
+lm(yawn == "yes" ~ group, data = mythbusters_yawn) %>%
+  tidy(conf.int = TRUE) %>%
+  select(term, estimate, conf.low, conf.high)
+```
+
+We are also `select`ing the `term` column, since now `lm()` gives estimates for two terms: `(Intercept)` and `groupseed`.  We will hold off on interpreting `lm()` model objects until the next chapter, but for now it all you need to know is that `groupseed` is the `term` that repesents our difference in means. Let's `filter()` to that `term`:
+
+```{r}
+lm(yawn == "yes" ~ group, data = mythbusters_yawn) %>%
+  tidy(conf.int = TRUE) %>%
+  select(term, estimate, conf.low, conf.high) %>%
+  filter(term == "groupseed")
+```
+
+Again, the confidence interval using `lm()` and `tidy()` is similar to what we saw using the bootstrap method, and thus this is available as a shortcut.
 
 ## Conclusion {#ci-conclusion}
 
