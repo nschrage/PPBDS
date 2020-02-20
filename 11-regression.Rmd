@@ -420,14 +420,14 @@ As you read news stories, be careful not to fall into the trap of thinking that 
 
 Let's say, however, that we were confident that there is no confounding: that is, that there are no variables such as socioeconomic background that correlate both with a teacher's "beauty" score and teaching score.  (We shouldn't be confident in this, but let's play along for the moment.)  Then, we can interpret the slope in terms of the [Rubin Causal Model](#rubin-causal-model).  The slope coefficient on `bty_avg` of `r evals_line[2]` then means that the *average treatment effect* of increasing a teacher's "beauty" score by 1 is `r evals_line[2]`.  In the absence of randomization, however, this is likely not a good interpretation of this regression!  Adding additional variables, as we'll do in Chapter \@ref{multiple-regression}, may make it more plausible to interpret the regression causally.
 
-Keeping with the causal interpretation, let's say that we observe a teacher named Joe who had a "beauty" score of 7 and a `bty_avg` of 4.  What would Joe's `bty_avg` be if he had a "beauty" score of 8?  
+Keeping with the causal interpretation, let's say that a teacher named Joe had a "beauty" score of 7 and a teaching score of 4. We are curious about how much moving from a "beauty" score of 7 versus "beauty" score of 8 would have affected Joe's teaching score.  Thus, we are comparing the *potential outcome* for Joe when `bty_avg` is 7 versus the *potential outcome* when `bty_avg` is 8.  Only one of these potential outcomes was observed.
 
 ```{r, echo = FALSE}
 # First, we create a tibble with the values we want for the table
 
 tibble(`Subject` = "Joe",
-       `$score = 7$` = c("$4$"),
-       `$score = 8$` = c("$?$")) %>%
+       `$bty\\_avg = 7$` = c("$4$"),
+       `$bty\\_avg = 8$` = c("$?$")) %>%
   
   # Then, we use the kable function to make it pretty
   
@@ -440,15 +440,15 @@ tibble(`Subject` = "Joe",
               border_right = TRUE)
 ```
 
-We can use our slope coefficient to fill in the missing potential outcome:
+We can use our slope coefficient from the linear regression to fill in the missing potential outcome:
 
 ```{r, echo = FALSE}
 # First, we create a tibble with the values we want for the table
 
 tibble(`Subject` = "Joe",
-       `$score = 7$` = c("$4$"),
-       `$score = 8$` = c("$4.067$"),
-       `$\\Delta score$` = c("$0.067$")) %>%
+       `$bty\\_avg = 7$` = c("$4$"),
+       `$bty\\_avg = 8$` = c("$4.067$"),
+       `$\\Delta bty\\_avg$` = c("$0.067$")) %>%
   
   # Then, we use the kable function to make it pretty
   
@@ -528,7 +528,26 @@ x %>%
  quantile(c(0.025, 0.5, 0.975))
 ```
 
-### Interpreting confidence intervals
+Now let's return to our example for Joe.  Since our slope coefficient is measured with some uncertainty, our estimate of his potential outcome under the "treatment" of having a "beauty" score of 8 is also measured with some uncertainty, and that should be reflected in our table:
+
+```{r, echo = FALSE}
+# First, we create a tibble with the values we want for the table
+
+tibble(`Subject` = "Joe",
+       `$bty\\_avg = 7$` = c("$4$"),
+       `$bty\\_avg = 8$` = c("$(4.034, 4.099)$"),
+       `$\\Delta bty\\_avg$` = c("$(0.034, 0.099)$")) %>%
+  
+  # Then, we use the kable function to make it pretty
+  
+  kable() %>%
+  kable_styling(bootstrap_options = "striped",
+                full_width = FALSE,
+                position = "left") %>%
+  column_spec(1,
+              bold = TRUE,
+              border_right = TRUE)
+```
 
 Instead of looking at confidence intervals, a common alternative approach is to conduct *hypothesis tests*, where one hypothesis is called the "null hypothesis" (in a regression context, generally that the regression coefficient is equal to zero) and the result of the test is either *rejecting* the null hypothesis (so you'd conclude that the regression coefficient probably is not zero) or *failing to reject* the null hypothesis.  The decision whether to reject the null hypothesis is generally made with reference to a *p-value*, a measure of how likely one would observe results at least as extreme as the results actually observed if the null hypothesis were true.  A *p*-value cutoff, often 0.05, is employed: if the *p*-value is lower, the null hypothesis is rejected, otherwise the hypothesis is not rejected.
 
@@ -635,6 +654,29 @@ Just as we did for the instructor of the 21st course in the `evals_ch11` dataset
 
 At this point, you can skip ahead if you like to Section \@ref(leastsquares) to learn about the processes behind what makes "best-fitting" regression lines. As a primer, a "best-fitting" line refers to the line that minimizes the *sum of squared residuals* out of all possible lines we can draw through the points. In Section \@ref(model2), we'll discuss another common scenario of having a categorical explanatory variable and a numerical outcome variable.
 
+Constructing a measure of uncertainty around the fitted values can also be done using the `augment()` function.  The simplest way to do this is through the standard error method that we learned in the last chapter.  Note that `augment()` saves the standard errors of the fitted values in a column called `.se.fit`:
+
+```{r}
+score_model %>%
+  augment() %>%
+  select(score, bty_avg, .fitted, .se.fit, .resid)
+```
+
+Now that we have the standard error of the fitted values, we can construct a confidence interval easily:
+
+```{r}
+score_model %>%
+  augment() %>%
+  mutate(conf.low = .fitted - 2 * .se.fit,
+         conf.high = .fitted + 2 * .se.fit) %>%
+  select(score, bty_avg, .fitted, conf.low, conf.high, .resid)
+```
+
+Note that the uncertainty for *particular predictions* is higher than the uncertainty for our estimate of the coefficient on `bty_avg`.  We are more confident in the *average* effect of "beauty" scores on teaching evaluations than we are on any predictions we would make for a *particular person*.
+
+<!-- AR: We can't really bring Joe back in here, because we are filling in the
+potential outcome table with estimates of the treatment effect + Joe's observed
+outcome, not with the predicted value for a particular bty_avg.-->
 
 ## Life expectancy: one categorical explanatory variable {#model2}
 
@@ -991,7 +1033,7 @@ Observe that `.fitted` contains the fitted values $\widehat{y}$ = $\widehat{\tex
 
 The `.resid` column is simply $y - \widehat{y}$ = `lifeExp - .fitted`. These values can be interpreted as the deviation of a country's life expectancy from its continent's average life expectancy. For example, look at the residual for Afghanistan. The residual of $y - \widehat{y} = 43.8 - 70.7 = -26.9$ is telling us that Afghanistan's life expectancy is a whopping 26.9 years lower than the mean life expectancy of all Asian countries. This can in part be explained by the many years of war that country has suffered.
 
-## Fitting multiple models using `map()`
+## Case study: 2018 gubernatorial forecasts
 
 <!-- AR: beginning of working with list columns -->
 
@@ -1015,6 +1057,8 @@ glimpse(gov)
 ```
 
 We `filter`ed to Republicans as well as to `model == "classic"` because FiveThirtyEight presented three versions of their model and we want to limit our analysis to one.  We also `mutate`d to create a variable `days` that is the number of days since the forecast began (October 11) and `statecand` which combines the name of the Republican candidate with the state abbreviation, which will be useful for plotting.
+
+### Fitting multiple models using `map()`
 
 Next, we need to use `nest()` like we did when creating bootstrapped confidence intervals, except this time we are `nest`ing the data by `statecand`:
 
@@ -1089,7 +1133,7 @@ gov %>%
 ```
 
 
-## Best-fitting line {#leastsquares}
+## Appendix: Best-fitting line {#leastsquares}
 
 Regression lines are also known as "best-fitting" lines. But what do we mean by "best"? Let's unpack the criteria that is used in regression to determine "best." Recall the plot where for an instructor with a beauty score of $x = 7.333$ we mark the *observed value* $y$ with a circle, the *fitted value* $\widehat{y}$ with a square, and the *residual* $y - \widehat{y}$ with an arrow. We re-display that plot in the top-left plot of the next figure in addition to three more arbitrarily chosen course instructors:
 
