@@ -418,7 +418,7 @@ Establishing causation is a tricky problem and frequently takes either randomize
 
 As you read news stories, be careful not to fall into the trap of thinking that correlation necessarily implies causation.  Check out the [Spurious Correlations](http://www.tylervigen.com/spurious-correlations) website for some rather comical examples of variables that are correlated, but are definitely not causally related.
 
-Let's say, however, that we were confident that there is no confounding: that is, that there are no variables such as socioeconomic background that correlate both with a teacher's "beauty" score and teaching score.  (We shouldn't be confident in this, but let's play along for the moment.)  Then, we can interpret the slope in terms of the [Rubin Causal Model](#rubin-causal-model).  The slope coefficient on `bty_avg` of `r evals_line[2]` then means that the *average treatment effect* of increasing a teacher's "beauty" score by 1 is `r evals_line[2]`.  In the absence of randomization, however, this is likely not a good interpretation of this regression!  Adding additional variables, as we'll do in Chapter \@ref{multiple-regression}, may make it more plausible to interpret the regression causally.
+Let's say, however, that we were confident that there is no confounding: that is, that there are no variables such as socioeconomic background that correlate both with a teacher's "beauty" score and the teacher's potential outcomes. <!--AR: trying to be precise that it is correlation with the treatment and *potential* outcomes that matters, not correlation with the treatment and observed outcomes.  What's a better way to explain this?-->   (We shouldn't be confident in this, but let's play along for the moment.)  Then, we can interpret the slope in terms of the [Rubin Causal Model](#rubin-causal-model).  The slope coefficient on `bty_avg` of `r evals_line[2]` then means that the *average treatment effect* of increasing a teacher's "beauty" score by 1 is `r evals_line[2]`.  In the absence of randomization, however, this is likely not a good interpretation of this regression!  Adding additional variables, as we'll do in Chapter \@ref{multiple-regression}, may make it more plausible to interpret the regression causally.
 
 Keeping with the causal interpretation, let's say that a teacher named Joe had a "beauty" score of 7 and a teaching score of 4. We are curious about how much moving from a "beauty" score of 7 versus "beauty" score of 8 would have affected Joe's teaching score.  Thus, we are comparing the *potential outcome* for Joe when `bty_avg` is 7 versus the *potential outcome* when `bty_avg` is 8.  Only one of these potential outcomes was observed.
 
@@ -426,8 +426,8 @@ Keeping with the causal interpretation, let's say that a teacher named Joe had a
 # First, we create a tibble with the values we want for the table
 
 tibble(`Subject` = "Joe",
-       `$bty\\_avg = 7$` = c("$4$"),
-       `$bty\\_avg = 8$` = c("$?$")) %>%
+       `$Y_{bty\\_avg = 7}$` = c("$4$"),
+       `$Y_{bty\\_avg = 8}$` = c("$?$")) %>%
   
   # Then, we use the kable function to make it pretty
   
@@ -446,9 +446,9 @@ We can use our slope coefficient from the linear regression to fill in the missi
 # First, we create a tibble with the values we want for the table
 
 tibble(`Subject` = "Joe",
-       `$bty\\_avg = 7$` = c("$4$"),
-       `$bty\\_avg = 8$` = c("$4.067$"),
-       `$\\Delta bty\\_avg$` = c("$0.067$")) %>%
+       `$Y_{bty\\_avg = 7}$` = c("$4$"),
+       `$Y_{bty\\_avg = 8}$` = c("$4.067$"),
+       `$\\widehat{bty\\_avg}$` = c("$0.067$")) %>%
   
   # Then, we use the kable function to make it pretty
   
@@ -467,7 +467,7 @@ Thus, our best guess of Joe's potential outcome under the "treatment" of $score 
 
 You might be wondering what the remaining five columns created by `tidy()` are: `std.error`, `statistic`, `p.value`, `conf.low` and `conf.high`. They are the _standard error_, _test statistic_, _p-value_, _lower 95% confidence interval bound_, and _upper 95% confidence interval bound_. We will focus on the confidence interval bounds. We have already explored the concept of confidence intervals in Chapter \@ref(confidence-intervals).  These bounds are an application the same concept, but applied to the slope of our simple linear regression.
 
-Let's load the **infer** package.  We're going to use the function `rep_sample_n()` to reample from our data 1000 times:
+Let's load the **infer** package.  We're going to use the function `rep_sample_n()` to reample from our data 1,000 times:
 
 ```{r}
 library(infer)
@@ -491,7 +491,7 @@ x <- x %>%
 x
 ```
 
-`nest()` comes from the **tidyr** package.  It's easiest to understand what `nest()` does by looking at its output. After grouping by `replicate` and using `nest()`, we now have a dataset of 1000 rows and a list column named `data`.  What's in this list column?  Each element of `data` is a tibble consisting of one of the resampled datasets we created using `rep_sample_n()`.  `nest()` is thus a useful function when you have a series of bootstrapped samples and want to run the same function on each sample.
+`nest()` comes from the **tidyr** package.  It's easiest to understand what `nest()` does by looking at its output. After grouping by `replicate` and using `nest()`, we now have a dataset of 1,000 rows and a list column named `data`.  What's in this list column?  Each element of `data` is a tibble consisting of one of the resampled datasets we created using `rep_sample_n()`.  `nest()` is thus a useful function when you have a series of bootstrapped samples and want to run the same function on each sample.
 
 Now, we can use `map()` to run our linear regression for each dataset:
 
@@ -520,7 +520,7 @@ x <- x %>%
 x
 ```
 
-Now that we have 1000 estimates from our bootstrap samples, we can construct a percentile-based confidence interval easily:
+Now that we have 1,000 estimates from our bootstrap samples, we can construct a percentile-based confidence interval easily:
 
 ```{r}
 x %>%
@@ -534,9 +534,9 @@ Now let's return to our example for Joe.  Since our slope coefficient is measure
 # First, we create a tibble with the values we want for the table
 
 tibble(`Subject` = "Joe",
-       `$bty\\_avg = 7$` = c("$4$"),
-       `$bty\\_avg = 8$` = c("$(4.034, 4.099)$"),
-       `$\\Delta bty\\_avg$` = c("$(0.034, 0.099)$")) %>%
+       `$Y_{bty\\_avg = 7}$` = c("$4$"),
+       `$Y_{bty\\_avg = 8}$` = c("$(4.034, 4.099)$"),
+       `$\\widehat{bty\\_avg}$` = c("$(0.034, 0.099)$")) %>%
   
   # Then, we use the kable function to make it pretty
   
