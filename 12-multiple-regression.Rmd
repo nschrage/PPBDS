@@ -830,6 +830,8 @@ The dataset consists of 21,613 houses and 21 variables describing these houses (
     1. A numerical explanatory variable $x_1$: house size `sqft_living` as measured in square feet of living space. Note that 1 square foot is about 0.09 square meters.
     1. A categorical explanatory variable $x_2$: house `condition`, a categorical variable with five levels where `1` indicates "poor" and `5` indicates "excellent."
 
+Then, we will use `map_*` functions to run the above model for every year that a house was built.
+
 ### Exploratory data analysis: Part I {#house-prices-EDA-I}
 
 As we've said numerous times throughout this book, a crucial first step when presented with data is to perform an exploratory data analysis (EDA). Exploratory data analysis can give you a sense of your data, help identify issues with your data, bring to light any outliers, and help inform model construction. 
@@ -1252,16 +1254,72 @@ This value is very close to our earlier visually made prediction of 5.75. But wa
 
 So our predicted price for this home of condition 5 and of size 1900 square feet is `r 10^(2.45 + 1*log10(1900)) %>% dollar()`.
 
-<!--
-TODO: Inference for regression for Seattle house prices
+### Fitting many models using `map()`
 
-### Inference for regression {#house-prices-inference-for-regression}
+Much like we did with the gubernatorial forecasts in the last chapter, we can now use `map_*` functions to estimate many models using our house prices data.
 
-- Interpret offset in slope terms
-- All possible partial residual plots
-- Then add back LC below
+How well do size and condition predict house prices for older houses versus newer ones?  That's difficult to visualize without using `map_*` functions.  But by using `map()` and list columns, we can learn a lot we couldn't otherwise.
 
--->
+Let's start by `filter`ing our data to houses built before 2000 (since there is little variation in `condition` for more recently built houses) and `nest()` by `yr_built`:
+
+```{r}
+house_prices %>%
+  filter(yr_built < 2000) %>%
+  group_by(yr_built) %>%
+  nest()
+```
+
+Now that we have a list column `data` consisting of our data for each `yr_built`, we can use some familiar code to run a model for each year.  Let's simplify the model to the parallel slopes model, which we can implement with the formula `log10_price ~ log10_size + condition.`  This simpler model may be a better choice since we have far fewer observations per model.  (In general, the smaller your data, the greater concern you should have that you are "overfitting" by including too many predictors.)
+
+Let's start by saving our model object in the list column `mod` and the `tid`ied version of that in the list column `reg_results`:
+
+```{r}
+house_prices %>%
+  filter(yr_built < 2000) %>%
+  group_by(yr_built) %>%
+  nest() %>%
+  mutate(mod = map(data, ~ lm(log10_price ~ log10_size + condition, 
+                        data = .)),
+         reg_results = map(mod, ~ tidy(., conf.int = TRUE)))
+```
+
+Now let's take a look at the effect of `log10_size_coef`.  Note that when interpreting this coefficient that these models also include `condition`, and thus we are looking at the effect of size on price while *also* allowing the intercept to be offset by different levels of `condition`. <!-- AR: I don't love this talk of "offsets" -- conceptually, you are just estimating different intercepts for different levels of "condition" and the regression output *expresses* it in terms of offsets -- but this is how the book discusses it throughout and it would take considerable editing to change it. -->
+
+Here is the code to extract the coefficient on `log10_size_coef` as well as the confidence interval bounds:
+
+```{r}
+house_year_model <- house_prices %>%
+  filter(yr_built < 2000) %>%
+  group_by(yr_built) %>%
+  nest() %>%
+  mutate(mod = map(data, ~ lm(log10_price ~ log10_size + condition, 
+                        data = .)),
+         reg_results = map(mod, ~ tidy(., conf.int = TRUE)),
+         log10_size_coef = map_dbl(reg_results, ~ filter(., term == "log10_size") %>%
+                                     pull(estimate)),
+         log10_size_low = map_dbl(reg_results, ~ filter(., term == "log10_size") %>%
+                                     pull(conf.low)),
+         log10_size_high = map_dbl(reg_results, ~ filter(., term == "log10_size") %>%
+                                     pull(conf.high)))
+
+house_year_model
+```
+
+The easiest way to see the results of these models is to plot the coefficients:
+
+```{r}
+house_year_model %>%
+  ggplot(aes(x = yr_built, y = log10_size_coef, ymin = log10_size_low, ymax = log10_size_high)) +
+  geom_point() +
+  geom_errorbar() +
+  theme_minimal() +
+  labs(x = "Year built",
+       y = "Effect of log 10 size on log 10 price",
+       title = "Predicting house price with house size and condition",
+       subtitle = "Regression coefficients for house size plotted by year")
+```
+
+We can learn a lot from this figure that would be hard to do if we just ran a single regression.  For example, we see that the effect of house size (taking into account condition) follows no clear pattern for the first half of the twentieth century, but appears to increase throughout the second half of the twentieth century.  The size of a house in Seattle is a much better predictor of its price in these models if the house was built in the 1990s than if the house was built in the 1940s.
 
 
 
