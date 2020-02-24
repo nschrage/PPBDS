@@ -2,49 +2,6 @@
 
 # Weekly Priorities
 
-Feb 24: Regression chapters in MD are excellent. Two minor points:
-
-We don't want to use coef(). It is too old and fragile, even if it works OK in certain situations. Instead, use tidy() and pull out what you want.
- 
-Uncertainty in simple linear regressions. Go slower. Show the results of each step. Show what each column (mod, data, etc) looks like as it is added to the tibble.
-
-Also, we need six kinds of major surgery.
-
-First, we do not want to use any of the MD-specific functions, like get_regression_table() or the other get_* hacks. Students should only use widely-used functions. Fortunately, the get_* functions are just wrapper for broom functions, so we will need to use tidy(), glance() and augment() instead. This will require changes in the text which explains the output. 
-
-Second, we need to use bootstrap resampling, just like we did in the confidence interval chapter. Make that connection explicitly. Then do it. rep_sample_n, followed by group_by(replication), followed by run a regression and store the model results in a list column.  Then gather up and show confidence intervals for intercept and regression cofficient. Surprise! Those ranges are just like those provided by lm(). So, all we need is to use lm(). Then, continue with all the current explanations for what lm() results mean, except that the chapter currently includes no inference! That is because, in MD, they do regression before they do confidence intervals. So, they don't get to inference for regression until later chapters. We, on the other hand, can do inference now.
-
-library(infer)
-library(broom)
-library(tidyverse)
-x <- mtcars %>% 
-  select(mpg, disp) %>% 
-  rep_sample_n(size = 32, replace = TRUE, reps = 1000) %>% 
-  group_by(replicate) %>% 
-  nest() %>% 
-  mutate(mod = map(data, ~ lm(mpg ~ disp, data = .x))) %>% 
-  mutate(reg_results = map(mod, ~ tidy(.x))) %>% 
-  mutate(disp_coef = map_dbl(reg_results, ~ slice(.x, 2) %>% pull(estimate)))
-  
-Not sure this is the best approach. And lots of explaining the steps needs to be done! But, x now has a column, disp_coef, which are 1,000 draws from the posterior distribution --- more or less! Then we can:
-
-quantile(x$disp_coef, c(0.025, 0.5, 0.975))
-
-And compare those numbers with the resut of:
-
-summary(lm(mpg ~ disp, data = mtcars))
-
-And see that the percentiles match --- more or less. The Bayesian interpretation of lm results is justified. And so we can just use lm going forward when we run regressions for each county or whatever.
-
-Third, the text descriptions, in later chapters, are frequentist. For us, everything is Bayesian. The confidence interval for a regression means that there is a 95% chance that the true value lies within that interval. And so on. We use the bootstrap to show that lm() produces the same answers, and then just use lm() because it is quicker.
-
-Fourth, there is no discussion about the Rubin Causal Model. We want to explicitly discuss how a regression connects to RCM, assuming that we are estimating a causal effect of some type. And, if we are not estimating causal effects (i.e., all we care about is prediction), then the mechanics of lm are the same, but the interpretation of the regression coefficient has no causal implications.  We want a series of tables illustrating potential outcomes and our estmation of them. Start with a table with ?, just as in the Appendix. We use linear regression to fill in these questions marks. Show table with question marks and then show table with question marks filled in with best guess. Then show table with question marks filled in with a confidence interval for the mean and then for a distribution of predicted values. The closer we can tie RCM to the different parts of a regression, the better.
-
-Fifth, the chapter has no discussion about hypothesis tests. That is good. Motto: No tests! There is only the data, and models we create from the data, and the decisions we make with those models. But we still need to explain what hypothesis tests are, and why we don't care about them. MD does that in their chapters 9 and 10, chapters which we have not included in our book for precisely that reason. So, explain what a test is, and why we think it is a waste of time to do them, and why people do them anyway. Key issue: If p = 0.04 really makes you do something totally different than p = 0.06, then either you (or the system within which you are operating) is stupid.
-
-Sixth, each chapter should finish with a new section which uses list-columns plus broom to estimate scores of models, and then pull out interesting models. See the gapminder examples from https://r4ds.had.co.nz/many-models.html#gapminder. We need the full tool set: nest, unnest and so on.
-
-
 March 1: 13-classification.Rmd has two major flaws. First, the logistic regression section comes from a different source than MD. Which is fine. But we want it to have the same look-and-feel as chapters 11 and 12, as if the MD authors had written it. We can use the same data/examples as currently (or we can change them). The style/wording should be as similar to chapters 11 and 12 as 11/12 are to each other. Each time, we show how boostrap justifies the use of lm/glm and, therefore, allows our Bayesian interpretation. Each time, we end with an example which runs 100 models and then pulls out and graphs an interesting subset. We need the same 6 part surgery here.
 
 March 8: The second flaw of 13-classification.Rmd is that the sections about CART and random forest are disconnected from logistic regression. (And they came from a different source.) We want the chapter as a whole to work together. There should be a brief intro to the chapter discussing all the different ways we can handle classification problems, and mentioning the three that we will be using. (Indeed, it might be nice to use the same data across the three approaches!) Then, at the end, there should be some discussion about how they connect to each other, and how they connect to other key themes: like causal inference versus prediction. Indeed, the entire book needs to be infused with discussions of this issue.
@@ -241,9 +198,26 @@ Follow MD as much as possible.
 
 * Package names are **bolded**.
 
-
-
 # Summer
+
+## Themes to confirm over the summer
+
+Chapters from sampling through machine learning should be parallel. To the greatest extent possible, they all do all these things.
+
+Use tidy() and pull out regression results which you want to manipulate. Use no functions from moderndive.
+ 
+Show the results of each step. Show what each column (mod, data, etc) looks like as it is added to the tibble.
+
+Everything is Bayesian. The confidence interval for a regression means that there is a 95% chance that the true value lies within that interval. And so on. We use the bootstrap to show that lm() produces the same answers, and then just use lm() because it is quicker.
+
+Discuss RCM, assuming that we are estimating a causal effect of some type. And, if we are not estimating causal effects (i.e., all we care about is prediction), then the mechanics of lm are the same, but the interpretation of the regression coefficient has no causal implications.  We want a series of tables illustrating potential outcomes and our estmation of them. Start with a table with ?, just as in the Appendix. We use linear regression to fill in these questions marks. Show table with question marks and then show table with question marks filled in with best guess. Then show table with question marks filled in with a confidence interval for the mean and then for a distribution of predicted values. The closer we can tie RCM to the different parts of a regression, the better. But do this each chapter, not just regression.
+
+Avoid discussion about hypothesis tests, except to dismiss them. But maybe we discuss and then dismiss them each chapter. Motto: No tests! There is only the data, and models we create from the data, and the decisions we make with those models. But we still need to explain what hypothesis tests are, and why we don't care about them. Explain what a test is, and why we think it is a waste of time to do them, and why people do them anyway. Key issue: If p = 0.04 really makes you do something totally different than p = 0.06, then either you (or the system within which you are operating) is stupid.
+
+Each chapter should finish with a new section which uses list-columns plus broom to estimate scores of models, and then pull out interesting models. See the gapminder examples from https://r4ds.had.co.nz/many-models.html#gapminder. We need the full tool set: nest, unnest and so on.
+
+
+## Other summer issues
 
 Should we move the whole thing to Netifly and use Github Actions to deploy? https://www.hvitfeldt.me/blog/bookdown-netlify-github-actions/
 
