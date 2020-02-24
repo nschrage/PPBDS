@@ -379,8 +379,9 @@ which is the equation of the `r if_else(knitr::is_latex_output(), "lighter-color
 
 Phew! That was a lot of arithmetic! Don't fret, however, this is as hard as modeling will get in this book. If you're still a little unsure about using indicator functions and using categorical explanatory variables in a regression model, we *highly* suggest you re-read Subsection \@ref(model2table). This involves only a single categorical explanatory variable and thus is much simpler. 
 
-Before we end this section, we explain why we refer to this type of model as an "interaction model." The $b_{\text{age,male}}$ term in the equation for the fitted value $\widehat{y}$ = $\widehat{\text{score}}$ is what's known in statistical modeling as an "interaction effect." The interaction term corresponds to the `age:gendermale` = 0.014 in the final row of the regression table in Table \@ref(tab:regtable-interaction).  
+### Interpreting regression coefficients with interactions
 
+Before we end this section, we explain why we refer to this type of model as an "interaction model." The $b_{\text{age,male}}$ term in the equation for the fitted value $\widehat{y}$ = $\widehat{\text{score}}$ is what's known in statistical modeling as an "interaction effect." The interaction term corresponds to the `age:gendermale` = 0.014 in the final row of the regression table in Table \@ref(tab:regtable-interaction).  
 We say there is an interaction effect if the associated effect of one variable *depends on the value of another variable*. That is to say, the two variables are "interacting" with each other. Here, the associated effect of the variable age *depends* on the value of the other variable gender. The difference in slopes for age of +0.014 of male instructors relative to female instructors shows this. \index{regression!multiple linear!interactions model}
 
 Another way of thinking about interaction effects on teaching scores is as follows. For a given instructor at UT Austin, there might be an associated effect of their age *by itself*, there might be an associated effect of their gender *by itself*, but when age and gender are considered *together* there might be an *additional effect* above and beyond the two individual effects.
@@ -407,6 +408,133 @@ tibble(`Subject` = c("Alice", "Bob", "Charlie"),
               border_right = TRUE)
 ```
 
+<!-- AR: problems with using potential outcome tables with regressions like
+this: a) heterogenous treatment effects lead to difficult-to-calculate
+confidence intervals, given what we've shown the students before, b) this only
+takes into account the uncertainty around the estimate of the ATE, since
+predictive intervals aren't causal quantities.  But this was my best attempt.
+-->
+
+Now, following what we saw in the last chapter, we'll want to fill in the missing potential outcomes by using our estimate of the ATE.  But in an interaction model, this is is more complicated, because we have **heterogeneous treatment effects**.  That means that we don't just have one estimate of the ATE, but rather we have an estimate of the ATE for *each age.*   So we need to know the age of each instructor:
+
+```{r, echo = FALSE}
+# First, we create a tibble with the values we want for the table
+
+tibble(`Subject` = c("Alice", "Bob", "Charlie"),
+       `age` = c("$30$", "$45$", "$60$"),
+       `$Y_{gender = F}$` = c("$4$", "$?$", "$?$"),
+       `$Y_{gender = M}$` = c("$?$", "$3.75$", "$4.1$")) %>%
+  
+  # Then, we use the kable function to make it pretty
+  
+  kable() %>%
+  kable_styling(bootstrap_options = "striped",
+                full_width = FALSE,
+                position = "left") %>%
+  column_spec(1,
+              bold = TRUE) %>%
+  column_spec(2,
+              border_right = TRUE)
+```
+
+We could use the regression equation to get the point estimate of the ATE for each age:
+
+$$
+\begin{aligned}
+\widehat{\text{ATE}} &= - 0.446 \cdot \mathbb{1}_{\text{is male}}(x) + 0.014 \cdot \text{age} \cdot \mathbb{1}_{\text{is male}}
+\end{aligned}
+$$
+
+But that still does not give us an estimate of the uncertainty around that interval.
+
+<!-- AR: we could teach the students how to use a covariance matrix to calculate this quantity, but this chapter is very long and I fear this is already pretty confusing, so I'm presenting an easy way to get the answer -->
+
+Thankfully, there is an easy way to get that using `lm()` and `tidy()`.  Recall that our coefficient on `gendermale` reflects the effect for instructors whose age is 0.  If we *recenter* age so 0 is equal to the age we are interested in, then we can use both the coefficient and confidence inteveral around `gendermale` to get the confidence interval for that age.  For example, here is how we would get the coefficient and confidence interval for instructors whose age is 30:
+
+```{r}
+lm(score ~ I(age - 30) * gender, data = evals_ch12) %>%
+  tidy(conf.int = TRUE) %>%
+  filter(term == "gendermale") %>%
+  select(term, estimate, conf.low, conf.high)
+```
+
+<!-- AR: at least this is an excuse to use our `map_*` code for regressions
+another time! -->
+
+But there's no reason to do this just for one age.  We can use `map_*` functions and list columns to get the coefficient on `gendermale` and the confidence interval for an arbitrary range of ages, say 20 to 90:
+
+```{r}
+gendermale_coefs <- tibble(ages = 20:90) %>%
+  
+  # First, we get our regression results for each age:
+  
+  mutate(mod = map(ages, ~ lm(score ~ I(age - .) * gender, data = evals_ch12)),
+         reg_results = map(mod, ~ tidy(., conf.int = TRUE)),
+         
+         # We only care about the term "gendermale":
+         
+         reg_gendermale = map(reg_results, ~ filter(., term == "gendermale")),
+         
+         # Now, let's get the estimates and CIs:
+         
+         estimate = map_dbl(reg_gendermale, ~ pull(., estimate)),
+         conf.low = map_dbl(reg_gendermale, ~ pull(., conf.low)),
+         conf.high = map_dbl(reg_gendermale, ~ pull(., conf.high)))
+
+gendermale_coefs
+```
+
+Note how closely this code follows code we've seen before for using `map_*` functions to run multiple models, except now we are using `I(age - .)` in the `lm()` call to recenter each regression by `ages`.
+
+The heterogeneous treatment effects are easiest to understand if plotted visually:
+
+```{r}
+gendermale_coefs %>%
+  ggplot(aes(x = ages, y = estimate, ymin = conf.low, ymax = conf.high)) +
+  geom_point() +
+  geom_errorbar() +
+  theme_minimal() +
+  labs(x = "Age",
+       y = "Effect of being male on teaching scores",
+       title = "Predicting teaching scores with gender and age",
+       subtitle = "As age increases, being male is more associated with higher teaching scores")
+
+```
+
+Note that our interaction model constrains the heterogeneous treatment effects to be linear with respect to age.  If that isn't a good model of the relationship, our model may make poor predictions.
+
+Finally, let's extract the values we need for our potential outcomes table:
+
+```{r}
+gendermale_coefs %>%
+  filter(ages %in% c(30, 45, 60)) %>%
+  select(ages, estimate, conf.low, conf.high)
+```
+
+Note that we'll have to reverse the sign on our estimate for Bob and Charlie, because for them, the counterfactual is that `gender` is `"female"`.
+
+```{r, echo = FALSE}
+# First, we create a tibble with the values we want for the table
+
+tibble(`Subject` = c("Alice", "Bob", "Charlie"),
+       `age` = c("$30$", "$45$", "$60$"),
+       `$Y_{gender = F}$` = c("$4$", "$3.59$ $(3.48,$ $3.69)$", "$3.73$ $(3.56,$ $3.91)$"),
+       `$Y_{gender = M}$` = c("$3.96$ $(3.75,$ $4.17)$", "$3.75$", "$4.1$"),
+       `$\\widehat{ATE}$` = c("$-0.04$ $(-0.25,$ $0.17)$", "-$0.16$ $(-0.27,$ $-0.06)$", "$-0.37$ $(-0.54,$ $-0.19)$")) %>%
+  
+  # Then, we use the kable function to make it pretty
+  
+  kable() %>%
+  kable_styling(bootstrap_options = "striped",
+                full_width = FALSE,
+                position = "left") %>%
+  column_spec(1,
+              bold = TRUE) %>%
+  column_spec(2,
+              border_right = TRUE)
+```
+
+Again, however, one should always think carefully about whether a causal interpretation of a regression model is plausible.  Is it really the case that age is only confounder of the relationship between gender and teaching scores?  Likely it is not, and therefore we should not interpret the results of this regression causally.
 
 ### Parallel slopes model {#model4table}
 
@@ -876,6 +1004,49 @@ $$
 
 Recall however in the right-hand plot of Figure \@ref(fig:2numxplot1) that when plotting the relationship between `debt` and `income` in isolation, there appeared to be a *positive* relationship. In the last discussed multiple regression, however, when *jointly* modeling the relationship between `debt`, `credit_limit`, and `income`, there appears to be a *negative* relationship of `debt` and `income` as evidenced by the negative slope for `income` of -\$7.663.  What explains these contradictory results? A phenomenon known as *Simpson's Paradox*\index{Simpson's Paradox}, whereby overall trends that exist in aggregate either disappear or reverse when the data are broken down into groups. In Subsection \@ref(simpsonsparadox) we elaborate on this idea by looking at the relationship between `credit_limit` and credit card `debt`, but split along different `income` brackets.
 
+Let's say that we are most interested in the effect of income on credit card debt.  Can we then use the Rubin Causal Model to estimate the causal effect of moving from one income to another?  **Only if** the only confounder is an individual's credit limit.  That's unlikely to be the case.  But if we were willing to make that assumption, we could fill in the following potential outcome table:
+
+```{r, echo = FALSE}
+# First, we create a tibble with the values we want for the table
+
+tibble(`Subject` = c("Alice", "Bob", "Charlie"),
+       `$Y_{income = 40}$` = c("$?$", "$1,000$", "$?$"),
+       `$Y_{income = 60}$` = c("$?$", "$?$", "$300$"),
+       `$Y_{income = 80}$` = c("$1,000$", "$?$", "$?$")) %>%
+  
+  # Then, we use the kable function to make it pretty
+  
+  kable() %>%
+  kable_styling(bootstrap_options = "striped",
+                full_width = FALSE,
+                position = "left") %>%
+  column_spec(1,
+              bold = TRUE,
+              border_right = TRUE)
+```
+
+Note that unlike our example with teaching scores and gender, we don't have heterogeneous treatment effects, so we are applying the same estimate of the ATE to all three people. To save space, we won't display the ATE ($-7.663$ $(-8.420,$ $-6.906)$) in the table below.
+
+```{r, echo = FALSE}
+# First, we create a tibble with the values we want for the table
+
+tibble(`Subject` = c("Alice", "Bob", "Charlie"),
+       `$Y_{income = 40}$` = c("$1,306$ $(1,276,$ $1,336)$", "$1,000$", "$453$ $(438,$ $468)$"),
+       `$Y_{income = 60}$` = c("$1,153$ $(1,138,$ $1,168)$", "$847$ $(832, 862)$", "$300$"),
+       `$Y_{income = 80}$` = c("$1,000$", "$694$ $(664,$ $724)$", "$147$ $(132,$ $162)$")) %>%
+  
+  # Then, we use the kable function to make it pretty
+  
+  kable() %>%
+  kable_styling(bootstrap_options = "striped",
+                full_width = FALSE,
+                position = "left") %>%
+  column_spec(1,
+              bold = TRUE,
+              border_right = TRUE)
+```
+
+This is likely not a great model of what sudden income shocks would do to the credit card debt of Alice, Bob and Charlie.  However, it is likely much closer to the truth than a simple linear regression of credit card debt on income, which would suggest that (for example) a negative shock to Alice's income would *reduce* her credit card debt.  That is an obviously implausible result.  Thus, multiple regression can help make causal claims much more plausible than simple regressions can.
 
 ### Observed/fitted values and residuals {#model3points}
 
@@ -889,12 +1060,16 @@ $$
 
 ```{r, eval=FALSE}
 augment(debt_model) %>%
-  select(income, credit_limit, debt, .fitted, .se.fit, .resid)
+  mutate(conf.low = .fitted - 2 * .se.fit,
+         conf.high = .fitted + 2 * .se.fit) %>%
+  select(income, credit_limit, debt, .fitted, conf.low, conf.high, .resid)
 ```
 ```{r model3-points-table, echo=FALSE}
 set.seed(76)
 regression_points <- augment(debt_model) %>%
-  select(income, credit_limit, debt, .fitted, .se.fit, .resid)
+  mutate(conf.low = .fitted - 2 * .se.fit,
+         conf.high = .fitted + 2 * .se.fit) %>%
+  select(income, credit_limit, debt, .fitted, conf.low, conf.high, .resid)
 regression_points %>%
   slice(1:10) %>%
   knitr::kable(
