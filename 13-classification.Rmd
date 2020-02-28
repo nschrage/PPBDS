@@ -45,10 +45,23 @@ library(kableExtra)
 library(gridExtra)
 ```
    
-## Presidential elections: logistic regression
+## House elections: logistic regression
 
+What affects whether a Democrat or Republican wins a race in the U.S. House of Representatives? This is an example of a binary response: either a Democrat wins (and a Republican loses) or a Republican wins (and a Democrat loses).^[It is rare that third party candidates mount serious bids in U.S. House bids, so it isn't a much of an oversimplication to think of the variable as binary.] In this section, we are going to consider several models predicting Democratic victory in House races.  First, we will consider a single categorical variable as a predictor: the region that a district lies in (Midwest, Northeast, South, or West).  Second, we will consider a single continuous variable (year).  Finally, we fill fit a model that contains an interaction of the two.
 
-```{r, OLSlogistic, fig.align="center", out.width="60%", fig.cap='Linear vs. Logistic regression models for binary response data.', echo=FALSE, warning=FALSE, message=FALSE}
+### What is logistic regression?
+
+Figure \@ref(fig:OLSlogistic) illustrates a data set with a binary (0 or 1) response ($Y$) and a single continuous predictor ($X$).  The blue line is a linear regression to model the probability of a success ($Y=1$) for a given value of $X$. With a binary response, the linear regression has an obvious problem: it can produce predicted probabilities below 0 and above 1. 
+
+The red curve is the *logistic regression* curve.  Note that its characteristic "S" shape always produces predicted probabilities between 0 and 1.  Here is the formula for a logistic regression:
+
+\[
+\log\left(\frac{p}{1 - p}\right)=\beta_0+\beta_1X 
+\]
+
+where the observed values $Y_i \sim$ Bernoulli with $p=p_i$ for a given set of predictors $X$.
+
+```{r, OLSlogistic, fig.align="center", out.width="60%", fig.cap='Linear vs. logistic regression models for binary response data.', echo=FALSE, warning=FALSE, message=FALSE}
 
 set.seed(0)
 dat <- tibble(x=runif(200, -5, 10),
@@ -60,38 +73,35 @@ ggplot(dat, aes(x = x)) +
   geom_point(aes(y = y)) +
   geom_smooth(aes(y = y, color = "blue"), method = "lm", se=FALSE) +
   geom_line(aes(y = p, color = "red")) +
-  scale_colour_manual(name = 'Regression model', 
+  scale_color_manual(name = 'Regression model', 
          values = c('blue', 'red'), 
-         labels = c('linear', 'logistic'), guide = 'legend')
+         labels = c('Linear', 'Logistic'), guide = 'legend') +
+  theme_minimal()
 ```
 
-Figure \@ref(fig:OLSlogistic) illustrates a data set with a binary (0 or 1) response ($Y$) and a single continuous predictor ($X$).  The blue line is a linear regression to model the probability of a success ($Y=1$) for a given value of $X$.  With a binary response, the line doesn't fit the data well, and it produces predicted probabilities below 0 and above 1.  On the other hand, the logistic regression fit (red curve) with its typical "S" shape follows the data closely and always produces predicted probabilities between 0 and 1.  Here is the formula for a logistic regression:
-
-\begin{equation}
-log(\frac{p_i}{1-p_i})=\beta_0+\beta_1 x_i
-(\#eq:logisticReg)
-\end{equation}
-where the observed values $Y_i \sim$ Bernoulli with $p=p_i$ for a given $x_i$ and $n=1$.
+The mathematical function $log\left(\frac{p}{1 - p}\right)$ is called the *logit function* and it transforms variables from the space $(0, 1)$ (like probabilities) to $(-\infty, \infty)$.  The inverse of that function, the *logistic function*, is $\left(\frac{e^x}{e^x + 1}\right)$, and transforms variables from the space $(-\infty, \infty)$ to $(0, 1)$.  From that latter function's name we get the terminology of *logistic regression*.
 
 ### Exploratory data analysis
 
-The data on presidential results by state from 1976 to 2016 can be found in the `pres_results_by_cd` **politicaldata** package.  We'll create a version of this data frame called `pres_ch13` that creates a new column `dem_win` that notes for each state if the Democratic candidate received more votes than the other candidates.  We'll also join it with the `state_info` data frame in the **fivethirtyeight** package to add the `region` of each state.
+The data on House election results from 1976 to 2018 can be found in the `house_results` data frame in **politicaldata** package.  We'll create a version of this data frame called `house_ch13` that creates a new column `dem_win` that notes for each state if the Democratic candidate in a congressional district received more votes than the other candidates.  We'll also join it with the `state_info` data frame in the **fivethirtyeight** package to add the `region` of each state.
 
 ```{r}
 library(politicaldata)
 
-pres_ch13 <- pres_results %>%
+house_ch13 <- house_results %>%
   
   # Create dem_win variable
   
-  mutate(other = ifelse(is.na(other), 0, other),
+  mutate(dem = ifelse(is.na(dem), 0, dem),
+         other = ifelse(is.na(other), 0, other),
+         rep = ifelse(is.na(rep), 0, rep),
          dem_win = ifelse(dem > rep & dem > other, 1, 0)) %>%
   
   # Rename to join with state_info
   
-  rename(state_abbrev = state) %>%
+  rename(state_abbrev = state_abb) %>%
   left_join(state_info) %>%
-  select(region, state, year, dem_win)
+  select(region, state, district, year, dem_win)
 ```
 
 Recall the three common steps in an exploratory data analysis we saw in Subsection \@ref(model1EDA):
@@ -100,85 +110,249 @@ Recall the three common steps in an exploratory data analysis we saw in Subsecti
 1. Computing summary statistics.
 1. Creating data visualizations.
 
-Let's first look at the raw data values by either looking at `pres_ch13` using RStudio's spreadsheet viewer or by using the `glimpse()` function from the **dplyr** package:
+Let's first look at the raw data values by either looking at `house_ch13` using RStudio's spreadsheet viewer or by using the `glimpse()` function from the **dplyr** package:
 
 ```{r}
-glimpse(pres_ch13)
+glimpse(house_ch13)
 ```
 
-Let's also display a random sample of 5 rows of the 4,201 rows corresponding to different district-years. Remember due to the random nature of the sampling, you will likely end up with a different subset of 5 rows.
+Let's also display a random sample of 5 rows of the 9,557 rows corresponding to different district-years. Remember due to the random nature of the sampling, you will likely end up with a different subset of 5 rows.
 
 ```{r, eval = FALSE}
-pres_ch13 %>% 
+house_ch13 %>% 
   sample_n(size = 5)
 ```
 ```{r, echo = FALSE}
-pres_ch13 %>%
+house_ch13 %>%
   sample_n(5) %>%
   knitr::kable(
     digits = 3,
-    caption = "A random sample of 5 out of the 463 courses at UT Austin",
+    caption = "A random sample of 5 out of the 4,201 district-years",
     booktabs = TRUE,
     linesep = ""
   ) %>% 
   kable_styling(font_size = ifelse(knitr:::is_latex_output(), 10, 16),
                 latex_options = c("hold_position"))
 ```
- 
-### Modeling odds
 
-\[\textrm{Odds} = \frac{\# \textrm{successes}}{\# \textrm{failures}}=
-\frac{\# \textrm{successes}/n}{\# \textrm{failures}/n}=
+Now that we’ve looked at the raw values in our `house_ch13` data frame and got a sense of the data, let’s compute summary statistics. As we've done in our exploratory data analyses before, let’s use the `skim()` function from the `skimr` package, being sure to only select() the variables of interest in our model:
+
+```{r}
+house_ch13 %>% 
+  select(dem_win, region, year) %>% 
+  skim()
+```
+
+Observe that we have no missing data, that we have 9,557 observations, and that the mean of `dem_win` is 0.536, indicating that Democrats won 53.6% of the House elections in this period (1976--2018).
+
+Let’s now perform the last of the three common steps in an exploratory data analysis: creating data visualizations.
+
+For our categorical variable, we'll look at histograms of `dem_win` faceted by `region`:
+
+```{r}
+house_ch13 %>%
+  ggplot(aes(x = dem_win)) +
+  geom_histogram(bins = 10, color = "white") +
+  labs(x = "Democratic victory percentage, 1976-2018", 
+       y = "Number of districts",
+       title = "Histogram of distribution of Democratic victories by House district") +
+  facet_wrap(~ region) +
+  theme_minimal()
+```
+
+Wait!  That doesn't tell us very much, because our outcome variable only takes two values, 0 and 1.  Let's instead `group_by(district)` and `summarize()` to get a better sense of the distributions:
+
+```{r}
+house_ch13 %>%
+  group_by(region, district) %>%
+  summarize(dem_win = mean(dem_win)) %>%
+  ggplot(aes(x = dem_win)) +
+  geom_histogram(bins = 10, color = "white") +
+  labs(x = "Democratic victory percentage, 1976-2018", 
+       y = "Number of districts",
+       title = "Histogram of distribution of Democratic victories by House district") +
+  facet_wrap(~ region) + 
+  theme_minimal()
+```
+
+This is much more informative!  We can see that the Midwest is highly bimodal, with many districts either electing Democrats for every year in this period or for none.  The Northeast and West have many districts that always elect Democrats but few that never do.  The South is the only region with a peak in the middle, indicating that there are many districts in the South that elected Democrats for about half the time during 1976-2018.
+
+What happens if we create a scatterplot of our outcome variable `dem_win` and a continuous predictor, `year`?
+
+```{r}
+house_ch13 %>%
+  ggplot(aes(x = year, y = dem_win)) +
+  geom_point() +
+  labs(x = "Year", y = "Democratic Victory") +
+  geom_smooth(method = "lm", se = FALSE)
+```
+
+This is completely incomprehensible!  When dealing with binary data, it is more helpful to construct an *empirical logit* plot instead of a regular scatterplot.  The steps for constructing such a plot are as follows:
+
+1. `group_by` your continuous variable.
+1. `summarize` the percentage of successes in your outcome variable.
+1. Calculate the *empirical logit* for each group, using the logit function: $log\left(\frac{p}{1 - p}\right)$
+1. Plot the results.
+
+First, since we will use it frequently, let's define a function `logit()` that performs the logit transformation:
+
+```{r}
+logit <- function(p) log(p / (1 - p))
+```
+
+Next, let's look at the empirical logit plot:
+
+```{r}
+house_ch13 %>%
+  group_by(year) %>%
+  summarize(perc_dem_win = mean(dem_win),
+            emplogit = logit(perc_dem_win)) %>%
+  ggplot(aes(x = year, y = emplogit)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  labs(x = "Year",
+       y = "Empirical logits") +
+  theme_classic()
+```
+
+Now we see that after the logit transformation, there is roughly a linear relationship between our outcome variable and our explanatory variable `year`.  This means that a logistic regression model makes sense.  Some of the most visually apparent outliers will be familiar to students of American politics: 1994 (the "Republican Revolution"), 2008 (Obama's first election), and 2018. Yet in general it appears that over time, the Democrats have performed worse in House elections.
+
+We can follow the same steps to look at this relationship within Census regions (Midwest, Northeast, South and West):
+ 
+```{r}
+house_ch13 %>%
+  group_by(region, year) %>%
+  summarize(perc_dem_win = mean(dem_win),
+            emplogit = logit(perc_dem_win)) %>%
+  ggplot(aes(x = year, y = emplogit)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  labs(x = "Year",
+       y = "Empirical logits") +
+  facet_wrap(~ region) +
+  theme_classic()
+```
+
+We see roughly linear relationships after the logit transformation within-region as well, although the relationship looks more linear in the Midwest and South than in the Northeast and West.  We see that the Democratic Party's overall decline in House races is driven by the South and to a lesser extent the Midwest; Democratic performance has on average improved in the Northeast and West.  The sharp negative slope in the South will not be surprising if one is familiar with the collapse of the "Solid South."
+
+### One categorical explanatory variable
+
+Let's start our modeling by predicting `dem_win` with a single categorical explanatory variable, `region`.  As we'll see, the syntax for running a logistic regression in R is very similar to that for running a linear regression.  In fact, we'll follow the same basic steps:
+
+1. We first "fit" the logistic regression model using the `glm(y ~ x, family, data)` function and save it in `house_region_model`.
+1. We get the regression table by applying the `tidy()` function from the **broom** package to `house_region_model`.  We'll print the `term`, `estimate`, `conf.low`, and `conf.high` columns.
+
+Note that the key difference is that instead of using `lm()`, we are now using `glm()`.  `glm()` operates very similarly to `lm()`, but it has an additional argument: `family`.  To run a logistic regression, we use `family = binomial`.
+
+```{r, eval=FALSE}
+house_region_model <- glm(dem_win ~ region, family = binomial data = house_ch13)
+house_region_model %>%
+  tidy(conf.int = TRUE) %>%
+  select(term, estimate, conf.low, conf.high)
+```
+```{r, echo=FALSE}
+house_region_model <- glm(dem_win ~ region, family = binomial, data = house_ch13)
+```
+```{r, echo=FALSE}
+tidy(house_region_model,
+     conf.int = TRUE) %>%
+  select(term, estimate, conf.low, conf.high) %>%
+  knitr::kable(
+    digits = 3,
+    caption = "Logistic regression table",
+    booktabs = TRUE,
+    linesep = ""
+  ) %>%
+  kable_styling(font_size = ifelse(knitr:::is_latex_output(), 10, 16),
+                latex_options = c("hold_position"))
+```
+
+Recall that in the linear regression context, we interpreted the coefficients as follows:  the intercept represented the mean for the omitted category, while the other coefficients all represented offsets from that value.  We can't use that intepretation here.  Recall our logistic regression model equation:
+
+\[
+\log\left(\frac{p}{1 - p}\right)=\beta_0+\beta_1X 
+\]
+
+Note that there's a familiar term for what we are taking the log of on the left hand side:
+
+\[\textrm{Odds} = \frac{\textrm{probability of success}}{\textrm{probability of failure}}=
 \frac{p}{1-p}.\] 
 
-### Interpreting logistic regression coefficients
+For example, there's a 25\% chance of flipping two heads in a row when flipping fair coins.  In odds terms, the odds of flipping two heads in a row are $\frac{0.25}{0.75} = \frac{1}{3}$. These are conventionally phrased in words in terms of the odds *against* success, such as "three to one odds against flipping two heads" or just "three to one odds."
 
-We would like to model the odds of success, however odds are strictly positive. Therefore, similar to modeling log($\lambda$) in Poisson regression, which allowed the response to take on values from $-\infty$ to $\infty$, we will model the log(odds), the __logit__\index{logit}, in logistic regression. Logits will be suitable for modeling with a linear function of the predictors:  
-\begin{equation}
-\log\left(\frac{p}{1 - p}\right)=\beta_0+\beta_1X 
-(\#eq:binreg)
- \end{equation}
-Models of this form are referred to as __logistic regression models__. \index{logistic regression models}  Here we provide intuition for using and interpreting logistic regression models.
+Thus, our equation can also be read as:
 
-\begin{equation}
-\log\left(\frac{p_X}{1-p_X}\right)=\beta_0 +\beta_1X
-(\#eq:logitXform)
-\end{equation}
-where $p_X$ is the probability of success given $X$.  
-
-Let's say that $X$ is a single binary variable. Based on this model, the log odds of a successful penalty kick when $X = 0$ is:
 \[
-\log\left(\frac{p_0}{1-p_0}\right) =\beta_0 \nonumber,
-\]
-and the log odds when $X = 1$ is:
-\[
-\log\left(\frac{p_1}{1-p_1}\right)=\beta_0+\beta_1. \nonumber
+\log(\textrm{Odds})=\beta_0+\beta_1X 
 \]
 
-We can see that $\beta_1$ is the difference between the log odds of success when $X = 1$ versus $X = 0$.  Using rules of logs:
-\begin{equation}
-\beta_1 = (\beta_0 + \beta_1) - \beta_0 = 
-\log\left(\frac{p_1}{1-p_1}\right) - \log\left(\frac{p_0}{1-p_0}\right) =
-\log\left(\frac{p_1/(1-p_1)}{p_0/{(1-p_0)}}\right).
-(\#eq:ORform)
-\end{equation}
-Thus $e^{\beta_1}$ is the ratio of the odds of success when $X = 1$ compared to $X = 0$. In general, __exponentiated coefficients in logistic regression are odds ratios (OR)__. A general interpretation of an OR is the odds of success for group A compared to the odds of success for group B---how many times greater the odds of success are in group A compared to group B.
+Let's say that $X$ is our categorical variable `region`, with the baseline category being the Midwest.  Based on this model, the log odds of a Democratic victory when $X = \textrm{Midwest}$ is:
+\[
+\log\left(\frac{p_{Midwest}}{1-p_{Midwest}}\right) =\beta_0 = -0.076,
+\]
+and the log odds when $X = \textrm{South}$ is:
+\[
+\log\left(\frac{p_{South}}{1-p_{South}}\right)=\beta_0+\beta_{1,South} = -0.076 + 0.056 = -0.020.
+\]
 
-The logit model (Equation \@ref(eq:logitXform)) can also be re-written in a __probability form__:
-\begin{equation} 
+We can see that $\beta_{1,South}$ is the difference between the log odds of success when $X = \textrm{South}$ versus $X = \textrm{Midwest}$.  Using rules of logs:
+\[
+\begin{aligned}
+\beta_{1,South} &= (\beta_0 + \beta_{1,South}) - \beta_0 \\ &=
+\log\left(\frac{p_{South}}{1-p_{South}}\right) - \log\left(\frac{p_{Midwest}}{1-p_{Midwest}}\right) \\ &=
+\log\left(\frac{p_{South}/(1-p_{South})}{p_{Midwest}/{(1-p_{Midwest})}}\right) \\ &=
+\log\left(\frac{\textrm{Odds}(South)}{\textrm{Odds}(Midwest)}\right)
+\end{aligned}
+\]
+
+Since $e^{\log(x)} = x$, $e^{\beta_{1,South}}$ is the ratio of the odds of success when $X = \textrm{South}$ compared to $X = \textrm{Midwest}$. In general, __exponentiated coefficients in a logistic regression are odds ratios__. A general interpretation of an odds ratio is the odds of success for group A compared to the odds of success for group B---how many times greater the odds of success are in group A compared to group B.
+
+Note that the logistic regression model can also be re-written in a __probability form__:
+
+\[
 p_X=\frac{e^{\beta_0+\beta_1X}}{1+e^{\beta_0+\beta_1X}}
-(\#eq:pXform)
-\end{equation}
+\]
+
+Now that we understand that expontentiated coefficients in logistic regressions are odds ratios, we can use the argument `exponentiate = TRUE` in the `tidy()` function to exponentiate the coefficients for us:
+
+```{r, eval=FALSE}
+house_region_model <- glm(dem_win ~ region, family = binomial, data = house_ch13)
+house_region_model %>%
+  tidy(conf.int = TRUE,
+       exponentiate = TRUE) %>%
+  select(term, estimate, conf.low, conf.high)
+```
+```{r, echo=FALSE}
+house_region_model <- glm(dem_win ~ region, family = binomial, data = house_ch13)
+```
+```{r, echo=FALSE}
+tidy(house_region_model,
+     conf.int = TRUE,
+     exponentiate = TRUE) %>%
+  select(term, estimate, conf.low, conf.high) %>%
+  knitr::kable(
+    digits = 3,
+    caption = "Logistic regression table, exponentiated coefficients",
+    booktabs = TRUE,
+    linesep = ""
+  ) %>%
+  kable_styling(font_size = ifelse(knitr:::is_latex_output(), 10, 16),
+                latex_options = c("hold_position"))
+```
+
+This allows us to see that the odds of a Democratic victory in the Northeast are nearly twice as high as the odds of a Democratic victory in the Midwest, the reference category.  The odds of a Democratic victory in the West are about 1.4 times higher than the odds of a Democratic victory in the Midwest.  The odds of a Democratic victory in the South are similar to the odds of a Democratic victory in the Midwest.
 
 ### Residuals for logistic regression
 
 With linear regression, we used residuals to assess model assumptions and identify outliers. For logistic regression, a __deviance residual__ is a residual for logistic regression based on the discrepancy between the observed values and those estimated using the likelihood.
 A deviance residual can be calculated for each observation using:
-\begin{equation}
+
+\[
 \textrm{d}_i = 
 \textrm{sign}(Y_i-\hat{p_i})\sqrt{-2 [ Y_i \text{log} \hat{p_i} + (1 - Y_i) \text{log} (1 - \hat{p_i}) ]}
-(\#eq:devianceBinom)
-\end{equation}
+\]
+
+where $Y_i$ is the actual outcome and $p_i$ is the predicted probability from the logistic regression model.
 
 The sum of the individual deviance residuals is referred to as the **deviance** or **residual deviance**. The deviance is used to assess the model. As the name suggests, a model with a small deviance is preferred. 
 
@@ -205,7 +379,7 @@ The sum of the individual deviance residuals is referred to as the **deviance** 
 
 ## Case study: Trying to lose weight
 
-In the final case study, we examine characteristics of young people who are trying to lose weight. The prevalence of obesity among US youth suggests that wanting to lose weight is sensible and desirable for some young people such as those with a high body mass index (BMI). On the flip side, there are young people who do not need to lose weight but make ill-advised attempts to do so nonetheless. A multitude of studies on weight loss focus specifically on youth and propose a variety of motivations for the young wanting to lose weight; athletics and the media are two commonly cited sources of motivation for losing weight for young people.
+In this case study, we examine characteristics of young people who are trying to lose weight. The prevalence of obesity among US youth suggests that wanting to lose weight is sensible and desirable for some young people such as those with a high body mass index (BMI). On the flip side, there are young people who do not need to lose weight but make ill-advised attempts to do so nonetheless. A multitude of studies on weight loss focus specifically on youth and propose a variety of motivations for the young wanting to lose weight; athletics and the media are two commonly cited sources of motivation for losing weight for young people.
 
 Sports have been implicated as a reason for young people wanting to shed pounds, but not all studies are consistent with this idea. For example, a study by @Martinsen2009 reported that, despite preconceptions to the contrary, there was a higher rate of self-reported eating disorders among controls (non-elite athletes) as opposed to elite athletes. Interestingly, the kind of sport was not found to be a factor, as participants in leanness sports (for example, distance running, swimming, gymnastics, dance, and diving) did not differ in the proportion with eating disorders when compared to those in non-leanness sports. So, in our analysis, we will not make a distinction between different sports.
 
