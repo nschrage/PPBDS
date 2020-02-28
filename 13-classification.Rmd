@@ -342,10 +342,71 @@ tidy(house_region_model,
 
 This allows us to see that the odds of a Democratic victory in the Northeast are nearly twice as high as the odds of a Democratic victory in the Midwest, the reference category.  The odds of a Democratic victory in the West are about 1.4 times higher than the odds of a Democratic victory in the Midwest.  The odds of a Democratic victory in the South are similar to the odds of a Democratic victory in the Midwest.
 
-### Residuals for logistic regression
+### Observed/fitted values and residuals
 
-With linear regression, we used residuals to assess model assumptions and identify outliers. For logistic regression, a __deviance residual__ is a residual for logistic regression based on the discrepancy between the observed values and those estimated using the likelihood.
-A deviance residual can be calculated for each observation using:
+We have previously defined the following three concepts for a linear regression:
+
+1. Observed values $y$, or the observed value of the outcome variable
+1. Fitted values $\widehat{y}$, or the value on the regression line for a given $x$ value
+1. Residuals $y - \widehat{y}$, or the error between the observed value and the fitted value
+
+We obtained these values and other values using the `augment()` function from the **broom** package. Recall too that we used the `.se.fit` column to construct confidence intervals.  We'll see here how we can apply these same concepts to logistic regression.
+
+```{r, eval=FALSE}
+regression_points <- house_region_model %>%
+  augment() %>%
+  mutate(conf.low = .fitted - 2 * .se.fit,
+         conf.high = .fitted + 2 * .se.fit) %>%
+  select(dem_win, region, .fitted, conf.low, conf.high, .resid)
+regression_points
+```
+```{r, echo=FALSE}
+regression_points <- augment(house_region_model) %>%
+  mutate(conf.low = .fitted - 2 * .se.fit,
+         conf.high = .fitted + 2 * .se.fit) %>%
+  select(dem_win, region, .fitted, conf.low, conf.high, .resid)
+regression_points %>%
+  slice(1:10) %>%
+  knitr::kable(
+    digits = 3,
+    caption = "Regression points (First 10 out of 4,201 district-years)",
+    booktabs = TRUE,
+    linesep = ""
+  ) %>%
+  kable_styling(font_size = ifelse(knitr:::is_latex_output(), 10, 16),
+                latex_options = c("hold_position"))
+```
+
+The syntax is the same, but the interpretation has to change, since the `.fitted`, `conf.low`, and `conf.high` columns are all on the logit scale.  While we could try to interpret these values, `augment()` has the argument `type.predict = "response"` that allow us to present the results in terms of **predicted probabilities**:
+
+```{r, eval=FALSE}
+regression_points <- house_region_model %>%
+  augment(type.predict = "response") %>%
+  mutate(conf.low = .fitted - 2 * .se.fit,
+         conf.high = .fitted + 2 * .se.fit) %>%
+  select(dem_win, region, .fitted, conf.low, conf.high, .resid)
+regression_points
+```
+```{r, echo=FALSE}
+regression_points <- augment(house_region_model,
+                             type.predict = "response") %>%
+  mutate(conf.low = .fitted - 2 * .se.fit,
+         conf.high = .fitted + 2 * .se.fit) %>%
+  select(dem_win, region, .fitted, conf.low, conf.high, .resid)
+regression_points %>%
+  slice(1:10) %>%
+  knitr::kable(
+    digits = 3,
+    caption = "Regression points (First 10 out of 4,201 district-years)",
+    booktabs = TRUE,
+    linesep = ""
+  ) %>%
+  kable_styling(font_size = ifelse(knitr:::is_latex_output(), 10, 16),
+                latex_options = c("hold_position"))
+```
+
+Now each of the `.fitted` values is a *predicted probability* of a Democratic victory from our model for a particular district and the confidence intervals are confidence intervals around that predicted probability. 
+You may be wondering how to interpret the residuals.  The residuals reported by `augment()` for a logistic regression are called *deviance residuals*.  A deviance residual can be calculated for each observation using:
 
 \[
 \textrm{d}_i = 
@@ -354,7 +415,41 @@ A deviance residual can be calculated for each observation using:
 
 where $Y_i$ is the actual outcome and $p_i$ is the predicted probability from the logistic regression model.
 
-The sum of the individual deviance residuals is referred to as the **deviance** or **residual deviance**. The deviance is used to assess the model. As the name suggests, a model with a small deviance is preferred. 
+The sum of the individual deviance residuals is referred to as the **deviance** or **residual deviance**. The deviance is used to assess the model. As the name suggests, a model with a small deviance is preferred.
+
+However, you can also have `augment()` report residuals as differences between the observed outcome and the predicted probabilities by using `type.residuals = "response"`:
+
+```{r, eval=FALSE}
+regression_points <- house_region_model %>%
+  augment(type.predict = "response",
+          type.residuals = "response") %>%
+  mutate(conf.low = .fitted - 2 * .se.fit,
+         conf.high = .fitted + 2 * .se.fit) %>%
+  select(dem_win, region, .fitted, conf.low, conf.high, .resid)
+regression_points
+```
+```{r, echo=FALSE}
+regression_points <- augment(house_region_model,
+                             type.predict = "response",
+                             type.residuals = "response") %>%
+  mutate(conf.low = .fitted - 2 * .se.fit,
+         conf.high = .fitted + 2 * .se.fit) %>%
+  select(dem_win, region, .fitted, conf.low, conf.high, .resid)
+regression_points %>%
+  slice(1:10) %>%
+  knitr::kable(
+    digits = 3,
+    caption = "Regression points (First 10 out of 4,201 district-years)",
+    booktabs = TRUE,
+    linesep = ""
+  ) %>%
+  kable_styling(font_size = ifelse(knitr:::is_latex_output(), 10, 16),
+                latex_options = c("hold_position"))
+```
+
+Now, the `.resid` value is the difference between the actual outcome (`dem_win`) and the predicted probability.
+
+### One numerical explanatory variable
 
 
 ### Linear regression vs. logistic regression
