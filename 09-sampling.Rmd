@@ -106,6 +106,7 @@ Each of our 33 groups of friends will do the following:
 
 ```{r sampling-exercise-3b, echo=FALSE, fig.show='hold', fig.cap="Repeating sampling activity 33 times.", purl=FALSE, out.width = "30%"}
 # Need new picture
+
 knitr::include_graphics(c("images/sampling/balls/tactile_2_a.jpg", "images/sampling/balls/tactile_2_b.jpg", "images/sampling/balls/tactile_2_c.jpg"))
 ```
 
@@ -181,6 +182,9 @@ In the previous Section \@ref(sampling-activity), we performed a *tactile* sampl
 ### Using the virtual shovel once
 
 Let's start by performing the virtual analog of the tactile sampling exercise we performed in Section \@ref(sampling-activity). We first need a virtual analog of the bowl seen in Figure \@ref(fig:sampling-exercise-1). To this end, we included a data frame named `bowl` in the **moderndive** package. The rows of `bowl` correspond exactly with the contents of the actual bowl. 
+
+
+<!-- Create the bowl by hand. -->
 
 ```{r}
 bowl
@@ -341,16 +345,7 @@ facet_compare <- bind_rows(
   labs(x = "Proportion of 50 balls that were red", 
          title = "Comparing distributions") 
 
-if(knitr::is_latex_output()){
-  facet_compare +
-  theme(
-    strip.text = element_text(colour = 'black'),
-    strip.background = element_rect(fill = "grey93")
-  )
-} else {
-  facet_compare
-}
-
+facet_compare
 ```
 
 
@@ -402,11 +397,7 @@ Once again, the most frequently occurring proportions of red balls occur between
 
 Now say instead of just one shovel, you have three choices of shovels to extract a sample of balls with: shovels of size 25, 50, and 100.
 
-<!--
-A shovel with 25 slots          |  A shovel with 50 slots  | A shovel with 100 slots
-:-------------------------:|:-------------------------:|:-------------------------:
-![](images/sampling/balls/shovel_025.jpg){ width=1.6in }  |  ![](images/sampling/balls/shovel_050.jpg){ width=1.6in } | ![](images/sampling/balls/shovel_100.jpg){ width=1.6in } 
--->
+
 ```{r three-shovels, echo=FALSE, fig.align='center', fig.cap="Three shovels to extract three different sample sizes.", out.width='100%', purl=FALSE}
 knitr::include_graphics("images/sampling/balls/three_shovels.png")
 ```
@@ -488,7 +479,11 @@ virtual_prop_red_100 %>%
 For easy comparison, we present the three resulting histograms in a single row with matching x and y axes in Figure \@ref(fig:comparing-sampling-distributions).
 
 ```{r comparing-sampling-distributions, echo=FALSE, fig.height=3, fig.cap="Comparing the distributions of proportion red for different sample sizes."}
+# DK: What is the purpose of all this file exist checking? Should we just be
+# creating all this on the fly, probably with a set.seed?
+
 # n = 25
+
 if(!file.exists("rds/virtual_samples_25.rds")){
   virtual_samples_25 <- bowl %>% 
     rep_sample_n(size = 25, reps = 1000)
@@ -503,6 +498,7 @@ virtual_prop_red_25 <- virtual_samples_25 %>%
   mutate(n = 25)
 
 # n = 50
+
 if(!file.exists("rds/virtual_samples_50.rds")){
   virtual_samples_50 <- bowl %>% 
     rep_sample_n(size = 50, reps = 1000)
@@ -517,6 +513,7 @@ virtual_prop_red_50 <- virtual_samples_50 %>%
   mutate(n = 50)
 
 # n = 100
+
 if(!file.exists("rds/virtual_samples_100.rds")){
   virtual_samples_100 <- bowl %>% 
     rep_sample_n(size = 100, reps = 1000)
@@ -540,16 +537,7 @@ comparing_sampling_distributions <- ggplot(virtual_prop, aes(x = prop_red)) +
        title = "Comparing distributions of proportions red for three different shovel sizes.") +
   facet_wrap(~ n) 
 
-if(knitr::is_latex_output()){
-  comparing_sampling_distributions +
-  theme(
-    strip.text = element_text(colour = 'black'),
-    strip.background = element_rect(fill = "grey93")
-  )
-} else {
-  comparing_sampling_distributions
-}
-
+comparing_sampling_distributions
 ```
 
 Observe that as the sample size increases, the variation of the 1,000 replicates of the proportion of red decreases. In other words, as the sample size increases, there are fewer differences due to sampling variation and the distribution centers more tightly around the same value. Eyeballing Figure \@ref(fig:comparing-sampling-distributions), all three histograms appear to center around roughly 40%.
@@ -613,34 +601,34 @@ We will break this into two functions, one called `use_shovel()` which will use 
 First, let's create `use_shovel()`
 
 ```{r}
-use_shovel <- function(x) {
-  bowl %>% rep_sample_n(size = x, reps = 1000)
+use_shovel <- function(x, size, reps) {
+  x %>% rep_sample_n(size = size, reps = reps)
 }
 
-use_shovel(25)
+use_shovel(x = bowl, size = 25, reps = 1000)
 ```
 
-See that we now can create the object `virtual_samples_25` with the code `virtual_samples_25 <- use_shovel(25)`.  This is far more succinct than our previous code, and it allows us to use a shovel of any size we'd like.
+See that we now can create the object `virtual_samples_25` with the code `virtual_samples_25 <- use_shovel(x = bowl, size = 25, reps = 1000)`.  This is far more succinct than our previous code, and it allows us to use a shovel of any size we'd like.
 
 Now, we can use our `use_shovel()` function to develop another function, `prop_red()`:
 
 ```{r}
-prop_red <- function(x) {
-  use_shovel(x) %>%
+prop_red <- function(x, size, reps) {
+  use_shovel(x = x, size = size, reps = reps) %>%
     group_by(replicate) %>%
     summarize(red = sum(color == "red")) %>%
-    mutate(prop_red = red / x)
+    mutate(prop_red = red / size)
 }
 
-prop_red(25)
+prop_red(x = bowl, size = 25, reps = 1000)
 ```
 
 See how this just uses the code we had before to create `virtual_prop_red_25`, but generalizes it.  Now we can create the same tibbles we did before, ready to plot the histograms, with only three lines of code:
 
 ```{r, eval = FALSE}
-virtual_prop_red_25 <- prop_red(25)
-virtual_prop_red_50 <- prop_red(50)
-virtual_prop_red_100 <- prop_red(100)
+virtual_prop_red_25 <- prop_red(x = bowl, size = 25, reps = 1000)
+virtual_prop_red_50 <- prop_red(x = bowl, size = 50, reps = 1000)
+virtual_prop_red_100 <- prop_red(x = bowl, size = 100, reps = 1000)
 ```
 
 But this still isn't the best way.  Note that we have three objects we need to deal with, `virtual_prop_red_25`, `virtual_prop_red_50`, and `virtual_prop_red_100`.  Furthermore, we don't actually know that the names are accurate! Perhaps we made a mistake and created `virtual_prop_red_50` with the code `virtual_prop_red_50 <- prop_red(25)`; our object name will now be misleading as to what's actually in the object.
@@ -657,8 +645,14 @@ Next, we'll create list columns called `use_shovel_results` and `prop_red_result
 
 ```{r}
 shovels <- shovels %>%
-  mutate(use_shovel_results = map(shovel_size, use_shovel),
-         prop_red_results = map(shovel_size, prop_red))
+  mutate(use_shovel_results = map(shovel_size,
+                                  ~ use_shovel(x = bowl,
+                                               size = .x,
+                                               reps = 1000))) %>%
+  mutate(prop_red_results = map(shovel_size,
+                                ~ prop_red(x = bowl, 
+                                           size = .x, 
+                                           reps = 1000)))
 
 glimpse(shovels)
 ```
@@ -676,9 +670,17 @@ But now that we have this framework, there's no need to limit ourselves to the s
 
 ```{r}
 shovels_100 <- tibble(shovel_size = 1:100) %>% 
-    mutate(use_shovel_results = map(shovel_size, use_shovel),
-         prop_red_results = map(shovel_size, prop_red),
-         prop_red_sd = map_dbl(prop_red_results, ~ pull(., prop_red) %>% sd()))
+  mutate(use_shovel_results = map(shovel_size,
+                                  ~ use_shovel(x = bowl,
+                                               size = .x,
+                                               reps = 1000))) %>%
+  mutate(prop_red_results = map(shovel_size,
+                                ~ prop_red(x = bowl, 
+                                           size = .x, 
+                                           reps = 1000))) %>% 
+  mutate(prop_red_sd = map_dbl(prop_red_results, 
+                               ~ pull(., prop_red) %>% sd()))
+
 
 glimpse(shovels_100)
 ```
