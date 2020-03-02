@@ -316,14 +316,10 @@ p_X=\frac{e^{\beta_0+\beta_1X}}{1+e^{\beta_0+\beta_1X}}
 Now that we understand that expontentiated coefficients in logistic regressions are odds ratios, we can use the argument `exponentiate = TRUE` in the `tidy()` function to exponentiate the coefficients for us:
 
 ```{r, eval=FALSE}
-house_region_model <- glm(dem_win ~ region, family = binomial, data = house_ch13)
 house_region_model %>%
   tidy(conf.int = TRUE,
        exponentiate = TRUE) %>%
   select(term, estimate, conf.low, conf.high)
-```
-```{r, echo=FALSE}
-house_region_model <- glm(dem_win ~ region, family = binomial, data = house_ch13)
 ```
 ```{r, echo=FALSE}
 tidy(house_region_model,
@@ -451,8 +447,184 @@ Now, the `.resid` value is the difference between the actual outcome (`dem_win`)
 
 ### One numerical explanatory variable
 
+We'll now predict `dem_win` with a single numerical explanatory variable, `year`. 
+
+1. We first "fit" the logistic regression model using the `glm(y ~ x, family, data)` function and save it in `house_year_model`.
+1. We get the regression table by applying the `tidy()` function from the **broom** package to `house_year_model`.  We'll print the `term`, `estimate`, `conf.low`, and `conf.high` columns.  Recall that setting `exponentiate = TRUE` exponentiates the logistic regression coefficients, which can help with interpretation. 
+
+```{r, eval=FALSE}
+house_year_model <- glm(dem_win ~ year, family = binomial data = house_ch13)
+house_year_model %>%
+  tidy(conf.int = TRUE,
+       exponentiate = TRUE) %>%
+  select(term, estimate, conf.low, conf.high)
+```
+```{r, echo=FALSE}
+house_year_model <- glm(dem_win ~ year, family = binomial, data = house_ch13)
+```
+```{r, echo=FALSE}
+tidy(house_year_model,
+     conf.int = TRUE,
+     exponentiate = TRUE) %>%
+  select(term, estimate, conf.low, conf.high) %>%
+  knitr::kable(
+    digits = 3,
+    caption = "Logistic regression table",
+    booktabs = TRUE,
+    linesep = ""
+  ) %>%
+  kable_styling(font_size = ifelse(knitr:::is_latex_output(), 10, 16),
+                latex_options = c("hold_position"))
+```
+
+How do we interpret the coefficients in this model?  Since the `year` coefficient is less than 1, that means that each additional year *reduces* the odds of a Democratic victory.  In fact, each additional year is associated with a 17% reduction in the odds of a Democratic victory.
+
+Note that the very high number for the "intercept" suggests that the odds of a Democratic victory in year 0 are arbitrarily high -- that is, the *probability* of a Democratic victory in year 0 is essentially 100%.  But of course, there was no House of Representatives in year 0!  This is a good lesson in making sure to know the limits of one's models: just because something makes *mathematical* sense as an output of your model, doesn't mean that it makes real-world sense for the phenomenon you are studying.
+
+While `house_region_model` and `house_year_model` both tell us something interesting, we could learn more with an *interaction model* that includes both of our predictors.
+
+### One numerical and one categorical explanatory variable
+
+We'll now predict `dem_win` with a two variable, `region` and `year`, as well as the interaction between the two 
+
+1. We first "fit" the logistic regression model using the `glm(y ~ x1 * x2, family, data)` function and save it in `house_interact_model`.
+1. We get the regression table by applying the `tidy()` function from the **broom** package to `house_interact_model`.  We'll print the `term`, `estimate`, `conf.low`, and `conf.high` columns.  Recall that setting `exponentiate = TRUE` exponentiates the logistic regression coefficients, which can help with interpretation. 
+
+```{r, eval=FALSE}
+house_interact_model <- glm(dem_win ~ region * year, family = binomial data = house_ch13)
+house_interact_model %>%
+  tidy(conf.int = TRUE,
+       exponentiate = TRUE) %>%
+  select(term, estimate, conf.low, conf.high)
+```
+```{r, echo=FALSE}
+house_interact_model <- glm(dem_win ~ region * year, family = binomial, data = house_ch13)
+```
+```{r, echo=FALSE}
+tidy(house_interact_model,
+     conf.int = TRUE,
+     exponentiate = TRUE) %>%
+  select(term, estimate, conf.low, conf.high) %>%
+  knitr::kable(
+    digits = 3,
+    caption = "Logistic regression table",
+    booktabs = TRUE,
+    linesep = ""
+  ) %>%
+  kable_styling(font_size = ifelse(knitr:::is_latex_output(), 10, 16),
+                latex_options = c("hold_position"))
+```
+
+Now we can see how the effect of `year` varies by `region`.  While the passage of time is associated with more Democratic victories in the Northeast and the West, which we can see from the exponentiated coefficients on `regionNortheast:year` and `regionWest:year` being greater than 1, `year` is associated with declining Democratic fortunes in the Midwest (`year`) and the South (`regionSouth:year`).
+
+Looking at predicted probabilities can also put this model in perspective.  Let's use `augment()` to generate the predictions.  Remember that `type.predict = "response"` and `type.residuals = "response"` put the fitted values and the residuals on the probability scale.
+
+```{r, eval=FALSE}
+regression_points <- house_interact_model %>%
+  augment(type.predict = "response",
+          type.residuals = "response") %>%
+  mutate(conf.low = .fitted - 2 * .se.fit,
+         conf.high = .fitted + 2 * .se.fit) %>%
+  select(dem_win, region, .fitted, conf.low, conf.high, .resid)
+regression_points
+```
+```{r, echo=FALSE}
+regression_points <- augment(house_interact_model,
+                             type.predict = "response",
+                             type.residuals = "response") %>%
+  mutate(conf.low = .fitted - 2 * .se.fit,
+         conf.high = .fitted + 2 * .se.fit) %>%
+  select(dem_win, region, .fitted, conf.low, conf.high, .resid)
+regression_points %>%
+  slice(1:10) %>%
+  knitr::kable(
+    digits = 3,
+    caption = "Regression points (First 10 out of 4,201 district-years)",
+    booktabs = TRUE,
+    linesep = ""
+  ) %>%
+  kable_styling(font_size = ifelse(knitr:::is_latex_output(), 10, 16),
+                latex_options = c("hold_position"))
+```
+
+We can also use `augment` to make predictions for years that aren't in our data.  What would our model predict for the 2020 elections?  We use the `newdata` argument in `augment()` to make these predictions.
+
+```{r}
+house_interact_model %>%
+  augment(newdata = tibble(year = rep(2020, 4),
+                           region = c("Midwest", "Northeast", "South", "West")),
+          type.predict = "response") %>%
+  mutate(conf.low = .fitted - 2 * .se.fit,
+         conf.high = .fitted + 2 * .se.fit)
+```
+
+These can easily be plotted using `ggplot()`:
+
+```{r}
+house_interact_model %>%
+  augment(newdata = tibble(year = rep(2020, 4),
+                           region = c("Midwest", "Northeast", "South", "West")),
+          type.predict = "response") %>%
+  mutate(conf.low = .fitted - 2 * .se.fit,
+         conf.high = .fitted + 2 * .se.fit) %>%
+  ggplot(aes(y = .fitted,
+             ymin = conf.low,
+             ymax = conf.high,
+             x = region)) +
+  geom_point() +
+  geom_errorbar() +
+  labs(y = "Predicted probability of a Democratic victory",
+       x = "") +
+  theme_classic()
+```
+
+### Fitting many models using `map()`
+
+While it is interesting to see how Democrats perform by region over time, it would also be interesting to see how each state has changed in its partisan voting from 1976--2018.  Have any seen particularly large increases (or decreases) in the probability of a Democratic candidate winning?
+
+The code to do this is very similar to the code we used for the gubernatorial forecasts in Chapter \@ref(regression) and the Seattle house prices in Chapter \@ref(multiple-regression).  However, we will use `glm()` instead of `lm()`, and we will use the `exponentiate = TRUE` option for `tidy()`.
+
+First, we'll filter to the states that have at least 50 district-years in the dataset. Next, let's use `map()` to learn about these districts:
+
+```{r}
+infreq_states <- house_ch13 %>%
+  count(state) %>%
+  filter(n < 50) %>%
+  pull(state)
+
+house_state_model <- house_ch13 %>%
+  filter(! state %in%  infreq_states) %>%
+  group_by(state) %>%
+  nest() %>%
+  mutate(mod = map(data, ~ glm(dem_win ~ year, family = binomial, data = .)),
+         reg_results = map(mod, ~ tidy(., conf.int = TRUE, exponentiate = TRUE)),
+         year_coef = map_dbl(reg_results, ~ filter(., term == "year") %>% pull(estimate)),
+         year_low = map_dbl(reg_results, ~ filter(., term == "year") %>% pull(conf.low)),
+         year_high = map_dbl(reg_results, ~ filter(., term == "year") %>% pull(conf.high)))
+
+glimpse(house_state_model)
+```
+
+The easiest way to see the results of these models is to plot the exponentiated coefficients:
+
+```{r}
+house_state_model %>%
+  ungroup() %>%
+  mutate(state = fct_reorder(state, year_coef)) %>%
+  ggplot(aes(x = state, y = year_coef, ymin = year_low, ymax = year_high)) +
+  geom_point() +
+  geom_errorbar() +
+  theme_minimal() +
+  labs(x = "",
+       y = "Exponentiated coefficients of year",
+       title = "Predicting Democratic victories in the U.S. House over time by state",
+       subtitle = "Logistic regression coefficients for year plotted by state") +
+  coord_flip()
+```
 
 ### Linear regression vs. logistic regression
+
+Here's a useful summary of the differences between linear regression and logistic regression:
 
 \[
 \underline{\textrm{Response}} \\
