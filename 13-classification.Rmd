@@ -690,7 +690,7 @@ Answers to Q66 are used to define our response variable: Y = 1 corresponds to "(
  
 BMI is included in this study as the percentile for a given BMI for members of the same sex. This facilitates comparisons when modeling with males and females. We will use the terms *BMI* and *BMI percentile* interchangeably with the understanding that we are always referring to the percentile.
 
-With our sample, we use only the cases that include all of the data for these four questions. This is referred to as a __complete case analysis__. That brings our sample of 500 to 426. There are limitations of complete case analyses that we address in the Discussion.   
+With our sample, we use only the cases that include all of the data for these four questions. This is referred to as a __complete case analysis__. That brings our sample of 500 to 439. There are limitations of complete case analyses that we address in the Discussion.   
 
 ### Exploratory data analysis
 
@@ -736,25 +736,47 @@ risk2009 <- risk2009.samp %>%
   dplyr::select(lose.wt, lose.wt.01, sex, sport, media, bmipct) %>%
   filter(complete.cases(.))
 rm(risk2009.samp)
+
+# write_rds(risk2009, "rds/risk2009.rds")
 ```
 
-```{r, include = FALSE}
-#primary response
-prop.table( mosaic::tally(~ lose.wt, data = risk2009) )   
+```{r}
+risk2009 <- read_rds(url("https://github.com/davidkane9/PPBDS/raw/master/rds/risk2009.rds"))
 
-#covariates
-prop.table( mosaic::tally(~ sex, data = risk2009) )   
-prop.table( mosaic::tally(~ sport, data = risk2009) )   
-prop.table( mosaic::tally(~ media, data = risk2009) )   
+risk2009 %>% skim()
+```
 
+Nearly half (48\%) of our sample of 439 youth report that they are trying to lose weight, 54\% percent of the sample are females, and 54\% play on one or more sports teams.
+
+
+```{r}
 risk2009 %>%
-  summarise(meanBMI = mean(bmipct),
+  count(media) %>%
+  mutate(prop = n / sum(n))
+```
+
+
+10 percent report that they do not watch any TV on school days, whereas another 11\% watched 5 or more hours each day.
+
+
+```{r}
+risk2009 %>%
+  summarize(meanBMI = mean(bmipct),
             medianBMI = median(bmipct))
 ```
 
-Nearly half (44.5\%) of our sample of 426 youth report that they are trying to lose weight, 49.9\% percent of the sample are females, and 56.6\% play on one or more sports teams. 9.3 percent report that they do not watch any TV on school days, whereas another 9.3\% watched 5 or more hours each day.  Interestingly, the median BMI percentile for our 426 youth is 70.  The most dramatic difference in the proportions of those who are trying to lose weight is by sex; 58\% of the females want to lose weight in contrast to only 31\% of the males (see Figure \@ref(fig:mosaicsexlose)). This provides strong support for the inclusion of a sex term in every model considered.
+The median BMI percentile for our 439 youth is 69.
 
-```{r, mosaicsexlose, fig.align="center", out.width="60%", fig.cap='Weight loss plans vs. Sex',echo=FALSE, warning=FALSE, comment=NA}
+```{r}
+risk2009 %>%
+  count(sex, lose.wt) %>%
+  group_by(sex) %>%
+  mutate(prop = n / sum(n))
+```
+
+The most dramatic difference in the proportions of those who are trying to lose weight is by sex; 59\% of the females want to lose weight in contrast to only 35\% of the males (see Figure \@ref(fig:mosaicsexlose)). This provides strong support for the inclusion of a sex term in every model considered.
+
+```{r, mosaicsexlose, fig.align="center", out.width="60%", fig.cap='Weight loss plans vs. Sex', warning=FALSE, comment=NA}
 risk2009 %>%
   ggplot(aes(x = lose.wt, y = ..prop.., group = sex, fill = sex)) +
   geom_bar(position = "dodge") +
@@ -764,55 +786,41 @@ risk2009 %>%
   theme_classic()
 ```
 
-
-```{r, echo=FALSE, include=FALSE, comment=NA}
+```{r, table3chp6, echo=FALSE, comment=NA}
 risk2009 %>%
   group_by(sex, lose.wt) %>%
-  summarise(mean = mean(bmipct), sd = sd(bmipct), n = n())
-```
-
-```{r, table3chp6, echo=FALSE, comment=NA}
-sex <- c("Female"," ","Male"," ")
-wls <- c("No weight loss","Lose weight","No weight loss","Lose weight")
-mbmip <- c("48.2","76.3","54.9","84.4")
-sds <- c("26.2", "19.5", "28.6", "17.7")
-ncol <- c(90,124,148,67)
-#ccbmiXsex.tab
-table3chp6 <- data.frame(sex,wls,mbmip,sds,ncol)
-colnames(table3chp6) <- c("Sex","Weight loss status","mean BMI percentile","SD","n")
-kable(table3chp6, booktabs=T,caption="Mean BMI percentile by sex and desire to lose weight.")
+  summarize(mean_BMI = mean(bmipct),
+            sd_BMI = sd(bmipct),
+            n = n()) %>%
+  kable(col.names = c("Sex", "Lose weight", "Mean BMI", "SD BMI", "Sample size"),
+        caption = "Mean BMI percentile by sex and desire to lose weight",
+        digits = 0)
 ```
 
 Table \@ref(tab:table3chp6) displays the mean BMI of those wanting and not wanting to lose weight for males and females. The mean BMI is greater for those trying to lose weight compared to those not trying to lose weight, regardless of sex. The size of the difference is remarkably similar for the two sexes.
 
 If we consider including a BMI term in our model(s), the logit should be linearly related to BMI. We can investigate this assumption by constructing an empirical logit plot. In order to calculate empirical logits, we first divide our data by sex. Within each sex, we generate 10 groups of equal sizes, the first holding the bottom 10\% in BMI percentile for that sex, the second holding the next lowest 10\%, etc. Within each group, we calculate the proporton, $\hat{p}$ that reported wanting to lose weight, and then the empirical log odds, $log(\frac{\hat{p}}{1-\hat{p}})$, that a young person in that group wants to lose weight.
 
-```{r, logitBMIsex, fig.align="center",out.width="60%", fig.cap='Empirical logits of trying to lose weight by BMI and Sex.',echo=FALSE, warning=FALSE, comment=NA}
-risk2009 <- risk2009 %>%
+```{r, logitBMIsex, fig.align="center",out.width="60%", fig.cap='Empirical logits of trying to lose weight by BMI and Sex.', warning=FALSE, comment=NA}
+risk2009 %>%
   group_by(sex) %>%
-  mutate(BMIcuts = cut_number(bmipct,10))
-  
-emplogit1 <- risk2009 %>%
+  mutate(BMIcuts = cut_number(bmipct, 10)) %>%
   group_by(sex, BMIcuts) %>%
   summarise(prop.lose = mean(lose.wt.01), 
             n = n(),
             midpoint = median(bmipct)) %>%
   mutate(prop.lose = ifelse(prop.lose == 0, .01, prop.lose),
-         emplogit = logit(prop.lose))
-
-ggplot(emplogit1, aes(x = midpoint, y = emplogit, color = sex)) +
+         emplogit = logit(prop.lose)) %>%
+  ggplot(aes(x = midpoint, y = emplogit, color = sex)) +
   geom_point() +
   geom_smooth(method = "lm") +
-  xlab("BMI percentile") + ylab("Empirical logits")
+  xlab("BMI percentile") + ylab("Empirical logits") +
+  theme_classic()
 ```
 
 Figure \@ref(fig:logitBMIsex) presents the empirical logits for the BMI intervals by sex. Both males and females exhibit an increasing linear trend on the logit scale indicating that increasing BMI is associated a greater desire to lose weight and that modeling log odds as a linear function of BMI is reasonable. The slope for the females appears to be similar to the slope for males, so we do not need to consider an interaction term between BMI and sex in the model. 
  
-```{r, mosaicsexsports, fig.align="center", out.width="60%", fig.cap='Weight loss plans vs. sex and sports participation',echo=FALSE, warning=FALSE, comment=NA}
-#ytable <- mosaic::tally(~ sex + sport + lose.wt, data = risk2009)   
-#mosaicplot(ytable, color = T, main="")
-#prop.table(ytable, c(1,2))
-
+```{r, mosaicsexsports, fig.align="center", out.width="60%", fig.cap='Weight loss plans vs. sex and sports participation', warning=FALSE, comment=NA}
 risk2009 %>%
   ggplot(aes(x = lose.wt, y = ..prop.., group = sex, fill = sex)) +
   geom_bar(position = "dodge") +
@@ -823,15 +831,11 @@ risk2009 %>%
   theme_classic()
 ```
 
-Out of those who play sports, 43\% want to lose weight whereas 46\% want to lose weight among those who do not play sports. Figure \@ref(fig:mosaicsexsports) compares the proportion of respondents who want to lose weight by their sex and sport participation. The data suggest that sports participation is associated with the same or even a slightly lower desire to lose weight, contrary to what had originally been hypothesized. While the overall levels of those wanting to lose weight differ considerably between the sexes, the differences between those in and out of sports within sex appear to be very small.  A term for sports participation or number of teams will be considered, but there is not compelling evidence that an interaction term will be needed.
+Out of those who play sports, 46\% want to lose weight whereas 50\% want to lose weight among those who do not play sports. Figure \@ref(fig:mosaicsexsports) compares the proportion of respondents who want to lose weight by their sex and sport participation. The data suggest that sports participation is associated with the same or even a slightly lower desire to lose weight, contrary to what had originally been hypothesized. While the overall levels of those wanting to lose weight differ considerably between the sexes, the differences between those in and out of sports within sex appear to be very small.  A term for sports participation or number of teams will be considered, but there is not compelling evidence that an interaction term will be needed.
 
-It was posited that increased exposure to media, here measured as hours of TV daily, is associated with increased desire to lose weight, particularly for females. Overall, the percentage who want to lose weight ranges from 35\% of those watching 5 hours of TV per day to 52\% among those watching 3 hours daily. There is minimal variation in the proportion wanting to lose weight with both sexes combined. However, we are more interested in differences between the sexes (see Figure \@ref(fig:mediaXsex)).  We create empirical logits using the proportion of students trying to lose weight for each level of hours spent watching daily and look at the trends in the logits separately for males and females. From Figure \@ref(fig:logitmediasex), there does not appear to be a linear relationship for males or females. 
+It was posited that increased exposure to media, here measured as hours of TV daily, is associated with increased desire to lose weight, particularly for females. Overall, the percentage who want to lose weight ranges from 37\% of those watching no TV to 49\% among those watching 2 hours daily. There is minimal variation in the proportion wanting to lose weight with both sexes combined. However, we are more interested in differences between the sexes (see Figure \@ref(fig:mediaXsex)).  We create empirical logits using the proportion of students trying to lose weight for each level of hours spent watching daily and look at the trends in the logits separately for males and females. From Figure \@ref(fig:logitmediasex), there does not appear to be a linear relationship for males or females. 
 
-```{r,mediaXsex, fig.align="center",out.width="60%", fig.cap='Weight loss plans vs. daily hours of TV and sex.',echo=FALSE, warning=FALSE, comment=NA}
-#ytable <- mosaic::tally(~ sex + media + lose.wt, data = risk2009)   
-#mosaicplot(ytable, color = T, main="")
-#prop.table(ytable, c(1,2))
-
+```{r,mediaXsex, fig.align="center",out.width="60%", fig.cap='Weight loss plans vs. daily hours of TV and sex.', warning=FALSE, comment=NA}
 risk2009 %>%
   ggplot(aes(x = lose.wt, y = ..prop.., group = factor(media), fill = factor(media))) +
   geom_bar(position = "dodge") +
@@ -842,17 +846,17 @@ risk2009 %>%
   theme_classic()
 ```
 
-```{r, logitmediasex, fig.align="center",out.width="60%", fig.cap='Empirical logits for the odds of trying to lose weight by TV watching and sex.',echo=FALSE, warning=FALSE}
-emplogit2 <- risk2009 %>%
+```{r, logitmediasex, fig.align="center",out.width="60%", fig.cap='Empirical logits for the odds of trying to lose weight by TV watching and sex.', warning=FALSE}
+risk2009 %>%
   group_by(sex, media) %>%
   summarise(prop.lose = mean(lose.wt.01), n = n()) %>%
   mutate(prop.lose = ifelse(prop.lose == 0, .01, prop.lose)) %>%
-  mutate(emplogit = logit(prop.lose))
-
-ggplot(emplogit2, aes(x = media, y = emplogit, color = sex)) +
+  mutate(emplogit = logit(prop.lose)) %>%
+  ggplot(aes(x = media, y = emplogit, color = sex)) +
   geom_point() +
   geom_smooth(method = "lm") +
-  xlab("TV hours per day") + ylab("Empirical logits")
+  xlab("TV hours per day") + ylab("Empirical logits") +
+  theme_classic()
 ```
 
 ### Initial models
@@ -861,28 +865,31 @@ Our strategy for modeling is to use our questions of interest and what we have l
 
 We first use a model where sex is our only predictor.
 
-```{r, 6model1, echo=FALSE, comment=NA}
+```{r, 6model1, comment=NA}
 risk2009 <- risk2009 %>%
   mutate(female = ifelse(sex == "Female", 1, 0))
+
 model1 <- glm(lose.wt.01 ~ female, family = binomial, data = risk2009)
-#tmp <- capture.output(summary(model1))
-#cat(tmp[c(3:4, 9:13, 18:20)], sep='\n')
-#exp(confint(model1))
 
 model1 %>%
   tidy(conf.int = TRUE) %>%
   select(term, estimate, conf.low, conf.high)
 ```
-Our estimated logistic regression model is:
-\[\log\left(\frac{{p}}{1-{p}}\right)=-0.79+1.11 (\textrm{female})\]
-where ${p}$ is the estimated proportion of youth wanting to lose weight. We can interpret the coefficient on female by exponentiating $e^{1.1130} = 3.04$ (95% CI = $(2.05, 4.54)$) indicating that the odds of a female trying to lose weight is over three times the odds of a male trying to lose weight ($Z=5.506$, $p=3.67e-08$). We retain sex in the model and consider adding the BMI percentile:
 
 ```{r, include=FALSE}
-exp(coef(model1))
-exp(confint(model1))
+model1 %>%
+  tidy(conf.int = TRUE,
+       exponentiate = TRUE) %>%
+  select(term, estimate, conf.low, conf.high)
 ```
 
-```{r, 6model2int, echo=FALSE, include=FALSE, comment=NA}
+Our estimated logistic regression model is:
+\[\log\left(\frac{{p}}{1-{p}}\right)=-0.60+0.94 (\textrm{female})\]
+where ${p}$ is the estimated proportion of youth wanting to lose weight. We can interpret the coefficient on female by exponentiating $e^{0.94} = 2.57$ (95% CI = $(1.75, 3.80)$) indicating that the odds of a female trying to lose weight is over two times the odds of a male trying to lose weight. We retain sex in the model and consider adding the BMI percentile:
+
+
+
+```{r, 6model2int, include=FALSE, comment=NA}
 model2int <- glm(lose.wt.01 ~ female + bmipct + female:bmipct, 
                  family = binomial, data = risk2009)
 
@@ -891,7 +898,7 @@ model2int %>%
   select(term, estimate, conf.low, conf.high)
 ```
 
-```{r, 6model2, echo=FALSE, comment=NA}
+```{r, 6model2, comment=NA}
 model2 <- glm(lose.wt.01 ~ female + bmipct, family = binomial, 
               data = risk2009)
 
@@ -903,13 +910,13 @@ model2 %>%
 We see that BMI is positively associated with the odds of trying to lose weight, after controlling for sex.  Clearly BMI percentile belongs in the model with sex.  
 
 Our estimated logistic regression model is:
-\[\log\left(\frac{{p}}{1-{p}}\right)= -4.46+1.54\textrm{female}+0.051\textrm{bmipct}\]
+\[\log\left(\frac{{p}}{1-{p}}\right)= -3.40+1.36\textrm{female}+0.039\textrm{bmipct}\]
 
-To interpret the coefficient on `bmipct`, we will consider a 10 unit increase in `bmipct`.  Because $e^{10*0.0509}=1.664$, then there is an estimated 66.4\% increase in the odds of wanting to lose weight for each additional 10 percentile points of BMI for members of the same sex. Just as we had done in other multiple regression models we need to interpret our coefficient *given that the other variables remain constant*. An interaction term for BMI by sex was tested as well, but appears that the effect of BMI differs by sex.
+To interpret the coefficient on `bmipct`, we will consider a 10 unit increase in `bmipct`.  Because $e^{10*0.039}=1.477$, then there is an estimated 47.7\% increase in the odds of wanting to lose weight for each additional 10 percentile points of BMI for members of the same sex. Just as we had done in other multiple regression models we need to interpret our coefficient *given that the other variables remain constant*. An interaction term for BMI by sex was tested as well, but appears that the effect of BMI differs by sex.
 
 We next add `sport` to our model. Sports participation was considered for inclusion in the model in three ways: an indicator of sports participation (0 = no teams, 1 = one or more teams), treating the number of teams (0, 1, 2, or 3) as numeric, and treating the number of teams as a factor.  The models below treat sports participation using an indicator variable, but all three models produced similar results.
 
-```{r, 6model3, echo=FALSE, comment=NA, message=FALSE}
+```{r, 6model3, comment=NA, message=FALSE}
 model3 <- glm(lose.wt.01 ~ female + bmipct + sport, 
               family = binomial, data = risk2009)
 
@@ -928,7 +935,7 @@ Sports teams do not appear to matter in any of these models, nor do interaction 
 
 We last look at adding `media` to our model.
 
-```{r, 6model4, echo=FALSE, comment=NA, message=FALSE}
+```{r, 6model4, comment=NA, message=FALSE}
 model4 <- glm(lose.wt.01 ~ bmipct + female + media, 
               family = binomial, data = risk2009)
 
@@ -945,7 +952,7 @@ Media is a small and imprecisely estimated term. We have no support in our data 
 
 We found that the odds of wanting to lose weight are considerably greater for females compared to males. In addition, respondents with greater BMI percentiles express a greater desire to lose weight for members of the same sex. Regardless of sex or BMI percentile, sports participation and TV watching are not associated with different odds for wanting to lose weight. 
 
-A limitation of this analysis is that we used complete cases in place of a method of imputing responses or modeling missingness. This reduced our sample from 500 to 429, and it may have introduced bias. For example, if respondents who watch a lot of TV were unwilling to reveal as much, and if they differed with respect to their desire to lose weight from those respondents who reported watching little TV, our inferences regarding the relationship between lots of TV and desire to lose weight may be biased.
+A limitation of this analysis is that we used complete cases in place of a method of imputing responses or modeling missingness. This reduced our sample from 500 to 439, and it may have introduced bias. For example, if respondents who watch a lot of TV were unwilling to reveal as much, and if they differed with respect to their desire to lose weight from those respondents who reported watching little TV, our inferences regarding the relationship between lots of TV and desire to lose weight may be biased.
 
 Other limitations may result from definitions. Trying to lose weight is self-reported and may not correlate with any action undertaken to do so. The number of sports teams may not accurately reflect sports related pressures to lose weight. For example, elite athletes may focus on a single sport and be subject to greater pressures whereas athletes who casually participate in three sports may not feel any pressure to lose weight. Hours spent watching TV is not likely to encompass the totality of media exposure, particularly because exposure to celebrities occurs often online.  Furthermore, this analysis does not explore in any detail maladaptions---inappropriate motivations for wanting to lose weight. For example, we did not focus our study on subsets of respondents with low BMI who are attempting to lose weight. 
 
