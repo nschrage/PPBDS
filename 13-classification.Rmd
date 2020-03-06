@@ -616,7 +616,7 @@ house_state_model %>%
   geom_errorbar() +
   theme_minimal() +
   labs(x = "",
-       y = "Exponentiated coefficients of year",
+       y = "Exponentiated coefficients of \"year\"",
        title = "Predicting Democratic victories in the U.S. House over time by state",
        subtitle = "Logistic regression coefficients for year plotted by state") +
   coord_flip()
@@ -695,7 +695,7 @@ $$
 If you study the formula carefully you will see that it is in fact 0 in the perfect scenario described above. 
 Once we are done partitioning the predictor space into regions, in each region a prediction is made using the observations in that region. 
 
-But when do we stop partitioning?  Every time we split and define two new partitions, the Gini Index improves. This is because with more partitions, our model has more flexibility to adapt to the training data.  To avoid this, the algorithm sets a minimum for how much the Gini Index must improve for another partition to be added. This parameter is referred to as the _complexity parameter_ (cp). The measure of fit must improve by a factor of cp for the new partition to be added. Large values of cp will therefore force the algorithm to stop earlier which results in fewer nodes.^[cp is not the only parameter used to decide whether we should create a new partition. Another common parameter is the minimum number of observations required in a partition before partitioning it further. The argument used in the `rpart()` function, which we'll be using in this chapter, is `minsplit`, and the default is 20. The `rpart()` implementation of classification trees also permits users to determine a minimum number of observations in each node. The argument is `minbucket` and defaults to `round(minsplit/3)`.]
+But when do we stop partitioning?  Every time we split and define two new partitions, the Gini Index improves. This is because with more partitions, our model has more flexibility to adapt to the training data.  To avoid this, the algorithm sets a minimum for how much the Gini Index must improve for another partition to be added. This parameter is referred to as the _complexity parameter_ (`cp`). The measure of fit must improve by a factor of `cp` for the new partition to be added. Large values of `cp` will therefore force the algorithm to stop earlier which results in fewer nodes.^[`cp` is not the only parameter used to decide whether we should create a new partition. Another common parameter is the minimum number of observations required in a partition before partitioning it further. The argument used in the `rpart()` function, which we'll be using in this chapter, is `minsplit`, and the default is 20. The `rpart()` implementation of classification trees also permits users to determine a minimum number of observations in each node. The argument is `minbucket` and defaults to `round(minsplit/3)`.]
 
 Classification trees have certain advantages that make them very useful. They are highly interpretable, even more so than linear models. They are easy to visualize (if small enough).  Finally, they can model human decision processes. However, in terms of accuracy, it is rarely the best performing method since it is not very flexible. Random forests, explained in the next section, improve on some of the shortcomings of classification trees.
 
@@ -750,7 +750,7 @@ prp_ch13(house_year_cart)
 
 Now, the algorithm creates cutpoints in the `year` variable in order to classify observations.  This tree will classify observations before 1993 (the 1992 election cycle or earlier, since House elections only occur in even-numbered years) or between 2005 and 2009 (the 2006 and 2008 cycles) as Democratic victories and all other observations as Democratic losses.
 
-Eagle-eyed observers will notice that this is simply classifying every year based on whether the Democrats won a majority in that year, with one exception --- observations in 2018 are predicted to be Democratic losses.  Why is that?  Recall that the algorithm uses a *complexity parameter*, cp, to avoid overfitting.  The default value of cp in `rpart()` is 0.01; setting it to 0 allows one to see the maximum number of partitions that the algorithm will do:
+Eagle-eyed observers will notice that this is simply classifying every year based on whether the Democrats won a majority in that year, with one exception --- observations in 2018 are predicted to be Democratic losses.  Why is that?  Recall that the algorithm uses a *complexity parameter*, `cp`, to avoid overfitting.  The default value of `cp` in `rpart()` is 0.01; setting it to 0 allows one to see the maximum number of partitions that the algorithm will do:
 
 ```{r}
 house_year_cart_0 <- rpart(factor(dem_win) ~ year, data = house_ch13, cp = 0)
@@ -760,7 +760,7 @@ prp_ch13(house_year_cart_0)
 
 Now there is an additional partition that classifies observations where `year` $>= 2017$ as 1.
 
-Note that if we already have a tree and want to apply a higher cp value, we can use the `prune` function. We call this _pruning_ a tree because we are snipping off partitions that do not meet a `cp` criterion. We  created a tree that used `cp = 0` and saved it to `house_year_cart_0`. We can prune it like this:
+Note that if we already have a tree and want to apply a higher `cp` value, we can use the `prune` function. We call this _pruning_ a tree because we are snipping off partitions that do not meet a `cp` criterion. We  created a tree that used `cp = 0` and saved it to `house_year_cart_0`. We can prune it like this:
 
 ```{r}
 pruned_cart <- prune(house_year_cart_0, cp = 0.01)
@@ -770,38 +770,73 @@ prp_ch13(pruned_cart)
 
 which gives us back our original tree.
 
-But which tree is better?  We can answer that question via **cross-validation**.  Using the `train()` function in the **caret** package, 
+But which tree is better?  We can answer that question using the `train()` function in the **caret** package. The basic idea is that we want to test out various values of `cp` and select the model that performs best.  The `train()` function decides which model is best by calculating the accuracy on 25 bootstrapped samples of our data.
+
+In order to tell `train` how to behave, we need to give it some arguments:
+
+1. The formula for our model.  (Here, `factor(dem_win) ~ year`.)
+1. The `method` we want to use. (Here, `method = "rpart".)
+1. The values of `cp` we want to test, using the argument `tuneGride`. To test values from 0.0 to 0.1, going up by increments of 0.005, we would use the argument `tuneGrid = data.frame(cp = seq(0.0, 0.1, by = 0.005))`.
+1. Our data (`data = house_ch13`).
 
 ```{r, message = FALSE}
 library(caret)
 
+set.seed(1234)
 train_year_cart <- train(factor(dem_win) ~ year,
                          method = "rpart",
-                         tuneGrid = data.frame(cp = seq(0.0, 0.1, len = 25)),
+                         tuneGrid = data.frame(cp = seq(0.0, 0.1, by = 0.005)),
                          data = house_ch13)
 train_year_cart
 ```
+
+We need to call `set.seed()` before running `train()` because of the randomness in the bootstrap process.  We can see from the output that `cp = 0.005` performed best on our bootstrap samples.  We can visualize these results using `ggplot()`:
+
+```{r}
+ggplot(train_year_cart)
+```
+
+We don't need to run `rpart()` again to fit the best-performing model, because it is saved in `train_year_cart$finalModel`.  Let's look at the tree:
 
 ```{r}
 prp_ch13(train_year_cart$finalModel)
 ```
 
+With the value of `cp` chosen by `train()`, we retain the partition based on `year < 2017`.
+
 ### Multiple explanatory variables
 
+What if we wanted to predict `dem_win` based on `region` and `year`?  The process is similar to what we've seen before.  We'll jump right to using `train()` in this example.
+
 ```{r}
-train_region_year_cart <- train(factor(dem_win) ~ region + year, method = "rpart", data = house_ch13)
+train_region_year_cart <- train(factor(dem_win) ~ region + year,
+                                method = "rpart",
+                                tuneGrid = data.frame(cp = seq(0.0, 0.1, by = 0.005)),
+                                data = house_ch13)
 
 prp_ch13(train_region_year_cart$finalModel)
 ```
 
+This tree classifies observations in the Northeast and West as a Democratic win and observations in the Midwest and South as a Democratic win before 1993 and a Democratic loss afterward. 
+
+In the section on logistic regression, we used `map()` to fit many models to visualize the effect of `year` by `state`.  When fitting classification trees, it is easy just to add `state` as a predictor and allow the complexity parameter to determine whether we ought to partition further states by `year`.  In fact, unlike with `lm()` and `glm()`, we can include both `region` and `state` in the model, and the algorithm will decide whether it wants to use the additional information provided by `state` or just create partitions based on `region`.  Let's take a look:
+
 ```{r}
-train_state_year_cart <- train(factor(dem_win) ~ region + state + year, method = "rpart", data = house_ch13)
+train_state_year_cart <- train(factor(dem_win) ~ region + state + year,
+                               method = "rpart",
+                               tuneGrid = data.frame(cp = seq(0.0, 0.1, by = 0.005)),
+                               data = house_ch13)
 
 prp_ch13(train_state_year_cart$finalModel)
 ```
 
+We see that one tradeoff as trees get more complex is that while they become more accurate, they also get harder to read.  Still, after inspecting this tree for a little bit, we can see it makes the following predictions:
+
+- Observations before 1993 are classified as Democratic wins.
+- Observations after 1993 in Massachusetts, New York, California, Hawaii, Rhode Island, Oregon, Connecticut, and Maryland are classified as Democratic wins.
+- All other observations are classified as Democratic losses.
+
 ## Random forests
-<!-- AR: don't bother doing one categorical, one numerical here -->
 
 ### What are random forests?
 
@@ -823,7 +858,7 @@ So how do we get different decision trees from a single training set? For this, 
 
 ### Fitting random forests
 
-We will demonstrate by fitting a random forest to the House elections data.  We will use the `randomForest` function in the __randomForest__ package:
+We will demonstrate by fitting a random forest to the House elections data, predicting `dem_win` with `region_fct`, `state_fct`, and `year`.  We will use the `randomForest` function in the __randomForest__ package.  Note that `randomForest()` requires that our categorical predictors be of type `factor` rather than `character`, so we'll `mutate()` first to create those variables.
 
 ```{r, message=FALSE, warning=FALSE}
 library(randomForest)
@@ -833,9 +868,10 @@ house_ch13 <- house_ch13 %>%
          state_fct = factor(state))
 
 house_forest <- randomForest(factor(dem_win) ~ region_fct + state_fct + year, data = house_ch13) 
+house_forest
 ```
 
-We can see how the error rate of our algorithm changes as we add trees by looking at `house_forest$err.rate[, "OOB"]` 
+We see under "OOB estimate of error rate" that this model has an error rate of 36% (or, looking at it the other way, an accuracy of 64%). We can see how the error rate of our algorithm changes as we add trees by looking at `house_forest$err.rate[, "OOB"]`.  By default, `randomForest()` grows 500 trees.
 
 ```{r}
 tibble(`Error rate` = house_forest$err.rate[, "OOB"],
@@ -847,18 +883,10 @@ tibble(`Error rate` = house_forest$err.rate[, "OOB"],
 
 We can see that in this case, the accuracy improves as we add more trees until about 250 trees where accuracy stabilizes.
 
-Random forests often perform better than other methods. However, a disadvantage of random forests is that we lose interpretability. An approach that helps with interpretability is to examine _variable importance_.
-To define _variable importance_ we count how often a predictor is used in the individual trees. You can learn more about _variable importance_ in an advanced machine learning book^[https://web.stanford.edu/~hastie/Papers/ESLII.pdf]. The __caret__ package includes the function `varImp` that extracts variable importance from any model in which the calculation is implemented. 
+Random forests often perform better than other methods. However, a disadvantage of random forests is that we lose interpretability--we don't get anything like the coefficients from a logistic regression or the single tree from CART. An approach that helps with interpretability is to examine _variable importance_. To define _variable importance_ we count how often a predictor is used in the individual trees. You can learn more about _variable importance_ in an advanced machine learning book^[https://web.stanford.edu/~hastie/Papers/ESLII.pdf]. The __caret__ package includes the function `varImp` that extracts variable importance from any model in which the calculation is implemented. 
 
 ```{r}
 varImp(house_forest)
 ```
 
-### References
-
-Centers for Disease Control and Prevention. 2009. “Youth Risk Behavior Survey Data.” http://www.cdc.gov/HealthyYouth/yrbs/index.htm.
-
-Grabe, Shelly, Janet Shibley Hyde, and L. Moniquee Ward. 2008. “The Role of the Media in Body Image Concerns Among Women: A Meta-Analysis of Experimental and Correlational Studies.” Pyschological Bulletin 134 (3): 460–76. doi:10.1037/0033-2909.134.3.460.
-
-Martinsen, M, S Bratland-Sanda, A K Eriksson, and J Sundgot-Borgen. 2009. “Dieting to Win or to Be Thin? A Study of Dieting and Disordered Eating Among Adolescent Elite Athletes and Non-Athlete Controls.” British Journal of Sports Medicine 44 (1): 70–76. doi:10.1136/bjsm.2009.068668.
-
+Thus, we can see that the state an observation is in plays the biggest role in our forest, followed by year and finally by region.
