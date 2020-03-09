@@ -657,7 +657,7 @@ img_path <- "images"
 
 We have learned how to fit models for binary responses using logistic regression.  However, logistic regression is just one of many methods we can use to model binary responses.  CART is another approach, which we'll learn about in this section.  In the next section, we'll learn about random forests.
 
-A **tree** is basically a flow chart of yes or no questions. The general idea of the methods we are describing is to define an algorithm that uses data to create these trees with predictions at the ends, referred to as _nodes_. Decision trees operate by predicting an outcome variable $Y$ by partitioning the predictors.
+A **tree** is basically a flow chart of yes or no questions. The general idea of the methods we are describing is to define an algorithm that uses data to create these trees with predictions at the ends, referred to as _nodes_. Decision trees predict an outcome variable $Y$ by *partitioning* the predictors.
 
 Decision trees like this are often used in practice. For example, to decide on a person's risk of poor outcome after having a heart attack, doctors use the following:
 
@@ -670,11 +670,11 @@ knitr::include_graphics(file.path(img_path,"Decision-Tree-for-Heart-Attack-Victi
 
 Here, the binary outcome is whether a patient is "High Risk" or "Low Risk."  We have three predictors: minimum systolic blood pressure over the initial 24-hour period, age, and presence of sinus tachycardia.  The tree presents a series of yes or no questions that allow us to use the predictors to classify a patient's risk level.
 
-**Classification trees**, or decision trees, are used in prediction problems where the outcome is categorical.  (When the outcome is numerical, they are called **regression trees**; hence the acronym **CART**, standing for Classification and Regression Trees.)  The general idea here is to build a decision tree and, at the end of each _node_, obtain a predictor $\hat{y}$. A mathematical way to describe this is to say that we are partitioning the predictor space into $J$ non-overlapping regions, $R_1, R_2, \ldots, R_J$, and then for any predictor $x$ that falls within region $R_j$, estimate $f(x)$ with the class that is the most common among the data within the partition for which the associated predictor $x_i$ is also in $R_j$.
+**Classification trees**, or decision trees, are used in prediction problems where the outcome is categorical.  (When the outcome is numerical, they are called **regression trees**; hence the acronym **CART**, standing for Classification and Regression Trees.)  The general idea here is to build a decision tree and, at the end of each _node_, obtain a predictor $\hat{y}$. A mathematical way to describe this is to say that we are partitioning the *predictor space* into $J$ non-overlapping regions, $R_1, R_2, \ldots, R_J$, and then for any predictor $x$ that falls within region $R_j$, we estimate $f(x)$ with the class that is the most common among the data within the partition for which the associated predictor $x_i$ is also in $R_j$.
 
-But how do we decide on the partition  $R_1, R_2, \ldots, R_J$ and how do we choose $J$? Here is where the algorithm gets a bit complicated.
+But how do we decide on which partitions to make  ($R_1, R_2, \ldots, R_J$) and how do we choose $J$, the total number of partitions? Here is where the algorithm gets a bit complicated.
 
-Classification trees create partitions recursively. We start the algorithm with one partition, the entire predictor space (i.e., every observation is classified as 0 or 1). But after the first step we will have two partitions. After the second step we will split one of these partitions into two and will have three partitions, then four, then five, and so on. We describe how we pick the partition to further partition, and when to stop, later.
+Classification trees create partitions recursively. We start the algorithm with one partition, the entire predictor space (i.e., every observation is classified as 0 or 1). But after the first step we will have two partitions. After the second step we will split one of these partitions into two and will have three partitions, then four, then five, and so on. (We will describe how we decide when to stop later.)
 
 Once we select a partition $\mathbf{x}$ to split in order to create the new partitions, we find a predictor $j$ and value $s$ that define two new partitions, which we will call $R_1(j,s)$ and $R_2(j,s)$, that split our observations in the current partition by asking if $x_j$ is bigger than $s$ (or if $x_j$ falls into a particular category $s$, if the predictor $j$ is categorical):
 
@@ -682,9 +682,9 @@ $$
 R_1(j,s) = \{\mathbf{x} \mid x_j < s\} \mbox{  and  } R_2(j,s) = \{\mathbf{x} \mid x_j \geq s\}
 $$
 
-Now, after we define the new partitions $R_1$ and $R_2$, and we decide to stop the partitioning, we compute predictors by taking the most common category of all the observations $y$ for which the associated $\mathbf{x}$ is in $R_1$ and $R_2$. We refer to these two as $\hat{y}_{R_1}$ and $\hat{y}_{R_2}$ respectively. 
+Now, after we define the new partitions $R_1$ and $R_2$, and we decide to stop the partitioning process, we compute predictors by taking the most common category of all the observations $y$ for which the associated $\mathbf{x}$ is in $R_1$ and $R_2$. We refer to these two as $\hat{y}_{R_1}$ and $\hat{y}_{R_2}$ respectively. 
 
-But how do we pick $j$ and $s$? One of the more popular ways for categorical data is the _Gini Index_.
+But how do we pick the predictor $j$ and the value $s$? One of the more popular ways for categorical data is the _Gini Index_.
 
 In a perfect scenario, the outcomes in each of our partitions are all of the same category since this will permit perfect accuracy. The _Gini Index_ is going to be 0 in this scenario, and become larger the more we deviate from this scenario. To define the Gini Index, we define $\hat{p}_{j,k}$ as the proportion of observations in partition $j$ that are of class $k$. The Gini Index is defined as 
 
@@ -692,12 +692,13 @@ $$
 \mbox{Gini}(j) = \sum_{k=1}^K \hat{p}_{j,k}(1-\hat{p}_{j,k})
 $$
 
-If you study the formula carefully you will see that it is in fact 0 in the perfect scenario described above. 
+If you study the formula carefully you will see that it is in fact 0 in the perfect scenario described above, since $\hat{p}_{j,k}(1-\hat{p}_{j,k}) = 0$ for all $k$.
+
 Once we are done partitioning the predictor space into regions, in each region a prediction is made using the observations in that region. 
 
-But when do we stop partitioning?  Every time we split and define two new partitions, the Gini Index improves. This is because with more partitions, our model has more flexibility to adapt to the training data.  To avoid this, the algorithm sets a minimum for how much the Gini Index must improve for another partition to be added. This parameter is referred to as the _complexity parameter_ (`cp`). The measure of fit must improve by a factor of `cp` for the new partition to be added. Large values of `cp` will therefore force the algorithm to stop earlier which results in fewer nodes.^[`cp` is not the only parameter used to decide whether we should create a new partition. Another common parameter is the minimum number of observations required in a partition before partitioning it further. The argument used in the `rpart()` function, which we'll be using in this chapter, is `minsplit`, and the default is 20. The `rpart()` implementation of classification trees also permits users to determine a minimum number of observations in each node. The argument is `minbucket` and defaults to `round(minsplit/3)`.]
+But when do we stop partitioning?  Every time we split and define two new partitions, the Gini Index improves. This is because with more partitions, our model has more flexibility to adapt to our data.  However, our model may therefore perform worse when exposed to new data (this problem is called *overfitting*).  To avoid this, the algorithm sets a minimum for how much the Gini Index must improve for another partition to be added. This parameter is referred to as the _complexity parameter_ (`cp`). The measure of fit must improve by a factor of `cp` for the new partition to be added. Large values of `cp` will therefore force the algorithm to stop earlier which results in fewer nodes.^[`cp` is not the only parameter used to decide whether we should create a new partition. Another common parameter is the minimum number of observations required in a partition before partitioning it further. The argument used in the `rpart()` function, which we'll be using in this chapter, is `minsplit`, and the default is 20. The `rpart()` implementation of classification trees also permits users to determine a minimum number of observations in each node. The argument is `minbucket` and defaults to `round(minsplit/3)`.]
 
-Classification trees have certain advantages that make them very useful. They are highly interpretable, even more so than linear models. They are easy to visualize (if small enough).  Finally, they can model human decision processes. However, in terms of accuracy, it is rarely the best performing method since it is not very flexible. Random forests, explained in the next section, improve on some of the shortcomings of classification trees.
+Classification trees have certain advantages that make them very useful. They are highly interpretable, even more so than linear models. They are easy to visualize (if small enough).  Finally, they can model human decision processes. However, in terms of accuracy, they are rarely the best performing method since they are not very flexible. Random forests, explained in the next section, improve on some of the shortcomings of classification trees.
 
 ### One categorical explanatory variable
 
@@ -717,7 +718,7 @@ library(rpart.plot)
 prp(house_region_cart, extra = 6, varlen = 0, faclen = 0)
 ```
 
-The arguments `varlen = 0` and `faclen = 0` ensure that the full variable names and factor levels are printed.  The argument `extra = 6` shows the proportion of "yes" outcomes within a given partition. Since we'll be using these same arguments throughout the chapter, we'll create a new function that is the same as `prp()`, but with these defaults:
+The arguments `varlen = 0` and `faclen = 0` ensure that the full variable names and factor levels are printed.  The argument `extra = 6` shows the proportion of "yes" outcomes within a given partition. Since we'll be using these same arguments throughout the chapter, we'll create a new function that calls `prp()` but with these options as defaults:
 
 ```{r}
 prp_ch13 <- function(x, ...) prp(x, extra = 6, varlen = 0, faclen = 0, ...)
@@ -737,7 +738,7 @@ house_ch13 %>%
         col.names = c("Region", "Democratic Win Percentage"))
 ```
 
-The two partitions just divide the observations by region into those regions where Democrats won a majority of the elections in the data and those where they lost a majority of the elections.
+The two partitions just divide the observations by region into a) those regions where Democrats won a majority of the elections in the data and b) those where they lost a majority of the elections.
 
 ### One numerical explanatory variable
 
@@ -775,8 +776,8 @@ But which tree is better?  We can answer that question using the `train()` funct
 In order to tell `train` how to behave, we need to give it some arguments:
 
 1. The formula for our model.  (Here, `factor(dem_win) ~ year`.)
-1. The `method` we want to use. (Here, `method = "rpart".)
-1. The values of `cp` we want to test, using the argument `tuneGride`. To test values from 0.0 to 0.1, going up by increments of 0.005, we would use the argument `tuneGrid = data.frame(cp = seq(0.0, 0.1, by = 0.005))`.
+1. The `method` we want to use. (Here, `method = "rpart"`.)
+1. The values of `cp` we want to test, using the argument `tuneGrid`. To test values from 0.0 to 0.1, going up by increments of 0.005, we would use the argument `tuneGrid = data.frame(cp = seq(0.0, 0.1, by = 0.005))`.
 1. Our data (`data = house_ch13`).
 
 ```{r, message = FALSE}
@@ -830,7 +831,7 @@ train_state_year_cart <- train(factor(dem_win) ~ region + state + year,
 prp_ch13(train_state_year_cart$finalModel)
 ```
 
-We see that one tradeoff as trees get more complex is that while they become more accurate, they also get harder to read.  Still, after inspecting this tree for a little bit, we can see it makes the following predictions:
+A tradeoff that occurs when trees get more complex is that while they become more accurate, they also get harder to read.  Still, after inspecting this tree for a little bit, we can see it makes the following predictions:
 
 - Observations before 1993 are classified as Democratic wins.
 - Observations after 1993 in Massachusetts, New York, California, Hawaii, Rhode Island, Oregon, Connecticut, and Maryland are classified as Democratic wins.
@@ -843,6 +844,8 @@ We see that one tradeoff as trees get more complex is that while they become mor
 Random forests are a **very popular** machine learning approach that addresses the shortcomings of decision trees using a clever idea. The goal is to improve prediction performance and reduce instability by _averaging_ multiple decision trees (a forest of trees constructed with randomness). It has two features that help accomplish this.
 
 The first step is _bootstrap aggregation_ or _bagging_. The general idea is to generate many predictors, each using classification trees, and then forming a final prediction based on the average prediction of all these trees. To assure that the individual trees are not the same, we use the bootstrap to induce randomness. These two features combined explain the name: the bootstrap makes the individual trees **randomly** different, and the combination of trees is the **forest**. The specific steps are as follows.
+
+<!-- AR: do we explain training set/test set before this? -->
 
 1\. Build $B$ decision trees using the training set. We refer to the fitted models as $T_1, T_2, \dots, T_B$. We later explain how we ensure they are different.
 
@@ -867,7 +870,8 @@ house_ch13 <- house_ch13 %>%
   mutate(region_fct = factor(region),
          state_fct = factor(state))
 
-house_forest <- randomForest(factor(dem_win) ~ region_fct + state_fct + year, data = house_ch13) 
+house_forest <- randomForest(factor(dem_win) ~ region_fct + state_fct + year,
+                             data = house_ch13) 
 house_forest
 ```
 
@@ -883,10 +887,50 @@ tibble(`Error rate` = house_forest$err.rate[, "OOB"],
 
 We can see that in this case, the accuracy improves as we add more trees until about 250 trees where accuracy stabilizes.
 
-Random forests often perform better than other methods. However, a disadvantage of random forests is that we lose interpretability--we don't get anything like the coefficients from a logistic regression or the single tree from CART. An approach that helps with interpretability is to examine _variable importance_. To define _variable importance_ we count how often a predictor is used in the individual trees. You can learn more about _variable importance_ in an advanced machine learning book^[https://web.stanford.edu/~hastie/Papers/ESLII.pdf]. The __caret__ package includes the function `varImp` that extracts variable importance from any model in which the calculation is implemented. 
+Random forests often perform better than other methods. However, a disadvantage of random forests is that we lose interpretability---we don't get anything like the coefficients from a logistic regression or the single tree from CART. An approach that helps with interpretability is to examine _variable importance_. To define _variable importance_ we count how often a predictor is used in the individual trees. You can learn more about _variable importance_ in an advanced machine learning book.^[https://web.stanford.edu/~hastie/Papers/ESLII.pdf] The __caret__ package includes the function `varImp` that extracts variable importance from any model in which the calculation is implemented. 
 
 ```{r}
 varImp(house_forest)
 ```
 
 Thus, we can see that the state an observation is in plays the biggest role in our forest, followed by year and finally by region.
+
+## Comparing the three approaches
+
+```{r, warning = FALSE}
+house_logistic <- glm(dem_win ~ state * year, family = binomial, data = house_ch13)
+
+logistic_preds <- 1 * (predict(house_logistic, type = "response") > 0.5)
+cart_preds <- 1 * (predict(train_state_year_cart$finalModel)[, 2] > 0.5)
+forest_preds <- as.numeric(predict(house_forest)) - 1
+
+mean(logistic_preds == house_ch13$dem_win)
+mean(cart_preds == house_ch13$dem_win)
+mean(forest_preds == house_ch13$dem_win)
+
+# How well did they predict 2018?
+
+house_logistic_2016 <- glm(dem_win ~ state * year,
+                           family = binomial,
+                           data = house_ch13 %>% filter(year != 2018))
+
+house_cart_2016 <- train(factor(dem_win) ~ region_fct + state_fct + year,
+                         method = "rpart",
+                         tuneGrid = data.frame(cp = seq(0.0, 0.1, by = 0.005)),
+                         data = house_ch13 %>% filter(year != 2018))
+
+house_forest_2016 <- randomForest(factor(dem_win) ~ region_fct + state_fct + year, 
+                                  data = house_ch13 %>% filter(year != 2018)) 
+
+logistic_preds_2018 <- 1 * (predict(house_logistic_2016,
+                                    type = "response",
+                                    newdata = house_ch13 %>% filter(year == 2018)) > 0.5)
+cart_preds_2018 <- predict(house_cart_2016,
+                           newdata = house_ch13 %>%filter(year == 2018))
+forest_preds_2018 <- as.numeric(predict(house_forest_2016,
+                                        newdata = house_ch13 %>% filter(year == 2018))) - 1
+
+mean(logistic_preds_2018 == house_ch13 %>% filter(year == 2018) %>% pull(dem_win))
+mean(cart_preds_2018 == house_ch13 %>% filter(year == 2018) %>% pull(dem_win))
+mean(forest_preds_2018 == house_ch13 %>% filter(year == 2018) %>% pull(dem_win))
+```
