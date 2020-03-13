@@ -646,6 +646,22 @@ Here's a useful summary of the differences between linear regression and logisti
 \mathbf{Logistic\ Regression:}\ e^{\beta_1}=\textrm{ percent change in odds for unit change in $X$} 
 \]
 
+### Professional models
+
+```{r}
+library(tidymodels)
+
+logistic_mod <- logistic_reg() %>%
+  set_engine("glm")
+
+logistic_fit <- fit(logistic_mod,
+                    factor(dem_win) ~ region * year,
+                    data = house_ch13)
+
+logistic_fit$fit %>%
+  tidy(conf.int = TRUE) %>%
+  select(term, estimate, conf.low, conf.high)
+```
 
 ## Classification and regression trees (CART)
 
@@ -705,9 +721,14 @@ Classification trees have certain advantages that make them very useful. They ar
 To create classification trees, we'll use the `rpart()` function in the **rpart** package.  The syntax is very similar to `lm()` or `glm()`, but note that our binary response variable has to be a factor in order for `rpart()` to create a classification tree (otherwise, it will create a regression tree).  Like we did with logistic regression, we'll predict `dem_win` with `region`:
 
 ```{r}
-library(rpart)
+tree_fit <- decision_tree() %>%
+  set_engine("rpart",
+             model = TRUE) %>%
+  set_mode("classification")
 
-house_region_cart <- rpart(factor(dem_win) ~ region, data = house_ch13)
+house_region_tree <- fit(tree_fit,
+                         factor(dem_win) ~ region, 
+                         data = house_ch13)
 ```
 
 In order to visualize the tree, we'll use the `prp()` function in the **rpart.plot** package.
@@ -715,7 +736,8 @@ In order to visualize the tree, we'll use the `prp()` function in the **rpart.pl
 ```{r}
 library(rpart.plot)
 
-prp(house_region_cart, extra = 6, varlen = 0, faclen = 0)
+house_region_tree$fit %>%
+  prp(extra = 6, varlen = 0, faclen = 0)
 ```
 
 The arguments `varlen = 0` and `faclen = 0` ensure that the full variable names and factor levels are printed.  The argument `extra = 6` shows the proportion of "yes" outcomes within a given partition. Since we'll be using these same arguments throughout the chapter, we'll create a new function that calls `prp()` but with these options as defaults:
@@ -723,7 +745,8 @@ The arguments `varlen = 0` and `faclen = 0` ensure that the full variable names 
 ```{r}
 prp_ch13 <- function(x, ...) prp(x, extra = 6, varlen = 0, faclen = 0, ...)
 
-prp_ch13(house_region_cart)
+house_region_tree$fit %>%
+  prp_ch13()
 ```
 
 How do we interpret this tree?  Here we have two partitions, based on whether an observation is in the Midwest or South or not in the Midwest or South (i.e., in the Northeast or West).  If an observation is in the Midwest or South, the tree classifies the observation as a 0, a Democratic loss. The "0.49" means that 49% of the observations in this node were Democratic wins. If an observation is not in the Midwest or South, the algorithm classifies the observation as a 1, a Democratic win; 60% of the observations in this node were Democratic wins.
@@ -745,8 +768,12 @@ The two partitions just divide the observations by region into a) those regions 
 We can use the same approach to create a classification tree predicting `dem_win` with `year`:
 
 ```{r}
-house_year_cart <- rpart(factor(dem_win) ~ year, data = house_ch13)
-prp_ch13(house_year_cart)
+house_year_tree <- fit(tree_fit,
+                       factor(dem_win) ~ year,
+                       data = house_ch13)
+
+house_year_tree$fit %>%
+  prp_ch13()
 ```
 
 Now, the algorithm creates cutpoints in the `year` variable in order to classify observations.  This tree will classify observations before 1993 (the 1992 election cycle or earlier, since House elections only occur in even-numbered years) or between 2005 and 2009 (the 2006 and 2008 cycles) as Democratic victories and all other observations as Democratic losses.
@@ -754,9 +781,13 @@ Now, the algorithm creates cutpoints in the `year` variable in order to classify
 Eagle-eyed observers will notice that this is simply classifying every year based on whether the Democrats won a majority in that year, with one exception --- observations in 2018 are predicted to be Democratic losses.  Why is that?  Recall that the algorithm uses a *complexity parameter*, `cp`, to avoid overfitting.  The default value of `cp` in `rpart()` is 0.01; setting it to 0 allows one to see the maximum number of partitions that the algorithm will do:
 
 ```{r}
-house_year_cart_0 <- rpart(factor(dem_win) ~ year, data = house_ch13, cp = 0)
+house_year_tree_0 <- fit(update(tree_fit, cost_complexity = 0),
+                         factor(dem_win) ~ year,
+                         data = house_ch13)
 
-prp_ch13(house_year_cart_0)
+
+house_year_tree_0$fit %>%
+  prp_ch13()
 ```
 
 Now there is an additional partition that classifies observations where `year` $>= 2017$ as 1.
@@ -764,9 +795,11 @@ Now there is an additional partition that classifies observations where `year` $
 Note that if we already have a tree and want to apply a higher `cp` value, we can use the `prune` function. We call this _pruning_ a tree because we are snipping off partitions that do not meet a `cp` criterion. We  created a tree that used `cp = 0` and saved it to `house_year_cart_0`. We can prune it like this:
 
 ```{r}
-pruned_cart <- prune(house_year_cart_0, cp = 0.01)
+pruned_cart <- house_year_tree_0$fit %>%
+  prune(cp = 0.01)
 
-prp_ch13(pruned_cart)
+pruned_cart %>%
+  prp_ch13()
 ```
 
 which gives us back our original tree.
@@ -781,26 +814,59 @@ In order to tell `train` how to behave, we need to give it some arguments:
 1. Our data (`data = house_ch13`).
 
 ```{r, message = FALSE}
-library(caret)
+tree_fit_tune <- decision_tree(cost_complexity = tune()) %>%
+  set_engine("rpart",
+             model = TRUE) %>%
+  set_mode("classification")
+
+
 
 set.seed(1234)
-train_year_cart <- train(factor(dem_win) ~ year,
-                         method = "rpart",
-                         tuneGrid = data.frame(cp = seq(0.0, 0.1, by = 0.005)),
-                         data = house_ch13)
-train_year_cart
+house_boots <- bootstraps(house_ch13)
+
+cost_grid <- grid_regular(cost_complexity(range = c(0, 0.1), trans = NULL), levels = 21)
+
+tree_res <- tune_grid(factor(dem_win) ~ year,
+                      tree_fit_tune,
+                      resamples = house_boots,
+                      grid = cost_grid,
+                      metrics = metric_set(accuracy))
+
+# this is slow so what if we did it this way?
+
+house_boots <- house_ch13 %>%
+  rep_sample_n(size = nrow(house_ch13), replace = TRUE, reps = 25)
+
+house_boots %>%
+  group_by(replicate) %>%
+  nest() %>%
+  mutate(house_year_tree = map(data, ~ fit(update(tree_fit, cost_complexity = 0),
+                                           factor(dem_win) ~ year,
+                                           data = .)))
+
+best_cost <- select_best(tree_res, metric = "accuracy")
+
+tree_fit_best <- decision_tree(cost_complexity = best_cost) %>%
+  set_engine("rpart",
+             model = TRUE) %>%
+  set_mode("classification")
+
+house_year_best <- fit(tree_fit_best,
+                       factor(dem_win) ~ year,
+                       data = house_ch13)
 ```
 
 We need to call `set.seed()` before running `train()` because of the randomness in the bootstrap process.  We can see from the output that `cp = 0.005` performed best on our bootstrap samples.  We can visualize these results using `ggplot()`:
 
 ```{r}
-ggplot(train_year_cart)
+autoplot(tree_res, metric = "accuracy")
 ```
 
 We don't need to run `rpart()` again to fit the best-performing model, because it is saved in `train_year_cart$finalModel`.  Let's look at the tree:
 
 ```{r}
-prp_ch13(train_year_cart$finalModel)
+house_year_best$fit %>%
+  prp_ch13()
 ```
 
 With the value of `cp` chosen by `train()`, we retain the partition based on `year < 2017`.
