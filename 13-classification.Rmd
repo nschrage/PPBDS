@@ -733,7 +733,7 @@ house_region_tree <- fit(tree_fit,
 
 In order to visualize the tree, we'll use the `prp()` function in the **rpart.plot** package.
 
-```{r}
+```{r, message = FALSE}
 library(rpart.plot)
 
 house_region_tree$fit %>%
@@ -822,9 +822,9 @@ tree_fit_tune <- decision_tree(cost_complexity = tune()) %>%
 
 
 set.seed(1234)
-house_boots <- bootstraps(house_ch13, times = 25)
+house_boots <- bootstraps(house_ch13)
 
-cost_grid <- grid_regular(cost_complexity(range = c(0, 0.1), trans = NULL), levels = 21)
+cost_grid <- grid_random(cost_complexity())
 
 tree_res <- tune_grid(factor(dem_win) ~ year,
                       tree_fit_tune,
@@ -832,31 +832,10 @@ tree_res <- tune_grid(factor(dem_win) ~ year,
                       grid = cost_grid,
                       metrics = metric_set(accuracy))
 
-# this is slow so what if we did it this way?
-
-# house_boots <- house_ch13 %>%
-#   rep_sample_n(size = nrow(house_ch13), replace = TRUE, reps = 25)
-# 
-# house_boots %>%
-#   group_by(replicate) %>%
-#   nest() %>%
-#   mutate(house_year_tree = map(data, ~ fit(update(tree_fit, cost_complexity = 0),
-#                                            factor(dem_win) ~ year,
-#                                            data = .)))
-# 
-# tune_model <- function(boots, model, tune_param, formula) {
-#   boots %>%
-#     group_by(replicate) %>%
-#     nest() %>%
-#     mutate(mod = map(data, ~ fit(update(model, tune_paramtuning, formula, data = .))
-# }
-
 best_cost <- select_best(tree_res, metric = "accuracy")
+best_cost
 
-tree_fit_best <- decision_tree(cost_complexity = best_cost) %>%
-  set_engine("rpart",
-             model = TRUE) %>%
-  set_mode("classification")
+tree_fit_best <- update(tree_fit, cost_complexity = best_cost)
 
 house_year_best <- fit(tree_fit_best,
                        factor(dem_win) ~ year,
@@ -883,12 +862,12 @@ With the value of `cp` chosen by `train()`, we retain the partition based on `ye
 What if we wanted to predict `dem_win` based on `region` and `year`?  The process is similar to what we've seen before.  We'll jump right to using `train()` in this example.
 
 ```{r}
-train_region_year_cart <- train(factor(dem_win) ~ region + year,
-                                method = "rpart",
-                                tuneGrid = data.frame(cp = seq(0.0, 0.1, by = 0.005)),
-                                data = house_ch13)
+region_year_tree <- fit(tree_fit,
+                        factor(dem_win) ~ region + year,
+                        data = house_ch13)
 
-prp_ch13(train_region_year_cart$finalModel)
+region_year_tree$fit %>%
+  prp_ch13()
 ```
 
 This tree classifies observations in the Northeast and West as a Democratic win and observations in the Midwest and South as a Democratic win before 1993 and a Democratic loss afterward. 
@@ -896,12 +875,29 @@ This tree classifies observations in the Northeast and West as a Democratic win 
 In the section on logistic regression, we used `map()` to fit many models to visualize the effect of `year` by `state`.  When fitting classification trees, it is easy just to add `state` as a predictor and allow the complexity parameter to determine whether we ought to partition further states by `year`.  In fact, unlike with `lm()` and `glm()`, we can include both `region` and `state` in the model, and the algorithm will decide whether it wants to use the additional information provided by `state` or just create partitions based on `region`.  Let's take a look:
 
 ```{r}
-train_state_year_cart <- train(factor(dem_win) ~ region + state + year,
-                               method = "rpart",
-                               tuneGrid = data.frame(cp = seq(0.0, 0.1, by = 0.005)),
-                               data = house_ch13)
+state_year_tree <- fit(tree_fit,
+                       factor(dem_win) ~ region + state + year,
+                       data = house_ch13)
 
-prp_ch13(train_state_year_cart$finalModel)
+split.fun <- function(x, labs, digits, varlen, faclen) {
+  
+  # Replace commas with spaces (needed for strwrap)
+  
+  labs <- gsub(",", " ", labs)
+  
+  for(i in 1:length(labs)) {
+    
+    # Split labs[i] into multiple lines
+    
+    labs[i] <- paste(strwrap(labs[i], width = 50), collapse = "\n")
+  }
+  
+  labs
+}
+
+state_year_tree$fit %>%
+  prp(split.fun = split.fun,
+      faclen = 2)
 ```
 
 A tradeoff that occurs when trees get more complex is that while they become more accurate, they also get harder to read.  Still, after inspecting this tree for a little bit, we can see it makes the following predictions:
@@ -963,7 +959,7 @@ We can see that in this case, the accuracy improves as we add more trees until a
 Random forests often perform better than other methods. However, a disadvantage of random forests is that we lose interpretability---we don't get anything like the coefficients from a logistic regression or the single tree from CART. An approach that helps with interpretability is to examine _variable importance_. To define _variable importance_ we count how often a predictor is used in the individual trees. You can learn more about _variable importance_ in an advanced machine learning book.^[https://web.stanford.edu/~hastie/Papers/ESLII.pdf] The __caret__ package includes the function `varImp` that extracts variable importance from any model in which the calculation is implemented. 
 
 ```{r}
-varImp(house_forest)
+caret::varImp(house_forest)
 ```
 
 Thus, we can see that the state an observation is in plays the biggest role in our forest, followed by year and finally by region.
@@ -974,7 +970,7 @@ Thus, we can see that the state an observation is in plays the biggest role in o
 house_logistic <- glm(dem_win ~ state * year, family = binomial, data = house_ch13)
 
 logistic_preds <- 1 * (predict(house_logistic, type = "response") > 0.5)
-cart_preds <- 1 * (predict(train_state_year_cart$finalModel)[, 2] > 0.5)
+cart_preds <- 1 * (predict(state_year_tree$fit)[, 2] > 0.5)
 forest_preds <- as.numeric(predict(house_forest)) - 1
 
 mean(logistic_preds == house_ch13$dem_win)
@@ -987,7 +983,7 @@ house_logistic_2016 <- glm(dem_win ~ state * year,
                            family = binomial,
                            data = house_ch13 %>% filter(year != 2018))
 
-house_cart_2016 <- train(factor(dem_win) ~ region_fct + state_fct + year,
+house_cart_2016 <- caret::train(factor(dem_win) ~ region_fct + state_fct + year,
                          method = "rpart",
                          tuneGrid = data.frame(cp = seq(0.0, 0.1, by = 0.005)),
                          data = house_ch13 %>% filter(year != 2018))
