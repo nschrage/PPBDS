@@ -1137,30 +1137,38 @@ Furthermore, if the 50 participants were randomly allocated to the `"seed"` and 
 
 We have learned that you can use `lm()` as a shortcut to construct confidence interval for a mean.  You can also use it to construct a confidence interval for a difference in means.  Recall that you'll need the **broom** package loaded in order to use the `tidy()` function.  Let's start by considering the `lm()` syntax:
 
+<!-- DK: The prior syntax, creating a logical value on the fly as our lefthand side variable, was problematic. This is not much better. Perhaps we should just have the yawn variable be 0/1 from the start? Also, is there a more natural way to use lm() within a pipe. -->
+
 ```{r}
-lm(yawn == "yes" ~ group, data = mythbusters_yawn)
+mythbusters_yawn %>% 
+  mutate(yawn_numeric = ifelse(yawn == "yes", 1, 0)) %>% 
+  lm(formula = yawn_numeric ~ group)
 ```
 
-There are two differences from what we've seen before.  First, since `yawn` is a character variable, we had to specify that our outcome is "yes" by using `yawn == "yes"`.  Second, since we are interested in the difference in means by group, we used `group` instead of `1` on the right side of the `~`.
+There are three differences from what we've seen before.  First, since `yawn` is a character variable, we had to create a new variable, `yawn_numeric`, which would take on the value 1 if there was a yawn and zero otherwise. Working with `lm()` requires numbers. Second, since we are interested in the difference in means by group, we used `group` instead of `1` on the right side of the `~`. Third, because we are using `lm()` within a pipe, we need to explicitly declare our formula. If, instead, we had used the `data` argument, this would not have been necessary. 
 
 Next, let's `tidy()` this object:
 
 ```{r}
-lm(yawn == "yes" ~ group, data = mythbusters_yawn) %>%
+mythbusters_yawn %>% 
+  mutate(yawn_numeric = ifelse(yawn == "yes", 1, 0)) %>% 
+  lm(formula = yawn_numeric ~ group) %>%
   tidy(conf.int = TRUE) %>%
   select(term, estimate, conf.low, conf.high)
 ```
 
-We are also `select`ing the `term` column, since now `lm()` gives estimates for two terms: `(Intercept)` and `groupseed`.  We will hold off on interpreting `lm()` model objects until the next chapter, but for now it all you need to know is that `groupseed` is the `term` that repesents our difference in means. Let's `filter()` to that `term`:
+We are also `select`ing the `term` column, since now `lm()` gives estimates for two terms: `(Intercept)` and `groupseed`.  We will hold off on interpreting `lm()` model objects until the next chapter, but, for now, all you need to know is that `groupseed` is the `term` that represents our difference in means. Let's `filter()` to that `term`:
 
 ```{r}
-lm(yawn == "yes" ~ group, data = mythbusters_yawn) %>%
+mythbusters_yawn %>% 
+  mutate(yawn_numeric = ifelse(yawn == "yes", 1, 0)) %>% 
+  lm(formula = yawn_numeric ~ group) %>%
   tidy(conf.int = TRUE) %>%
-  select(term, estimate, conf.low, conf.high) %>%
+  select(term, estimate, conf.low, conf.high) %>% 
   filter(term == "groupseed")
 ```
 
-Again, the confidence interval using `lm()` and `tidy()` is similar to what we saw using the bootstrap method, and thus this is available as a shortcut.
+Again, the confidence interval using `lm()` and `tidy()` is similar to what we saw using the bootstrap method, but `lm()` often runs much faster.
 
 ## Conclusion {#ci-conclusion}
 
@@ -1172,9 +1180,12 @@ Recall back in Subsection \@ref(shovel-1000-times), we took 1,000 virtual sample
 
 We also mentioned that this sampling activity does not reflect how sampling is done in real life. Rather, it was an *idealized version* of sampling so that we could study the effects of sampling variation on estimates, like the proportion of the shovel's balls that are red. In real life, however, one would take a single sample that's as large as possible, much like in the Obama poll we saw in Section \@ref(sampling-case-study). But how can we get a sense of the effect of sampling variation on estimates if we only have one sample and thus only one estimate? Don't we need many samples and hence many estimates?
 
+<!-- DK: There is nothing wrong with this text, but I don't like it. We need a more coherent story connecting sampling to the bootstrap. Randomization is magic and these are two forms of randomization. Maybe each chapter after this should mention three types of randomization. These two and then assignment to treatment. Indeed, all of statistics is dealing with situations in which we could not use all three randomization techniques, or approximations thereto. -->
+
 The workaround to having a *single* sample was to perform *bootstrap resampling with replacement* from the single sample. We did this in the resampling activity in Section \@ref(resampling-tactile) where we focused on the mean year of minting of pennies. We used pieces of paper representing the original sample of 50 pennies from the bank and resampled them with replacement from a hat. We had 35 of our friends perform this activity and visualized the resulting 35 sample means $\overline{x}$ in a histogram in Figure \@ref(fig:tactile-resampling-6). 
 
 This distribution was called the *bootstrap distribution* of $\overline{x}$. We stated at the time that the bootstrap distribution is an *approximation* to the sampling distribution of $\overline{x}$ in the sense that both distributions will have a similar shape and similar spread. \index{bootstrap!distribution!approximation of sampling distribution} Thus the *standard error* of the bootstrap distribution can be used as an approximation to the *standard error* of the sampling distribution. 
+<!-- DK: The below seems useful, but does it belong in a Conclusion? Probably not. Perhaps each chapter ends with some stats nonsense (like CLT in sampling chapter) before we get to the real conclusion. -->
 
 Let's show you that this is the case by now comparing these two types of distributions. Specifically, we'll compare
 
