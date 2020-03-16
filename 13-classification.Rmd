@@ -648,20 +648,46 @@ Here's a useful summary of the differences between linear regression and logisti
 
 ### Professional models
 
-```{r}
-library(tidymodels)
+So far, we have been fitting linear regressions and logistic regressions using `lm()` and `glm()`.  While these functions are well-known and easy to use, what if we wanted to fit another model?  We'd have to learn a new function, which may have new syntax.  It'd be much easier if we could use the same syntax for every model we fit.
 
+A collection of packages that helps address this issue is called **tidymodels**: 
+
+```{r, message = FALSE}
+library(tidymodels)
+```
+
+**tidymodels** includes many packages, but we'll start by showing how to use **parsnip** to fit a logistic regression. 
+
+First, in the **tidymodels** workflow, we have to save the *model specification*.  We do that using two functions: `logistic_reg()` and `set_engine()`.
+
+```{r}
 logistic_mod <- logistic_reg() %>%
   set_engine("glm")
+```
 
+`logistic_reg()` says that we want to fit a logistic regression, and `set_engine("glm")` specifies that we want to do it using `glm()`.  Behind the scenes, **parsnip** uses many other packages to fit its models, but by unifying the syntax, it means that you don't have to memorize how a lot of different functions work.
+
+Note that our new object, `logistic_mod`, doesn't contain our data or a formula.  In order actually to fit our model, we need to feed `logistic_mod` to a function called `fit()`.  `fit()` is the general purpose function in **parsnip** for fitting any model specification.  It takes as its first argument the model specification, but otherwise it operates similarly to `lm()` and `glm()`:
+
+```{r}
 logistic_fit <- fit(logistic_mod,
                     factor(dem_win) ~ region * year,
                     data = house_ch13)
+```
 
+(We have to wrap `dem_win` in `factor()`, because `fit()` is more careful than `glm()` in requiring that classification models actually have categorical outcomes.)
+
+One we have fit the model, how can we use it?  The `glm` object is still stored in `logistic_fit$fit`, so we can access that and use `tidy()`, just like we did before:
+
+```{r}
 logistic_fit$fit %>%
   tidy(conf.int = TRUE) %>%
   select(term, estimate, conf.low, conf.high)
 ```
+
+As you can see, this generates the same results as when we used `glm()` directly.
+
+We'll use **tidymodels** when introducing CART and random forests in this chapter and machine learning in the next chapter.  While the models will change, the basic code structure will be very similar to how we fit the logistic regression above.
 
 ## Classification and regression trees (CART)
 
@@ -712,26 +738,42 @@ If you study the formula carefully you will see that it is in fact 0 in the perf
 
 Once we are done partitioning the predictor space into regions, in each region a prediction is made using the observations in that region. 
 
-But when do we stop partitioning?  Every time we split and define two new partitions, the Gini Index improves. This is because with more partitions, our model has more flexibility to adapt to our data.  However, our model may therefore perform worse when exposed to new data (this problem is called *overfitting*).  To avoid this, the algorithm sets a minimum for how much the Gini Index must improve for another partition to be added. This parameter is referred to as the _complexity parameter_ (`cp`). The measure of fit must improve by a factor of `cp` for the new partition to be added. Large values of `cp` will therefore force the algorithm to stop earlier which results in fewer nodes.^[`cp` is not the only parameter used to decide whether we should create a new partition. Another common parameter is the minimum number of observations required in a partition before partitioning it further. The argument used in the `rpart()` function, which we'll be using in this chapter, is `minsplit`, and the default is 20. The `rpart()` implementation of classification trees also permits users to determine a minimum number of observations in each node. The argument is `minbucket` and defaults to `round(minsplit/3)`.]
+But when do we stop partitioning?  Every time we split and define two new partitions, the Gini Index improves. This is because with more partitions, our model has more flexibility to adapt to our data.  However, our model may therefore perform worse when exposed to new data (this problem is called *overfitting*).  To avoid this, the algorithm sets a minimum for how much the Gini Index must improve for another partition to be added. This parameter is referred to as the _complexity parameter_ ($c_p$). The measure of fit must improve by a factor of $c_p$ for the new partition to be added. Large values of $c_p$ will therefore force the algorithm to stop earlier which results in fewer nodes.
 
 Classification trees have certain advantages that make them very useful. They are highly interpretable, even more so than linear models. They are easy to visualize (if small enough).  Finally, they can model human decision processes. However, in terms of accuracy, they are rarely the best performing method since they are not very flexible. Random forests, explained in the next section, improve on some of the shortcomings of classification trees.
 
 ### One categorical explanatory variable
 
-To create classification trees, we'll use the `rpart()` function in the **rpart** package.  The syntax is very similar to `lm()` or `glm()`, but note that our binary response variable has to be a factor in order for `rpart()` to create a classification tree (otherwise, it will create a regression tree).  Like we did with logistic regression, we'll predict `dem_win` with `region`:
+To create classification trees, we'll use the `decision_tree()` model specification and the `"rpart"` engine.  The syntax is very similar to when we used `logistic_reg()`.  Note that our binary response variable has to be a factor, just like with `logistic_reg()`. 
 
 ```{r}
-tree_fit <- decision_tree() %>%
+tree_mod <- decision_tree() %>%
   set_engine("rpart",
              model = TRUE) %>%
   set_mode("classification")
+```
 
-house_region_tree <- fit(tree_fit,
+(Note that we added the argument `model = TRUE` to `set_engine()`.  This saves the model frame, which we will need to avoid a warning when we plot the trees later.)
+
+The function `set_mode()` wasn't necessary when we did logistic regression.  Here it clarifies that we want a *classification* tree rather than a *regression* tree.
+
+Now that we have the object `tree_mod`, we can use `fit()` in the **parsnip** package.  We'll start by predicting `dem_win` with `region`:
+
+```{r}
+house_region_tree <- fit(tree_mod,
                          factor(dem_win) ~ region, 
                          data = house_ch13)
 ```
 
-In order to visualize the tree, we'll use the `prp()` function in the **rpart.plot** package.
+See how when using **tidymodels**, this is exactly the same as how we would fit a logistic regression, but with our model specification saved in `tree_mod` rather than the model specification we saved in `logistic_fit`.
+
+What was the result of our tree?
+
+```{r}
+house_region_tree
+```
+
+It's not especially helpful to look at the results of a tree as text.  In order to visualize the tree, we'll use the `prp()` function in the **rpart.plot** package.  Remember that the model object is stored in `house_region_tree$fit`.
 
 ```{r, message = FALSE}
 library(rpart.plot)
@@ -765,10 +807,10 @@ The two partitions just divide the observations by region into a) those regions 
 
 ### One numerical explanatory variable
 
-We can use the same approach to create a classification tree predicting `dem_win` with `year`:
+Once we have created our model specification `tree_mod`, it is easy to use it to fit new models with different formulae and data.  We can use the same approach to create a classification tree predicting `dem_win` with `year`:
 
 ```{r}
-house_year_tree <- fit(tree_fit,
+house_year_tree <- fit(tree_mod,
                        factor(dem_win) ~ year,
                        data = house_ch13)
 
@@ -778,91 +820,122 @@ house_year_tree$fit %>%
 
 Now, the algorithm creates cutpoints in the `year` variable in order to classify observations.  This tree will classify observations before 1993 (the 1992 election cycle or earlier, since House elections only occur in even-numbered years) or between 2005 and 2009 (the 2006 and 2008 cycles) as Democratic victories and all other observations as Democratic losses.
 
-Eagle-eyed observers will notice that this is simply classifying every year based on whether the Democrats won a majority in that year, with one exception --- observations in 2018 are predicted to be Democratic losses.  Why is that?  Recall that the algorithm uses a *complexity parameter*, `cp`, to avoid overfitting.  The default value of `cp` in `rpart()` is 0.01; setting it to 0 allows one to see the maximum number of partitions that the algorithm will do:
+Eagle-eyed observers will notice that this is simply classifying every year based on whether the Democrats won a majority in that year, with one exception --- observations in 2018 are predicted to be Democratic losses.  Why is that?  Recall that the algorithm uses a *complexity parameter*, $c_p$, to avoid overfitting.  The default value of $c_p$ in `rpart()` (the engine we are using) is 0.01; setting it to 0 allows one to see the maximum number of partitions that the algorithm will do.
+
+How can we change $c_p$?  We don't need to create an entirely new model specification.  Rather, we can use the `update()` function to change $c_p$ while leaving everything else about `tree_mod` the same.  All we need to do is specify the parameter we want to change, which here is called `cost_complexity`:
 
 ```{r}
-house_year_tree_0 <- fit(update(tree_fit, cost_complexity = 0),
+house_year_tree_0 <- fit(update(tree_mod, cost_complexity = 0),
                          factor(dem_win) ~ year,
                          data = house_ch13)
+```
 
+We can then look at the new tree and see what changed:
 
+```{r}
 house_year_tree_0$fit %>%
   prp_ch13()
 ```
 
-Now there is an additional partition that classifies observations where `year` $>= 2017$ as 1.
+Now there is an additional partition that classifies observations where `year` $\geq 2017$ as 1.
 
-Note that if we already have a tree and want to apply a higher `cp` value, we can use the `prune` function. We call this _pruning_ a tree because we are snipping off partitions that do not meet a `cp` criterion. We  created a tree that used `cp = 0` and saved it to `house_year_cart_0`. We can prune it like this:
+<!-- AR: leaving this out because prune() uses cp, not cost_complexity, which seems needlessly confusing. -->
+
+<!-- Note that if we already have a tree and want to apply a higher $c_p$ value, we can use the `prune` function. We call this _pruning_ a tree because we are snipping off partitions that do not meet a `cp` criterion. We  created a tree that used `cost_complexity = 0` and saved it to `house_year_cart_0`. We can prune it like this: -->
+
+<!-- ```{r} -->
+<!-- pruned_cart <- house_year_tree_0$fit %>% -->
+<!--   prune(cp = 0.01) -->
+
+<!-- pruned_cart %>% -->
+<!--   prp_ch13() -->
+<!-- ``` -->
+
+<!-- which gives us back our original tree. -->
+
+<!-- AR: Leaving the following discussion as a comment because caret::train() is
+much, much faster than tune_grid().  As a practical matter, I'd actually use
+train() rather than tidymodels here. -->
+
+<!-- But which tree is better?  We can answer that question using the `train()` function in the **caret** package. The basic idea is that we want to test out various values of `cp` and select the model that performs best.  The `train()` function decides which model is best by calculating the accuracy on 25 bootstrapped samples of our data. -->
+
+<!-- In order to tell `train` how to behave, we need to give it some arguments: -->
+
+<!-- 1. The formula for our model.  (Here, `factor(dem_win) ~ year`.) -->
+<!-- 1. The `method` we want to use. (Here, `method = "rpart"`.) -->
+<!-- 1. The values of `cp` we want to test, using the argument `tuneGrid`. To test values from 0.0 to 0.1, going up by increments of 0.005, we would use the argument `tuneGrid = data.frame(cp = seq(0.0, 0.1, by = 0.005))`. -->
+<!-- 1. Our data (`data = house_ch13`). -->
+
+But which tree is better?  We can answer that question using the `tune_grid()` function in the **tune** package, included as part of **tidymodels**. The basic idea is that we want to test out various values of $c_p$. and select the model that performs best.  We will provide code on how to decide which model is best by calculating the accuracy on 25 bootstrapped samples of our data.  (We wouldn't want to calculate the accuracy on our full data, because a lower value of $c_p$ will always perform best on any particular dataset, but the resulting model may not perform well on out-of-sample observations; this is an example of a general phenomenon called *overfitting*.)
+
+First, we need to update the model specification to note that we are tuning the `cost_complexity` parameter.  We can do that using the `update()` function and setting `cost_complexity = tune()`:
 
 ```{r}
-pruned_cart <- house_year_tree_0$fit %>%
-  prune(cp = 0.01)
-
-pruned_cart %>%
-  prp_ch13()
+tree_mod_tune <- tree_mod %>%
+  update(cost_complexity = tune())
 ```
 
-which gives us back our original tree.
+Next, we need to create our bootstrapped data.  We can do that using **tidymodels** with the `bootstraps()` function in the **rsample** package.  We will first call `set.seed()` in order to make sure our results are replicable, given the random nature of the bootstrap process.
 
-But which tree is better?  We can answer that question using the `train()` function in the **caret** package. The basic idea is that we want to test out various values of `cp` and select the model that performs best.  The `train()` function decides which model is best by calculating the accuracy on 25 bootstrapped samples of our data.
-
-In order to tell `train` how to behave, we need to give it some arguments:
-
-1. The formula for our model.  (Here, `factor(dem_win) ~ year`.)
-1. The `method` we want to use. (Here, `method = "rpart"`.)
-1. The values of `cp` we want to test, using the argument `tuneGrid`. To test values from 0.0 to 0.1, going up by increments of 0.005, we would use the argument `tuneGrid = data.frame(cp = seq(0.0, 0.1, by = 0.005))`.
-1. Our data (`data = house_ch13`).
-
-```{r, message = FALSE}
-tree_fit_tune <- decision_tree(cost_complexity = tune()) %>%
-  set_engine("rpart",
-             model = TRUE) %>%
-  set_mode("classification")
-
-
-
-set.seed(1234)
+```{r}
+set.seed(12345)
 house_boots <- bootstraps(house_ch13)
+```
 
+By default, the `bootstraps()` function generates 25 samples.  You can modify this with the `times` argument.
+
+Next, we must set the values of `cost_complexity` that we will test.  We can select random values using the `grid_random()` function; by default, it selects 5, although you can adjust that with the `size` option.  We'll save the result in `cost_grid`.
+
+```{r}
 cost_grid <- grid_random(cost_complexity())
+cost_grid
+```
 
+Now we have the elements necessary to run `tune_grid`.  The key arguments are our formula (here, `factor(dem_win) ~ year`), the `model` (`tree_mod_tune`), the `resamples` (`house_boots`), and the grid (`cost_grid`).  We'll save the result as `tree_res`:
+
+```{r}
 tree_res <- tune_grid(factor(dem_win) ~ year,
-                      tree_fit_tune,
+                      model = tree_mod_tune,
                       resamples = house_boots,
-                      grid = cost_grid,
-                      metrics = metric_set(accuracy))
+                      grid = cost_grid)
+```
 
+Now we need to know what value of `cost_complexity` performed the best.  For this, we use the function `select_best()`. We need to supply an argument called `metric` to `select_best()`; for this example, we'll choose `"accuracy"`, which is just the percentage of observations correctly classified.
+
+```{r}
 best_cost <- select_best(tree_res, metric = "accuracy")
 best_cost
-
-tree_fit_best <- update(tree_fit, cost_complexity = best_cost)
-
-house_year_best <- fit(tree_fit_best,
-                       factor(dem_win) ~ year,
-                       data = house_ch13)
 ```
 
-We need to call `set.seed()` before running `train()` because of the randomness in the bootstrap process.  We can see from the output that `cp = 0.005` performed best on our bootstrap samples.  We can visualize these results using `ggplot()`:
+We can see from the output that `r best_cost` performed best on our bootstrap samples. We can visualize these results using `autoplot()`:
 
 ```{r}
 autoplot(tree_res, metric = "accuracy")
 ```
 
-We don't need to run `rpart()` again to fit the best-performing model, because it is saved in `train_year_cart$finalModel`.  Let's look at the tree:
+All we have left to do is to `update()` our model specification based on `best_cost` and fit the results:
 
 ```{r}
-house_year_best$fit %>%
+house_year_tree_best <- fit(update(tree_mod, cost_complexity = best_cost),
+                       factor(dem_win) ~ year,
+                       data = house_ch13)
+```
+
+Let's look at the tree, saved in `house_year_tree_best$fit`:
+
+```{r}
+house_year_tree_best$fit %>%
   prp_ch13()
 ```
 
-With the value of `cp` chosen by `train()`, we retain the partition based on `year < 2017`.
+With the value of `cost_complexity` chosen by `tune_grid()`, we retain the partition based on `year < 2017`.
 
 ### Multiple explanatory variables
 
-What if we wanted to predict `dem_win` based on `region` and `year`?  The process is similar to what we've seen before.  We'll jump right to using `train()` in this example.
+What if we wanted to predict `dem_win` based on `region` and `year`?  The process is similar to what we've seen before.  We'll fit a new model called `region_year_tree` using our model specification `tree_mod`.
 
 ```{r}
-region_year_tree <- fit(tree_fit,
+region_year_tree <- fit(tree_mod,
                         factor(dem_win) ~ region + year,
                         data = house_ch13)
 
@@ -875,10 +948,17 @@ This tree classifies observations in the Northeast and West as a Democratic win 
 In the section on logistic regression, we used `map()` to fit many models to visualize the effect of `year` by `state`.  When fitting classification trees, it is easy just to add `state` as a predictor and allow the complexity parameter to determine whether we ought to partition further states by `year`.  In fact, unlike with `lm()` and `glm()`, we can include both `region` and `state` in the model, and the algorithm will decide whether it wants to use the additional information provided by `state` or just create partitions based on `region`.  Let's take a look:
 
 ```{r}
-state_year_tree <- fit(tree_fit,
+state_year_tree <- fit(tree_mod,
                        factor(dem_win) ~ region + state + year,
                        data = house_ch13)
 
+state_year_tree$fit %>%
+  prp_ch13()
+```
+
+Unfortunately, this is very difficult to read, since `prp()` tries to plot all the state names on one line.  The [documentation][http://www.milbo.org/doc/prp.pdf] gives example code on how to wrap the factor labels across multiple lines, which we will adapt:
+
+```{r}
 split.fun <- function(x, labs, digits, varlen, faclen) {
   
   # Replace commas with spaces (needed for strwrap)
@@ -894,17 +974,17 @@ split.fun <- function(x, labs, digits, varlen, faclen) {
   
   labs
 }
+```
 
+Now we need to apply `split.fun` to `prp()`; we'll also set `faclen = 2` in order to abbreviate the state names:
+
+```{r}
 state_year_tree$fit %>%
   prp(split.fun = split.fun,
       faclen = 2)
 ```
 
-A tradeoff that occurs when trees get more complex is that while they become more accurate, they also get harder to read.  Still, after inspecting this tree for a little bit, we can see it makes the following predictions:
-
-- Observations before 1993 are classified as Democratic wins.
-- Observations after 1993 in Massachusetts, New York, California, Hawaii, Rhode Island, Oregon, Connecticut, and Maryland are classified as Democratic wins.
-- All other observations are classified as Democratic losses.
+This experience shows a tradeoff when working with decision trees: as they get more complex, they become more accurate but also harder to read.
 
 ## Random forests
 
@@ -930,76 +1010,81 @@ So how do we get different decision trees from a single training set? For this, 
 
 ### Fitting random forests
 
-We will demonstrate by fitting a random forest to the House elections data, predicting `dem_win` with `region_fct`, `state_fct`, and `year`.  We will use the `randomForest` function in the __randomForest__ package.  Note that `randomForest()` requires that our categorical predictors be of type `factor` rather than `character`, so we'll `mutate()` first to create those variables.
+We will demonstrate by fitting a random forest to the House elections data, predicting `dem_win` with `region`, `state`, and `year`.  We will use the `rand_forest()` function to create our model specification, setting the engine to `"randomForest"` and the mode to `"classification"`.
 
 ```{r, message=FALSE, warning=FALSE}
-library(randomForest)
+forest_mod <- rand_forest() %>%
+  set_engine("randomForest") %>%
+  set_mode("classification")
 
-house_ch13 <- house_ch13 %>%
-  mutate(region_fct = factor(region),
-         state_fct = factor(state))
+house_forest <- fit(forest_mod,
+                    factor(dem_win) ~ region + state + year,
+                    data = house_ch13)
 
-house_forest <- randomForest(factor(dem_win) ~ region_fct + state_fct + year,
-                             data = house_ch13) 
 house_forest
 ```
 
-We see under "OOB estimate of error rate" that this model has an error rate of 36% (or, looking at it the other way, an accuracy of 64%). We can see how the error rate of our algorithm changes as we add trees by looking at `house_forest$err.rate[, "OOB"]`.  By default, `randomForest()` grows 500 trees.
+We see under "OOB estimate of error rate" that this model has an error rate of 36% (or, looking at it the other way, an accuracy of 64%). We can see how the error rate of our algorithm changes as we add trees by looking at `house_forest$fit$err.rate[, "OOB"]`.  By default, `randomForest()` (the engine we specified) grows 500 trees.
 
 ```{r}
-tibble(`Error rate` = house_forest$err.rate[, "OOB"],
+tibble(`Error rate` = house_forest$fit$err.rate[, "OOB"],
        Trees = 1:500) %>%
   ggplot(aes(x = Trees, y = `Error rate`)) +
   geom_line() +
   theme_classic()
 ```
 
-We can see that in this case, the accuracy improves as we add more trees until about 250 trees where accuracy stabilizes.
+We can see that in this case, the accuracy improves as we add more trees until about 300 trees where accuracy stabilizes.
 
-Random forests often perform better than other methods. However, a disadvantage of random forests is that we lose interpretability---we don't get anything like the coefficients from a logistic regression or the single tree from CART. An approach that helps with interpretability is to examine _variable importance_. To define _variable importance_ we count how often a predictor is used in the individual trees. You can learn more about _variable importance_ in an advanced machine learning book.^[https://web.stanford.edu/~hastie/Papers/ESLII.pdf] The __caret__ package includes the function `varImp` that extracts variable importance from any model in which the calculation is implemented. 
+Random forests often perform better than other methods. However, a disadvantage of random forests is that we lose interpretability---we don't get anything like the coefficients from a logistic regression or the single tree from CART.
 
-```{r}
-caret::varImp(house_forest)
-```
+<!-- AR: Cutting this; not sure how to do this in tidymodels -->
 
-Thus, we can see that the state an observation is in plays the biggest role in our forest, followed by year and finally by region.
+<!-- An approach that helps with interpretability is to examine _variable importance_. To define _variable importance_ we count how often a predictor is used in the individual trees. You can learn more about _variable importance_ in an advanced machine learning book.^[https://web.stanford.edu/~hastie/Papers/ESLII.pdf] The __caret__ package includes the function `varImp` that extracts variable importance from any model in which the calculation is implemented.  -->
+
+<!-- ```{r} -->
+<!-- caret::varImp(house_forest) -->
+<!-- ``` -->
+
+<!-- Thus, we can see that the state an observation is in plays the biggest role in our forest, followed by year and finally by region. -->
 
 ## Comparing the three approaches
 
 ```{r, warning = FALSE}
-house_logistic <- glm(dem_win ~ state * year, family = binomial, data = house_ch13)
 
-logistic_preds <- 1 * (predict(house_logistic, type = "response") > 0.5)
-cart_preds <- 1 * (predict(state_year_tree$fit)[, 2] > 0.5)
-forest_preds <- as.numeric(predict(house_forest)) - 1
+house_logistic <- fit(logistic_mod,
+                      factor(dem_win) ~ state * year,
+                      data = house_ch13)
 
-mean(logistic_preds == house_ch13$dem_win)
-mean(cart_preds == house_ch13$dem_win)
-mean(forest_preds == house_ch13$dem_win)
+logistic_preds <- predict(house_logistic, new_data = house_ch13)
+tree_preds <- predict(state_year_tree, new_data = house_ch13)
+forest_preds <- predict(house_forest, new_data = house_ch13)
+
+mean(logistic_preds$.pred_class == house_ch13$dem_win)
+mean(tree_preds$.pred_class == house_ch13$dem_win)
+mean(forest_preds$.pred_class == house_ch13$dem_win)
 
 # How well did they predict 2018?
 
-house_logistic_2016 <- glm(dem_win ~ state * year,
-                           family = binomial,
+house_logistic_2016 <- fit(logistic_mod,
+                           factor(dem_win) ~ state * year,
                            data = house_ch13 %>% filter(year != 2018))
 
-house_cart_2016 <- caret::train(factor(dem_win) ~ region_fct + state_fct + year,
-                         method = "rpart",
-                         tuneGrid = data.frame(cp = seq(0.0, 0.1, by = 0.005)),
+house_tree_2016 <- fit(tree_mod,
+                       factor(dem_win) ~ state + year,
+                       data = house_ch13 %>% filter(year != 2018))
+
+house_forest_2016 <- fit(forest_mod,
+                         factor(dem_win) ~ state + year,
                          data = house_ch13 %>% filter(year != 2018))
 
-house_forest_2016 <- randomForest(factor(dem_win) ~ region_fct + state_fct + year, 
-                                  data = house_ch13 %>% filter(year != 2018)) 
+house_2018 <- house_ch13 %>% filter(year == 2018)
 
-logistic_preds_2018 <- 1 * (predict(house_logistic_2016,
-                                    type = "response",
-                                    newdata = house_ch13 %>% filter(year == 2018)) > 0.5)
-cart_preds_2018 <- predict(house_cart_2016,
-                           newdata = house_ch13 %>%filter(year == 2018))
-forest_preds_2018 <- as.numeric(predict(house_forest_2016,
-                                        newdata = house_ch13 %>% filter(year == 2018))) - 1
+logistic_preds <- predict(house_logistic_2016, new_data = house_2018)
+tree_preds <- predict(house_tree_2016, new_data = house_2018)
+forest_preds <- predict(house_forest_2016, new_data = house_2018)
 
-mean(logistic_preds_2018 == house_ch13 %>% filter(year == 2018) %>% pull(dem_win))
-mean(cart_preds_2018 == house_ch13 %>% filter(year == 2018) %>% pull(dem_win))
-mean(forest_preds_2018 == house_ch13 %>% filter(year == 2018) %>% pull(dem_win))
+mean(logistic_preds$.pred_class == house_2018$dem_win)
+mean(tree_preds$.pred_class == house_2018$dem_win)
+mean(forest_preds$.pred_class == house_2018$dem_win)
 ```
