@@ -25,6 +25,8 @@ set.seed(76)
 ```
 
 
+<!-- DK: Maybe build this from tidymodels, while also mentioning the traditional way of just using lm()? The problem with raw lm() is that it does not work natively in a pipe since the first argument is a formula instead of the data. (Or maybe a lm(y ~ x, data = .) hack is OK?) -->
+
 The fundamental goal of data modeling is to make explicit the relationship between:
 
 * an *outcome variable* $y$, also called a *dependent variable* or response variable, and  
@@ -35,13 +37,15 @@ Another way to state this is using mathematical terminology: we will model the o
 1. **Modeling for explanation**: When you want to explicitly describe and quantify the relationship between the outcome variable $y$ and an explanatory variable $x$, determine the importance of any relationships, have measures summarizing these relationships, and possibly identify any *causal* relationships between the variables.  (What's a causal relationship? Remember the [Rubin Causal Model](#rubin-causal-model)! The *causal effect* of $x$ on $y$ is the difference in *potential outcomes* of $y$ given different values of $x$.)
 1. **Modeling for prediction**: When you want to predict an outcome variable $y$ based on the information contained in a set of predictor variables $x$. Unlike modeling for explanation, however, you don't care so much about understanding how all the variables relate and interact with one another, but rather only whether you can make good predictions about $y$ using the information in $x$.
 
-For example, say you are interested in an outcome variable $y$ of whether patients develop lung cancer and information $x$ on their risk factors, such as smoking habits, age, and socioeconomic status. If we are modeling for explanation, we would be interested in both describing and quantifying the effects of the different risk factors. One reason could be that you want to design an intervention to reduce lung cancer incidence in a population, such as targeting smokers of a specific age group with advertising for smoking cessation programs.  In that case, you would want to know the causal effect of age on the incidence of lung cancer for smokers.
+For example, say you are interested in an outcome variable $y$ of whether patients develop lung cancer and information $x$ on their risk factors, such as smoking habits, age, and socioeconomic status. If we are modeling for explanation, we would be interested in both describing and quantifying the effects of the different risk factors. One reason could be that you want to design an intervention to reduce lung cancer incidence in a population, such as increasing family income.  In that case, you would want to know the causal effect of income on the incidence of lung cancer for smokers.
 
 If we are modeling for prediction, however, we wouldn't care so much about understanding how all the individual risk factors contribute to lung cancer, but rather only whether we can make good predictions of which people will contract lung cancer.
 
 In this book, we'll focus on modeling for explanation and hence refer to $x$ as *explanatory variables*. If you are interested in learning about modeling for prediction, we suggest you check out Chapter \@ref(machine) and other books and courses on the field of *machine learning* such as [*An Introduction to Statistical Learning with Applications in R (ISLR)*](http://www-bcf.usc.edu/~gareth/ISL/) [@islr2017]. Furthermore, while there exist many techniques for modeling, such as tree-based models and neural networks, right now we'll focus on one particular technique: *linear regression*. \index{regression!linear} Linear regression is one of the most commonly-used and easy-to-understand approaches to modeling.
 
-Linear regression involves a *numerical* outcome variable $y$ and explanatory variables $x$ that are either *numerical* or *categorical*. Furthermore, the relationship between $y$ and $x$ is assumed to be linear, or in other words, a line. However, we'll see that what constitutes a "line" will vary depending on the nature of your explanatory variables $x$ .
+Linear regression involves a *numerical* outcome variable $y$ and explanatory variables $x$ that are either *numerical* or *categorical*. Furthermore, the relationship between $y$ and $x$ is assumed to be linear, or in other words, a line. However, we'll see that what constitutes a "line" will vary depending on the nature of your explanatory variables $x$.
+
+<!-- DK: Could give a better plan overview, including discussion of chapters 13 and 14. Indeed, perhaps also looking backward to sampling and uncertainty. -->
 
 In Chapter \@ref(regression) on basic regression, we'll only consider models with a single explanatory variable $x$. In Section \@ref(model1), the explanatory variable will be numerical. This scenario is known as *simple linear regression*. In Section \@ref(model2), the explanatory variable will be categorical.
 
@@ -51,6 +55,8 @@ Let's now begin with basic regression, \index{regression!basic} which refers to 
 
 
 ### Needed packages {-}
+
+<!-- DK: Do we really need to do this each time? I think not! -->
 
 Let's now load all the packages needed for this chapter (this assumes you've already installed them). In this chapter, we introduce some new packages:
 
@@ -88,6 +94,9 @@ library(patchwork)
 
 
 ## Teaching evaluations: one numerical explanatory variable {#model1}
+
+<!-- DK: I think this is good. I like walking through EDA. Should do that each chapter, maybe showing more tricks each time. But in what order? skim() here then calculate your own simply in 12 and then calculate using new dplyr 1.0.0 tricks like across() in 13. Also, stop replying on moderndive. Just include this data in our package or on line. Indeed, do we need our own package? Or just our own dedicated set of Google sheets? -->
+
 
 Why do some professors and instructors at universities and colleges receive high teaching evaluations scores from students while others receive lower ones? Are there differences in teaching evaluations between instructors of different demographic groups? Could there be an impact due to student biases? These are all questions that are of interest to university/college administrators, as teaching evaluations are among the many criteria considered in determining which instructors and professors get promoted.
 
@@ -185,7 +194,7 @@ For the numerical variables teaching `score` and `bty_avg` it returns:
 - `p75`: the 75th percentile: the value at which 75% of observations are smaller than it (the *3rd quartile*)
 - `p100`: the 100th percentile: the value at which 100% of observations are smaller than it (the *maximum* value)
 
-Looking at this output, we can see how the values of both variables distribute. For example, the mean teaching score was 4.17 out of 5, whereas the mean "beauty" score was 4.42 out of 10. Furthermore, the middle 50% of teaching scores was between 3.80 and 4.6 (the first and third quartiles), whereas the middle 50% of "beauty" scores falls within 3.17 to 5.5 out of 10.
+Looking at this output, we can see how the values of both variables are distributed. For example, the mean teaching score was 4.17 out of 5, whereas the mean "beauty" score was 4.42 out of 10. Furthermore, the middle 50% of teaching scores was between 3.80 and 4.6 (the first and third quartiles), whereas the middle 50% of "beauty" scores falls within 3.17 to 5.5 out of 10.
 
 The `skim()` function only returns what are known as *univariate* \index{univariate} summary statistics: functions that take a single variable and return some numerical summary of that variable. However, there also exist *bivariate* \index{bivariate} summary statistics: functions that take in two variables and return some summary of those two variables. In particular, when the two variables are numerical, we can compute the \index{correlation (coefficient)} *correlation coefficient*. Generally speaking, *coefficients* are quantitative expressions of a specific phenomenon.  A *correlation coefficient* is a quantitative expression of the *strength of the linear relationship between two numerical variables*. Its value ranges between -1 and 1 where:
 
@@ -291,6 +300,7 @@ evals_ch11 %>%
   labs(x = "Beauty Score", y = "Teaching Score",
        title = "Scatterplot of relationship of teaching and beauty scores")
 ```
+
 ```{r, warning=FALSE, echo=FALSE, fig.cap="Instructor evaluation scores at UT Austin.", fig.height=4.2}
 ggplot(evals_ch11, aes(x = bty_avg, y = score)) +
   geom_jitter() +
@@ -318,6 +328,8 @@ Furthermore, a regression line is "best-fitting" in that it minimizes some mathe
 
 
 ### Simple linear regression {#model1table}
+
+<!-- DK: Make this with just one decimal. Indeed, can we make that consistent everywhere? Also, bty_avg should be renamed beauty. We don't really care if it is an average. -->
 
 You may recall from secondary/high school algebra that the equation of a line is $y = a + b\cdot x$. (Note that the $\cdot$ symbol is equivalent to the $\times$ "multiply by" mathematical symbol. We'll use the $\cdot$ symbol in the rest of this book as it is more succinct.) It is defined by two coefficients $a$ and $b$. The intercept coefficient $a$ is the value of $y$ when $x = 0$. The slope coefficient $b$ for $x$ is the increase in $y$ for every increase of one in $x$. This is also called the "rise over run."
 
@@ -362,7 +374,7 @@ tidy(score_model,
 
 Note that we used the argument `conf.int = TRUE` in the `tidy()` function; that will be important for later.
 
-How did this code work?  First, we "fit" the linear regression model to the `data` using the `lm()` \index{lm()} function and save this as `score_model`. When we say "fit", we mean  "find the best fitting line to this data." `lm()` stands for "linear model" and is used as follows: `lm(y ~ x, data = data_frame_name)` where:
+How did this code work?  First, we "fit" the linear regression model to the `data` using the `lm()` \index{lm()} function and saved this as `score_model`. When we say "fit", we mean  "find the best fitting line to this data." `lm()` stands for "linear model" and is used as follows: `lm(y ~ x, data = data_frame_name)` where:
 
 * `y` is the outcome variable, followed by a tilde `~`. In our case, `y` is set to `score`.
 * `x` is the explanatory variable. In our case, `x` is set to `bty_avg`.
@@ -370,6 +382,30 @@ How did this code work?  First, we "fit" the linear regression model to the `dat
 * `data_frame_name` is the name of the data frame that contains the variables `y` and `x`. In our case, `data_frame_name` is the `evals_ch11` data frame.
 
 Second, we take the saved model in `score_model` and apply the `tidy()` function from the **broom** package to it to obtain the regression table. 
+
+We can also do this with pipes:
+
+```{r}
+evals_ch11 %>% 
+  lm(score ~ bty_avg, data = .) %>% 
+  tidy(conf.int = TRUE) %>% 
+  select(term, estimate, conf.low, conf.high)
+```
+
+Recall from our discussion in Chapter \@ref{wrangling} that we can use "." to refer to the tibble that has been passed in by the proceeding pipe. In this case, that is the `eval_ch11` tibble. Using "." to refer to the passed-down tibble will be a trick which we use again and again in the coming chapters.
+
+You may wonder why this code does not work:
+
+```{r, eval=FALSE}
+evals_ch11 %>% 
+  lm(score ~ bty_avg) 
+```
+
+<!-- DK: How can we show the error which happens when this code runs? -->
+
+With most of the functions we have seen, we don't need the "hack" of referring to the passed-down tibble with a ".". Things "just work." Functions like `filter()` and `arrange()` just know to work on the tibble which is coming there way. Why doesn't `lm()` do that?
+
+The answer is that `lm()` is, like many parts of R, an old function, created before the Tidyverse came into style. Look at the help page with `?lm`. As you can see, the first argument is `formula`. The automatic pass-down trick only works with functions in which the first argument is the data to be used. This is (almost) always the case in Tidyverse functions.
 
 ### Interpreting regression coefficients
 
@@ -383,9 +419,15 @@ $$
 \end{aligned}
 $$
 
+<!-- DK: "beauty" rather than "bty_avg" would be a better variable name. Don't need to recall that the beauty score is an average. After all, the score is an average also! Also: Need a discussion of potential outcomes and RCM here. Can we manipulate beauty? On one hand, no. On the other hand, yes. Makeup, lighting and so on. Could provide an interesting complex case to discuss. -->
+
 The intercept $b_0$ = `r evals_line[1]` is the average teaching score $\widehat{y}$ = $\widehat{\text{score}}$ for those courses where the instructor had a "beauty" score `bty_avg` of 0. Or in graphical terms, it's where the line intersects the $y$ axis when $x$ = 0. Note, however, that while the \index{regression!equation of a line!intercept} intercept of the regression line has a mathematical interpretation, it has no *practical* interpretation here, since observing a `bty_avg` of 0 is impossible; it is the average of six panelists' "beauty" scores ranging from 1 to 10. Furthermore, looking at the scatterplot with the regression line, no instructors had a "beauty" score anywhere near 0.
 
+<!-- DK: Add discussion of "hat". Recall the p hat which we estimated last time. y hat is like that! It is not a variable that we can observe. It is an estimate. (Indeed, it is an estimate of a potential outcome!) This is different form x, which has no hat, because it is real data, something we can see. Side note: not sure if the hat versus no hat distinction works well with b_0/b_1 being things we can't see and need to estimate, but for which we do not use hat notation. -->
+
 Of greater interest is the \index{regression!equation of a line!slope} slope $b_1$ = $b_{\text{bty_avg}}$ for `bty_avg` of `r evals_line[2]`, as this summarizes the relationship between the teaching and "beauty" score variables. Note that the sign is positive, suggesting a positive relationship between these two variables, meaning teachers with higher "beauty" scores also tend to have higher teaching scores. Recall from earlier that the correlation coefficient is `r cor_ch11`. They both have the same positive sign, but have a different value. Recall further that the correlation's interpretation is the "strength of linear association". The \index{regression!interpretation of the slope} slope's interpretation is a little different:
+
+<!-- DK: Let's make sure that these interpretations are highly consistent with Gelman and across the book. -->
 
 > For every increase of 1 unit in `bty_avg`, there is an *associated* increase of, *on average*, `r evals_line[2]` units of `score`.
 
@@ -465,9 +507,9 @@ Thus, our best guess of Joe's potential outcome under the "treatment" of $score 
 
 ## Uncertainty in simple linear regressions
 
-You might be wondering what the remaining five columns created by `tidy()` are: `std.error`, `statistic`, `p.value`, `conf.low` and `conf.high`. They are the _standard error_, _test statistic_, _p-value_, _lower 95% confidence interval bound_, and _upper 95% confidence interval bound_. We will focus on the confidence interval bounds. We have already explored the concept of confidence intervals in Chapter \@ref(confidence-intervals).  These bounds are an application the same concept, but applied to the slope of our simple linear regression.
+You might be wondering what the remaining five columns created by `tidy()` are: `std.error`, `statistic`, `p.value`, `conf.low` and `conf.high`. They are the _standard error_, _test statistic_, _p-value_, _lower 95% confidence interval bound_, and _upper 95% confidence interval bound_. We will focus on the confidence interval bounds. We have already explored the concept of confidence intervals in Chapter \@ref(confidence-intervals).  These bounds are an application of the same concept, but applied to the slope of our simple linear regression.
 
-Let's load the **infer** package.  We're going to use the function `rep_sample_n()` to reample from our data 1,000 times:
+Let's load the **infer** package.  We're going to use the function `rep_sample_n()` to resample from our data 1,000 times:
 
 ```{r}
 library(infer)
