@@ -628,7 +628,7 @@ Imagine we want to forecast the high temperature in Seoul, South Korea on August
 
 We need this wider range to allow for the possibility of anomalous weather, like a freak cold spell or an extreme heat wave. So a range of temperatures we could be near certain about would be between 32&deg;F - 110&deg;F (0&deg;C - 43&deg;C). On the other hand, if we could tolerate being a little less confident, we could narrow this range to between 70&deg;F - 85&deg;F (21&deg;C - 30&deg;C). 
 
-<!-- DK: Is it a good idea to go back to the urn example here? Why not just stick with pennies? Or perhaps it is important to connect the previous chapter to this one, to see how our new knowledge of confidence intervals applies in the urn case. -->
+<!-- DK: Is it a good idea to go back to the urn example here? Why not just stick with pennies? Or perhaps it is important to connect the previous chapter to this one, to see how our new knowledge of confidence intervals applies in the urn case. Even if we do keep it, this part definitely goes much too fast. First, remind people about the urn. Then, do one sample and show how we can build a confidence interval from that, at a given confidence level. Then show how we build it for different confidence levels. Then do it 10 times for each confidence level. Or something like that. -->
 
 Let's revisit our sampling urn from Chapter \@ref(sampling). Let's compare $10 \cdot 3 = 30$ confidence intervals for $p$ based on three different confidence levels: 80%, 95%, and 99%. 
 
@@ -649,6 +649,8 @@ perc_cis_80 <- urn %>%
   rep_sample_n(size = 50, reps = 10)
 perc_cis_80
 ```
+
+<!-- DK: Is this the first time we are using nest? If so, it is going way too fast! -->
 
 Next, we'll construct a confidence interval for each one.  This will require `nest`ing the data by sample and then `map`ping to construct each confidence interval.  Let's grab 1,000 bootstrap replicates for each sample:
 
@@ -893,9 +895,9 @@ percentile_cis_by_n %>%
                 latex_options = c("hold_position", "repeat_header"))
 ```
 
-The moral of the story is: \index{confidence interval!impact of sample size on interval width} **Larger sample sizes tend to produce narrower confidence intervals.**   Recall that this was a key message in Subsection \@ref(moral-of-the-story). As we used larger and larger shovels for our samples, the sample proportions red $\widehat{p}$ tended to vary less. In other words, our estimates got more and more *precise*. 
+The moral of the story is: \index{confidence interval!impact of sample size on interval width} **Larger sample sizes tend to produce narrower confidence intervals.**   Recall that this was a key message in Subsection \@ref(moral-of-the-story). As we used larger and larger shovels for our samples, the sample proportions red, $\widehat{p}$, tended to vary less. In other words, our estimates got more and more *precise*. 
 
-Recall that we visualized these results in Figure \@ref(fig:comparing-sampling-distributions-3), where we compared the *sampling distributions* for $\widehat{p}$ based on samples of size $n$ equal 25, 50, and 100. We also quantified the sampling variation of these sampling distributions using their standard deviation, which has that special name: the *standard error*. So as the sample size increases, the standard error decreases.
+Recall that we visualized these results in Figure \@ref(fig:comparing-sampling-distributions-3), where we compared the *sampling distributions* for $\widehat{p}$ based on samples of size $n$ equal to 25, 50, and 100. We also quantified the sampling variation of these sampling distributions using their standard deviation, which has that special name: the *standard error*. So as the sample size increases, the standard error decreases.
 
 Let's do this again, but creating everything in a single tibble so we can look at sample sizes from 25 to 200:
 
@@ -948,9 +950,11 @@ It turns out that we can, using the `lm()` function.  `lm()` stands for `l`inear
 lm(year ~ 1, data = pennies_sample)
 ```
 
+<!-- DK: Do we explain this later? If so, provide a link here. -->
+
 Once we learn about regression, we'll learn why this is labeled the "intercept."  The key thing to note right now is that `lm()` takes two main arguments, `formula` and `data`.  The notation `year ~ 1` will get the mean of `year`.
 
-The **broom** package makes it a lot easier to work with `lm()` model objects.  In particular, the function `tidy()` has the option `conf.int = TRUE`, which we can use to get a confidence interval:
+The **broom** package makes it easier to work with `lm()` model objects.  In particular, the function `tidy()` has the option `conf.int = TRUE`, which we can use to get a confidence interval:
 
 ```{r}
 library(broom)
@@ -969,7 +973,9 @@ lm(year ~ 1, data = pennies_sample) %>%
   select(estimate, conf.low, conf.high)
 ```
 
-These are not identical to our bootstrap confidence interval estimates, but they are similar.  Thus, if you are interested in constructing a confidence interval for a mean, you can use `lm()` and `tidy()` as a shortcut.
+<!-- DK: Do we need more discussion here? In what sense is this approximation "close enough?" -->
+
+These are not identical to our bootstrap confidence interval estimates, but they are close enough.  Thus, if you are interested in constructing a confidence interval for a mean, you can use `lm()` and `tidy()` as a shortcut. `tidy()` also has an argument, `conf.level`, which allows us to specify the confidence level. By default, it is 0.95.
 
 ## Case study: Is yawning contagious? {#case-study-two-prop-ci}
 
@@ -1241,18 +1247,21 @@ se_samp <- sampling_distribution %>%
 
 #### Bootstrap distribution {-}
 
-Here is the code to construct the bootstrap distribution of $\widehat{p}$ based on Ilyas and Yohan's original sample of 50 balls saved in `urn_sample_1`.
+Here is the code to construct the bootstrap distribution of $\widehat{p}$ based on Ilyas and Yohan's original sample of 50 balls saved in `urn_sample_1`. 
 
-<!-- DK: Check to see if this new sample matches the text. -->
+<!-- DK: This is still ugly. Might also be nice to show this exercise with sampling of 100, 1000, 10000 and then 100000, in order to show how things smooth out and look more normal as n increases. -->
 
-```{r,echo=FALSE}
-set.seed(76)
+```{r, echo=FALSE}
+# This seed is needed to ensure that 21 reds are sampled, so that p-hat is 42%.
+
+set.seed(31111111)
 urn_sample_1 <- urn %>% 
   select(color) %>% 
-  sample_n(50)
+  sample_n(50) 
 ```
 
 ```{r}
+set.seed(14)
 bootstrap_distribution <- urn_sample_1 %>% 
   rep_sample_n(size = 50, reps = 1000, replace = TRUE) %>%
   summarize(prop_red = mean(color == "red"))
@@ -1298,6 +1307,7 @@ p_samp <- ggplot(sampling_distribution, aes(x = prop_red)) +
                      breaks = seq(from = 0.15, to = 0.65, by = 0.1)) + 
   scale_y_continuous(limits = c(0, 350), 
                      breaks = seq(from = 0, to = 400, by = 100))
+
 p_boot <- ggplot(bootstrap_distribution, aes(x = prop_red)) +
   geom_histogram(binwidth = 0.05, boundary = 0.4, fill = "blue", 
                  color = "white") + 
@@ -1310,6 +1320,9 @@ p_boot <- ggplot(bootstrap_distribution, aes(x = prop_red)) +
                      breaks = seq(from = 0.15, to = 0.65, by = 0.1)) + 
   scale_y_continuous(limits = c(0, 350), breaks = seq(from = 0, 
                                                       to = 400, by = 100))
+
+# This could be made much nicer with cowplot.
+
 p_samp + p_boot + plot_layout(ncol = 1, heights = c(1, 1))
 ```
 
