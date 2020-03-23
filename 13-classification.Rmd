@@ -1050,41 +1050,170 @@ Random forests often perform better than other methods. However, a disadvantage 
 
 ## Comparing the three approaches
 
+We've explored three ways to model binary responses in this chapter.  Which one should you use?
+
+This isn't as straightforward a question as it may seem.  First, we need some measure of which model is "better."  The most obvious way to compare models for binary data is simply to look at the predicted outcomes from the model and compare those predicted outcomes to the actual outcomes.  The percentage of outcomes correctly classified by the model is called the model's *accuracy*.
+
+Let's compare the accuracy of the following models in predicting Democratic victories in House elections:
+
+- Predicting a Democratic win (the modal outcome in our data) for every observation 
+- A logistic regression predicting `dem_win` with `state`, `year`, and the interaction of `state` and `year`
+- A linear regression with the same predictors as the logistic regression
+- A classification tree using `state` and `year`
+- A random forest using `state` and `year`
+
+Those last two models we already have saved as `state_year_tree` and `house_forest` respectively.  We'll create the logistic and linear regressions and save them as `house_logistic` and `house_linear`:
+
 ```{r, warning = FALSE}
 
 house_logistic <- fit(logistic_mod,
                       factor(dem_win) ~ state * year,
                       data = house_ch13)
 
-logistic_preds <- predict(house_logistic, new_data = house_ch13)
-tree_preds <- predict(state_year_tree, new_data = house_ch13)
-forest_preds <- predict(house_forest, new_data = house_ch13)
-
-mean(logistic_preds$.pred_class == house_ch13$dem_win)
-mean(tree_preds$.pred_class == house_ch13$dem_win)
-mean(forest_preds$.pred_class == house_ch13$dem_win)
-
-# How well did they predict 2018?
-
-house_logistic_2016 <- fit(logistic_mod,
-                           factor(dem_win) ~ state * year,
-                           data = house_ch13 %>% filter(year != 2018))
-
-house_tree_2016 <- fit(tree_mod,
-                       factor(dem_win) ~ state + year,
-                       data = house_ch13 %>% filter(year != 2018))
-
-house_forest_2016 <- fit(forest_mod,
-                         factor(dem_win) ~ state + year,
-                         data = house_ch13 %>% filter(year != 2018))
-
-house_2018 <- house_ch13 %>% filter(year == 2018)
-
-logistic_preds <- predict(house_logistic_2016, new_data = house_2018)
-tree_preds <- predict(house_tree_2016, new_data = house_2018)
-forest_preds <- predict(house_forest_2016, new_data = house_2018)
-
-mean(logistic_preds$.pred_class == house_2018$dem_win)
-mean(tree_preds$.pred_class == house_2018$dem_win)
-mean(forest_preds$.pred_class == house_2018$dem_win)
+house_linear <- fit(linear_reg(),
+                    dem_win ~ state * year,
+                    data = house_ch13)
 ```
+
+Note that fitting a linear regression is as simple as using the model specification `linear_reg()`, which by default uses `lm()` as its engine.
+
+How can we extract the predictions for each of these models?  **tidymodels** provides a unified function, `predict()`.  The first argument of the function is the fitted model object.  It also requires the argument `new_data`, which is the dataset on which you will be making your predictions.  Here, we are making predictions on our original data (`house_ch13`).  For example:
+
+```{r}
+predict(house_logistic, new_data = house_ch13)
+```
+
+The result is a tibble with the predicted outcomes stored in the column `.pred_class`.
+
+For the linear model, the result is going to be a number, not a class:
+
+```{r}
+predict(house_linear, new_data = house_ch13)
+```
+
+We can interpret this as a predicted probability and classify responses $> 0.5$ as $1$ and $< 0.5$ as $0$:
+
+```{r, eval = FALSE}
+1 * (predict(house_linear, new_data = house_ch13) > 0.5)
+```
+
+Let's put it all together in a tibble called `house_preds`:
+
+```{r}
+house_preds <- house_ch13 %>%
+  mutate(modal = 1,
+         logistic = predict(house_logistic, new_data = house_ch13) %>% 
+           pull(.pred_class),
+         linear = 1 * (predict(house_linear, new_data = house_ch13) > 0.5),
+         tree = predict(state_year_tree, new_data = house_ch13) %>% 
+           pull(.pred_class),
+         forest = predict(house_forest, new_data = house_ch13) %>% 
+           pull(.pred_class))
+```
+
+We'll start by looking at five random rows of `house_preds`.
+
+```{r, eval = FALSE}
+house_preds %>%
+  select(-region, -state) %>%
+  sample_n(5)
+```
+
+```{r, eval = TRUE, echo = FALSE}
+house_preds %>%
+  select(-region, -state) %>%
+  sample_n(5) %>%
+  kable()
+```
+
+In these five districts, the Democrats won two and therefore our `modal` prediction, which always predicts a Democratic win, classifies 40% of the observations correctly.  For these districts, the logistic, linear, and classification tree models all classify SC-02 in 2010 correctly as a Democratic loss and misclassify the remaining districts, for an accuracy of 20%.  Finally, the random forest model classifies SC-02 in 2010 correctly as a Democratic loss and also correctly classifies PA-17 in 2002 as a Democratic win, for an accuracy of 40%.
+
+Now let's calculate the overall accuracy of our five models.  We simply need to calculate the proportion of observations where the predicted value equals `dem_win`:
+
+```{r}
+tibble(modal = mean(house_preds$modal == house_preds$dem_win),
+       logistic = mean(house_preds$logistic == house_preds$dem_win),
+       linear = mean(house_preds$linear == house_preds$dem_win),
+       tree = mean(house_preds$tree == house_preds$dem_win),
+       forest = mean(house_preds$forest == house_preds$dem_win))
+```
+
+Here we see that all our models perform better than simply picking the modal outcome, but there isn't much variation in accuracy of the four more sophisticated models.
+
+However, when selecting a model, we may care about more than just accuracy.  There are three concerns in particular that we'll address here:
+
+1. Is accuracy the right measure?
+1. Modeling for prediction vs. explanation
+1. Out-of-sample predictions
+
+### Is accuracy the right measure?
+
+We've been looking at the *accuracy* of each model.  However, we can come up with more granular measures.  Every prediction can be classified into one of the following four categories:
+
+- True positive (classified as a `1` and actually a `1`)
+- True negative (classified as a `0` and actually a `0`)
+- False positive (classified as a `1` but actually a `0`)
+- False negative (classified as a `0` but actually a `1`)
+
+Accuracy thus is $(\text{True positives } + \text{ True negatives})/n$.  When using accuracy as a metric, therefore, we are implicitly assuming that false positives and false negatives are equally bad.  In the context of election forecasting, that is probably right, since we probably only care about how many seats we accurately predict.
+
+
+However, there are other scenarios where a false negative and a false positive can have very different costs associated with them, such as when evaluating medical interventions.  (A false negative may mean that a person who actually has a disease receives no treatment, whereas a false positive may mean that a healthy person receives a medical intervention; which is worse depends on the disease and the side effects of the treatment.)  Therefore, there are many metrics  beyond accuracy that may be relevant for different applications, such as *sensitivity* (the proportion of actual $1$s classified as $1$) and *specificity* (the proportion of actual $0$s classified as $0$).
+
+### Modeling for prediction vs. explanation
+
+All things being equal, we would prefer a model with more predictive power to one with less.  However, we have emphasized that models may serve different purposes.  Some focus on attempting to predict an outcome.  Others focus on learning about a *causal effect*.  When one is interested in identifying a causal effect, we may not always prefer the model that has the greatest predictive power.
+
+Why not?  One concern is *interpretability*.  We want to have a sense of the magnitude of the causal effect and our uncertainty about that magnitude; this is much easier with models such as linear and logistic regressions that produce coefficients.
+
+Another concern is *post-treatment bias*.  For example, let's say that we were interested in the effect of a hypertension drug on all-cause mortality.  We cannot use blood pressure measurements taken after the drug was administered as a predictor if we are interested in the effects of the drug on mortality, even though such a variable will surely improve our predictions, since that variable is affected by our treatment.
+
+### Out-of-sample predictions
+
+We saw that our models predicted 64%-65% of the House races from 1976--2018 accurately using `state` and `year` as predictors.  However, these models were fitted on the same data that we used to evaluate their predictions.  These are called *in-sample* predictions.  A more strenuous test of a model's performance is whether it can generate good predictions on data that were not used in fitting the model. For election forecasting, for example, we are much more interested in forecasting the 2020 election results (which we don't know) than the 1976--2018 election results (which we know).  The 2020 predictions are an example of *out-of-sample* predictions.
+
+While we can't evaluate our models' performance on the 2020 elections (yet!), we can take a look at the process by fitting our logistic, classification tree, and random forest models on the data we have pre-2018 and then evaluating their accuracy on the 2018 election results.  Let's start by creating tibbles of our pre-2018 and 2018 data:
+
+```{r}
+house_pre_2018 <- house_ch13 %>% filter(year != 2018)
+house_2018 <- house_ch13 %>% filter(year == 2018)
+```
+
+Next, we'll fit the models on the pre-2018 data:
+
+```{r, warning = FALSE}
+house_logistic_pre <- fit(logistic_mod,
+                           factor(dem_win) ~ state * year,
+                           data = house_pre_2018)
+
+house_tree_pre <- fit(tree_mod,
+                       factor(dem_win) ~ state + year,
+                       data = house_pre_2018)
+
+house_forest_pre <- fit(forest_mod,
+                         factor(dem_win) ~ state + year,
+                         data = house_pre_2018)
+```
+
+We'll then generate predictions using `new_data = house_2018`:
+
+```{r}
+house_2018_preds <- house_2018 %>%
+  mutate(logistic = predict(house_logistic_pre, new_data = house_2018) %>% 
+           pull(.pred_class),
+         tree = predict(house_tree_pre, new_data = house_2018)  %>% 
+           pull(.pred_class),
+         forest = predict(house_forest_pre, new_data = house_2018)  %>% 
+           pull(.pred_class))
+
+```
+
+Finally, let's take a look at the accuracy of the three models:
+
+```{r}
+tibble(logistic = mean(house_2018_preds$logistic == house_2018_preds$dem_win),
+       tree = mean(house_2018_preds$tree == house_2018_preds$dem_win),
+       forest = mean(house_2018_preds$forest == house_2018_preds$dem_win))
+```
+
+Here we see that when fitting the models on pre-2018 data and testing them on 2018 data, the random forest specification performs the best and the classification tree the worse, with the logistic regression in-between.
