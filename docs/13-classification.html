@@ -24,7 +24,7 @@
 <meta name="author" content="David Kane" />
 
 
-<meta name="date" content="2020-03-21" />
+<meta name="date" content="2020-03-23" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -522,7 +522,11 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li class="chapter" data-level="13.3.1" data-path="13-classification.html"><a href="13-classification.html#what-are-random-forests"><i class="fa fa-check"></i><b>13.3.1</b> What are random forests?</a></li>
 <li class="chapter" data-level="13.3.2" data-path="13-classification.html"><a href="13-classification.html#fitting-random-forests"><i class="fa fa-check"></i><b>13.3.2</b> Fitting random forests</a></li>
 </ul></li>
-<li class="chapter" data-level="13.4" data-path="13-classification.html"><a href="13-classification.html#comparing-the-three-approaches"><i class="fa fa-check"></i><b>13.4</b> Comparing the three approaches</a></li>
+<li class="chapter" data-level="13.4" data-path="13-classification.html"><a href="13-classification.html#comparing-the-three-approaches"><i class="fa fa-check"></i><b>13.4</b> Comparing the three approaches</a><ul>
+<li class="chapter" data-level="13.4.1" data-path="13-classification.html"><a href="13-classification.html#is-accuracy-the-right-measure"><i class="fa fa-check"></i><b>13.4.1</b> Is accuracy the right measure?</a></li>
+<li class="chapter" data-level="13.4.2" data-path="13-classification.html"><a href="13-classification.html#modeling-for-prediction-vs.-explanation"><i class="fa fa-check"></i><b>13.4.2</b> Modeling for prediction vs. explanation</a></li>
+<li class="chapter" data-level="13.4.3" data-path="13-classification.html"><a href="13-classification.html#out-of-sample-predictions"><i class="fa fa-check"></i><b>13.4.3</b> Out-of-sample predictions</a></li>
+</ul></li>
 </ul></li>
 <li class="chapter" data-level="14" data-path="14-machine-learning.html"><a href="14-machine-learning.html"><i class="fa fa-check"></i><b>14</b> Machine Learning</a><ul>
 <li class="chapter" data-level="14.1" data-path="14-machine-learning.html"><a href="14-machine-learning.html#notation"><i class="fa fa-check"></i><b>14.1</b> Notation</a></li>
@@ -2725,7 +2729,7 @@ R_1(j,s) = \{\mathbf{x} \mid x_j &lt; s\} \mbox{  and  } R_2(j,s) = \{\mathbf{x}
 <div class="sourceCode" id="cb906"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb906-1"><a href="13-classification.html#cb906-1"></a>house_region_tree</span></code></pre></div>
 <pre><code>parsnip model object
 
-Fit time:  29ms 
+Fit time:  31ms 
 n= 9557 
 
 node), split, n, loss, yval, (yprob)
@@ -2950,7 +2954,7 @@ train() rather than tidymodels here. -->
 <span id="cb927-9"><a href="13-classification.html#cb927-9"></a>house_forest</span></code></pre></div>
 <pre><code>parsnip model object
 
-Fit time:  19.6s 
+Fit time:  21s 
 
 Call:
  randomForest(x = as.data.frame(x), y = y) 
@@ -2982,47 +2986,309 @@ Confusion matrix:
 </div>
 <div id="comparing-the-three-approaches" class="section level2">
 <h2><span class="header-section-number">13.4</span> Comparing the three approaches</h2>
+<p>We’ve explored three ways to model binary responses in this chapter. Which one should you use?</p>
+<p>This isn’t as straightforward a question as it may seem. First, we need some measure of which model is “better.” The most obvious way to compare models for binary data is simply to look at the predicted outcomes from the model and compare those predicted outcomes to the actual outcomes. The percentage of outcomes correctly classified by the model is called the model’s <em>accuracy</em>.</p>
+<p>Let’s compare the accuracy of the following models in predicting Democratic victories in House elections:</p>
+<ul>
+<li>Predicting a Democratic win (the modal outcome in our data) for every observation</li>
+<li>A logistic regression predicting <code>dem_win</code> with <code>state</code>, <code>year</code>, and the interaction of <code>state</code> and <code>year</code></li>
+<li>A linear regression with the same predictors as the logistic regression</li>
+<li>A classification tree using <code>state</code> and <code>year</code></li>
+<li>A random forest using <code>state</code> and <code>year</code></li>
+</ul>
+<p>Those last two models we already have saved as <code>state_year_tree</code> and <code>house_forest</code> respectively. We’ll create the logistic and linear regressions and save them as <code>house_logistic</code> and <code>house_linear</code>:</p>
 <div class="sourceCode" id="cb930"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb930-1"><a href="13-classification.html#cb930-1"></a>house_logistic &lt;-<span class="st"> </span><span class="kw">fit</span>(logistic_mod,</span>
 <span id="cb930-2"><a href="13-classification.html#cb930-2"></a>                      <span class="kw">factor</span>(dem_win) <span class="op">~</span><span class="st"> </span>state <span class="op">*</span><span class="st"> </span>year,</span>
 <span id="cb930-3"><a href="13-classification.html#cb930-3"></a>                      <span class="dt">data =</span> house_ch13)</span>
 <span id="cb930-4"><a href="13-classification.html#cb930-4"></a></span>
-<span id="cb930-5"><a href="13-classification.html#cb930-5"></a>logistic_preds &lt;-<span class="st"> </span><span class="kw">predict</span>(house_logistic, <span class="dt">new_data =</span> house_ch13)</span>
-<span id="cb930-6"><a href="13-classification.html#cb930-6"></a>tree_preds &lt;-<span class="st"> </span><span class="kw">predict</span>(state_year_tree, <span class="dt">new_data =</span> house_ch13)</span>
-<span id="cb930-7"><a href="13-classification.html#cb930-7"></a>forest_preds &lt;-<span class="st"> </span><span class="kw">predict</span>(house_forest, <span class="dt">new_data =</span> house_ch13)</span>
-<span id="cb930-8"><a href="13-classification.html#cb930-8"></a></span>
-<span id="cb930-9"><a href="13-classification.html#cb930-9"></a><span class="kw">mean</span>(logistic_preds<span class="op">$</span>.pred_class <span class="op">==</span><span class="st"> </span>house_ch13<span class="op">$</span>dem_win)</span></code></pre></div>
-<pre><code>[1] 0.65</code></pre>
-<div class="sourceCode" id="cb932"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb932-1"><a href="13-classification.html#cb932-1"></a><span class="kw">mean</span>(tree_preds<span class="op">$</span>.pred_class <span class="op">==</span><span class="st"> </span>house_ch13<span class="op">$</span>dem_win)</span></code></pre></div>
-<pre><code>[1] 0.642</code></pre>
-<div class="sourceCode" id="cb934"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb934-1"><a href="13-classification.html#cb934-1"></a><span class="kw">mean</span>(forest_preds<span class="op">$</span>.pred_class <span class="op">==</span><span class="st"> </span>house_ch13<span class="op">$</span>dem_win)</span></code></pre></div>
-<pre><code>[1] 0.645</code></pre>
-<div class="sourceCode" id="cb936"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb936-1"><a href="13-classification.html#cb936-1"></a><span class="co"># How well did they predict 2018?</span></span>
-<span id="cb936-2"><a href="13-classification.html#cb936-2"></a></span>
-<span id="cb936-3"><a href="13-classification.html#cb936-3"></a>house_logistic_<span class="dv">2016</span> &lt;-<span class="st"> </span><span class="kw">fit</span>(logistic_mod,</span>
-<span id="cb936-4"><a href="13-classification.html#cb936-4"></a>                           <span class="kw">factor</span>(dem_win) <span class="op">~</span><span class="st"> </span>state <span class="op">*</span><span class="st"> </span>year,</span>
-<span id="cb936-5"><a href="13-classification.html#cb936-5"></a>                           <span class="dt">data =</span> house_ch13 <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">filter</span>(year <span class="op">!=</span><span class="st"> </span><span class="dv">2018</span>))</span>
-<span id="cb936-6"><a href="13-classification.html#cb936-6"></a></span>
-<span id="cb936-7"><a href="13-classification.html#cb936-7"></a>house_tree_<span class="dv">2016</span> &lt;-<span class="st"> </span><span class="kw">fit</span>(tree_mod,</span>
-<span id="cb936-8"><a href="13-classification.html#cb936-8"></a>                       <span class="kw">factor</span>(dem_win) <span class="op">~</span><span class="st"> </span>state <span class="op">+</span><span class="st"> </span>year,</span>
-<span id="cb936-9"><a href="13-classification.html#cb936-9"></a>                       <span class="dt">data =</span> house_ch13 <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">filter</span>(year <span class="op">!=</span><span class="st"> </span><span class="dv">2018</span>))</span>
-<span id="cb936-10"><a href="13-classification.html#cb936-10"></a></span>
-<span id="cb936-11"><a href="13-classification.html#cb936-11"></a>house_forest_<span class="dv">2016</span> &lt;-<span class="st"> </span><span class="kw">fit</span>(forest_mod,</span>
-<span id="cb936-12"><a href="13-classification.html#cb936-12"></a>                         <span class="kw">factor</span>(dem_win) <span class="op">~</span><span class="st"> </span>state <span class="op">+</span><span class="st"> </span>year,</span>
-<span id="cb936-13"><a href="13-classification.html#cb936-13"></a>                         <span class="dt">data =</span> house_ch13 <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">filter</span>(year <span class="op">!=</span><span class="st"> </span><span class="dv">2018</span>))</span>
-<span id="cb936-14"><a href="13-classification.html#cb936-14"></a></span>
-<span id="cb936-15"><a href="13-classification.html#cb936-15"></a>house_<span class="dv">2018</span> &lt;-<span class="st"> </span>house_ch13 <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">filter</span>(year <span class="op">==</span><span class="st"> </span><span class="dv">2018</span>)</span>
-<span id="cb936-16"><a href="13-classification.html#cb936-16"></a></span>
-<span id="cb936-17"><a href="13-classification.html#cb936-17"></a>logistic_preds &lt;-<span class="st"> </span><span class="kw">predict</span>(house_logistic_<span class="dv">2016</span>, <span class="dt">new_data =</span> house_<span class="dv">2018</span>)</span>
-<span id="cb936-18"><a href="13-classification.html#cb936-18"></a>tree_preds &lt;-<span class="st"> </span><span class="kw">predict</span>(house_tree_<span class="dv">2016</span>, <span class="dt">new_data =</span> house_<span class="dv">2018</span>)</span>
-<span id="cb936-19"><a href="13-classification.html#cb936-19"></a>forest_preds &lt;-<span class="st"> </span><span class="kw">predict</span>(house_forest_<span class="dv">2016</span>, <span class="dt">new_data =</span> house_<span class="dv">2018</span>)</span>
-<span id="cb936-20"><a href="13-classification.html#cb936-20"></a></span>
-<span id="cb936-21"><a href="13-classification.html#cb936-21"></a><span class="kw">mean</span>(logistic_preds<span class="op">$</span>.pred_class <span class="op">==</span><span class="st"> </span>house_<span class="dv">2018</span><span class="op">$</span>dem_win)</span></code></pre></div>
-<pre><code>[1] 0.697</code></pre>
-<div class="sourceCode" id="cb938"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb938-1"><a href="13-classification.html#cb938-1"></a><span class="kw">mean</span>(tree_preds<span class="op">$</span>.pred_class <span class="op">==</span><span class="st"> </span>house_<span class="dv">2018</span><span class="op">$</span>dem_win)</span></code></pre></div>
-<pre><code>[1] 0.655</code></pre>
-<div class="sourceCode" id="cb940"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb940-1"><a href="13-classification.html#cb940-1"></a><span class="kw">mean</span>(forest_preds<span class="op">$</span>.pred_class <span class="op">==</span><span class="st"> </span>house_<span class="dv">2018</span><span class="op">$</span>dem_win)</span></code></pre></div>
-<pre><code>[1] 0.722</code></pre>
+<span id="cb930-5"><a href="13-classification.html#cb930-5"></a>house_linear &lt;-<span class="st"> </span><span class="kw">fit</span>(<span class="kw">linear_reg</span>(),</span>
+<span id="cb930-6"><a href="13-classification.html#cb930-6"></a>                    dem_win <span class="op">~</span><span class="st"> </span>state <span class="op">*</span><span class="st"> </span>year,</span>
+<span id="cb930-7"><a href="13-classification.html#cb930-7"></a>                    <span class="dt">data =</span> house_ch13)</span></code></pre></div>
+<p>Note that fitting a linear regression is as simple as using the model specification <code>linear_reg()</code>, which by default uses <code>lm()</code> as its engine.</p>
+<p>How can we extract the predictions for each of these models? <strong>tidymodels</strong> provides a unified function, <code>predict()</code>. The first argument of the function is the fitted model object. It also requires the argument <code>new_data</code>, which is the dataset on which you will be making your predictions. Here, we are making predictions on our original data (<code>house_ch13</code>). For example:</p>
+<div class="sourceCode" id="cb931"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb931-1"><a href="13-classification.html#cb931-1"></a><span class="kw">predict</span>(house_logistic, <span class="dt">new_data =</span> house_ch13)</span></code></pre></div>
+<pre><code># A tibble: 9,557 x 1
+   .pred_class
+   &lt;fct&gt;      
+ 1 0          
+ 2 1          
+ 3 1          
+ 4 1          
+ 5 1          
+ 6 1          
+ 7 1          
+ 8 1          
+ 9 1          
+10 1          
+# … with 9,547 more rows</code></pre>
+<p>The result is a tibble with the predicted outcomes stored in the column <code>.pred_class</code>.</p>
+<p>For the linear model, the result is going to be a number, not a class:</p>
+<div class="sourceCode" id="cb933"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb933-1"><a href="13-classification.html#cb933-1"></a><span class="kw">predict</span>(house_linear, <span class="dt">new_data =</span> house_ch13)</span></code></pre></div>
+<pre><code># A tibble: 9,557 x 1
+         .pred
+         &lt;dbl&gt;
+ 1 1.00222e-11
+ 2 7.34613e- 1
+ 3 7.34613e- 1
+ 4 7.34613e- 1
+ 5 7.34613e- 1
+ 6 7.34613e- 1
+ 7 7.34613e- 1
+ 8 7.34613e- 1
+ 9 7.82609e- 1
+10 7.82609e- 1
+# … with 9,547 more rows</code></pre>
+<p>We can interpret this as a predicted probability and classify responses <span class="math inline">\(&gt; 0.5\)</span> as <span class="math inline">\(1\)</span> and <span class="math inline">\(&lt; 0.5\)</span> as <span class="math inline">\(0\)</span>:</p>
+<div class="sourceCode" id="cb935"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb935-1"><a href="13-classification.html#cb935-1"></a><span class="dv">1</span> <span class="op">*</span><span class="st"> </span>(<span class="kw">predict</span>(house_linear, <span class="dt">new_data =</span> house_ch13) <span class="op">&gt;</span><span class="st"> </span><span class="fl">0.5</span>)</span></code></pre></div>
+<p>Let’s put it all together in a tibble called <code>house_preds</code>:</p>
+<div class="sourceCode" id="cb936"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb936-1"><a href="13-classification.html#cb936-1"></a>house_preds &lt;-<span class="st"> </span>house_ch13 <span class="op">%&gt;%</span></span>
+<span id="cb936-2"><a href="13-classification.html#cb936-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">modal =</span> <span class="dv">1</span>,</span>
+<span id="cb936-3"><a href="13-classification.html#cb936-3"></a>         <span class="dt">logistic =</span> <span class="kw">predict</span>(house_logistic, <span class="dt">new_data =</span> house_ch13) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb936-4"><a href="13-classification.html#cb936-4"></a><span class="st">           </span><span class="kw">pull</span>(.pred_class),</span>
+<span id="cb936-5"><a href="13-classification.html#cb936-5"></a>         <span class="dt">linear =</span> <span class="dv">1</span> <span class="op">*</span><span class="st"> </span>(<span class="kw">predict</span>(house_linear, <span class="dt">new_data =</span> house_ch13) <span class="op">&gt;</span><span class="st"> </span><span class="fl">0.5</span>),</span>
+<span id="cb936-6"><a href="13-classification.html#cb936-6"></a>         <span class="dt">tree =</span> <span class="kw">predict</span>(state_year_tree, <span class="dt">new_data =</span> house_ch13) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb936-7"><a href="13-classification.html#cb936-7"></a><span class="st">           </span><span class="kw">pull</span>(.pred_class),</span>
+<span id="cb936-8"><a href="13-classification.html#cb936-8"></a>         <span class="dt">forest =</span> <span class="kw">predict</span>(house_forest, <span class="dt">new_data =</span> house_ch13) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb936-9"><a href="13-classification.html#cb936-9"></a><span class="st">           </span><span class="kw">pull</span>(.pred_class))</span></code></pre></div>
+<p>We’ll start by looking at five random rows of <code>house_preds</code>.</p>
+<div class="sourceCode" id="cb937"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb937-1"><a href="13-classification.html#cb937-1"></a>house_preds <span class="op">%&gt;%</span></span>
+<span id="cb937-2"><a href="13-classification.html#cb937-2"></a><span class="st">  </span><span class="kw">select</span>(<span class="op">-</span>region, <span class="op">-</span>state) <span class="op">%&gt;%</span></span>
+<span id="cb937-3"><a href="13-classification.html#cb937-3"></a><span class="st">  </span><span class="kw">sample_n</span>(<span class="dv">5</span>)</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th style="text-align:left;">
+district
+</th>
+<th style="text-align:right;">
+year
+</th>
+<th style="text-align:right;">
+dem_win
+</th>
+<th style="text-align:right;">
+modal
+</th>
+<th style="text-align:left;">
+logistic
+</th>
+<th style="text-align:right;">
+linear
+</th>
+<th style="text-align:left;">
+tree
+</th>
+<th style="text-align:left;">
+forest
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+NC-12
+</td>
+<td style="text-align:right;">
+2014
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:left;">
+0
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:left;">
+0
+</td>
+<td style="text-align:left;">
+0
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+PA-17
+</td>
+<td style="text-align:right;">
+2002
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:left;">
+0
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:left;">
+0
+</td>
+<td style="text-align:left;">
+1
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+SC-02
+</td>
+<td style="text-align:right;">
+2010
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:left;">
+0
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:left;">
+0
+</td>
+<td style="text-align:left;">
+0
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+NY-29
+</td>
+<td style="text-align:right;">
+1984
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:left;">
+1
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:left;">
+1
+</td>
+<td style="text-align:left;">
+1
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+PA-15
+</td>
+<td style="text-align:right;">
+1990
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:left;">
+1
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:left;">
+1
+</td>
+<td style="text-align:left;">
+1
+</td>
+</tr>
+</tbody>
+</table>
+<p>In these five districts, the Democrats won two and therefore our <code>modal</code> prediction, which always predicts a Democratic win, classifies 40% of the observations correctly. For these districts, the logistic, linear, and classification tree models all classify SC-02 in 2010 correctly as a Democratic loss and misclassify the remaining districts, for an accuracy of 20%. Finally, the random forest model classifies SC-02 in 2010 correctly as a Democratic loss and also correctly classifies PA-17 in 2002 as a Democratic win, for an accuracy of 40%.</p>
+<p>Now let’s calculate the overall accuracy of our five models. We simply need to calculate the proportion of observations where the predicted value equals <code>dem_win</code>:</p>
+<div class="sourceCode" id="cb938"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb938-1"><a href="13-classification.html#cb938-1"></a><span class="kw">tibble</span>(<span class="dt">modal =</span> <span class="kw">mean</span>(house_preds<span class="op">$</span>modal <span class="op">==</span><span class="st"> </span>house_preds<span class="op">$</span>dem_win),</span>
+<span id="cb938-2"><a href="13-classification.html#cb938-2"></a>       <span class="dt">logistic =</span> <span class="kw">mean</span>(house_preds<span class="op">$</span>logistic <span class="op">==</span><span class="st"> </span>house_preds<span class="op">$</span>dem_win),</span>
+<span id="cb938-3"><a href="13-classification.html#cb938-3"></a>       <span class="dt">linear =</span> <span class="kw">mean</span>(house_preds<span class="op">$</span>linear <span class="op">==</span><span class="st"> </span>house_preds<span class="op">$</span>dem_win),</span>
+<span id="cb938-4"><a href="13-classification.html#cb938-4"></a>       <span class="dt">tree =</span> <span class="kw">mean</span>(house_preds<span class="op">$</span>tree <span class="op">==</span><span class="st"> </span>house_preds<span class="op">$</span>dem_win),</span>
+<span id="cb938-5"><a href="13-classification.html#cb938-5"></a>       <span class="dt">forest =</span> <span class="kw">mean</span>(house_preds<span class="op">$</span>forest <span class="op">==</span><span class="st"> </span>house_preds<span class="op">$</span>dem_win))</span></code></pre></div>
+<pre><code># A tibble: 1 x 5
+     modal logistic   linear     tree   forest
+     &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;
+1 0.536152 0.649681 0.649785 0.642356 0.645391</code></pre>
+<p>Here we see that all our models perform better than simply picking the modal outcome, but there isn’t much variation in accuracy of the four more sophisticated models.</p>
+<p>However, when selecting a model, we may care about more than just accuracy. There are three concerns in particular that we’ll address here:</p>
+<ol style="list-style-type: decimal">
+<li>Is accuracy the right measure?</li>
+<li>Modeling for prediction vs. explanation</li>
+<li>Out-of-sample predictions</li>
+</ol>
+<div id="is-accuracy-the-right-measure" class="section level3">
+<h3><span class="header-section-number">13.4.1</span> Is accuracy the right measure?</h3>
+<p>We’ve been looking at the <em>accuracy</em> of each model. However, we can come up with more granular measures. Every prediction can be classified into one of the following four categories:</p>
+<ul>
+<li>True positive (classified as a <code>1</code> and actually a <code>1</code>)</li>
+<li>True negative (classified as a <code>0</code> and actually a <code>0</code>)</li>
+<li>False positive (classified as a <code>1</code> but actually a <code>0</code>)</li>
+<li>False negative (classified as a <code>0</code> but actually a <code>1</code>)</li>
+</ul>
+<p>Accuracy thus is <span class="math inline">\((\text{True positives } + \text{ True negatives})/n\)</span>. When using accuracy as a metric, therefore, we are implicitly assuming that false positives and false negatives are equally bad. In the context of election forecasting, that is probably right, since we probably only care about how many seats we accurately predict.</p>
+<p>However, there are other scenarios where a false negative and a false positive can have very different costs associated with them, such as when evaluating medical interventions. (A false negative may mean that a person who actually has a disease receives no treatment, whereas a false positive may mean that a healthy person receives a medical intervention; which is worse depends on the disease and the side effects of the treatment.) Therefore, there are many metrics beyond accuracy that may be relevant for different applications, such as <em>sensitivity</em> (the proportion of actual <span class="math inline">\(1\)</span>s classified as <span class="math inline">\(1\)</span>) and <em>specificity</em> (the proportion of actual <span class="math inline">\(0\)</span>s classified as <span class="math inline">\(0\)</span>).</p>
+</div>
+<div id="modeling-for-prediction-vs.-explanation" class="section level3">
+<h3><span class="header-section-number">13.4.2</span> Modeling for prediction vs. explanation</h3>
+<p>All things being equal, we would prefer a model with more predictive power to one with less. However, we have emphasized that models may serve different purposes. Some focus on attempting to predict an outcome. Others focus on learning about a <em>causal effect</em>. When one is interested in identifying a causal effect, we may not always prefer the model that has the greatest predictive power.</p>
+<p>Why not? One concern is <em>interpretability</em>. We want to have a sense of the magnitude of the causal effect and our uncertainty about that magnitude; this is much easier with models such as linear and logistic regressions that produce coefficients.</p>
+<p>Another concern is <em>post-treatment bias</em>. For example, let’s say that we were interested in the effect of a hypertension drug on all-cause mortality. We cannot use blood pressure measurements taken after the drug was administered as a predictor if we are interested in the effects of the drug on mortality, even though such a variable will surely improve our predictions, since that variable is affected by our treatment.</p>
+</div>
+<div id="out-of-sample-predictions" class="section level3">
+<h3><span class="header-section-number">13.4.3</span> Out-of-sample predictions</h3>
+<p>We saw that our models predicted 64%-65% of the House races from 1976–2018 accurately using <code>state</code> and <code>year</code> as predictors. However, these models were fitted on the same data that we used to evaluate their predictions. These are called <em>in-sample</em> predictions. A more strenuous test of a model’s performance is whether it can generate good predictions on data that were not used in fitting the model. For election forecasting, for example, we are much more interested in forecasting the 2020 election results (which we don’t know) than the 1976–2018 election results (which we know). The 2020 predictions are an example of <em>out-of-sample</em> predictions.</p>
+<p>While we can’t evaluate our models’ performance on the 2020 elections (yet!), we can take a look at the process by fitting our logistic, classification tree, and random forest models on the data we have pre-2018 and then evaluating their accuracy on the 2018 election results. Let’s start by creating tibbles of our pre-2018 and 2018 data:</p>
+<div class="sourceCode" id="cb940"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb940-1"><a href="13-classification.html#cb940-1"></a>house_pre_<span class="dv">2018</span> &lt;-<span class="st"> </span>house_ch13 <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">filter</span>(year <span class="op">!=</span><span class="st"> </span><span class="dv">2018</span>)</span>
+<span id="cb940-2"><a href="13-classification.html#cb940-2"></a>house_<span class="dv">2018</span> &lt;-<span class="st"> </span>house_ch13 <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">filter</span>(year <span class="op">==</span><span class="st"> </span><span class="dv">2018</span>)</span></code></pre></div>
+<p>Next, we’ll fit the models on the pre-2018 data:</p>
+<div class="sourceCode" id="cb941"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb941-1"><a href="13-classification.html#cb941-1"></a>house_logistic_pre &lt;-<span class="st"> </span><span class="kw">fit</span>(logistic_mod,</span>
+<span id="cb941-2"><a href="13-classification.html#cb941-2"></a>                           <span class="kw">factor</span>(dem_win) <span class="op">~</span><span class="st"> </span>state <span class="op">*</span><span class="st"> </span>year,</span>
+<span id="cb941-3"><a href="13-classification.html#cb941-3"></a>                           <span class="dt">data =</span> house_pre_<span class="dv">2018</span>)</span>
+<span id="cb941-4"><a href="13-classification.html#cb941-4"></a></span>
+<span id="cb941-5"><a href="13-classification.html#cb941-5"></a>house_tree_pre &lt;-<span class="st"> </span><span class="kw">fit</span>(tree_mod,</span>
+<span id="cb941-6"><a href="13-classification.html#cb941-6"></a>                       <span class="kw">factor</span>(dem_win) <span class="op">~</span><span class="st"> </span>state <span class="op">+</span><span class="st"> </span>year,</span>
+<span id="cb941-7"><a href="13-classification.html#cb941-7"></a>                       <span class="dt">data =</span> house_pre_<span class="dv">2018</span>)</span>
+<span id="cb941-8"><a href="13-classification.html#cb941-8"></a></span>
+<span id="cb941-9"><a href="13-classification.html#cb941-9"></a>house_forest_pre &lt;-<span class="st"> </span><span class="kw">fit</span>(forest_mod,</span>
+<span id="cb941-10"><a href="13-classification.html#cb941-10"></a>                         <span class="kw">factor</span>(dem_win) <span class="op">~</span><span class="st"> </span>state <span class="op">+</span><span class="st"> </span>year,</span>
+<span id="cb941-11"><a href="13-classification.html#cb941-11"></a>                         <span class="dt">data =</span> house_pre_<span class="dv">2018</span>)</span></code></pre></div>
+<p>We’ll then generate predictions using <code>new_data = house_2018</code>:</p>
+<div class="sourceCode" id="cb942"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb942-1"><a href="13-classification.html#cb942-1"></a>house_<span class="dv">2018</span>_preds &lt;-<span class="st"> </span>house_<span class="dv">2018</span> <span class="op">%&gt;%</span></span>
+<span id="cb942-2"><a href="13-classification.html#cb942-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">logistic =</span> <span class="kw">predict</span>(house_logistic_pre, <span class="dt">new_data =</span> house_<span class="dv">2018</span>) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb942-3"><a href="13-classification.html#cb942-3"></a><span class="st">           </span><span class="kw">pull</span>(.pred_class),</span>
+<span id="cb942-4"><a href="13-classification.html#cb942-4"></a>         <span class="dt">tree =</span> <span class="kw">predict</span>(house_tree_pre, <span class="dt">new_data =</span> house_<span class="dv">2018</span>)  <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb942-5"><a href="13-classification.html#cb942-5"></a><span class="st">           </span><span class="kw">pull</span>(.pred_class),</span>
+<span id="cb942-6"><a href="13-classification.html#cb942-6"></a>         <span class="dt">forest =</span> <span class="kw">predict</span>(house_forest_pre, <span class="dt">new_data =</span> house_<span class="dv">2018</span>)  <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb942-7"><a href="13-classification.html#cb942-7"></a><span class="st">           </span><span class="kw">pull</span>(.pred_class))</span></code></pre></div>
+<p>Finally, let’s take a look at the accuracy of the three models:</p>
+<div class="sourceCode" id="cb943"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb943-1"><a href="13-classification.html#cb943-1"></a><span class="kw">tibble</span>(<span class="dt">logistic =</span> <span class="kw">mean</span>(house_<span class="dv">2018</span>_preds<span class="op">$</span>logistic <span class="op">==</span><span class="st"> </span>house_<span class="dv">2018</span>_preds<span class="op">$</span>dem_win),</span>
+<span id="cb943-2"><a href="13-classification.html#cb943-2"></a>       <span class="dt">tree =</span> <span class="kw">mean</span>(house_<span class="dv">2018</span>_preds<span class="op">$</span>tree <span class="op">==</span><span class="st"> </span>house_<span class="dv">2018</span>_preds<span class="op">$</span>dem_win),</span>
+<span id="cb943-3"><a href="13-classification.html#cb943-3"></a>       <span class="dt">forest =</span> <span class="kw">mean</span>(house_<span class="dv">2018</span>_preds<span class="op">$</span>forest <span class="op">==</span><span class="st"> </span>house_<span class="dv">2018</span>_preds<span class="op">$</span>dem_win))</span></code></pre></div>
+<pre><code># A tibble: 1 x 3
+  logistic     tree   forest
+     &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;
+1 0.696552 0.655172 0.721839</code></pre>
+<p>Here we see that when fitting the models on pre-2018 data and testing them on 2018 data, the random forest specification performs the best and the classification tree the worse, with the logistic regression in-between.</p>
 
+</div>
 </div>
 </div>
 <div class="footnotes">
