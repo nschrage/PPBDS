@@ -194,19 +194,13 @@ This is completely incomprehensible!  When dealing with binary data, it is more 
 1. Calculate the *empirical logit* for each group, using the logit function: $log\left(\frac{p}{1 - p}\right)$
 1. Plot the results.
 
-First, since we will use it frequently, let's define a function `logit()` that performs the logit transformation:
-
-```{r}
-logit <- function(p) log(p / (1 - p))
-```
-
-Next, let's look at the empirical logit plot:
+The logit function exists in base R as `qlogis()`. Let's look at the empirical logit plot:
 
 ```{r}
 house_ch13 %>%
   group_by(year) %>%
   summarize(perc_dem_win = mean(dem_win),
-            emplogit = logit(perc_dem_win)) %>%
+            emplogit = qlogis(perc_dem_win)) %>%
   ggplot(aes(x = year, y = emplogit)) +
   geom_point() +
   geom_smooth(method = "lm") +
@@ -223,7 +217,7 @@ We can follow the same steps to look at this relationship within Census regions 
 house_ch13 %>%
   group_by(region, year) %>%
   summarize(perc_dem_win = mean(dem_win),
-            emplogit = logit(perc_dem_win)) %>%
+            emplogit = qlogis(perc_dem_win)) %>%
   ggplot(aes(x = year, y = emplogit)) +
   geom_point() +
   geom_smooth(method = "lm") +
@@ -294,49 +288,6 @@ and the log odds when $X = \textrm{South}$ is:
 \[
 \log\left(\frac{p_{South}}{1-p_{South}}\right)=\beta_0+\beta_{1,South} = -0.076 + 0.056 = -0.020.
 \]
-
-We can see that $\beta_{1,South}$ is the difference between the log odds of success when $X = \textrm{South}$ versus $X = \textrm{Midwest}$.  Using rules of logs:
-\[
-\begin{aligned}
-\beta_{1,South} &= (\beta_0 + \beta_{1,South}) - \beta_0 \\ &=
-\log\left(\frac{p_{South}}{1-p_{South}}\right) - \log\left(\frac{p_{Midwest}}{1-p_{Midwest}}\right) \\ &=
-\log\left(\frac{p_{South}/(1-p_{South})}{p_{Midwest}/{(1-p_{Midwest})}}\right) \\ &=
-\log\left(\frac{\textrm{Odds}(South)}{\textrm{Odds}(Midwest)}\right)
-\end{aligned}
-\]
-
-Since $e^{\log(x)} = x$, $e^{\beta_{1,South}}$ is the ratio of the odds of success when $X = \textrm{South}$ compared to $X = \textrm{Midwest}$. In general, __exponentiated coefficients in a logistic regression are odds ratios__. A general interpretation of an odds ratio is the odds of success for group A compared to the odds of success for group B---how many times greater the odds of success are in group A compared to group B.
-
-Note that the logistic regression model can also be re-written in a __probability form__:
-
-\[
-p_X=\frac{e^{\beta_0+\beta_1X}}{1+e^{\beta_0+\beta_1X}}
-\]
-
-Now that we understand that expontentiated coefficients in logistic regressions are odds ratios, we can use the argument `exponentiate = TRUE` in the `tidy()` function to exponentiate the coefficients for us:
-
-```{r, eval=FALSE}
-house_region_model %>%
-  tidy(conf.int = TRUE,
-       exponentiate = TRUE) %>%
-  select(term, estimate, conf.low, conf.high)
-```
-```{r, echo=FALSE}
-tidy(house_region_model,
-     conf.int = TRUE,
-     exponentiate = TRUE) %>%
-  select(term, estimate, conf.low, conf.high) %>%
-  knitr::kable(
-    digits = 3,
-    caption = "Logistic regression table, exponentiated coefficients",
-    booktabs = TRUE,
-    linesep = ""
-  ) %>%
-  kable_styling(font_size = ifelse(knitr:::is_latex_output(), 10, 16),
-                latex_options = c("hold_position"))
-```
-
-This allows us to see that the odds of a Democratic victory in the Northeast are nearly twice as high as the odds of a Democratic victory in the Midwest, the reference category.  The odds of a Democratic victory in the West are about 1.4 times higher than the odds of a Democratic victory in the Midwest.  The odds of a Democratic victory in the South are similar to the odds of a Democratic victory in the Midwest.
 
 ### Observed/fitted values and residuals
 
@@ -450,13 +401,12 @@ Now, the `.resid` value is the difference between the actual outcome (`dem_win`)
 We'll now predict `dem_win` with a single numerical explanatory variable, `year`. 
 
 1. We first "fit" the logistic regression model using the `glm(y ~ x, family, data)` function and save it in `house_year_model`.
-1. We get the regression table by applying the `tidy()` function from the **broom** package to `house_year_model`.  We'll print the `term`, `estimate`, `conf.low`, and `conf.high` columns.  Recall that setting `exponentiate = TRUE` exponentiates the logistic regression coefficients, which can help with interpretation. 
+1. We get the regression table by applying the `tidy()` function from the **broom** package to `house_year_model`.  We'll print the `term`, `estimate`, `conf.low`, and `conf.high` columns.
 
 ```{r, eval=FALSE}
 house_year_model <- glm(dem_win ~ year, family = binomial data = house_ch13)
 house_year_model %>%
-  tidy(conf.int = TRUE,
-       exponentiate = TRUE) %>%
+  tidy(conf.int = TRUE) %>%
   select(term, estimate, conf.low, conf.high)
 ```
 ```{r, echo=FALSE}
@@ -477,9 +427,7 @@ tidy(house_year_model,
                 latex_options = c("hold_position"))
 ```
 
-How do we interpret the coefficients in this model?  Since the `year` coefficient is less than 1, that means that each additional year *reduces* the odds of a Democratic victory.  In fact, each additional year is associated with a 17% reduction in the odds of a Democratic victory.
-
-Note that the very high number for the "intercept" suggests that the odds of a Democratic victory in year 0 are arbitrarily high -- that is, the *probability* of a Democratic victory in year 0 is essentially 100%.  But of course, there was no House of Representatives in year 0 (furthermore, there is no year 0)!  This is a good lesson in making sure to know the limits of one's models: just because something makes *mathematical* sense as an output of your model, doesn't mean that it makes real-world sense for the phenomenon you are studying.
+How do we interpret the coefficients in this model?  Since the `year` coefficient is positive, that means that each additional year *reduces* the odds of a Democratic victory.
 
 While `house_region_model` and `house_year_model` both tell us something interesting, we could learn more with an *interaction model* that includes both of our predictors.
 
@@ -502,8 +450,7 @@ house_interact_model <- glm(dem_win ~ region * year, family = binomial, data = h
 ```
 ```{r, echo=FALSE}
 tidy(house_interact_model,
-     conf.int = TRUE,
-     exponentiate = TRUE) %>%
+     conf.int = TRUE) %>%
   select(term, estimate, conf.low, conf.high) %>%
   knitr::kable(
     digits = 3,
@@ -515,7 +462,7 @@ tidy(house_interact_model,
                 latex_options = c("hold_position"))
 ```
 
-Now we can see how the effect of `year` varies by `region`.  While the passage of time is associated with more Democratic victories in the Northeast and the West, which we can see from the exponentiated coefficients on `regionNortheast:year` and `regionWest:year` being greater than 1, `year` is associated with declining Democratic fortunes in the Midwest (`year`) and the South (`regionSouth:year`).
+Now we can see how the effect of `year` varies by `region`.  While the passage of time is associated with more Democratic victories in the Northeast and the West, `year` is associated with declining Democratic fortunes in the Midwest (`year`) and the South (`regionSouth:year`).
 
 Looking at predicted probabilities can also put this model in perspective.  Let's use `augment()` to generate the predictions.  Remember that `type.predict = "response"` and `type.residuals = "response"` put the fitted values and the residuals on the probability scale.
 
@@ -597,7 +544,7 @@ house_state_model <- house_ch13 %>%
   group_by(state) %>%
   nest() %>%
   mutate(mod = map(data, ~ glm(dem_win ~ year, family = binomial, data = .)),
-         reg_results = map(mod, ~ tidy(., conf.int = TRUE, exponentiate = TRUE)),
+         reg_results = map(mod, ~ tidy(., conf.int = TRUE)),
          year_coef = map_dbl(reg_results, ~ filter(., term == "year") %>% pull(estimate)),
          year_low = map_dbl(reg_results, ~ filter(., term == "year") %>% pull(conf.low)),
          year_high = map_dbl(reg_results, ~ filter(., term == "year") %>% pull(conf.high)))
@@ -605,7 +552,7 @@ house_state_model <- house_ch13 %>%
 glimpse(house_state_model)
 ```
 
-The easiest way to see the results of these models is to plot the exponentiated coefficients:
+The easiest way to see the results of these models is to plot the coefficients:
 
 ```{r}
 house_state_model %>%
@@ -616,35 +563,13 @@ house_state_model %>%
   geom_errorbar() +
   theme_minimal() +
   labs(x = "",
-       y = "Exponentiated coefficients of \"year\"",
+       y = "Coefficients of \"year\"",
        title = "Predicting Democratic victories in the U.S. House over time by state",
        subtitle = "Logistic regression coefficients for year plotted by state") +
   coord_flip()
 ```
 
 Consistent with the account we saw when looking at the effect of `year` overall, there are more states where the odds of a Democratic victory have been decreasing by year than ones where they have been increasing. 
-
-### Linear regression vs. logistic regression
-
-Here's a useful summary of the differences between linear regression and logistic regression:
-
-\[
-\underline{\textrm{Response}} \\
-\mathbf{Linear\ Regression:}\textrm{ numeric} \\
-\mathbf{Logistic\ Regression:}\textrm{ binary} \\
-\textrm{ } \\
-\underline{\textrm{Model Fitting}} \\
-\mathbf{Linear\ Regression:}\ \mu=\beta_0+\beta_1x \textrm{ using }\texttt{lm()}\\
-\mathbf{Logistic\ Regression:}\ \log\left(\frac{p}{1-p}\right)=\beta_0+\beta_1x \text{ using }\texttt{glm()}\\
-\textrm{ } \\
-\underline{\textrm{EDA}} \\
-\mathbf{Linear\ Regression:}\textrm{ plot $X$ vs. $Y$; add line} \\
-\mathbf{Logistic\ Regression:}\textrm{ find $\log(\textrm{odds})$ for several subgroups; plot vs. $X$} \\
-\textrm{ } \\
-\underline{\textrm{Interpreting Coefficients}} \\
-\mathbf{Linear\ Regression:}\ \beta_1=\textrm{ change in }\mu_y\textrm{ for unit change in $X$} \\
-\mathbf{Logistic\ Regression:}\ e^{\beta_1}=\textrm{ percent change in odds for unit change in $X$} 
-\]
 
 ### Professional models
 
@@ -838,33 +763,6 @@ house_year_tree_0$fit %>%
 ```
 
 Now there is an additional partition that classifies observations where `year` $\geq 2017$ as 1.
-
-<!-- AR: leaving this out because prune() uses cp, not cost_complexity, which seems needlessly confusing. -->
-
-<!-- Note that if we already have a tree and want to apply a higher $c_p$ value, we can use the `prune` function. We call this _pruning_ a tree because we are snipping off partitions that do not meet a `cp` criterion. We  created a tree that used `cost_complexity = 0` and saved it to `house_year_cart_0`. We can prune it like this: -->
-
-<!-- ```{r} -->
-<!-- pruned_cart <- house_year_tree_0$fit %>% -->
-<!--   prune(cp = 0.01) -->
-
-<!-- pruned_cart %>% -->
-<!--   prp_ch13() -->
-<!-- ``` -->
-
-<!-- which gives us back our original tree. -->
-
-<!-- AR: Leaving the following discussion as a comment because caret::train() is
-much, much faster than tune_grid().  As a practical matter, I'd actually use
-train() rather than tidymodels here. -->
-
-<!-- But which tree is better?  We can answer that question using the `train()` function in the **caret** package. The basic idea is that we want to test out various values of `cp` and select the model that performs best.  The `train()` function decides which model is best by calculating the accuracy on 25 bootstrapped samples of our data. -->
-
-<!-- In order to tell `train` how to behave, we need to give it some arguments: -->
-
-<!-- 1. The formula for our model.  (Here, `factor(dem_win) ~ year`.) -->
-<!-- 1. The `method` we want to use. (Here, `method = "rpart"`.) -->
-<!-- 1. The values of `cp` we want to test, using the argument `tuneGrid`. To test values from 0.0 to 0.1, going up by increments of 0.005, we would use the argument `tuneGrid = data.frame(cp = seq(0.0, 0.1, by = 0.005))`. -->
-<!-- 1. Our data (`data = house_ch13`). -->
 
 But which tree is better?  We can answer that question using the `tune_grid()` function in the **tune** package, included as part of **tidymodels**. The basic idea is that we want to test out various values of $c_p$. and select the model that performs best.  We will provide code on how to decide which model is best by calculating the accuracy on 25 bootstrapped samples of our data.  (We wouldn't want to calculate the accuracy on our full data, because a lower value of $c_p$ will always perform best on any particular dataset, but the resulting model may not perform well on out-of-sample observations; this is an example of a general phenomenon called *overfitting*.)
 
