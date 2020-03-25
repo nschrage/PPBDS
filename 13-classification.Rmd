@@ -77,7 +77,7 @@ ggplot(dat, aes(x = x)) +
   theme_minimal()
 ```
 
-The mathematical function $log\left(\frac{p}{1 - p}\right)$ is called the *logit function* and it transforms variables from the space $(0, 1)$ (like probabilities) to $(-\infty, \infty)$.  The inverse of that function, the *logistic function*, is $\left(\frac{e^x}{e^x + 1}\right)$ and transforms variables from the space $(-\infty, \infty)$ to $(0, 1)$.  From that latter function's name we get the terminology of *logistic regression*.
+The mathematical function $log\left(\frac{p}{1 - p}\right)$ is called the *logit function* and it transforms variables from the space $(0, 1)$ (like probabilities) to $(-\infty, \infty)$.  The inverse of that function, the *standard logistic function*, is $\frac{1}{1 + e^{-x}})$ and transforms variables from the space $(-\infty, \infty)$ to $(0, 1)$.  From that latter function's name we get the terminology of *logistic regression*.
 
 ### House elections: exploratory data analysis
 
@@ -231,15 +231,158 @@ We see roughly linear relationships after the logit transformation within-region
 
 ### One categorical explanatory variable
 
-Let's start our modeling by predicting `dem_win` with a single categorical explanatory variable, `region`.  As we'll see, the syntax for running a logistic regression in R is very similar to that for running a linear regression.  In fact, we'll follow the same basic steps:
+Let's start our modeling by predicting `dem_win` with a single categorical explanatory variable.  We'll start with a binary variable for whether an observation is in the South and we will progress to the categorical variable `region`.  As we'll see, the syntax for running a logistic regression in R is very similar to that for running a linear regression.  In fact, we'll follow the same basic steps:
 
 1. We first "fit" the logistic regression model using the `glm(y ~ x, family, data)` function and save it in `house_region_model`.
 1. We get the regression table by applying the `tidy()` function from the **broom** package to `house_region_model`.  We'll print the `term`, `estimate`, `conf.low`, and `conf.high` columns.
 
 Note that the key difference is that instead of using `lm()`, we are now using `glm()`.  `glm()` operates very similarly to `lm()`, but it has an additional argument: `family`.  To run a logistic regression, we use `family = binomial`.
 
+Let's create a binary variable for whether an observation is in the South:
+
+```{r}
+house_ch13 <- house_ch13 %>%
+  mutate(south = 1 * (region == "South"))
+```
+
+Next, let's fit a model and `tidy()` it:
+
 ```{r, eval=FALSE}
-house_region_model <- glm(dem_win ~ region, family = binomial data = house_ch13)
+house_south_model <- glm(dem_win ~ south, family = binomial, data = house_ch13)
+house_south_model %>%
+  tidy(conf.int = TRUE) %>%
+  select(term, estimate)
+```
+```{r, echo=FALSE}
+house_south_model <- glm(dem_win ~ south, family = binomial, data = house_ch13)
+```
+```{r, echo=FALSE}
+tidy(house_south_model) %>%
+  select(term, estimate) %>%
+  knitr::kable(
+    digits = 3,
+    caption = "Logistic regression table",
+    booktabs = TRUE,
+    linesep = ""
+  ) %>%
+  kable_styling(font_size = ifelse(knitr:::is_latex_output(), 10, 16),
+                latex_options = c("hold_position"))
+```
+
+How can we interpret the coefficients?  Unlike linear regressions, these coefficients aren't directly interpretable.  Recall our logistic regression model equation:
+
+\[
+\log\left(\frac{p}{1 - p}\right)=\beta_0+\beta_1X 
+\]
+
+A one-unit change in $X$ thus is associated with a one-unit change in $log\left(\frac{p}{1 - p}\right)$, where $p$ is the predicted probability of success. It is hard to understand intuitively what this means.
+
+However, with only two possible values for the predictors (`south` = 0 or `south` = 1), we can directly calculate all the possible values of $p$ this model by using the *standard logistic function*:
+
+\[
+p = \frac{1}{1 + e^{-(\beta_0+\beta_1X)}} 
+\]
+
+This can easily be done using the `plogis()` function in R. 
+
+Thus, for our example, we have:
+
+\[
+p_{dem\_win} = \frac{1}{1 + e^{-(0.230 - 0.249 \times south)}} 
+\]
+
+Therefore, the predicted probability for an observation in the South is $\frac{1}{1 + e^{-(0.230 - 0.249)}}$ (`r round(plogis(0.230 - 0.249), 3)`) and the predicted probability for an observation outside the South is $\frac{1}{1 + e^{-(0.230)}}$ (`r round(plogis(0.230), 3)`) a difference of `r round(plogis(0.230 - 0.249) - plogis(0.230), 3)`.  Thus, an observation being the South is associated with a `r round(plogis(0.230 - 0.249) - plogis(0.230), 3)` decrease in the predicted probability of a Democratic victory.
+
+Note that you could also estimate this value through the so-called **"divide by 4" rule**: $-0.249 / 4 \approx 0.062$.  We'll discuss this further when we talk about interpreting the coefficiences of continuous predictors in logistic regression models.
+
+Let's now estimate the uncertainty around our coefficients.  We'll start by showing how you can do this through the bootstrap.  We'll begin by loading the **infer** package.  We're going to use the function `rep_sample_n()` to resample from our data 1,000 times:
+
+```{r}
+library(infer)
+
+x <- house_ch13 %>% 
+  select(dem_win, south) %>% 
+  rep_sample_n(size = nrow(house_ch13), replace = TRUE, reps = 1000)
+
+x
+```
+
+For each `replicate`, we have `r nrow(house_ch13)` resamples of `dem_win` and `south`.
+
+Next, we are going to `nest()` our data by `replicate`:
+
+```{r}
+x <- x %>% 
+  group_by(replicate) %>% 
+  nest()
+
+x
+```
+
+After grouping by `replicate` and using `nest()`, we now have a dataset of 1,000 rows and a list column named `data`.  Each element of `data` is a tibble consisting of one of the resampled datasets we created using `rep_sample_n()`.
+
+Now, we can use `map()` to run our logistic regression for each dataset:
+
+```{r}
+x <- x %>% 
+  mutate(mod = map(data, ~ glm(dem_win ~ south, family = binomial, data = .)))
+
+x
+```
+
+Now we have a new list column, `mod`, that contains the model objects created by `glm()`.  We will now want to `tidy()` the object created by `glm()`:
+
+```{r}
+x <- x %>% 
+  mutate(reg_results = map(mod, ~ tidy(.)))
+
+x
+```
+
+`tidy()` stores the coefficients in the `estimate` column, with each coefficient named in the `term` column.  Thus, if we `filter()` by `term` and `pull(estimate)`, we can get the logistic regression coefficient for each bootstrap sample:
+
+```{r}
+x <- x %>%
+  mutate(disp_coef = map_dbl(reg_results, ~ filter(., term == "south") %>% pull(estimate)))
+
+x
+```
+
+Now that we have 1,000 estimates from our bootstrap samples, we can construct a percentile-based confidence interval easily:
+
+```{r}
+x %>%
+ pull(disp_coef) %>%
+ quantile(c(0.025, 0.5, 0.975))
+```
+
+As we've seen before, these are very similar to what we observe using `tidy(conf.int = TRUE)`:
+
+```{r, eval=FALSE}
+house_south_model %>%
+  tidy(conf.int = TRUE) %>%
+  select(term, estimate, conf.low, conf.high)
+```
+
+```{r, echo=FALSE}
+tidy(house_south_model, conf.int = TRUE) %>%
+  select(term, estimate, conf.low, conf.high) %>%
+  knitr::kable(
+    digits = 3,
+    caption = "Logistic regression table",
+    booktabs = TRUE,
+    linesep = ""
+  ) %>%
+  kable_styling(font_size = ifelse(knitr:::is_latex_output(), 10, 16),
+                latex_options = c("hold_position"))
+```
+
+Thus, from now on, we'll just use `tidy(conf.int = TRUE)` when working with `glm()`, just as we did with `lm()`.
+
+Let's try running a slightly more complicated version of the above model, where we use `region` as a predictor instead of `south`.
+
+```{r, eval=FALSE}
+house_region_model <- glm(dem_win ~ region, family = binomial, data = house_ch13)
 house_region_model %>%
   tidy(conf.int = TRUE) %>%
   select(term, estimate, conf.low, conf.high)
@@ -261,33 +404,14 @@ tidy(house_region_model,
                 latex_options = c("hold_position"))
 ```
 
-Recall that in the linear regression context, we interpreted the coefficients as follows:  the intercept represented the mean for the omitted category, while the other coefficients all represented offsets from that value.  We can't use that intepretation here.  Recall our logistic regression model equation:
+The intercept here is the omitted category, the Midwest.  We can calculate the predicted probabilities for each category:
 
-\[
-\log\left(\frac{p}{1 - p}\right)=\beta_0+\beta_1X 
-\]
+- Midwest: $\frac{1}{1 + e^{-(-0.076)}} = 0.481$
+- Northeast: $\frac{1}{1 + e^{-(-0.076 + 0.657)}} = 0.641$
+- South: $\frac{1}{1 + e^{-(-0.076 + 0.056)}} = 0.495$
+- West: $\frac{1}{1 + e^{-(-0.076 + 0.333)}} = 0.564$
 
-Note that there's a familiar term for what we are taking the log of on the left hand side:
-
-\[\textrm{Odds} = \frac{\textrm{probability of success}}{\textrm{probability of failure}}=
-\frac{p}{1-p}.\] 
-
-For example, there's a 25\% chance of flipping two heads in a row when flipping fair coins.  In odds terms, the odds of flipping two heads in a row are $\frac{0.25}{0.75} = \frac{1}{3}$. These are conventionally phrased in words in terms of the odds *against* success, such as "three to one odds against flipping two heads" or just "three to one odds."
-
-Thus, our equation can also be read as:
-
-\[
-\log(\textrm{Odds})=\beta_0+\beta_1X 
-\]
-
-Let's say that $X$ is our categorical variable `region`, with the baseline category being the Midwest.  Based on this model, the log odds of a Democratic victory when $X = \textrm{Midwest}$ is:
-\[
-\log\left(\frac{p_{Midwest}}{1-p_{Midwest}}\right) =\beta_0 = -0.076,
-\]
-and the log odds when $X = \textrm{South}$ is:
-\[
-\log\left(\frac{p_{South}}{1-p_{South}}\right)=\beta_0+\beta_{1,South} = -0.076 + 0.056 = -0.020.
-\]
+We can then interpret the effect of moving from one category to another.  For example, the effect of being in the Northeast as opposed to the Midwest is 0.16; the predicted probability of a Democratic victory in the Northeast is 0.16 greater than in the Midwest. Note too that we could have obtained this through the "divide by 4" rule:  $0.657 / 4 \approx 0.16$.
 
 ### Observed/fitted values and residuals
 
@@ -324,7 +448,7 @@ regression_points %>%
                 latex_options = c("hold_position"))
 ```
 
-The syntax is the same, but the interpretation has to change, since the `.fitted`, `conf.low`, and `conf.high` columns are all on the logit scale.  While we could try to interpret these values, `augment()` has the argument `type.predict = "response"` that allow us to present the results in terms of **predicted probabilities**:
+The syntax is the same, but the interpretation has to change, since the `.fitted`, `conf.low`, and `conf.high` columns are all on the logit scale.  While we could try to interpret these values, `augment()` has the argument `type.predict = "response"` that allow us to present the results in terms of *predicted probabilities*:
 
 ```{r, eval=FALSE}
 regression_points <- house_region_model %>%
@@ -353,6 +477,7 @@ regression_points %>%
 ```
 
 Now each of the `.fitted` values is a *predicted probability* of a Democratic victory from our model for a particular district and the confidence intervals are confidence intervals around that predicted probability. 
+
 You may be wondering how to interpret the residuals.  The residuals reported by `augment()` for a logistic regression are called *deviance residuals*.  A deviance residual can be calculated for each observation using:
 
 \[
@@ -404,7 +529,7 @@ We'll now predict `dem_win` with a single numerical explanatory variable, `year`
 1. We get the regression table by applying the `tidy()` function from the **broom** package to `house_year_model`.  We'll print the `term`, `estimate`, `conf.low`, and `conf.high` columns.
 
 ```{r, eval=FALSE}
-house_year_model <- glm(dem_win ~ year, family = binomial data = house_ch13)
+house_year_model <- glm(dem_win ~ year, family = binomial, data = house_ch13)
 house_year_model %>%
   tidy(conf.int = TRUE) %>%
   select(term, estimate, conf.low, conf.high)
@@ -427,7 +552,7 @@ tidy(house_year_model,
                 latex_options = c("hold_position"))
 ```
 
-How do we interpret the coefficients in this model?  Since the `year` coefficient is positive, that means that each additional year *reduces* the odds of a Democratic victory.
+How do we interpret the coefficients in this model?  Since the `year` coefficient is positive, that means that each additional year *reduces* the odds of a Democratic victory. 
 
 While `house_region_model` and `house_year_model` both tell us something interesting, we could learn more with an *interaction model* that includes both of our predictors.
 
