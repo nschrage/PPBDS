@@ -539,8 +539,7 @@ house_year_model <- glm(dem_win ~ year, family = binomial, data = house_ch13)
 ```
 ```{r, echo=FALSE}
 tidy(house_year_model,
-     conf.int = TRUE,
-     exponentiate = TRUE) %>%
+     conf.int = TRUE) %>%
   select(term, estimate, conf.low, conf.high) %>%
   knitr::kable(
     digits = 3,
@@ -552,7 +551,36 @@ tidy(house_year_model,
                 latex_options = c("hold_position"))
 ```
 
-How do we interpret the coefficients in this model?  Since the `year` coefficient is positive, that means that each additional year *reduces* the odds of a Democratic victory. 
+How do we interpret the coefficients in this model?  Since the `year` coefficient is negative, that means that each additional year is associated with a reduction in the chances of a Democratic victory. 
+
+If we wanted to learn the predicted probabilities for any given value of `year`, we can plug in our values of `year` into the standard logistic function, like so:
+
+\[
+p_{dem\_win} = \frac{1}{1 + e^{-(34.487 - 0.017 \times year)}} 
+\]
+
+Note that since this is not a linear function, a one-unit change in `year` will be associated with various one-unit changes in `dem_win`, depending on what `year` you are starting from.  Recall the figure we used to start the chapter:
+
+```{r, echo = FALSE, message = FALSE}
+ggplot(dat, aes(x = x)) +
+  geom_point(aes(y = y)) +
+  geom_smooth(aes(y = y, color = "blue"), method = "lm", se=FALSE) +
+  geom_line(aes(y = p, color = "red")) +
+  scale_color_manual(name = 'Regression model', 
+         values = c('blue', 'red'), 
+         labels = c('Linear', 'Logistic'), guide = 'legend') +
+  theme_minimal()
+```
+
+A linear regression line (in blue) has a constant slope, which means that no matter what $x$ you start with, the effect of going from $x$ to $x + 1$ on $y$ is the same number.  
+
+However, take a look at the logistic regression curve (in red).  The value of the slope for very high or very low values of $x$ is smaller (approaching 0 as $x$ tends to negative or positive infinity), while the slope in the middle of the curve is highest.  The steepest part of the curve corresponds to that part of the curve where the predicted probability equals 0.5.  That is, the effect of a one-unit change in $x$ is the highest when the predicted probability for that $x$ is close to 0.5 and smallest when the predicted probability for that $x$ is close to 0 or 1.
+
+You can always use R to calculate the predicted probabilities for any value of $x$ and thus calculate the effect of moving from a particular $x$ to $x + 1$.  But this can get complicated.  In particular, once you start employing logistic regression with multiple predictors, the effect of a one-unit change in a predictor $x$ depends not only on $x$, but on the values of all the other predictors in your model!  You can always plug in all the coefficients and values of your predictors into the logistic function to calculate predicted probabilities, but if you don't do that, how can you interpret the coefficients?
+
+Here is where we can use the *divide by 4 rule* that we discussed before.  A logistic regression coefficient divided by 4 is the effect of that variable at the steepest part of the logistic regression curve, which, as we saw, corresponds to where the predicted probability is 0.5.
+
+Therefore, you can divide a logistic regression coefficient by 4 to get an upper bound on the effect a one-unit change in that predictor will have on the predicted probability of your outcome.  In this case, the approximation tells us that each additional year is associated with about a $-0.004$ decrease in the predicted probability of a Democratic victory.  Since the predicted probability of a Democratic victory in this model never strays far from 0.5, this is a pretty good approximation.^[Indeed, it is almost identical to the coefficient you would obtain in a linear regression--try it out!]
 
 While `house_region_model` and `house_year_model` both tell us something interesting, we could learn more with an *interaction model* that includes both of our predictors.
 
@@ -561,13 +589,12 @@ While `house_region_model` and `house_year_model` both tell us something interes
 We'll now predict `dem_win` with a two variable, `region` and `year`, as well as the interaction between the two 
 
 1. We first "fit" the logistic regression model using the `glm(y ~ x1 * x2, family, data)` function and save it in `house_interact_model`.
-1. We get the regression table by applying the `tidy()` function from the **broom** package to `house_interact_model`.  We'll print the `term`, `estimate`, `conf.low`, and `conf.high` columns.  Recall that setting `exponentiate = TRUE` exponentiates the logistic regression coefficients, which can help with interpretation. 
+1. We get the regression table by applying the `tidy()` function from the **broom** package to `house_interact_model`.  We'll print the `term`, `estimate`, `conf.low`, and `conf.high` columns.
 
 ```{r, eval=FALSE}
 house_interact_model <- glm(dem_win ~ region * year, family = binomial data = house_ch13)
 house_interact_model %>%
-  tidy(conf.int = TRUE,
-       exponentiate = TRUE) %>%
+  tidy(conf.int = TRUE) %>%
   select(term, estimate, conf.low, conf.high)
 ```
 ```{r, echo=FALSE}
@@ -654,7 +681,7 @@ house_interact_model %>%
 
 While it is interesting to see how Democrats perform by region over time, it would also be interesting to see how each state has changed in its partisan voting from 1976--2018.  Have any seen particularly large increases (or decreases) in the probability of a Democratic candidate winning?
 
-The code to do this is very similar to the code we used for the gubernatorial forecasts in Chapter \@ref(regression) and the Seattle house prices in Chapter \@ref(multiple-regression).  However, we will use `glm()` instead of `lm()`, and we will use the `exponentiate = TRUE` option for `tidy()`.
+The code to do this is very similar to the code we used for the gubernatorial forecasts in Chapter \@ref(regression) and the Seattle house prices in Chapter \@ref(multiple-regression).  However, we will use `glm()` instead of `lm()`.
 
 First, we'll filter to the states that have at least 50 district-years in the dataset. Next, let's use `map()` to learn about these districts:
 
