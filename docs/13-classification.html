@@ -24,7 +24,7 @@
 <meta name="author" content="David Kane" />
 
 
-<meta name="date" content="2020-03-29" />
+<meta name="date" content="2020-03-30" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -631,20 +631,21 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 \newcommand{\lik}{\operatorname{Lik}}
 \newcommand{\Lik}{\operatorname{Lik}}
 \]</span>
-Many research questions have binary (yes/no or success/failure) responses:</p>
+Many questions have binary (yes/no or success/failure) answers:</p>
 <ul>
 <li><ol style="list-style-type: lower-alpha">
-<li>Are students with poor grades more likely to binge drink?</li>
+<li>Are students with below average grades more likely to binge drink?</li>
 </ol></li>
 <li><ol start="2" style="list-style-type: lower-alpha">
 <li>Is exposure to a particular chemical associated with a cancer diagnosis?</li>
 </ol></li>
 </ul>
-<p><strong>Binary responses</strong> take on only two values: success (<span class="math inline">\(Y=1\)</span>) or failure (<span class="math inline">\(Y=0\)</span>), Yes (<span class="math inline">\(Y=1\)</span>) or No (<span class="math inline">\(Y=0\)</span>), etc. Thus, examples (a) and (b) above would be considered to have binary responses (Does a student binge drink? Was a patient diagnosed with cancer?). Binary responses are ubiquitous; they are one of the most common types of data that statisticians encounter. We are often interested in modeling the probability of success <span class="math inline">\(p\)</span> based on a set of covariates, although sometimes we wish to use those covariates to classify a future observation as a success or a failure.</p>
-<p>In this chapter, we will look at three common techniques of <strong>classification</strong> of binary data. First, we will consider logistic regression, which is similar conceptually to the linear regression models we considered in Chapter <a href="11-regression.html#regression">11</a> and <a href="12-multiple-regression.html#multiple-regression">12</a>. Second, we will consider classification and regression trees (CART). Finally, we will discuss random forests.</p>
+<p><strong>Binary responses</strong> take on only two values: success (<span class="math inline">\(Y=1\)</span>) or failure (<span class="math inline">\(Y=0\)</span>), Yes (<span class="math inline">\(Y=1\)</span>) or No (<span class="math inline">\(Y=0\)</span>), et cetera. Examples (a) and (b) above have binary responses (Does a student binge drink? Was a patient diagnosed with cancer?). Binary responses are ubiquitous; they are one of the most common types of data that statisticians encounter. We are often interested in modeling the probability of success, <span class="math inline">\(p\)</span>, based on a set of covariates. As with regression, there are two broad categories of problems: <em>modeling for explanation</em> and <em>modeling for prediction</em>. Although terminology varies across fields, “regression” is generally used for situations in which our <em>dependent variable</em> is continuous. “Classification” applies to cases in which the dependent variable is binary.</p>
+<p>In this chapter, we will look at three common techniques of <strong>classification</strong> of binary data. First, we will consider logistic regression, which is similar conceptually to the linear regression models we considered in Chapters <a href="11-regression.html#regression">11</a> and <a href="12-multiple-regression.html#multiple-regression">12</a>. Second, we will consider classification and regression trees (CART). Third, we will discuss random forests.</p>
+<!-- DK: I don't think we need this Needed packages section each chapter. Or, if we have something here, we should use it as an occasion to educate readers about cool package facts. Need to improve their technical knowledge each chapter. -->
 <div id="needed-packages-5" class="section level3 unnumbered">
 <h3>Needed packages</h3>
-<p>Let’s load all the packages needed for this chapter (this assumes you’ve already installed them). Recall from our discussion in Section <a href="5-tidy.html#tidyverse-package">5.5</a> that loading the <strong>tidyverse</strong> package by running <code>library(tidyverse)</code> loads the following commonly used data science packages all at once:</p>
+<p>Recall from our discussion in Section <a href="5-tidy.html#tidyverse-package">5.5</a> that loading the <strong>tidyverse</strong> package by running <code>library(tidyverse)</code> loads the following commonly used data science packages all at once:</p>
 <ul>
 <li><strong>ggplot2</strong> for data visualization</li>
 <li><strong>dplyr</strong> for data wrangling</li>
@@ -663,22 +664,26 @@ Many research questions have binary (yes/no or success/failure) responses:</p>
 <div id="what-is-logistic-regression" class="section level3">
 <h3><span class="header-section-number">13.1.1</span> What is logistic regression?</h3>
 <p>Figure <a href="13-classification.html#fig:OLSlogistic">13.1</a> illustrates a data set with a binary (0 or 1) response (<span class="math inline">\(Y\)</span>) and a single continuous predictor (<span class="math inline">\(X\)</span>). The blue line is a linear regression to model the probability of a success (<span class="math inline">\(Y=1\)</span>) for a given value of <span class="math inline">\(X\)</span>. With a binary response, the linear regression has an obvious problem: it can produce predicted probabilities below 0 and above 1.</p>
+<!-- DK: I think this point, about the nonsense of probabilities outside 0,1, should be emphasized in the picture more. -->
 <p>The red curve is the <em>logistic regression</em> curve. Note that its characteristic “S” shape always produces predicted probabilities between 0 and 1. Here is the formula for a logistic regression:</p>
 <p><span class="math display">\[
 \log\left(\frac{p}{1 - p}\right)=\beta_0+\beta_1X 
 \]</span></p>
-<p>where the observed values <span class="math inline">\(Y_i \sim\)</span> Bernoulli with <span class="math inline">\(p=p_i\)</span> for a given set of predictors <span class="math inline">\(X\)</span>.</p>
+<p>where <span class="math inline">\(p\)</span> is the probability of a “yes” or “success” for a given set of predictors <span class="math inline">\(X\)</span>.</p>
 <div class="figure" style="text-align: center"><span id="fig:OLSlogistic"></span>
 <img src="Preceptor%E2%80%99s-Primer-for-Bayesian-Data-Science_files/figure-html/OLSlogistic-1.png" alt="Linear vs. logistic regression models for binary response data." width="60%" />
 <p class="caption">
 FIGURE 13.1: Linear vs. logistic regression models for binary response data.
 </p>
 </div>
-<p>The mathematical function <span class="math inline">\(log\left(\frac{p}{1 - p}\right)\)</span> is called the <em>logit function</em> and it transforms variables from the space <span class="math inline">\((0, 1)\)</span> (like probabilities) to <span class="math inline">\((-\infty, \infty)\)</span>. The inverse of that function, the <em>standard logistic function</em>, is <span class="math inline">\(\frac{1}{1 + e^{-x}})\)</span> and transforms variables from the space <span class="math inline">\((-\infty, \infty)\)</span> to <span class="math inline">\((0, 1)\)</span>. From that latter function’s name we get the terminology of <em>logistic regression</em>.</p>
+<!-- DK: How does the math work here? log(p/1-p) seems, to me, to map 0,1 to 0,infinity. -->
+<p>The mathematical function <span class="math inline">\(log\left(\frac{p}{1 - p}\right)\)</span> is called the <em>logit function</em> and it transforms variables from the space <span class="math inline">\((0, 1)\)</span> (like probabilities) to <span class="math inline">\((-\infty, \infty)\)</span>. The inverse of that function, the <em>standard logistic function</em>, is <span class="math inline">\(\frac{1}{1 + e^{-x}}\)</span> and transforms variables from the space <span class="math inline">\((-\infty, \infty)\)</span> to <span class="math inline">\((0, 1)\)</span>. From that latter function’s name we get the terminology of <em>logistic regression</em>.</p>
 </div>
 <div id="house-elections-exploratory-data-analysis" class="section level3">
 <h3><span class="header-section-number">13.1.2</span> House elections: exploratory data analysis</h3>
-<p>What affects whether a Democrat or Republican wins a race in the U.S. House of Representatives? This is an example of a binary response: either a Democrat wins (and a Republican loses) or a Republican wins (and a Democrat loses).<a href="#fn20" class="footnote-ref" id="fnref20"><sup>20</sup></a> In this section, we are going to consider several models predicting Democratic victory in House races. First, we will consider a single categorical variable as a predictor: the region that a district lies in (Midwest, Northeast, South, or West). Second, we will consider a single continuous variable (year). Finally, we fill fit a model that contains an interaction of the two.</p>
+<!-- DK: Perhaps we can use house elections as a running example throughout the book? With regression we tried to forecast vote percentage. Here, we just care about wins and losses. Also provides an occasion to talk about which is best. Also to get into subtle issues like cases which are dropped, like redistricting contests. -->
+<p>What affects whether a Democrat or Republican wins a race in the U.S. House of Representatives? This is an example of a binary response: either a Democrat wins (and a Republican loses) or a Republican wins (and a Democrat loses).<a href="#fn20" class="footnote-ref" id="fnref20"><sup>20</sup></a> In this section, we are going to consider several models predicting Democratic victory in House races. First, we will consider a single categorical variable as a predictor, the region in which a district lies: Midwest, Northeast, South, or West. Second, we will consider a single continuous variable: year. Finally, we fill fit a model that contains both separately, and than also an interaction between the two.</p>
+<!-- DK: Too much cognitive load to create these datasets on the fly. They need to be ready to go. -->
 <p>The data on House election results from 1976 to 2018 can be found in the <code>house_results</code> data frame in <strong>politicaldata</strong> package. We’ll create a version of this data frame called <code>house_ch13</code> that creates a new column <code>dem_win</code> that notes for each state if the Democratic candidate in a congressional district received more votes than the other candidates. We’ll also join it with the <code>state_info</code> data frame in the <strong>fivethirtyeight</strong> package to add the <code>region</code> of each state.</p>
 <div class="sourceCode" id="cb873"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb873-1"><a href="13-classification.html#cb873-1"></a><span class="kw">library</span>(politicaldata)</span>
 <span id="cb873-2"><a href="13-classification.html#cb873-2"></a></span>
@@ -697,6 +702,7 @@ FIGURE 13.1: Linear vs. logistic regression models for binary response data.
 <span id="cb873-15"><a href="13-classification.html#cb873-15"></a><span class="st">  </span><span class="kw">left_join</span>(state_info) <span class="op">%&gt;%</span></span>
 <span id="cb873-16"><a href="13-classification.html#cb873-16"></a><span class="st">  </span><span class="kw">select</span>(region, state, district, year, dem_win)</span></code></pre></div>
 <pre><code>Joining, by = &quot;state_abbrev&quot;</code></pre>
+<!-- DK: We use same dataset from other chapter, we need to modify this. But we won't have looked at everything! So, look at other stuff. Some is obvious, especially our new Y variable. But we can also look at stuff like number of elections per state, per year. Which state had the biggest districting rise and when? Indeed, the data exploration section in each chapter provides an occasion to learn more advanced R tricks. -->
 <p>Recall the three common steps in an exploratory data analysis we saw in Subsection <a href="11-regression.html#model1EDA">11.1.1</a>:</p>
 <ol style="list-style-type: decimal">
 <li>Looking at the raw data values.</li>
@@ -1118,6 +1124,7 @@ year
 <span id="cb881-4"><a href="13-classification.html#cb881-4"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">&quot;Year&quot;</span>, <span class="dt">y =</span> <span class="st">&quot;Democratic Victory&quot;</span>) <span class="op">+</span></span>
 <span id="cb881-5"><a href="13-classification.html#cb881-5"></a><span class="st">  </span><span class="kw">geom_smooth</span>(<span class="dt">method =</span> <span class="st">&quot;lm&quot;</span>, <span class="dt">se =</span> <span class="ot">FALSE</span>)</span></code></pre></div>
 <p><img src="Preceptor%E2%80%99s-Primer-for-Bayesian-Data-Science_files/figure-html/unnamed-chunk-599-1.png" width="\textwidth" style="display: block; margin: auto;" /></p>
+<!-- DK: The below seems like good stuff, but I don't really understand it. Needs more words. Why is log(p/1-p) an interesting thing. Is it really? -->
 <p>This is completely incomprehensible! When dealing with binary data, it is more helpful to construct an <em>empirical logit</em> plot instead of a regular scatterplot. The steps for constructing such a plot are as follows:</p>
 <ol style="list-style-type: decimal">
 <li><code>group_by</code> your continuous variable.</li>
@@ -2825,7 +2832,7 @@ R_1(j,s) = \{\mathbf{x} \mid x_j &lt; s\} \mbox{  and  } R_2(j,s) = \{\mathbf{x}
 <div class="sourceCode" id="cb919"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb919-1"><a href="13-classification.html#cb919-1"></a>house_region_tree</span></code></pre></div>
 <pre><code>parsnip model object
 
-Fit time:  29ms 
+Fit time:  33ms 
 n= 9557 
 
 node), split, n, loss, yval, (yprob)
@@ -3032,7 +3039,7 @@ West
 <span id="cb940-9"><a href="13-classification.html#cb940-9"></a>house_forest</span></code></pre></div>
 <pre><code>parsnip model object
 
-Fit time:  17.9s 
+Fit time:  20.4s 
 
 Call:
  randomForest(x = as.data.frame(x), y = y) 
