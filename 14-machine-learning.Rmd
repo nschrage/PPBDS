@@ -1,6 +1,62 @@
 # Machine Learning {#machine-learning}
 
-Perhaps the most popular data science methodologies come from the field of _machine learning_. Machine learning success stories include the handwritten zip code readers implemented by the postal service, speech recognition technology such as Apple's Siri, movie recommendation systems, spam and malware detectors, housing price predictors, and driverless cars. Although today Artificial Intelligence and machine learning are often used interchangeably, we make the following distinction: while the first artificial intelligence algorithms, such as those used by chess playing machines, implemented decision making based on programmable rules derived from theory or first principles, in machine learning decisions are based on algorithms **built with data**. 
+We have learned four models: linear regression, logistic regression, CART, and random forest. But there are hundreds more! We need a consistent way to try lots of models and to compare them. Hence, we introduced in the last chapter the **tidymodels** collection of packages.
+
+Also, how do we know which models are best? Recall that we came up with several different models for each of our example data sets. Which one should we use? The framework of **machine learning** helps.
+
+Perhaps the most popular data science methodologies come from the field of machine learning. Machine learning success stories include the handwritten zip code readers implemented by the postal service, speech recognition technology such as Apple's Siri, movie recommendation systems, spam and malware detectors, housing price predictors, and driverless cars. Although today the terms "artificial intelligence" and "machine learning" are often used interchangeably, we make the following distinction: while the first artificial intelligence algorithms, such as those used by chess playing machines, implemented decision making based on programmable rules derived from theory or first principles, in machine learning decisions are based on algorithms **built with data**. 
+
+## Data: Cooperative Congressional Election Study (CCES)
+
+For this chapter, we'll be using data from the Cooperative Congressional Election Study, a large survey of Americans that asks many questions relevant to American politics and elections.  You can learn more about the study [here](https://cces.gov.harvard.edu/).
+
+Let's start by downloading the file called "cumulative_2006_2018.rds" at the [CCES Dataverse](https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/II2DB6).  After you have downloaded it, load it into your environment with the name "cces" using `cces <- read_rds("cumulative_2006_2018.rds")`.  Be sure to load the **tidyverse** and **tidymodels** packages before running the code in this chapter.
+
+```{r, echo = FALSE, message = FALSE}
+library(tidyverse)
+library(tidymodels)
+
+cces <- read_rds("rds/cumulative_2006_2018.rds")
+```
+
+Take a look at the `cces` object:
+
+```{r}
+cces
+```
+
+We have a lot of observations (more than 450,000), each of which is a single survey respondent.
+
+The outcome we'll focus on for this chapter is *presidential approval.* 
+
+Let's take a look at the presidential approval variable in the CCES. We see that it is an "int+lbl" object, which means that it an integer variable with labels, which we can see using the `print_labels()` function from the **haven** package:
+
+```{r}
+library(haven)
+
+print_labels(cces$approval_pres)
+```
+
+We can see that there are 6 levels to this variable.  We'll `mutate()` the variable so it goes from 1 to 5, which 1 being "strongly disapprove" and 5 being "strongly approve," and 3 will be a middle category that combines responses from "never heard / not sure" and "neither approve nor disapprove," so that higher values indicate greater approval.
+
+```{r}
+cces <- cces %>%
+  mutate(pres_approval = case_when(approval_pres == 4 ~ 1,
+                                   approval_pres == 3 ~ 2,
+                                   approval_pres %in% c(5, 6) ~ 3,
+                                   approval_pres == 2 ~ 4,
+                                   approval_pres == 1 ~ 5,
+                                   TRUE ~ NA_real_))
+```
+
+We'll also `mutate()` some other variables for interpretability this chapter:
+
+```{r}
+cces <- cces %>%
+  mutate(pres_gop = ifelse(year %in% c(2009:2016), 0, 1),
+         pid7 = ifelse(pid7 == 8, 4, pid7),
+         ideo5 = ifelse(ideo5 == "Not Sure", 3, as.numeric(ideo5)))
+```
 
 ## Notation
 
