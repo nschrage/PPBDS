@@ -1,15 +1,71 @@
 # Machine Learning {#machine-learning}
 
 <!-- AR: I used material from this blog post: https://alison.rbind.io/post/2020-02-27-better-tidymodels/#tidymodels-101
+and from this github:
+https://github.com/rstudio-conf-2020/applied-ml
 Should be added to the Acknowledgements section -->
 
 We have learned four models: linear regression, logistic regression, CART, and random forest. But there are hundreds more! We need a consistent way to try lots of models and to compare them. Hence, we introduced in the last chapter the **tidymodels** collection of packages.
 
 Also, how do we know which models are best? Recall that we came up with several different models for each of our example data sets. Which one should we use? The framework of **machine learning** helps.
 
-Perhaps the most popular data science methodologies come from the field of machine learning. Machine learning success stories include the handwritten zip code readers implemented by the postal service, speech recognition technology such as Apple's Siri, movie recommendation systems, spam and malware detectors, housing price predictors, and driverless cars. Although today the terms "artificial intelligence" and "machine learning" are often used interchangeably, we make the following distinction: while the first artificial intelligence algorithms, such as those used by chess playing machines, implemented decision making based on programmable rules derived from theory or first principles, in machine learning decisions are based on algorithms **built with data**. 
+Perhaps the most popular data science methodologies come from the field of machine learning.  Machine learning is the study and application of algorithms that learn from and make predictions on data. From search results to self-driving cars, it has manifested itself in all areas of our lives and is one of the most exciting and fast-growing fields of research in the world of data science. Machine learning success stories include the handwritten zip code readers implemented by the postal service, speech recognition technology such as Apple's Siri, movie recommendation systems, spam and malware detectors, housing price predictors, and driverless cars.
+
+There are a wide variety of machine learning algorithms, including the models we have learned so far.  We won't introduce new models this chapter.  Rather, we'll use linear regression as an example for how to apply machine learning techniques to improve your predictive modeling.
+
+## The process of machine learning
+
+In machine learning, modeling is a *process*, not a single step.  Common steps during model building are:
+
+- Estimating model parameters (i.e. training models)
+- Determining the values of tuning parameters that cannot be directly calculated from the data
+- Model selection (within a model type) and model comparison (between types)
+- Calculating the performance of the final model that will generalize to new data
+
+Many books and courses portray predictive modeling as a short sprint. A better analogy would be a marathon or campaign (depending on how hard the problem is). 
+
+We often think of the model as the only real data analysis step in this process.  However, there are other procedures that are often applied before or after the model fit that are data-driven and have an impact.  If we only think of the model as being important, we might end up accidentally *overfitting* to the data in-hand. This is very similar to the problems of "the garden of forking paths" and "[p-hacking](http://www.stat.columbia.edu/~gelman/research/unpublished/p_hacking.pdf)." 
+
+Let's conceptualize a process or *workflow* that involves all of the steps where the data are analyzed in a significant way. This includes the model but might also include other *estimation* steps. Admittedly, there is some grey area here.  This includes data preparation steps (e.g., imputation, encoding, transformations) and selection of which terms go into the model.
+
+This concept of a "modeling workflow" will become important when we talk about measuring performance of the modeling process. Ultimately, when we evaluate models, we are evaluating the whole process.  All the steps involved in the process can affect the performance of the final model.
+
+## What does it mean for a model to be "good?"
+
+Before we start describing machine learning approaches to optimize the way we build models, we first need to define what we mean when we say one approach is better than another. In this section, we focus on describing ways in which machine learning algorithms are evaluated. Specifically, we need to quantify what we mean by "better."
+
+### Training and test sets
+
+Ultimately, a machine learning algorithm should be evaluated on how it performs in the real world with completely new datasets. However, when developing an algorithm, we usually have a dataset for which we know the outcomes. Therefore, to mimic the ultimate evaluation process, we typically split the data into two parts and act as if we don't know the outcome for one of these. We stop pretending we don't know the outcome to evaluate the algorithm, but only *after* we are done constructing it. We refer to the group for which we know the outcome, and use to develop the algorithm, as the _training_ set. We refer to the group for which we pretend we don't know the outcome as the _test_ set.   A standard way of generating the training and test sets is by randomly splitting the data.
+
+- Training Set: these data are used to estimate model parameters and to pick the values of the complexity parameter(s) for the model.
+- Test Set: these data can be used to get an independent assessment of model efficacy. They should not be used during model training.
+
+We then develop an algorithm using **only** the training set. Once we are done developing the algorithm, we will _freeze_ it and evaluate it using the test set.  But remember, **it is important that we optimize the model using only the training set**: the test set is only for evaluation. Evaluating an algorithm on the training set can lead to _overfitting_, which often results in dangerously over-optimistic assessments. 
+
+### The loss function {#loss-function}
+
+The general approach to defining "best" in machine learning is to define a _loss function_.  This concept can be applied to both categorical and continuous data. 
+
+The most commonly used loss function is the *squared loss function*.^[Note that there are loss functions other than the squared loss. For example, the _Mean Absolute Error_  uses absolute values, $|\hat{Y}_i - Y_i|$ instead of squaring the errors$(\hat{Y}_i - Y_i)^2$. However, in this chapter we focus on minimizing square loss since it is the most widely used.] If $\hat{y}$ is our predictor and $y$ is the observed outcome, the squared loss function is simply:
+
+$$
+(\hat{y} - y)^2
+$$
+
+Because we often have a test set with many observations, say $N$, we use the mean squared error (MSE):
+
+$$
+MSE = \frac{1}{N}\sum_{i=1}^N (\hat{y}_i - y_i)^2
+$$
+
+In practice, we often report the root mean squared error (RMSE), which is $\sqrt{\mbox{MSE}}$, because it is in the same units as the outcomes.^[Doing the math is often easier with the MSE and it is therefore more commonly used in textbooks, since these usually describe theoretical properties of algorithms.]
+
+If the outcomes are binary, both RMSE and MSE are equivalent to accuracy, since $(\hat{y} - y)^2$ is 0 if the prediction was correct and 1 otherwise. In general, our goal is to build an algorithm that minimizes the loss so it is as close to 0 as possible.
 
 ## Data: Cooperative Congressional Election Study (CCES)
+
+Now that we have a way to evaluate models, we're almost ready to start going through the modeling process using **tidymodels**.  However, we'll first need some data!
 
 For this chapter, we'll be using data from the Cooperative Congressional Election Study, a large survey of Americans that asks many questions relevant to American politics and elections.  You can learn more about the study [here](https://cces.gov.harvard.edu/).
 
@@ -70,17 +126,21 @@ cces <- cces %>%
     
     ideo5 = ifelse(ideo5 == "Not Sure", 3, as.numeric(ideo5)),
     
-    # Turn race and gender into factor variables
+    # Create "female" variable
     
-    race = as_factor(race),
-    gender = as_factor(gender))
+    female = 1 * (gender == 2),
+    
+    # Turn race into a factor variable
+    
+    race = as_factor(race))
 ```
 
 Finally, we'll `select()` the variables we'll be using and `glimpse()` our tibble:
 
 ```{r}
 cces <- cces %>%
-  select(pres_approval, pres_gop, pid7, ideo5, race, gender, educ, age, state)
+  select(pres_approval, pres_gop, pid7, ideo5, race, female, educ, age, state) %>%
+  filter(complete.cases(.))
 
 glimpse(cces)
 ```
@@ -91,7 +151,7 @@ Now we have one outcome (`pres_approval`, which ranges from 1 to 5) and eight po
 - `pid7`: Respondent's party identification on a 1-7 scale from strong Democrat to strong Republican
 - `ideo5`: Respondent's ideology on a 1-5 scale from very liberal to very conservative
 - `race`: Respondent's race, from eight choices (white, black, Hispanic, Asian, Native American, Middle Eastern, mixed, or other)
-- `gender`: Respondent's gender, from two choices (male and female)
+- `female`: Whether the respondent is female (0 or 1)
 - `educ`: Respondent's education on a 1-6 scale (no high school, high school, some college, two-year college, four-year college, and post-graduate education)
 - `age`: Respondent's age
 - `state`: Respondent's state
@@ -101,8 +161,8 @@ In past chapters, we've shown example models with one or two predictors, perhaps
 For this chapter, we'll consider x possible models.  We have some intuitions about what should be in a useful model for presidential approval.  First, since the effect of all the predictors likely vary based on whether the president is a Democrat or Republican, all predictors should be interacted with `pres_gop`.  Also, party identification and self-reported ideology are likely large predictors of presidential approval, and thus should be included.  But what about the other variables?  Let's consider the following combinations:
 
 1. `pid7` and `ideo5` alone
-1. `pid7` and `ideo5` plus demographic variables (`race`, `gender`, `educ`, and `age`)
-1. Same as above, but with interactions between `race` and `educ` and between `gender` and `age`
+1. `pid7` and `ideo5` plus demographic variables (`race`, `female`, `educ`, and `age`)
+1. Same as above, but with interactions between `race` and `educ` and between `female` and `age`
 1. `pid7` and `ideo5` plus the respondent's `state`
 1. The kitchen sink: demographic variables with the interactions in #3, plus `state`
 
@@ -119,13 +179,13 @@ Next, we can use `update()` to create the more complicated formulas.  `update()`
 ```{r}
 demo_form <- update(basic_form,
                     ~ . + race * pres_gop + 
-                      gender * pres_gop + 
+                      female * pres_gop + 
                       educ * pres_gop + 
                       age * pres_gop)
 
 demo_interact_form <- update(basic_form,
                              ~ . + race * educ * pres_gop + 
-                               gender * age * pres_gop)
+                               female * age * pres_gop)
 
 state_form <- update(basic_form,
                      ~ . + state * pres_gop)
@@ -155,110 +215,14 @@ cces_formulas <- tibble(formula = c(basic_form,
                                  "Full model"))
 ```
 
-## Notation
 
-In machine learning, data comes in the form of:
+## The modeling process using **tidymodels**
 
-1. the _outcome_ we want to predict and 
-2. the _predictors_ that we will use to predict the outcome
-
-We want to build an algorithm that takes predictor values as input and returns a prediction for the outcome when we don't know the outcome. The machine learning approach is to _train_ an algorithm using a dataset for which we do know the outcome, and then apply this algorithm in the future to make a prediction when we don't know the outcome.
-
-Here we will use $Y$ to denote the outcome and $X_1, \dots, X_p$ to denote predictors. Note that predictors are sometimes referred to as *features* or *covariates*. We consider all these to be synonyms.
-
-Prediction problems can be divided into categorical and continuous outcomes. For categorical outcomes, $Y$ can be any one of $K$ classes. The number of classes can vary greatly across applications.
-
-The general setup is as follows. We have a series of predictors and an unknown outcome we want to predict:
-
-```{r, echo=FALSE, message=FALSE, warning=FALSE}
-library(tidyverse)
-library(knitr)
-library(dslabs)
-tmp <- tibble(outcome="?", 
-              'predictor 1' = "$X_1$",
-              'predictor 2' = "$X_2$",
-              'predictor 3' = "$X_3$",
-              'predictor 4' = "$X_4$",
-              'predictor 5' = "$X_5$")
-if(knitr::is_html_output()){
-  knitr::kable(tmp, "html", align = "c") %>%
-    kableExtra::kable_styling(bootstrap_options = "striped", full_width = FALSE)
-} else{
-  knitr::kable(tmp, "latex", align="c", escape = FALSE, booktabs = TRUE) %>%
-    kableExtra::kable_styling(font_size = 8)
-}
-```
-
-To _build a model_ that provides a prediction for any set of observed values $X_1=x_1, X_2=x_2, \dots X_5=x_5$, we collect data for which we know the outcome:
-
-```{r, echo=FALSE}
-n <- 2
-tmp <- tibble(outcome = paste0("$y_{", 1:n,"}$"), 
-              'predictor 1' = paste0("$x_{",1:n,",1}$"),
-              'predictor 2' = paste0("$x_{",1:n,",2}$"),
-              'predictor 3' = paste0("$x_{",1:n,",3}$"),
-              'predictor 4' = paste0("$x_{",1:n,",4}$"),
-              'predictor 5' = paste0("$x_{",1:n,",5}$"))
-tmp_2 <- rbind(c("$\\vdots$", "$\\vdots$", "$\\vdots$", "$\\vdots$", "$\\vdots$", "$\\vdots$"),
-               c("$y_n$", "$x_{n,1}$","$x_{n,2}$","$x_{n,3}$","$x_{n,4}$","$x_{n,5}$"))
-colnames(tmp_2) <- names(tmp)
-tmp <- bind_rows(tmp, as_tibble(tmp_2))
-if(knitr::is_html_output()){
-  knitr::kable(tmp, "html") %>%
-    kableExtra::kable_styling(bootstrap_options = "striped", full_width = FALSE)
-} else{
-  knitr::kable(tmp, "latex", escape = FALSE, booktabs = TRUE) %>%
-    kableExtra::kable_styling(font_size = 8)
-}
-```
-
-When the output is continuous we refer to the machine learning task as _prediction_, and the main output of the model is a function $f$ that automatically produces a prediction, denoted with $\hat{y}$, for any set of predictors: $\hat{y} = f(x_1, x_2, \dots, x_p)$.  We use the term _actual outcome_ to denote what we ended up observing. So we want the prediction $\hat{y}$ to match the actual outcome $y$ as well as possible. Because our outcome is continuous, our predictions $\hat{y}$ will not be either exactly right or wrong, but instead we will determine an _error_ defined as the difference between the prediction and the actual outcome $y - \hat{y}$.
-
-When the outcome is categorical, we refer to the machine learning task as _classification_, and the main output of the model will be a _decision rule_ which prescribes which of the $K$ classes we should predict. In this scenario, most models provide functions of the predictors for each class $k$, $f_k(x_1, x_2, \dots, x_p)$, that are used to make this decision. When the data is binary a typical decision rules looks like this: if $f_1(x_1, x_2, \dots, x_p) > C$, predict category 1, if not the other category, with $C$ a predetermined cutoff. Because the outcomes are categorical, our predictions will be either right or wrong. 
-
-## Evaluation metrics
-
-Before we start describing approaches to optimize the way we build algorithms, we first need to define what we mean when we say one approach is better than another. In this section, we focus on describing ways in which machine learning algorithms are evaluated. Specifically, we need to quantify what we mean by "better."
-
-### Training and test sets
-
-Ultimately, a machine learning algorithm is evaluated on how it performs in the real world with completely new datasets. However, when developing an algorithm, we usually have a dataset for which we know the outcomes. Therefore, to mimic the ultimate evaluation process, we typically split the data into two parts and act as if we don't know the outcome for one of these. We stop pretending we don't know the outcome to evaluate the algorithm, but only *after* we are done constructing it. We refer to the group for which we know the outcome, and use to develop the algorithm, as the _training_ set. We refer to the group for which we pretend we don't know the outcome as the _test_ set. 
-
-A standard way of generating the training and test sets is by randomly splitting the data.
-
-We will then develop an algorithm using **only** the training set. Once we are done developing the algorithm, we will _freeze_ it and evaluate it using the test set.
-
-But remember, **it is important that we optimize the model using only the training set**: the test set is only for evaluation. Evaluating an algorithm on the training set can lead to _overfitting_, which often results in dangerously over-optimistic assessments. 
-
-### The loss function {#loss-function}
-
-In this section, we describe how the general approach to defining "best" in machine learning is to define a _loss function_, which can be applied to both categorical and continuous data. 
-
-The most commonly used loss function is the squared loss function. If $\hat{y}$ is our predictor and $y$ is the observed outcome, the squared loss function is simply:
-
-$$
-(\hat{y} - y)^2
-$$
-
-Because we often have a test set with many observations, say $N$, we use the mean squared error (MSE):
-
-$$
-MSE = \frac{1}{N}\sum_{i=1}^N (\hat{y}_i - y_i)^2
-$$
-
-In practice, we often report the root mean squared error (RMSE), which is $\sqrt{\mbox{MSE}}$, because it is in the same units as the outcomes. But doing the math is often easier with the MSE and it is therefore more commonly used in textbooks, since these usually describe theoretical properties of algorithms.
-
-If the outcomes are binary, both RMSE and MSE are equivalent to accuracy, since $(\hat{y} - y)^2$ is 0 if the prediction was correct and 1 otherwise. In general, our goal is to build an algorithm that minimizes the loss so it is as close to 0 as possible.
-
-Note that there are loss functions other than the squared loss. For example, the _Mean Absolute Error_  uses absolute values, $|\hat{Y}_i - Y_i|$ instead of squaring the errors$(\hat{Y}_i - Y_i)^2$. However, in this book we focus on minimizing square loss since it is the most widely used.
-
-## Evaluating with **tidymodels**
-
-If you are embarking on learning **tidymodels**, you’ll need to use this same kind of code as the building blocks for any predictive modeling pipeline.
+If you are using **tidymodels**, many machine learning tasks are simplified, since you can use the same kind of code as the building blocks for any predictive modeling pipeline.
 
 ### **parsnip**: build the model
 
-This step is really three, using only the [**parsnip** package](https://tidymodels.github.io/parsnip/):
+This step is really three, using only the [**parsnip** package](https://tidymodels.github.io/parsnip/). In this setp, we can choose the *model*, the *engine* to run the model in R, and, for some models, the *mode*.  Here, our model will be linear regression, the engine `lm`, and the mode "regression" (the only possible mode for a linear regression).
 
 ```{r}
 lm_spec <- 
@@ -278,22 +242,22 @@ lm_spec <-
 lm_spec
 ```
 
-To keep things simple, we'll only be evaluating linear regressions in this chapter, although there are many other modeling choices one could make for predicting presidential approval, some of which may be superior.^[For instance, linear regression allows for predicted values which are below 1 and above 5, which are theoretically forbidden.  Furthermore, linear regression assumes that the distance between each response category is the same, since the distance between 1 and 2 is the same as 2 and 3, and so on, but there may be real world "breakpoints," for instance if it is more important to go from neutral to somewhat approval than from somewhat approval to strong approval.  However, for the purposes of this chapter, we will proceed with linear regression.]
+To keep things simple, we'll only be evaluating linear regressions in this chapter, although there are many other modeling choices one could make for predicting presidential approval, some of which may be superior.^[For instance, linear regression allows for predicted values which are below 1 and above 5, which are theoretically forbidden.  Furthermore, linear regression assumes that the distance between each response category is the same, since the distance between 1 and 2 is the same as 2 and 3, and so on, but there may be real world "breakpoints," for instance if it is more important to go from neutral to somewhat approval than from somewhat approval to strong approval.  However, for the purposes of this chapter, we will proceed with linear regression.]  Note that you could evaluate the performances of those other models using the same building blocks of code that we show you here.
 
 Things that are missing: data (we haven’t touched it yet) and a formula (no data, no variables, no twiddle ~). This is an abstract model specification. See other possible parsnip models [here](https://tidymodels.github.io/parsnip/articles/articles/Models.html).
 
 ### **recipes**: not happening here, folks
 
-This is where you would normally insert some code for *feature engineering* using the **recipes** package.  Feature engineering involves transforming your data to create different predictors, such as by taking log transforming, turning numerical variables into factors or vise versa, and so on.  We engaged in some rudimentary feature engineering when we `mutate()`d the CCES at the beginning of this chapter.  But for the purposes of this chapter, we will treat our data as-is.
+This is where one would normally insert some code for *feature engineering* using the **recipes** package.  Feature engineering involves transforming your data to create different predictors, such as by taking log transformations, turning numerical variables into factors or vise versa, and so on.  We engaged in some rudimentary feature engineering when we `mutate`d the CCES at the beginning of this chapter.  But for the purposes of this chapter, we will treat our data as-is.
 
 ### **rsample**: initial split
 
-We’ll use the [**rsample** package](https://tidymodels.github.io/rsample/) to split the CCES up into two datasets: training and testing. The `initial_split()` function takes a dataset and splits it into a training and test set.  By default, 75% of the data is kept in the training set and the rest are allocated to the test set (this can be changed with the `prop` argument).  Because the split is done at random, we need to use `set.seed()` to ensure our results are replicable.
+We’ll use the [**rsample** package](https://tidymodels.github.io/rsample/) to split the CCES up into two datasets: training and testing. The `initial_split()` function takes a dataset and splits it into a training and test set.  By default, 75% of the data is kept in the training set and the rest are allocated to the test set.  This can be changed with the `prop` argument -- we'll set it at 0.8.  Because the split is done at random, we need to use `set.seed()` to ensure our results are replicable.
 
 ```{r}
 set.seed(1234)
 
-cces_split <- initial_split(cces)
+cces_split <- initial_split(cces, prop = 0.8)
 cces_train <- training(cces_split)
 cces_test <- testing(cces_split)
 ```
@@ -301,6 +265,42 @@ cces_test <- testing(cces_split)
 ### Fitting the model once
 
 Fitting a single model once is... not *exactly* the hardest part.
+
+First, we can get the fitted model using the `fit()` function:
+
+```{r}
+lm_spec %>%
+  fit(basic_form, data = cces_train)
+```
+
+Note that we can use `tidy()`, just like we did in previous chapters, to take a look at the results:
+
+```{r}
+lm_spec %>%
+  fit(basic_form, data = cces_train) %>%
+  tidy(conf.int = TRUE) %>%
+  select(term, estimate, conf.low, conf.high)
+```
+
+As we'd expect, Republicans and conservatives approve of Republican presidents more.
+
+Now that we have fit a model on the *training* set, is it time to make predictions on the *test* set? In general, we would **not** want to predict the test set at this point, although we will do so to illustrate how the code works.  In a real scenario, we would use *resampling* methods (e.g., cross-validation, bootstrapping) to evaluate how well the model is doing. **tidymodels** has a great infrastructure to do this with **rsample**, and we will talk about this soon to demonstrate how we should really evaluate models. 
+
+To make predictions, we'll use the `predict()` function.  We will use the argument `new_data = cces_test` to make predictions on the test set.
+
+```{r}
+lm_spec %>%
+  
+  # Train: get fitted model
+  
+  fit(basic_form, data = cces_train) %>%
+  
+  # Test: get predictions
+  
+  predict(new_data = cces_test)
+```
+
+Now we have a tibble of predictions.  How can we evaluate it? The **yardstick** package is a tidy interface for computing measures of performance, with individual functions for specific metrics (e.g., `accuracy()`, `rmse()`).  The `rmse()` function in the **yardstick** package will compute the RMSE for us, as long as we have the actual values.   So we'll `bind_cols()` to the test data and use `rmse()` to evaluate our model.  `rmse()` requires that we give it the `truth` (here, `pres_approval`) and the our `estimate` (here, `.pred`):
 
 ```{r}
 lm_spec %>%
@@ -319,10 +319,12 @@ lm_spec %>%
   rmse(truth = pres_approval, estimate = .pred)
 ```
 
-If you squint, you might see that we could make this into a function like below:
+### Fitting many models using `map()`
+
+If you squint, you might see that we could make this process into a function like the one below below:
 
 ```{r}
-fit_lm_holdout <- function(formula, train, test) {
+fit_lm_split <- function(formula, train, test) {
   lm_spec %>%
     fit(formula, data = train) %>%
     predict(new_data = test) %>%
@@ -330,11 +332,13 @@ fit_lm_holdout <- function(formula, train, test) {
 }
 ```
 
-We can then create a tibble that has all the predictions for each model, using our old friend `map()`:
+This function takes a `formula` object and fits it a linear regression on the training data.  It returns the test data with a new column (`.pred`) that contains predictions from the model that we fit on the training data.
+
+It's not a great leap to can then create a tibble that has all the predictions for every specification in `cces_formualas`, using our old friend `map()`:
 
 ```{r}
 cces_test_preds <- cces_formulas %>%
-  mutate(preds = map(formula, ~ fit_lm_holdout(., cces_train, cces_test))) %>%
+  mutate(preds = map(formula, ~ fit_lm_split(., cces_train, cces_test))) %>%
   unnest(preds)
 ```
 
@@ -346,10 +350,11 @@ cces_test_preds %>%
   rmse(truth = pres_approval, estimate = .pred)
 ```
 
-But, unfortunately, we shouldn’t be predicting with the test set over and over again like this. It isn’t good practice to predict with the test set more than one time. What is a good predictive modeler to do? We should be saving (holding out) the test set and use it to generate predictions exactly once, at the very end — after we’ve compared different models, selected my features, and tuned my hyperparameters. How do you do this? You do [cross-validation](https://sebastianraschka.com/blog/2016/model-evaluation-selection-part3.html) with the training set, and you leave the testing set for [*the very last fit you do*](https://tidymodels.github.io/tune/reference/last_fit.html).
+Here we see that the basic model and the state model perform worse and the other three models, all of which include demographic covariates, perform better.
+
+But, unfortunately, we shouldn’t be predicting with the test set over and over again like this. It isn’t good practice to predict with the test set more than one time. What is a good predictive modeler to do? We should be saving (holding out) the test set and use it to generate predictions exactly once, at the very end — after we’ve compared different models, selected features, and tuned hyperparameters. How do you do this? You do [cross-validation](https://sebastianraschka.com/blog/2016/model-evaluation-selection-part3.html) with the training set, and you leave the testing set for [*the very last fit you do*](https://tidymodels.github.io/tune/reference/last_fit.html).
 
 ## Cross validation {#cross-validation}
-
 
 In this section we introduce cross validation, one of the most important ideas in machine learning. 
 
@@ -396,7 +401,7 @@ knitr::include_graphics("images/cv-2.png")
 
 So to imitate this situation, we carve out a piece of our dataset and pretend it is an independent dataset: we divide the dataset into a _training set_ (blue) and a _test set_ (red). We will train our algorithm exclusively on the training set and use the test set only for evaluation purposes.
 
-We usually try to select a small piece of the dataset so that we have as much data as possible to train. However, we also want the test set to be large so that we obtain a stable estimate of the loss without fitting an impractical number of models. Typical choices are to use 10%-20% of the data for testing. 
+We usually try to select a small piece of the dataset so that we have as much data as possible to train. However, we also want the test set to be large so that we obtain a stable estimate of the loss without fitting an impractical number of models. The `initial_split()` function reserves 25% of the data for testing by default. 
 
 ```{r, echo=FALSE}
 knitr::include_graphics("images/cv-3.png")
@@ -452,6 +457,52 @@ knitr::include_graphics("images/cv-8.png")
 
 
 Now how do we pick the cross validation $K$? Large values of $K$ are preferable because the training data better imitates the original dataset. However, larger values of $K$ will have much slower computation time: for example, 100-fold cross validation will be 10 times slower than 10-fold cross validation. For this reason, the choices of $K=5$ and $K=10$ are popular.
+
+### Implementing cross-validation using **rsample**
+
+Now let's add cross-validation to our **tidymodels** workflow!  To do this, we’ll use a function called `vfold_cv()` in the **rsample** package.  The argument `v` sets the number of folds, which is 10 by default.  We'll do 5-fold cross-validation in this example.
+
+```{r}
+set.seed(1234)
+
+cces_folds <- vfold_cv(cces_train, v = 5)
+```
+
+How can we work with the `cces_folds` object?  **tidymodels** makes it easy by using the `fit_resamples()` function in the **tune** package.  (Note: make sure you have at least version 0.1.0 of the **tune** package installed, as the following code uses new syntax.)  The `fit_resamples()` function takes as its first argument a model specification (such as `lm_spec`), then a formula as its second argument, called `preprocessor`.^[Or a recipe, if you delve more deeply into **tidymodels**.]  Finally, the `resamples` argument is where you input the cross-validation dataset.
+
+```{r}
+lm_spec %>%
+  fit_resamples(preprocessor = basic_form,
+                resamples = cces_folds)
+```
+
+To inspect the average metrics across all the folds, we can use the `collect_metrics()` function:
+
+```{r}
+lm_spec %>%
+  fit_resamples(preprocessor = basic_form,
+                resamples = cces_folds) %>%
+  collect_metrics()
+```
+
+It's not that hard to extend this to all of our formulas using `map()`.  (Note that `fit_resamples()` currently gives the warning message "prediction from a rank-deficient fit may be misleading" whenever a factor or character variable is used as a predictor; this does not necessarily mean that the fit was actually rank-deficient.)
+
+```{r, message = FALSE}
+cces_metrics <- cces_formulas %>%
+  mutate(metrics = map(formula, ~ fit_resamples(lm_spec,
+                                                preprocessor = .,
+                                                resamples = cces_folds) %>%
+                         collect_metrics()))
+```
+
+Let's present the results stored in our `cces_metrics` object:
+
+```{r}
+cces_metrics %>%
+  mutate(mean_rmse = map_dbl(metrics, ~ filter(., .metric == "rmse") %>% pull(mean)),
+         se_rmse = map_dbl(metrics, ~ filter(., .metric == "rmse") %>% pull(std_err))) %>%
+  select(group, mean_rmse, se_rmse)
+```
 
 ### Bootstrap
 
