@@ -47,7 +47,7 @@ We then develop an algorithm using **only** the training set. Once we are done d
 
 The general approach to defining "best" in machine learning is to define a _loss function_.  This concept can be applied to both categorical and continuous data. 
 
-The most commonly used loss function is the *squared loss function*.^[Note that there are loss functions other than the squared loss. For example, the _Mean Absolute Error_  uses absolute values, $|\hat{Y}_i - Y_i|$ instead of squaring the errors$(\hat{Y}_i - Y_i)^2$. However, in this chapter we focus on minimizing square loss since it is the most widely used.] If $\hat{y}$ is our predictor and $y$ is the observed outcome, the squared loss function is simply:
+The most commonly used loss function is the *squared loss function*.^[Note that there are loss functions other than the squared loss. For example, the _Mean Absolute Error_  uses absolute values, $|\hat{Y}_i - Y_i|$ instead of squaring the errors $(\hat{Y}_i - Y_i)^2$. However, in this chapter we focus on minimizing square loss since it is the most widely used.] If $\hat{y}$ is our predictor and $y$ is the observed outcome, the squared loss function is simply:
 
 $$
 (\hat{y} - y)^2
@@ -108,7 +108,7 @@ cces <- cces %>%
                                    TRUE ~ NA_real_))
 ```
 
-We'll also `mutate()` some other variables for interpretability this chapter:
+We'll also `mutate()` some other variables for interpretability this chapter (just copy this code--if you want a better sense of what these lines are doing, take a look at the [CCES documentation](https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/II2DB6)):
 
 ```{r}
 cces <- cces %>%
@@ -129,17 +129,21 @@ cces <- cces %>%
     # Create "female" variable
     
     female = 1 * (gender == 2),
+  
+    # Turn race into a character variable
     
-    # Turn race into a factor variable
+    race = as_factor(race),
+  
+    # Simplify race categories (because some categories appear rarely)
     
-    race = as_factor(race))
+    race = fct_lump_n(race, 4))
 ```
 
 Finally, we'll `select()` the variables we'll be using and `glimpse()` our tibble:
 
 ```{r}
 cces <- cces %>%
-  select(pres_approval, pres_gop, pid7, ideo5, race, female, educ, age, state) %>%
+  select(pres_approval, pres_gop, pid7, ideo5, race, female, educ, age) %>%
   filter(complete.cases(.))
 
 glimpse(cces)
@@ -154,29 +158,31 @@ Now we have one outcome (`pres_approval`, which ranges from 1 to 5) and eight po
 - `female`: Whether the respondent is female (0 or 1)
 - `educ`: Respondent's education on a 1-6 scale (no high school, high school, some college, two-year college, four-year college, and post-graduate education)
 - `age`: Respondent's age
-- `state`: Respondent's state
 
 In past chapters, we've shown example models with one or two predictors, perhaps with an interaction.  When you have more variables in your dataset, how can you decide which predictors to include?  The techniques of machine learning can help answer this question.
 
-For this chapter, we'll consider x possible models.  We have some intuitions about what should be in a useful model for presidential approval.  First, since the effect of all the predictors likely vary based on whether the president is a Democrat or Republican, all predictors should be interacted with `pres_gop`.  Also, party identification and self-reported ideology are likely large predictors of presidential approval, and thus should be included.  But what about the other variables?  Let's consider the following combinations:
+For this chapter, we'll consider x possible models.  We have some intuitions about what should be in a useful model for presidential approval.  First, since the effect of all the predictors likely vary based on whether the president is a Democrat or Republican, all predictors should be interacted with `pres_gop`.  Also, party identification is likely a large predictor of presidential approval, and thus should be included.  But what about the other variables?  Let's consider the following combinations:
 
-1. `pid7` and `ideo5` alone
-1. `pid7` and `ideo5` plus demographic variables (`race`, `female`, `educ`, and `age`)
-1. Same as above, but with interactions between `race` and `educ` and between `female` and `age`
-1. `pid7` and `ideo5` plus the respondent's `state`
-1. The kitchen sink: demographic variables with the interactions in #3, plus `state`
+1. `pid7` alone
+1. `pid7` and `ideo5`
+1. `pid7` plus demographic variables (`race`, `female`, `educ`, and `age`)
+1. Same as above, but with all two-way interactions between the demographic variables
+1. The kitchen sink: demographic variables with the interactions in #4, plus `ideo5`
 
 Of course, these are a small subset of the possible models we could consider, either with the variables we have selected or with the larger set of all the variables in the CCES.  But we'll use these as examples for the machine learning techniques in this chapter; if you'd like, you can use the methods we learn here to test additional models.
 
 Let's save these as `formula` objects in R, so we can easily access them later.  We'll start with the simplest model we'll consider, as `basic_form`:
 
 ```{r}
-basic_form <- formula(pres_approval ~ pid7 * pres_gop + ideo5 * pres_gop)
+basic_form <- formula(pres_approval ~ pid7 * pres_gop)
 ```
 
 Next, we can use `update()` to create the more complicated formulas.  `update()` takes as its first argument a formula and as its second argument the additions you want to make.  To keep all the predictors from the first formula and add more, you will start with `~ . + ` and then add more predictors, like so:
 
 ```{r}
+ideo_form <- update(basic_form,
+                    ~ ideo5 * pres_gop)
+
 demo_form <- update(basic_form,
                     ~ . + race * pres_gop + 
                       female * pres_gop + 
@@ -186,16 +192,13 @@ demo_form <- update(basic_form,
 demo_interact_form <- update(basic_form,
                              ~ . + race * educ * pres_gop + 
                                female * age * pres_gop)
-
-state_form <- update(basic_form,
-                     ~ . + state * pres_gop)
 ```
 
-Since the last model is the same as `demo_interact_form` but with `state * pres_gop` added, we'll use `update(demo_interact_form)` rather than `update(basic_form)` here:
+Since the last model is the same as `demo_interact_form` but with `ideo5 * pres_gop` added, we'll use `update(demo_interact_form)` rather than `update(basic_form)` here:
 
 ```{r}
 full_form <- update(demo_interact_form,
-                    ~ . + state * pres_gop)
+                    ~ . + ideo5 * pres_gop)
 ```
 
 Now we have five `formula` objects we can use to fit models.
@@ -204,14 +207,14 @@ So we can access them easily, we'll save them in a tibble and give them easy-to-
 
 ```{r}
 cces_formulas <- tibble(formula = c(basic_form,
-                                   demo_form,
-                                   demo_interact_form,
-                                   state_form,
-                                   full_form),
+                                    ideo_form,
+                                    demo_form,
+                                    demo_interact_form,
+                                    full_form),
                        group = c("Basic model",
+                                 "Ideology model",
                                  "Demographic model",
                                  "Demographic interaction model",
-                                 "State model",
                                  "Full model"))
 ```
 
@@ -282,7 +285,7 @@ lm_spec %>%
   select(term, estimate, conf.low, conf.high)
 ```
 
-As we'd expect, Republicans and conservatives approve of Republican presidents more.
+As we'd expect, Republicans approve of Republican presidents more.
 
 Now that we have fit a model on the *training* set, is it time to make predictions on the *test* set? In general, we would **not** want to predict the test set at this point, although we will do so to illustrate how the code works.  In a real scenario, we would use *resampling* methods (e.g., cross-validation, bootstrapping) to evaluate how well the model is doing. **tidymodels** has a great infrastructure to do this with **rsample**, and we will talk about this soon to demonstrate how we should really evaluate models. 
 
@@ -350,7 +353,7 @@ cces_test_preds %>%
   rmse(truth = pres_approval, estimate = .pred)
 ```
 
-Here we see that the basic model and the state model perform worse and the other three models, all of which include demographic covariates, perform better.
+Here we see that adding ideology to the model above and beyond partisanship makes the predictions worse.  The two demographic models perform similarly.  Interestingly, adding back in ideology to the demographic model with interactions performs the best on the test set.
 
 But, unfortunately, we shouldn’t be predicting with the test set over and over again like this. It isn’t good practice to predict with the test set more than one time. What is a good predictive modeler to do? We should be saving (holding out) the test set and use it to generate predictions exactly once, at the very end — after we’ve compared different models, selected features, and tuned hyperparameters. How do you do this? You do [cross-validation](https://sebastianraschka.com/blog/2016/model-evaluation-selection-part3.html) with the training set, and you leave the testing set for [*the very last fit you do*](https://tidymodels.github.io/tune/reference/last_fit.html).
 
@@ -413,9 +416,7 @@ Now this presents a new problem because for most machine learning algorithms we 
 
 For each set of algorithm parameters being considered, we want an estimate of the MSE and then we will choose the parameters with the smallest MSE. Cross validation provides this estimate.
 
-First, before we start the cross validation procedure, it is important to fix all the algorithm parameters. Although we will train the algorithm on the set of training sets, the parameters will be the same across all training sets.
-
-Let's start by describing how to construct the first: we simply pick $M=N/K$ observations at random (we round if $M$ is not a round number) and think of these as a random sample. We call this the *validation set*:
+Let's start by describing how to construct the first "fold": we simply pick $M=N/K$ observations at random (we round if $M$ is not a round number) and think of these as a random sample. We call this the *validation set*:
 
 
 ```{r, echo=FALSE}
@@ -431,8 +432,6 @@ knitr::include_graphics("images/cv-5.png")
 
 Then, for our final estimate, we compute the average MSE across our $K$ samples.
 
-A final step would be to select the set of parameters that minimizes the MSE.
-
 We have described how to use cross validation to optimize parameters. However, we now have to take into account the fact that the optimization occurred on the training data and therefore we need an estimate of our final algorithm based on data that was not used to optimize the choice. Here is where we use the test set we separated early on:
 
 
@@ -440,21 +439,12 @@ We have described how to use cross validation to optimize parameters. However, w
 knitr::include_graphics("images/cv-6.png")
 ```
 
-We can do cross validation again:
-
-```{r, echo=FALSE}
-knitr::include_graphics("images/cv-7.png")
-```
-
-and obtain a final estimate of our expected loss. However, note that this means that our entire compute time gets multiplied by $K$. You will soon learn that performing this task takes time because we are performing many complex computations. As a result, we are always looking for ways to reduce this time. For the final evaluation, we often just use the one test set.
-
 Once we are satisfied with this model and want to make it available to others, we could refit the model on the entire dataset, without changing the optimized parameters.
 
 
 ```{r, echo=FALSE}
 knitr::include_graphics("images/cv-8.png")
 ```
-
 
 Now how do we pick the cross validation $K$? Large values of $K$ are preferable because the training data better imitates the original dataset. However, larger values of $K$ will have much slower computation time: for example, 100-fold cross validation will be 10 times slower than 10-fold cross validation. For this reason, the choices of $K=5$ and $K=10$ are popular.
 
@@ -465,10 +455,11 @@ Now let's add cross-validation to our **tidymodels** workflow!  To do this, we�
 ```{r}
 set.seed(1234)
 
-cces_folds <- vfold_cv(cces_train, v = 5)
+cces_folds <- cces_train %>%
+  vfold_cv(v = 5)
 ```
 
-How can we work with the `cces_folds` object?  **tidymodels** makes it easy by using the `fit_resamples()` function in the **tune** package.  (Note: make sure you have at least version 0.1.0 of the **tune** package installed, as the following code uses new syntax.)  The `fit_resamples()` function takes as its first argument a model specification (such as `lm_spec`), then a formula as its second argument, called `preprocessor`.^[Or a recipe, if you delve more deeply into **tidymodels**.]  Finally, the `resamples` argument is where you input the cross-validation dataset.
+How can we work with the `cces_folds` object?  **tidymodels** makes it easy by using the `fit_resamples()` function in the **tune** package.  (**Note**: make sure you have at least version 0.1.0 of the **tune** package installed, as the following code uses new syntax.)  The `fit_resamples()` function takes as its first argument a model specification (such as `lm_spec`), then a formula as its second argument, called `preprocessor`.^[Or a recipe, if you delve more deeply into **tidymodels**.]  Finally, the `resamples` argument is where you input the cross-validation dataset.
 
 ```{r}
 lm_spec %>%
@@ -485,20 +476,22 @@ lm_spec %>%
   collect_metrics()
 ```
 
-It's not that hard to extend this to all of our formulas using `map()`.  (Note that `fit_resamples()` currently gives the warning message "prediction from a rank-deficient fit may be misleading" whenever a factor or character variable is used as a predictor; this does not necessarily mean that the fit was actually rank-deficient.)
+It's not that hard to extend this to all of our formulas using `map()`.
 
 ```{r, message = FALSE}
-cces_metrics <- cces_formulas %>%
+folds_metrics <- cces_formulas %>%
   mutate(metrics = map(formula, ~ fit_resamples(lm_spec,
                                                 preprocessor = .,
                                                 resamples = cces_folds) %>%
                          collect_metrics()))
 ```
 
-Let's present the results stored in our `cces_metrics` object:
+(Note that `fit_resamples()` currently gives the warning message "prediction from a rank-deficient fit may be misleading" whenever a factor or character variable is used as a predictor; this does not necessarily mean that the fit was actually rank-deficient.)
+
+Let's present the results stored in our `folds_metrics` object:
 
 ```{r}
-cces_metrics %>%
+folds_metrics %>%
   mutate(mean_rmse = map_dbl(metrics, ~ filter(., .metric == "rmse") %>% pull(mean)),
          se_rmse = map_dbl(metrics, ~ filter(., .metric == "rmse") %>% pull(std_err))) %>%
   select(group, mean_rmse, se_rmse)
@@ -508,5 +501,61 @@ cces_metrics %>%
 
 One way we can improve the variance of our final estimate is to take more samples. To do this, we would no longer require the training set to be partitioned into non-overlapping sets. Instead, we would just pick $K$ sets of some size at random.
 
-One popular version of this technique, at each fold, picks observations at random with replacement (which means the same observation can appear twice). This approach has some advantages (not discussed here) and is generally referred to as the _bootstrap_. 
+One popular version of this technique, at each fold, picks observations at random with replacement (which means the same observation can appear twice) -- our old friend the *bootstrap*.
 
+In **rsample**, we can do that using the `boostraps()` function.  The `times` argument states how many bootstrap samples you want to take:
+
+```{r}
+set.seed(1234)
+
+cces_boots <- cces_train %>%
+  bootstraps(times = 25)
+```
+
+Now we can use `fit_resample()` just like we did with `cces_folds`.  Here's how we do it with one formula:
+
+```{r}
+lm_spec %>%
+  fit_resamples(preprocessor = basic_form,
+                resamples = cces_boots) %>%
+  collect_metrics()
+```
+
+And we can also adapt our code to run this for every formula in `cces_formulas`:
+
+```{r, eval = FALSE}
+boots_metrics <- cces_formulas %>%
+  mutate(metrics = map(formula, ~ fit_resamples(lm_spec,
+                                                preprocessor = .,
+                                                resamples = cces_boots) %>%
+                         collect_metrics()))
+
+boots_metrics %>%
+  mutate(mean_rmse = map_dbl(metrics, ~ filter(., .metric == "rmse") %>% pull(mean)),
+         se_rmse = map_dbl(metrics, ~ filter(., .metric == "rmse") %>% pull(std_err))) %>%
+  select(group, mean_rmse, se_rmse)
+```
+
+
+<!-- AR: this takes a while, so I saved the result, but be sure to uncomment
+this if you need to run this code again -->
+
+```{r, echo = FALSE, message = FALSE}
+# boots_metrics <- cces_formulas %>%
+#   mutate(metrics = map(formula, ~ fit_resamples(lm_spec,
+#                                                 preprocessor = .,
+#                                                 resamples = cces_boots) %>%
+#                          collect_metrics()))
+# 
+# boots_metrics %>%
+#   write_rds(path = "rds/boots_metrics.rds")
+
+boots_metrics <- read_rds(path = "rds/boots_metrics.rds")
+
+boots_metrics %>%
+  mutate(mean_rmse = map_dbl(metrics, ~ filter(., .metric == "rmse") %>% pull(mean)),
+         se_rmse = map_dbl(metrics, ~ filter(., .metric == "rmse") %>% pull(std_err))) %>%
+  select(group, mean_rmse, se_rmse)
+```
+
+Cross-validation and the bootstrap lead to similar estimates of the RMSE, but note that the standard error of the RMSE goes down using the bootstrap method, since more samples were taken.  However, the trade-off is that the more samples you take, the more computing time you'll use.
