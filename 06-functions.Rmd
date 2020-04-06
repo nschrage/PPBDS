@@ -579,38 +579,54 @@ What can we do with a list column? That is tricky! Lists are hard to work with. 
 Let's say that you want to add 1 to row of a variable in a tibble, storing the result in `x`.  You could accomplish this with `mutate`:
 
 ```{r for_loop_example}
-tibble(start = c(3, 2, 6)) %>% 
+tibble(start = c(3, 2.5, 6)) %>% 
   mutate(new = start + 1)
 
 ```
 
-We could instead create a function that adds 1 to a number.  Then, we can use `map_dbl()` to apply this to our input variable.  `map_dbl()` --- pronounced "map double" --- comes from the `purrr` package, which you will have loaded if you have loaded `tidyverse`.  `map_dbl()` is just one member of a family of map_* functions which applies the same function to every row in a tibble. The "dbl" suffix indicates that the function returns a "double," meaning a numeric value.
+We could instead create a function that adds 1 to a number.  Then, we can use `map_dbl()` to apply this to our input variable.  `map_dbl()` --- pronounced "map double" --- comes from the **purrr** package, which you will have loaded if you have loaded **tidyverse**.  `map_dbl()` is just one member of a family of `map_*` functions which applies the same function to every row in a tibble. The "dbl" suffix indicates that the function returns a "double," meaning a numeric value.
 
 
 ```{r map_simple}
 increment <- function(x) return(x + 1)
 
-tibble(start = c(3, 2, 6)) %>% 
+tibble(start = c(3, 2.5, 6)) %>% 
   mutate(new = map_dbl(start, increment))
-   
 ```
 
-What happened is that `map_dbl()` took the function `increment()` and applied it to each element of `start`.  
+`map_dbl()` took the function `increment` and applied it to each element of `start`. Note that, when we passed the function `increment` to `map_dbl()`, we passed in just its name, without the closing parentheses. This code fails:
 
-The syntax can get even simpler than this if we use [anonymous functions.](https://coolbutuseless.github.io/2019/03/13/anonymous-functions-in-r-part-1/)  The following code snippet shows two ways to use anonymous functions.  The first one, using base R, creates a function within `map_dbl()` using `function()`.  The second, using the `purrr` package (from where we get `map_dbl()`), starts with the `~` operator and then uses `.` to represent the current element:
+```{r, error=TRUE}
+tibble(start = c(3, 2.5, 6)) %>% 
+  mutate(new = map_dbl(start, increment()))
+```
 
+`increment()` with the parantheses is a call to the function. So, the first thing R tries to do is to run the function. Doing so fails because `increment()` requires an argument `x`, which is not present. Lesson: When passing a function in to `map_*` functions, pass just the name.
 
-```{r map_anonymous}
-tibble(start = c(3, 2, 6)) %>% 
+The syntax can get even simpler than this if we use [anonymous functions.](https://coolbutuseless.github.io/2019/03/13/anonymous-functions-in-r-part-1/)  An anonymous function in R is one without a name. The function `increment()` has a name, obviously. But we can create a function which does the same thing "on the fly" without bothering to give it a name. 
+
+There are two ways to create anonymous functions.  The first one, using base R, uses `function()` to create a function within `map_dbl()`.  
+
+```{r}
+tibble(start = c(3, 2.5, 6)) %>% 
   mutate(new = map_dbl(start, function(x) x + 1))
-
-
-tibble(start = c(3, 2, 6)) %>% 
-  mutate(new = map_dbl(start, ~ . + 1))
-
 ```
 
-The latter shorthand is very convenient once you get used to it.  Note that we are piping `start` directly into `map_dbl()`, which we can do because like other tidyverse functions, `map_dbl()` takes its data as the first argument.
+The second, using the **purrr** package (from where we get `map_dbl()`), starts with the `~` operator and then uses `.` to represent the current element.
+
+```{r}
+tibble(start = c(3, 2.5, 6)) %>% 
+  mutate(new = map_dbl(start, ~ (. + 1)))
+```
+
+Note that the parantheses are not necessary. As long as everything after the `~` works as R code, the anonymous function should work, each time replace the `.` with the value of the `.x` variable --- which is `start` in this case --- with its value in that row.
+
+```{r}
+tibble(start = c(3, 2.5, 6)) %>% 
+  mutate(new = map_dbl(start, ~ . + 1))
+```
+
+The `~ ` shorthand is very convenient once you get used to it.  
 
 We called these `map_*` *functions* (plural) before.  If you know the expected output of your function, you can specify that kind of vector:
 
@@ -621,11 +637,11 @@ We called these `map_*` *functions* (plural) before.  If you know the expected o
 - `map_chr()`: character
 - `map_df()`: data frame
 
-So, since our above code produces numeric output, we use `map_dbl()` instead of `map()`:^[You may wonder why we aren't using `map_int()` instead.  We could, but we'd have to write the code a little differently.  R uses `L` to mark integers, so we'd have to say `map_int(~ . + 1L)`.]
+So, since our example produces numeric output, we use `map_dbl()` instead of `map()`.
 
 ### Using `map_*` functions to create list columns
 
-Now that we understand `map_*` functions, we can also use them to create list columns.  We'll use the `weather` dataset in the `nycflights13` package.
+We can use `map_*` functions to create list columns.  We'll use the `weather` dataset in the `nycflights13` package.
 
 First, let's wrangle the data so each observation is a day rather than an hour.  We'll create a list column `temps_F` that consists of all the temperatures recorded that day at a particular origin.
 
