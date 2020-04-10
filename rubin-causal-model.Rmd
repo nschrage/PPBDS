@@ -19,7 +19,7 @@ rather than here. -->
 
 The Rubin causal model (RCM) is based on the idea of **potential outcomes.**  For example, let's say you took aspirin and now no longer have a headache. To measure the causal effect of taking the aspirin, we need to compare the outcome for you in one alternative future (where you took the aspirin) to another (where you did not). Since it is impossible to see both potential outcomes at once, one of the potential outcomes is always missing. This dilemma is the "fundamental problem of causal inference."
 
-## Causal effects
+## What is a causal effect?
 
 Here's how Rubin defines a "causal effect": 
 
@@ -29,7 +29,7 @@ Thus, according to the RCM, the causal effect of your taking or not taking aspir
 
 In most circumstances, we are interested in comparing two futures, one generally termed "treatment" and the other "control." These labels are somewhat arbitrary. The difference between the potential outcome under treatment and the potential outcome under control is called a "causal effect" or a "treatment effect."  The scenario that didn't actually happen, and thus that we didn't observe, is called a "counterfactual."
 
-## Potential outcomes
+### Potential outcomes
 
 Suppose that Joe is participating in an FDA test for a new hypertension drug. If we were omniscient, we would know the outcomes for Joe under both treatment (the new drug) and control (either no treatment or the current standard treatment). The causal effect, or treatment effect, is the difference between these two potential outcomes. 
 
@@ -60,7 +60,7 @@ $Y_{t}(u)$ is Joe's systolic blood pressure if he takes the new pill. In general
 
 From this table we only know the causal effect on Joe. Everyone else in the study might have an increase in blood pressure if they take the pill. However, regardless of what the causal effect is for the other subjects, the causal effect for Joe is lower blood pressure, relative to what his blood pressure would have been if he had not taken the pill.
 
-## No causation without manipulation
+### No causation without manipulation
 
 In order for a potential outcome to make sense, it must be possible, at least *a priori*. For example, if there is no way for Joe, under any circumstance, to obtain the new drug, then $Y_{t}(u)$ is impossible for him. It can never happen. And if $Y_{t}(u)$ can never be observed, even in theory, then the causal effect of treatment on Joe's blood pressure is not defined. 
 
@@ -70,7 +70,7 @@ This definition of causal effects becomes much more problematic if there is no w
 
 A moment's reflection highlights the problem: we can't increase Joe's height. There is no way to observe, even conceptually, what Joe's weight would be if he were taller because there is no way to make him taller. We can't manipulate Joe's height, so it makes no sense to investigate the causal effect of height on weight. Hence the slogan: **No causation without manipulation.**
 
-## Average treatment effect
+### Average treatment effect
 
 <!-- Calling this the "average treatment effect" rather than "average causal
 effect" throughout -->
@@ -102,46 +102,6 @@ One may calculate the **average treatment effect** (often abbreviated ATE) by ta
 
 Note that we can calculate the average treatment effect in this case because we are omniscient and know all the potential outcomes under both treatment and control.  We will soon see what assumptions we need to make in order to calculate the average treatment effect in the real world where only one potential outcome can ever be observed.  In particular, while we cannot estimate individual causal effects without very strong assumptions, randomized experiments can allow for good estimates of the ATE, as we will see later in this chapter.
 
-## Stable unit treatment value assumption (SUTVA)
-
-One important assumption for causal inference is that "the [potential outcome] observation on one unit should be unaffected by the particular assignment of treatments to the other units."^[Cox 1958, §2.4.] This is called the **Stable Unit Treatment Value Assumption** (**SUTVA**). 
-
-In the context of our example, Joe's blood pressure should not depend on whether Mary receives the drug. But what if it does? Suppose that Joe and Mary live in the same house and Mary always cooks. The drug causes Mary to crave salty foods, so if she takes the drug she will cook with more salt than she would have otherwise. A high salt diet increases Joe's blood pressure. Therefore, his outcome will depend on both which treatment he received and which treatment Mary receives.
-
-SUTVA violation makes causal inference more difficult. We can account for dependent observations by considering more treatments. We create 4 treatments by taking into account whether or not Mary receives treatment:
-
-```{r joe_mary, echo = FALSE}
-# First, we create a tibble with the values we want for the table
-
-tibble(`Subject` = c("Joe"),
-       `Joe = c,<br />Mary = t` = c("$140$"),
-       `Joe = t,<br />Mary = t` = c("$130$"),
-       `Joe = c,<br />Mary = c` = c("$125$"),
-       `Joe = t,<br />Mary = c` = c("$120$")) %>%
-  
-  # Then, we use the kable function to make it pretty. escape = FALSE is also
-  # required for the linebreaks
-  
-  kable(escape = FALSE) %>%
-  
-  kable_styling(bootstrap_options = "striped",
-                full_width = FALSE,
-                position = "left") %>%
-  column_spec(1,
-              bold = TRUE,
-              border_right = TRUE)
-```
-
-Recall that a causal effect is defined as the difference between two potential outcomes. In this case, there are multiple causal effects because there are more than two potential outcomes:
-
-- One is the causal effect of the drug on Joe when Mary receives treatment ($130-140$).
-- Another is the causal effect of the drug on Joe when Mary does not receive treatment ($120-125$).
-- A third is the causal effect of Mary's treatment on Joe when Joe is not treated ($140-125$). In other words, we can define a causal effect on Joe even in situation in which Joe's treatment is identical in both situations.
-
-Note that Mary taking the drug has a larger causal effect on Joe than Joe himself taking the drug, and what's more, the effect is in the opposite dierction!
-
-By considering more potential outcomes in this way, we can cause SUTVA to hold. However, if any units other than Joe are dependent on Mary, then we must consider further potential outcomes. The greater the number of dependent units, the more potential outcomes we must consider and the more complex the calculations become (consider an experiment with 20 different people, each of whose treatment status can affect outcomes for every one else). In order (easily) to estimate the causal effect of a single treatment relative to a control, SUTVA should hold. 
-
 ## The fundamental problem of causal inference
 
 The results we have seen up to this point could never be measured in practice. It is impossible, by definition, to observe the effects of more than one treatment on a single subject. Joe cannot both take the pill and not take the pill at the same time! Therefore, the data we actually observe would look something like this: 
@@ -167,11 +127,85 @@ tibble(`Subject` = c("Joe", "Mary", "Sally", "Bob", "James", "MEAN"),
 
 Question marks are responses that could not be observed. The **Fundamental Problem of Causal Inference**^[Holland 1986.] is that directly observing unit-level causal effects is impossible. However, this does not make *causal inference* impossible. Certain techniques and assumptions allow the fundamental problem to be overcome.
 
-In particular, we may want to know whether we can get a good estimate of the average treatment effect.  If we knew that the drug lowered blood pressure on average, that would help us make decisions even if we can't observe the causal effect of the drug on individual people (because we don't observe counterfactuals).
+One way we could solve this problem is by filling in the missing values for treatment and control with the mean values.  That is, let's say we wanted to know what Joe's outcome would have been under control.  We then just plug in the observed mean ($127.5$) of the control observations for Joe's outcome:
+
+```{r, echo = FALSE}
+# First, we create a tibble with the values we want for the table
+
+tibble(`Subject` = c("Joe", "Mary", "Sally", "Bob", "James", "MEAN"),
+       `$Y_t(u)$` = c("$130$", "$120$", "$121.67$", "$121.67$", "$115$", "$121.67$"),
+       `$Y_c(u)$` = c("$127.5$", "$127.5$", "$125$", "$130$", "$127.5$", "$127.5$"),
+       `$Y_t(u) - Y_c(u)$` = c("$2.5$", "$-7.5$", "$-3.33$", "$-8.33$", "$-12.5$", "$-5.83$")) %>%
+  
+  # Then, we use the kable function to make it pretty
+  
+  kable() %>%
+  kable_styling(bootstrap_options = "striped",
+                full_width = FALSE,
+                position = "left") %>%
+  column_spec(1,
+              bold = TRUE,
+              border_right = TRUE)
+```
+
+We see that this method doesn't change our estimate of the treatment mean ($121.67$), the control mean ($127.5$), or the mean difference between treatment and control ($-5.83$).  However, it does allow us to make predictions for individual observations.  For example, now we predict that Joe's systolic blood pressure under control would have been $127.5$.
+
+But how confident should we be that Joe's outcome under control is $127.5$?  Not very!  Even if plugging in the average outcome value for the control observations is a good prediction for Joe (and it may well not be), we should recognize that we have a great deal of *uncertainty* about that value.  In Chapter \@ref(confidence-intervals), we show how to construct a *confidence interval* around a quantity of interest; later in this chapter we'll discuss *permutation tests*, a way of quantifying uncertainty for randomized experiences.
+
+However, with only two observations in the control group, we can simply note that we've observed values under control as low as $125$ and as high as $130$, so we don't have good reason to think that Joe's value will be precisely $127.5$.  Here's the same table, but with some makeshift confidence intervals, taken from the lowest and highest values observed under treatment and control:
+
+```{r, echo = FALSE}
+# First, we create a tibble with the values we want for the table
+
+tibble(`Subject` = c("Joe", "Mary", "Sally", "Bob", "James", "MEAN"),
+       `$Y_t(u)$` = c("$130$", "$120$", "$121.67$ $(115, 130)$", "$121.67$ $(115, 130)$", "$115$", "$121.67$"),
+       `$Y_c(u)$` = c("$127.5$ $(125, 130)$", "$127.5$ 4(125, 130)$", "$125$", "$130$", "$127.5$ $s(125, 130)$", "$127.5$"),
+       `$Y_t(u) - Y_c(u)$` = c("$2.5$", "$-7.5$", "$-3.33$", "$-8.33$", "$-12.5$", "$-5.83$")) %>%
+  
+  # Then, we use the kable function to make it pretty
+  
+  kable() %>%
+  kable_styling(bootstrap_options = "striped",
+                full_width = FALSE,
+                position = "left") %>%
+  column_spec(1,
+              bold = TRUE,
+              border_right = TRUE)
+```
+
+We may wonder still whether this is a good estimate for Joe.  After all, we are guessing here that the treatment is likely to *raise* his blood pressure, given that his observed blood pressure under treatment was still higher than the average blood pressure under control ($130 > 127.5$).
+
+A way to make a better prediction for Joe is to use an estimate of the average treatment effect.  If we knew that the drug lowered blood pressure on average, that would help us make decisions even if we can't observe the causal effect of the drug on individual people (because we don't observe counterfactuals).
 
 The most natural place to start is with the difference in the sample mean outcomes between treatment and control, $-5.83$.  Note that unlike earlier, this is an *estimate* of the ATE, not the ATE itself.  Why?  Because we have missing data!  For each unit, we only observe one of the potential outcomes.
 
-## The assignment mechanism
+Thus, another way we can fill in our missing values is by adding our estimate of the ATE to the observed value under control (for units in the control group) or by subtracting our estimate of the ATE from the observed value under treatment (for units in the treatment group), like so:
+
+```{r, echo = FALSE}
+# First, we create a tibble with the values we want for the table
+
+tibble(`Subject` = c("Joe", "Mary", "Sally", "Bob", "James", "MEAN"),
+       `$Y_t(u)$` = c("$130$", "$120$", "$119.17$", "$124.17$", "$115$", "$121.67$"),
+       `$Y_c(u)$` = c("$135.83$", "$125.83$", "$125$", "$130$", "$120.83$", "$127.5$"),
+       `$Y_t(u) - Y_c(u)$` = c("$-5.83$", "$-5.83$", "$-5.83$", "$-5.83$", "$-5.83$", "$-5.83$")) %>%
+  
+  # Then, we use the kable function to make it pretty
+  
+  kable() %>%
+  kable_styling(bootstrap_options = "striped",
+                full_width = FALSE,
+                position = "left") %>%
+  column_spec(1,
+              bold = TRUE,
+              border_right = TRUE)
+```
+
+Do we think that if Joe didn't take the drug, his systolic blood pressure would be exactly $135.83$? Of course not! We have some uncertainty around these numbers, as well.  There are two main sources of uncertainty we have to take into account when making a prediction for Joe:
+
+1. **Uncertainty in estimating the ATE**.  Especially with five subjects, we may not have a good estimate of the ATE.  With this miniscule sample, the uncertainty might be gigantic, like ($-25$, $13$), which would lead to a prediction for Joe of ($117, 155$).  As we get a larger sample size, this uncertainty decreases.
+1. **Individual variation**.  Even if we have a perfect estimate of the *average* treatment effect, it still may be the case that the effect *for Joe* is higher or lower than average.  We can assume this away if we say that the treatment effect is constant for everyone, but that is not likely to be true in the real world -- and this source of uncertainty does not go away simply by collecting more observations.  So with a large sample, let's say that we calculated a confidence interval around the ATE of ($-6, -5.67$), leading to an interval for Joe's outcome under control of ($135.67, 136$).  The uncertainty due to individual variation may still be a great deal higher---say ($120, 152$).  These numbers are simply illustative, but they highlight an important point: even if you have a good estimate of the ATE, you should still be much more uncertain about the causal effect for any *particular individual*.
+
+### The assignment mechanism
 
 Is the difference in sample means between treated units and control units a good estimate of the average treatment effect?  That depends entirely on the method by which units are assigned treatment, which is called the **assignment mechanism**.
 
@@ -223,7 +257,7 @@ tibble(`Subject` = c("Joe", "Mary", "Sally", "Bob", "James", "MEAN"),
 
 Thus, the true average treatment effect is $-8$.  However, our estimates of the average treatment effect vary because our sample is small and the responses have a large variance. If the sample were larger and the variance were less, the average treatment effect would be closer to the true average treatment effect regardless of the specific units randomly assigned to treatment.
 
-## Permutation tests
+### Permutation tests
 
 <!-- This section attempts to describe permutation tests in a non-frequentist
 way; thus, there are no references to a "test statistic" or to the "sharp null."
@@ -281,7 +315,7 @@ Here, permutation #1 is what we actually observed, and permutations #2-6 are all
 
 Let's say that we had a larger experiment.  We can no longer calculate the results of the permutation test by hand, since the number of possible permutations will quickly become very large.  However, you can use R to calculate far more permutations than you can do by hand.  Furthermore, if the number of permutations becomes too much even for your computer, you can take a random sample of all the possible permutations instead; if the random sample is large enough, this will give you a result very close to what you would get if you considered all the permutations.
 
-## Confounding and selection bias
+### Confounding and selection bias
 
 With a large enough sample and randomized assignment, we can get a good estimate of the ATE.  Other assignment mechanisms, however, can make it difficult or impossible to engage in causal inference.
 
@@ -339,7 +373,50 @@ For instance, let's say you were interested in the effect of college attendence 
 
 Many statistical methods have been developed for causal inference when there is a non-random assignment mechanism, such as propensity score matching. These methods attempt to correct for the assignment mechanism by finding control units similar to treatment units. What you should not do is naively compare the sample means under treatment and control and assume that is a good estimate of the ATE.  Without randomization, this could be very misleading!
 
-## Internal and external validity
+## Other issues with causal inference
+
+
+### Stable unit treatment value assumption (SUTVA)
+
+One important assumption for causal inference is that "the [potential outcome] observation on one unit should be unaffected by the particular assignment of treatments to the other units."^[Cox 1958, §2.4.] This is called the **Stable Unit Treatment Value Assumption** (**SUTVA**). 
+
+In the context of our example, Joe's blood pressure should not depend on whether Mary receives the drug. But what if it does? Suppose that Joe and Mary live in the same house and Mary always cooks. The drug causes Mary to crave salty foods, so if she takes the drug she will cook with more salt than she would have otherwise. A high salt diet increases Joe's blood pressure. Therefore, his outcome will depend on both which treatment he received and which treatment Mary receives.
+
+SUTVA violation makes causal inference more difficult. We can account for dependent observations by considering more treatments. We create 4 treatments by taking into account whether or not Mary receives treatment:
+
+```{r joe_mary, echo = FALSE}
+# First, we create a tibble with the values we want for the table
+
+tibble(`Subject` = c("Joe"),
+       `Joe = c,<br />Mary = t` = c("$140$"),
+       `Joe = t,<br />Mary = t` = c("$130$"),
+       `Joe = c,<br />Mary = c` = c("$125$"),
+       `Joe = t,<br />Mary = c` = c("$120$")) %>%
+  
+  # Then, we use the kable function to make it pretty. escape = FALSE is also
+  # required for the linebreaks
+  
+  kable(escape = FALSE) %>%
+  
+  kable_styling(bootstrap_options = "striped",
+                full_width = FALSE,
+                position = "left") %>%
+  column_spec(1,
+              bold = TRUE,
+              border_right = TRUE)
+```
+
+Recall that a causal effect is defined as the difference between two potential outcomes. In this case, there are multiple causal effects because there are more than two potential outcomes:
+
+- One is the causal effect of the drug on Joe when Mary receives treatment ($130-140$).
+- Another is the causal effect of the drug on Joe when Mary does not receive treatment ($120-125$).
+- A third is the causal effect of Mary's treatment on Joe when Joe is not treated ($140-125$). In other words, we can define a causal effect on Joe even in situation in which Joe's treatment is identical in both situations.
+
+Note that Mary taking the drug has a larger causal effect on Joe than Joe himself taking the drug, and what's more, the effect is in the opposite dierction!
+
+By considering more potential outcomes in this way, we can cause SUTVA to hold. However, if any units other than Joe are dependent on Mary, then we must consider further potential outcomes. The greater the number of dependent units, the more potential outcomes we must consider and the more complex the calculations become (consider an experiment with 20 different people, each of whose treatment status can affect outcomes for every one else). In order (easily) to estimate the causal effect of a single treatment relative to a control, SUTVA should hold. 
+
+### Internal and external validity
 
 If we have randomized assignment and a large sample, we can be confident that we have a good estimate of the average treatment effect *in that sample*.  We say that the experiment has high **internal validity**: the inferences we are making are likely to reflect the truth about that sample.
 
@@ -355,7 +432,7 @@ When dealing with human subjects, there is a particular concern regarding extern
 
 This can lead to a version of the above concern.  Suppose again that the blood pressure drug works when combined with a controlled diet, say a low-salt diet, but it doesn't work for those who have a high-salt diet.  If the subjects in the experiment are paying greater attention to their blood pressure than they otherwise would and thus are eating lower sodium diets than other people, one could make the mistaken inference that it was the blood pressure drug alone that led to a decrease in blood pressure, and not the combination of the drug and the experimental subjects' changing behavior.
 
-## Survey research and external validity
+### Survey research and external validity
 
 <!-- Should this be merged with the sampling chapter? -->
 
