@@ -24,7 +24,7 @@
 <meta name="author" content="David Kane" />
 
 
-<meta name="date" content="2020-04-10" />
+<meta name="date" content="2020-04-13" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -647,10 +647,10 @@ Many questions have binary (yes/no or success/failure) answers:</p>
 <li>As well as the more advanced <strong>purrr</strong>, <strong>tibble</strong>, <strong>stringr</strong>, and <strong>forcats</strong> packages</li>
 </ul>
 <p>If needed, read Section <a href="1-getting-started.html#packages">1.3</a> for information on how to install and load R packages.</p>
-<div class="sourceCode" id="cb870"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb870-1"><a href="13-classification.html#cb870-1"></a><span class="kw">library</span>(tidyverse)</span>
-<span id="cb870-2"><a href="13-classification.html#cb870-2"></a><span class="kw">library</span>(broom)</span>
-<span id="cb870-3"><a href="13-classification.html#cb870-3"></a><span class="kw">library</span>(skimr)</span>
-<span id="cb870-4"><a href="13-classification.html#cb870-4"></a><span class="kw">library</span>(fivethirtyeight)</span></code></pre></div>
+<div class="sourceCode" id="cb883"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb883-1"><a href="13-classification.html#cb883-1"></a><span class="kw">library</span>(tidyverse)</span>
+<span id="cb883-2"><a href="13-classification.html#cb883-2"></a><span class="kw">library</span>(broom)</span>
+<span id="cb883-3"><a href="13-classification.html#cb883-3"></a><span class="kw">library</span>(skimr)</span>
+<span id="cb883-4"><a href="13-classification.html#cb883-4"></a><span class="kw">library</span>(fivethirtyeight)</span></code></pre></div>
 </div>
 <div id="logistic-regression" class="section level2">
 <h2><span class="header-section-number">13.1</span> Logistic regression</h2>
@@ -678,22 +678,22 @@ FIGURE 13.1: Linear vs. logistic regression models for binary response data.
 <p>What affects whether a Democrat or Republican wins a race in the U.S. House of Representatives? This is an example of a binary response: either a Democrat wins (and a Republican loses) or a Republican wins (and a Democrat loses).<a href="#fn19" class="footnote-ref" id="fnref19"><sup>19</sup></a> In this section, we are going to consider several models predicting Democratic victory in House races. First, we will consider a single categorical variable as a predictor, the region in which a district lies: Midwest, Northeast, South, or West. Second, we will consider a single continuous variable: year. Finally, we fill fit a model that contains both separately, and than also an interaction between the two.</p>
 <!-- DK: Too much cognitive load to create these datasets on the fly. They need to be ready to go. -->
 <p>The data on House election results from 1976 to 2018 can be found in the <code>house_results</code> data frame in <strong>politicaldata</strong> package. We’ll create a version of this data frame called <code>house_ch13</code> that creates a new column <code>dem_win</code> that notes for each state if the Democratic candidate in a congressional district received more votes than the other candidates. We’ll also join it with the <code>state_info</code> data frame in the <strong>fivethirtyeight</strong> package to add the <code>region</code> of each state.</p>
-<div class="sourceCode" id="cb871"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb871-1"><a href="13-classification.html#cb871-1"></a><span class="kw">library</span>(politicaldata)</span>
-<span id="cb871-2"><a href="13-classification.html#cb871-2"></a></span>
-<span id="cb871-3"><a href="13-classification.html#cb871-3"></a>house_ch13 &lt;-<span class="st"> </span>house_results <span class="op">%&gt;%</span></span>
-<span id="cb871-4"><a href="13-classification.html#cb871-4"></a><span class="st">  </span></span>
-<span id="cb871-5"><a href="13-classification.html#cb871-5"></a><span class="st">  </span><span class="co"># Create dem_win variable</span></span>
-<span id="cb871-6"><a href="13-classification.html#cb871-6"></a><span class="st">  </span></span>
-<span id="cb871-7"><a href="13-classification.html#cb871-7"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">dem =</span> <span class="kw">ifelse</span>(<span class="kw">is.na</span>(dem), <span class="dv">0</span>, dem),</span>
-<span id="cb871-8"><a href="13-classification.html#cb871-8"></a>         <span class="dt">other =</span> <span class="kw">ifelse</span>(<span class="kw">is.na</span>(other), <span class="dv">0</span>, other),</span>
-<span id="cb871-9"><a href="13-classification.html#cb871-9"></a>         <span class="dt">rep =</span> <span class="kw">ifelse</span>(<span class="kw">is.na</span>(rep), <span class="dv">0</span>, rep),</span>
-<span id="cb871-10"><a href="13-classification.html#cb871-10"></a>         <span class="dt">dem_win =</span> <span class="kw">ifelse</span>(dem <span class="op">&gt;</span><span class="st"> </span>rep <span class="op">&amp;</span><span class="st"> </span>dem <span class="op">&gt;</span><span class="st"> </span>other, <span class="dv">1</span>, <span class="dv">0</span>)) <span class="op">%&gt;%</span></span>
-<span id="cb871-11"><a href="13-classification.html#cb871-11"></a><span class="st">  </span></span>
-<span id="cb871-12"><a href="13-classification.html#cb871-12"></a><span class="st">  </span><span class="co"># Rename to join with state_info</span></span>
-<span id="cb871-13"><a href="13-classification.html#cb871-13"></a><span class="st">  </span></span>
-<span id="cb871-14"><a href="13-classification.html#cb871-14"></a><span class="st">  </span><span class="kw">rename</span>(<span class="dt">state_abbrev =</span> state_abb) <span class="op">%&gt;%</span></span>
-<span id="cb871-15"><a href="13-classification.html#cb871-15"></a><span class="st">  </span><span class="kw">left_join</span>(state_info) <span class="op">%&gt;%</span></span>
-<span id="cb871-16"><a href="13-classification.html#cb871-16"></a><span class="st">  </span><span class="kw">select</span>(region, state, district, year, dem_win)</span></code></pre></div>
+<div class="sourceCode" id="cb884"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb884-1"><a href="13-classification.html#cb884-1"></a><span class="kw">library</span>(politicaldata)</span>
+<span id="cb884-2"><a href="13-classification.html#cb884-2"></a></span>
+<span id="cb884-3"><a href="13-classification.html#cb884-3"></a>house_ch13 &lt;-<span class="st"> </span>house_results <span class="op">%&gt;%</span></span>
+<span id="cb884-4"><a href="13-classification.html#cb884-4"></a><span class="st">  </span></span>
+<span id="cb884-5"><a href="13-classification.html#cb884-5"></a><span class="st">  </span><span class="co"># Create dem_win variable</span></span>
+<span id="cb884-6"><a href="13-classification.html#cb884-6"></a><span class="st">  </span></span>
+<span id="cb884-7"><a href="13-classification.html#cb884-7"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">dem =</span> <span class="kw">ifelse</span>(<span class="kw">is.na</span>(dem), <span class="dv">0</span>, dem),</span>
+<span id="cb884-8"><a href="13-classification.html#cb884-8"></a>         <span class="dt">other =</span> <span class="kw">ifelse</span>(<span class="kw">is.na</span>(other), <span class="dv">0</span>, other),</span>
+<span id="cb884-9"><a href="13-classification.html#cb884-9"></a>         <span class="dt">rep =</span> <span class="kw">ifelse</span>(<span class="kw">is.na</span>(rep), <span class="dv">0</span>, rep),</span>
+<span id="cb884-10"><a href="13-classification.html#cb884-10"></a>         <span class="dt">dem_win =</span> <span class="kw">ifelse</span>(dem <span class="op">&gt;</span><span class="st"> </span>rep <span class="op">&amp;</span><span class="st"> </span>dem <span class="op">&gt;</span><span class="st"> </span>other, <span class="dv">1</span>, <span class="dv">0</span>)) <span class="op">%&gt;%</span></span>
+<span id="cb884-11"><a href="13-classification.html#cb884-11"></a><span class="st">  </span></span>
+<span id="cb884-12"><a href="13-classification.html#cb884-12"></a><span class="st">  </span><span class="co"># Rename to join with state_info</span></span>
+<span id="cb884-13"><a href="13-classification.html#cb884-13"></a><span class="st">  </span></span>
+<span id="cb884-14"><a href="13-classification.html#cb884-14"></a><span class="st">  </span><span class="kw">rename</span>(<span class="dt">state_abbrev =</span> state_abb) <span class="op">%&gt;%</span></span>
+<span id="cb884-15"><a href="13-classification.html#cb884-15"></a><span class="st">  </span><span class="kw">left_join</span>(state_info) <span class="op">%&gt;%</span></span>
+<span id="cb884-16"><a href="13-classification.html#cb884-16"></a><span class="st">  </span><span class="kw">select</span>(region, state, district, year, dem_win)</span></code></pre></div>
 <pre><code>Joining, by = &quot;state_abbrev&quot;</code></pre>
 <!-- DK: We use same dataset from other chapter, we need to modify this. But we won't have looked at everything! So, look at other stuff. Some is obvious, especially our new Y variable. But we can also look at stuff like number of elections per state, per year. Which state had the biggest districting rise and when? Indeed, the data exploration section in each chapter provides an occasion to learn more advanced R tricks. -->
 <p>Recall the three common steps in an exploratory data analysis we saw in Subsection <a href="11-regression.html#model1EDA">11.1.1</a>:</p>
@@ -703,17 +703,17 @@ FIGURE 13.1: Linear vs. logistic regression models for binary response data.
 <li>Creating data visualizations.</li>
 </ol>
 <p>Let’s first look at the raw data values by either looking at <code>house_ch13</code> using RStudio’s spreadsheet viewer or by using the <code>glimpse()</code> function from the <strong>dplyr</strong> package:</p>
-<div class="sourceCode" id="cb873"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb873-1"><a href="13-classification.html#cb873-1"></a><span class="kw">glimpse</span>(house_ch13)</span></code></pre></div>
-<pre><code>Observations: 9,557
-Variables: 5
+<div class="sourceCode" id="cb886"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb886-1"><a href="13-classification.html#cb886-1"></a><span class="kw">glimpse</span>(house_ch13)</span></code></pre></div>
+<pre><code>Rows: 9,557
+Columns: 5
 $ region   &lt;chr&gt; &quot;West&quot;, &quot;South&quot;, &quot;South&quot;, &quot;South&quot;, &quot;South&quot;, &quot;South&quot;, &quot;South&quot;…
 $ state    &lt;chr&gt; &quot;Alaska&quot;, &quot;Alabama&quot;, &quot;Alabama&quot;, &quot;Alabama&quot;, &quot;Alabama&quot;, &quot;Alaba…
 $ district &lt;chr&gt; &quot;AK-AL&quot;, &quot;AL-01&quot;, &quot;AL-02&quot;, &quot;AL-03&quot;, &quot;AL-04&quot;, &quot;AL-05&quot;, &quot;AL-06…
 $ year     &lt;dbl&gt; 1976, 1976, 1976, 1976, 1976, 1976, 1976, 1976, 1976, 1976, …
 $ dem_win  &lt;dbl&gt; 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 1, …</code></pre>
 <p>Let’s also display a random sample of 5 rows of the 9,557 rows corresponding to different district-years. Remember due to the random nature of the sampling, you will likely end up with a different subset of 5 rows.</p>
-<div class="sourceCode" id="cb875"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb875-1"><a href="13-classification.html#cb875-1"></a>house_ch13 <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb875-2"><a href="13-classification.html#cb875-2"></a><span class="st">  </span><span class="kw">sample_n</span>(<span class="dt">size =</span> <span class="dv">5</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb888"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb888-1"><a href="13-classification.html#cb888-1"></a>house_ch13 <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb888-2"><a href="13-classification.html#cb888-2"></a><span class="st">  </span><span class="kw">sample_n</span>(<span class="dt">size =</span> <span class="dv">5</span>)</span></code></pre></div>
 <table class="table" style="font-size: 16px; margin-left: auto; margin-right: auto;">
 <caption style="font-size: initial !important;">
 <span id="tab:unnamed-chunk-596">TABLE 13.1: </span>A random sample of 5 out of the 4,201 district-years
@@ -826,9 +826,9 @@ MI-15
 </tbody>
 </table>
 <p>Now that we’ve looked at the raw values in our <code>house_ch13</code> data frame and got a sense of the data, let’s compute summary statistics. As we’ve done in our exploratory data analyses before, let’s use the <code>skim()</code> function from the <code>skimr</code> package, being sure to only select() the variables of interest in our model:</p>
-<div class="sourceCode" id="cb876"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb876-1"><a href="13-classification.html#cb876-1"></a>house_ch13 <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb876-2"><a href="13-classification.html#cb876-2"></a><span class="st">  </span><span class="kw">select</span>(dem_win, region, year) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb876-3"><a href="13-classification.html#cb876-3"></a><span class="st">  </span><span class="kw">skim</span>()</span></code></pre></div>
+<div class="sourceCode" id="cb889"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb889-1"><a href="13-classification.html#cb889-1"></a>house_ch13 <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb889-2"><a href="13-classification.html#cb889-2"></a><span class="st">  </span><span class="kw">select</span>(dem_win, region, year) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb889-3"><a href="13-classification.html#cb889-3"></a><span class="st">  </span><span class="kw">skim</span>()</span></code></pre></div>
 <table style='width: auto;'
         class='table table-condensed'>
 <caption>
@@ -1088,34 +1088,35 @@ year
 <p>Observe that we have no missing data, that we have 9,557 observations, and that the mean of <code>dem_win</code> is 0.54, indicating that Democrats won 54% of the House elections in this period (1976–2018).</p>
 <p>Let’s now perform the last of the three common steps in an exploratory data analysis: creating data visualizations.</p>
 <p>For our categorical variable, we’ll look at histograms of <code>dem_win</code> faceted by <code>region</code>:</p>
-<div class="sourceCode" id="cb877"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb877-1"><a href="13-classification.html#cb877-1"></a>house_ch13 <span class="op">%&gt;%</span></span>
-<span id="cb877-2"><a href="13-classification.html#cb877-2"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> dem_win)) <span class="op">+</span></span>
-<span id="cb877-3"><a href="13-classification.html#cb877-3"></a><span class="st">  </span><span class="kw">geom_histogram</span>(<span class="dt">bins =</span> <span class="dv">10</span>, <span class="dt">color =</span> <span class="st">&quot;white&quot;</span>) <span class="op">+</span></span>
-<span id="cb877-4"><a href="13-classification.html#cb877-4"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">&quot;Democratic victory percentage, 1976-2018&quot;</span>, </span>
-<span id="cb877-5"><a href="13-classification.html#cb877-5"></a>       <span class="dt">y =</span> <span class="st">&quot;Number of districts&quot;</span>,</span>
-<span id="cb877-6"><a href="13-classification.html#cb877-6"></a>       <span class="dt">title =</span> <span class="st">&quot;Histogram of distribution of Democratic victories by House district&quot;</span>) <span class="op">+</span></span>
-<span id="cb877-7"><a href="13-classification.html#cb877-7"></a><span class="st">  </span><span class="kw">facet_wrap</span>(<span class="op">~</span><span class="st"> </span>region) <span class="op">+</span></span>
-<span id="cb877-8"><a href="13-classification.html#cb877-8"></a><span class="st">  </span><span class="kw">theme_minimal</span>()</span></code></pre></div>
+<div class="sourceCode" id="cb890"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb890-1"><a href="13-classification.html#cb890-1"></a>house_ch13 <span class="op">%&gt;%</span></span>
+<span id="cb890-2"><a href="13-classification.html#cb890-2"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> dem_win)) <span class="op">+</span></span>
+<span id="cb890-3"><a href="13-classification.html#cb890-3"></a><span class="st">  </span><span class="kw">geom_histogram</span>(<span class="dt">bins =</span> <span class="dv">10</span>, <span class="dt">color =</span> <span class="st">&quot;white&quot;</span>) <span class="op">+</span></span>
+<span id="cb890-4"><a href="13-classification.html#cb890-4"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">&quot;Democratic victory percentage, 1976-2018&quot;</span>, </span>
+<span id="cb890-5"><a href="13-classification.html#cb890-5"></a>       <span class="dt">y =</span> <span class="st">&quot;Number of districts&quot;</span>,</span>
+<span id="cb890-6"><a href="13-classification.html#cb890-6"></a>       <span class="dt">title =</span> <span class="st">&quot;Histogram of distribution of Democratic victories by House district&quot;</span>) <span class="op">+</span></span>
+<span id="cb890-7"><a href="13-classification.html#cb890-7"></a><span class="st">  </span><span class="kw">facet_wrap</span>(<span class="op">~</span><span class="st"> </span>region) <span class="op">+</span></span>
+<span id="cb890-8"><a href="13-classification.html#cb890-8"></a><span class="st">  </span><span class="kw">theme_minimal</span>()</span></code></pre></div>
 <p><img src="Preceptor%E2%80%99s-Primer-for-Bayesian-Data-Science_files/figure-html/unnamed-chunk-598-1.png" width="\textwidth" style="display: block; margin: auto;" /></p>
 <p>Wait! That doesn’t tell us very much, because our outcome variable only takes two values, 0 and 1. Let’s instead <code>group_by(district)</code> and <code>summarize()</code> to get a better sense of the distributions:</p>
-<div class="sourceCode" id="cb878"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb878-1"><a href="13-classification.html#cb878-1"></a>house_ch13 <span class="op">%&gt;%</span></span>
-<span id="cb878-2"><a href="13-classification.html#cb878-2"></a><span class="st">  </span><span class="kw">group_by</span>(region, district) <span class="op">%&gt;%</span></span>
-<span id="cb878-3"><a href="13-classification.html#cb878-3"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">dem_win =</span> <span class="kw">mean</span>(dem_win)) <span class="op">%&gt;%</span></span>
-<span id="cb878-4"><a href="13-classification.html#cb878-4"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> dem_win)) <span class="op">+</span></span>
-<span id="cb878-5"><a href="13-classification.html#cb878-5"></a><span class="st">  </span><span class="kw">geom_histogram</span>(<span class="dt">bins =</span> <span class="dv">10</span>, <span class="dt">color =</span> <span class="st">&quot;white&quot;</span>) <span class="op">+</span></span>
-<span id="cb878-6"><a href="13-classification.html#cb878-6"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">&quot;Democratic victory percentage, 1976-2018&quot;</span>, </span>
-<span id="cb878-7"><a href="13-classification.html#cb878-7"></a>       <span class="dt">y =</span> <span class="st">&quot;Number of districts&quot;</span>,</span>
-<span id="cb878-8"><a href="13-classification.html#cb878-8"></a>       <span class="dt">title =</span> <span class="st">&quot;Histogram of distribution of Democratic victories by House district&quot;</span>) <span class="op">+</span></span>
-<span id="cb878-9"><a href="13-classification.html#cb878-9"></a><span class="st">  </span><span class="kw">facet_wrap</span>(<span class="op">~</span><span class="st"> </span>region) <span class="op">+</span><span class="st"> </span></span>
-<span id="cb878-10"><a href="13-classification.html#cb878-10"></a><span class="st">  </span><span class="kw">theme_minimal</span>()</span></code></pre></div>
+<div class="sourceCode" id="cb891"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb891-1"><a href="13-classification.html#cb891-1"></a>house_ch13 <span class="op">%&gt;%</span></span>
+<span id="cb891-2"><a href="13-classification.html#cb891-2"></a><span class="st">  </span><span class="kw">group_by</span>(region, district) <span class="op">%&gt;%</span></span>
+<span id="cb891-3"><a href="13-classification.html#cb891-3"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">dem_win =</span> <span class="kw">mean</span>(dem_win)) <span class="op">%&gt;%</span></span>
+<span id="cb891-4"><a href="13-classification.html#cb891-4"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> dem_win)) <span class="op">+</span></span>
+<span id="cb891-5"><a href="13-classification.html#cb891-5"></a><span class="st">  </span><span class="kw">geom_histogram</span>(<span class="dt">bins =</span> <span class="dv">10</span>, <span class="dt">color =</span> <span class="st">&quot;white&quot;</span>) <span class="op">+</span></span>
+<span id="cb891-6"><a href="13-classification.html#cb891-6"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">&quot;Democratic victory percentage, 1976-2018&quot;</span>, </span>
+<span id="cb891-7"><a href="13-classification.html#cb891-7"></a>       <span class="dt">y =</span> <span class="st">&quot;Number of districts&quot;</span>,</span>
+<span id="cb891-8"><a href="13-classification.html#cb891-8"></a>       <span class="dt">title =</span> <span class="st">&quot;Histogram of distribution of Democratic victories by House district&quot;</span>) <span class="op">+</span></span>
+<span id="cb891-9"><a href="13-classification.html#cb891-9"></a><span class="st">  </span><span class="kw">facet_wrap</span>(<span class="op">~</span><span class="st"> </span>region) <span class="op">+</span><span class="st"> </span></span>
+<span id="cb891-10"><a href="13-classification.html#cb891-10"></a><span class="st">  </span><span class="kw">theme_minimal</span>()</span></code></pre></div>
 <p><img src="Preceptor%E2%80%99s-Primer-for-Bayesian-Data-Science_files/figure-html/unnamed-chunk-599-1.png" width="\textwidth" style="display: block; margin: auto;" /></p>
 <p>This is much more informative! We can see that the Midwest is highly bimodal, with many districts either electing Democrats for every year in this period or for none. The Northeast and West have many districts that always elect Democrats but few that never do. The South is the only region with a peak in the middle, indicating that there are many districts in the South that elected Democrats for about half the time during 1976-2018.</p>
 <p>What happens if we create a scatterplot of our outcome variable <code>dem_win</code> and a continuous predictor, <code>year</code>?</p>
-<div class="sourceCode" id="cb879"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb879-1"><a href="13-classification.html#cb879-1"></a>house_ch13 <span class="op">%&gt;%</span></span>
-<span id="cb879-2"><a href="13-classification.html#cb879-2"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> year, <span class="dt">y =</span> dem_win)) <span class="op">+</span></span>
-<span id="cb879-3"><a href="13-classification.html#cb879-3"></a><span class="st">  </span><span class="kw">geom_point</span>() <span class="op">+</span></span>
-<span id="cb879-4"><a href="13-classification.html#cb879-4"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">&quot;Year&quot;</span>, <span class="dt">y =</span> <span class="st">&quot;Democratic Victory&quot;</span>) <span class="op">+</span></span>
-<span id="cb879-5"><a href="13-classification.html#cb879-5"></a><span class="st">  </span><span class="kw">geom_smooth</span>(<span class="dt">method =</span> <span class="st">&quot;lm&quot;</span>, <span class="dt">se =</span> <span class="ot">FALSE</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb892"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb892-1"><a href="13-classification.html#cb892-1"></a>house_ch13 <span class="op">%&gt;%</span></span>
+<span id="cb892-2"><a href="13-classification.html#cb892-2"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> year, <span class="dt">y =</span> dem_win)) <span class="op">+</span></span>
+<span id="cb892-3"><a href="13-classification.html#cb892-3"></a><span class="st">  </span><span class="kw">geom_point</span>() <span class="op">+</span></span>
+<span id="cb892-4"><a href="13-classification.html#cb892-4"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">&quot;Year&quot;</span>, <span class="dt">y =</span> <span class="st">&quot;Democratic Victory&quot;</span>) <span class="op">+</span></span>
+<span id="cb892-5"><a href="13-classification.html#cb892-5"></a><span class="st">  </span><span class="kw">geom_smooth</span>(<span class="dt">method =</span> <span class="st">&quot;lm&quot;</span>, <span class="dt">se =</span> <span class="ot">FALSE</span>)</span></code></pre></div>
+<pre><code>`geom_smooth()` using formula &#39;y ~ x&#39;</code></pre>
 <p><img src="Preceptor%E2%80%99s-Primer-for-Bayesian-Data-Science_files/figure-html/unnamed-chunk-600-1.png" width="\textwidth" style="display: block; margin: auto;" /></p>
 <!-- DK: The below seems like good stuff, but I don't really understand it. Needs more words. Why is log(p/1-p) an interesting thing. Is it really? -->
 <p>This is completely incomprehensible! When dealing with binary data, it is more helpful to construct an <em>empirical logit</em> plot instead of a regular scatterplot. The steps for constructing such a plot are as follows:</p>
@@ -1126,30 +1127,32 @@ year
 <li>Plot the results.</li>
 </ol>
 <p>The logit function exists in base R as <code>qlogis()</code>. Let’s look at the empirical logit plot:</p>
-<div class="sourceCode" id="cb880"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb880-1"><a href="13-classification.html#cb880-1"></a>house_ch13 <span class="op">%&gt;%</span></span>
-<span id="cb880-2"><a href="13-classification.html#cb880-2"></a><span class="st">  </span><span class="kw">group_by</span>(year) <span class="op">%&gt;%</span></span>
-<span id="cb880-3"><a href="13-classification.html#cb880-3"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">perc_dem_win =</span> <span class="kw">mean</span>(dem_win),</span>
-<span id="cb880-4"><a href="13-classification.html#cb880-4"></a>            <span class="dt">emplogit =</span> <span class="kw">qlogis</span>(perc_dem_win)) <span class="op">%&gt;%</span></span>
-<span id="cb880-5"><a href="13-classification.html#cb880-5"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> year, <span class="dt">y =</span> emplogit)) <span class="op">+</span></span>
-<span id="cb880-6"><a href="13-classification.html#cb880-6"></a><span class="st">  </span><span class="kw">geom_point</span>() <span class="op">+</span></span>
-<span id="cb880-7"><a href="13-classification.html#cb880-7"></a><span class="st">  </span><span class="kw">geom_smooth</span>(<span class="dt">method =</span> <span class="st">&quot;lm&quot;</span>) <span class="op">+</span></span>
-<span id="cb880-8"><a href="13-classification.html#cb880-8"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">&quot;Year&quot;</span>,</span>
-<span id="cb880-9"><a href="13-classification.html#cb880-9"></a>       <span class="dt">y =</span> <span class="st">&quot;Empirical logits&quot;</span>) <span class="op">+</span></span>
-<span id="cb880-10"><a href="13-classification.html#cb880-10"></a><span class="st">  </span><span class="kw">theme_classic</span>()</span></code></pre></div>
+<div class="sourceCode" id="cb894"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb894-1"><a href="13-classification.html#cb894-1"></a>house_ch13 <span class="op">%&gt;%</span></span>
+<span id="cb894-2"><a href="13-classification.html#cb894-2"></a><span class="st">  </span><span class="kw">group_by</span>(year) <span class="op">%&gt;%</span></span>
+<span id="cb894-3"><a href="13-classification.html#cb894-3"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">perc_dem_win =</span> <span class="kw">mean</span>(dem_win),</span>
+<span id="cb894-4"><a href="13-classification.html#cb894-4"></a>            <span class="dt">emplogit =</span> <span class="kw">qlogis</span>(perc_dem_win)) <span class="op">%&gt;%</span></span>
+<span id="cb894-5"><a href="13-classification.html#cb894-5"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> year, <span class="dt">y =</span> emplogit)) <span class="op">+</span></span>
+<span id="cb894-6"><a href="13-classification.html#cb894-6"></a><span class="st">  </span><span class="kw">geom_point</span>() <span class="op">+</span></span>
+<span id="cb894-7"><a href="13-classification.html#cb894-7"></a><span class="st">  </span><span class="kw">geom_smooth</span>(<span class="dt">method =</span> <span class="st">&quot;lm&quot;</span>) <span class="op">+</span></span>
+<span id="cb894-8"><a href="13-classification.html#cb894-8"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">&quot;Year&quot;</span>,</span>
+<span id="cb894-9"><a href="13-classification.html#cb894-9"></a>       <span class="dt">y =</span> <span class="st">&quot;Empirical logits&quot;</span>) <span class="op">+</span></span>
+<span id="cb894-10"><a href="13-classification.html#cb894-10"></a><span class="st">  </span><span class="kw">theme_classic</span>()</span></code></pre></div>
+<pre><code>`geom_smooth()` using formula &#39;y ~ x&#39;</code></pre>
 <p><img src="Preceptor%E2%80%99s-Primer-for-Bayesian-Data-Science_files/figure-html/unnamed-chunk-601-1.png" width="\textwidth" style="display: block; margin: auto;" /></p>
 <p>Now we see that after the logit transformation, there is roughly a linear relationship between our outcome variable and our explanatory variable <code>year</code>. This means that a logistic regression model makes sense. Some of the most visually apparent outliers will be familiar to students of American politics: 1994 (the “Republican Revolution”), 2008 (Obama’s first election), and 2018. Yet in general it appears that over time the Democrats have performed worse in House elections.</p>
 <p>We can follow the same steps to look at this relationship within Census regions (Midwest, Northeast, South and West):</p>
-<div class="sourceCode" id="cb881"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb881-1"><a href="13-classification.html#cb881-1"></a>house_ch13 <span class="op">%&gt;%</span></span>
-<span id="cb881-2"><a href="13-classification.html#cb881-2"></a><span class="st">  </span><span class="kw">group_by</span>(region, year) <span class="op">%&gt;%</span></span>
-<span id="cb881-3"><a href="13-classification.html#cb881-3"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">perc_dem_win =</span> <span class="kw">mean</span>(dem_win),</span>
-<span id="cb881-4"><a href="13-classification.html#cb881-4"></a>            <span class="dt">emplogit =</span> <span class="kw">qlogis</span>(perc_dem_win)) <span class="op">%&gt;%</span></span>
-<span id="cb881-5"><a href="13-classification.html#cb881-5"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> year, <span class="dt">y =</span> emplogit)) <span class="op">+</span></span>
-<span id="cb881-6"><a href="13-classification.html#cb881-6"></a><span class="st">  </span><span class="kw">geom_point</span>() <span class="op">+</span></span>
-<span id="cb881-7"><a href="13-classification.html#cb881-7"></a><span class="st">  </span><span class="kw">geom_smooth</span>(<span class="dt">method =</span> <span class="st">&quot;lm&quot;</span>) <span class="op">+</span></span>
-<span id="cb881-8"><a href="13-classification.html#cb881-8"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">&quot;Year&quot;</span>,</span>
-<span id="cb881-9"><a href="13-classification.html#cb881-9"></a>       <span class="dt">y =</span> <span class="st">&quot;Empirical logits&quot;</span>) <span class="op">+</span></span>
-<span id="cb881-10"><a href="13-classification.html#cb881-10"></a><span class="st">  </span><span class="kw">facet_wrap</span>(<span class="op">~</span><span class="st"> </span>region) <span class="op">+</span></span>
-<span id="cb881-11"><a href="13-classification.html#cb881-11"></a><span class="st">  </span><span class="kw">theme_classic</span>()</span></code></pre></div>
+<div class="sourceCode" id="cb896"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb896-1"><a href="13-classification.html#cb896-1"></a>house_ch13 <span class="op">%&gt;%</span></span>
+<span id="cb896-2"><a href="13-classification.html#cb896-2"></a><span class="st">  </span><span class="kw">group_by</span>(region, year) <span class="op">%&gt;%</span></span>
+<span id="cb896-3"><a href="13-classification.html#cb896-3"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">perc_dem_win =</span> <span class="kw">mean</span>(dem_win),</span>
+<span id="cb896-4"><a href="13-classification.html#cb896-4"></a>            <span class="dt">emplogit =</span> <span class="kw">qlogis</span>(perc_dem_win)) <span class="op">%&gt;%</span></span>
+<span id="cb896-5"><a href="13-classification.html#cb896-5"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> year, <span class="dt">y =</span> emplogit)) <span class="op">+</span></span>
+<span id="cb896-6"><a href="13-classification.html#cb896-6"></a><span class="st">  </span><span class="kw">geom_point</span>() <span class="op">+</span></span>
+<span id="cb896-7"><a href="13-classification.html#cb896-7"></a><span class="st">  </span><span class="kw">geom_smooth</span>(<span class="dt">method =</span> <span class="st">&quot;lm&quot;</span>) <span class="op">+</span></span>
+<span id="cb896-8"><a href="13-classification.html#cb896-8"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">&quot;Year&quot;</span>,</span>
+<span id="cb896-9"><a href="13-classification.html#cb896-9"></a>       <span class="dt">y =</span> <span class="st">&quot;Empirical logits&quot;</span>) <span class="op">+</span></span>
+<span id="cb896-10"><a href="13-classification.html#cb896-10"></a><span class="st">  </span><span class="kw">facet_wrap</span>(<span class="op">~</span><span class="st"> </span>region) <span class="op">+</span></span>
+<span id="cb896-11"><a href="13-classification.html#cb896-11"></a><span class="st">  </span><span class="kw">theme_classic</span>()</span></code></pre></div>
+<pre><code>`geom_smooth()` using formula &#39;y ~ x&#39;</code></pre>
 <p><img src="Preceptor%E2%80%99s-Primer-for-Bayesian-Data-Science_files/figure-html/unnamed-chunk-602-1.png" width="\textwidth" style="display: block; margin: auto;" /></p>
 <p>We see roughly linear relationships after the logit transformation within-region as well, although the relationship looks more linear in the Midwest and South than in the Northeast and West. We see that the Democratic Party’s overall decline in House races is driven by the South and to a lesser extent the Midwest; Democratic performance has on average improved in the Northeast and West. The sharp negative slope in the South will not be surprising if one is familiar with the collapse of the “Solid South.”</p>
 </div>
@@ -1162,13 +1165,13 @@ year
 </ol>
 <p>Note that the key difference is that instead of using <code>lm()</code>, we are now using <code>glm()</code>. <code>glm()</code> operates very similarly to <code>lm()</code>, but it has an additional argument: <code>family</code>. To run a logistic regression, we use <code>family = binomial</code>.</p>
 <p>Let’s create a binary variable for whether an observation is in the South:</p>
-<div class="sourceCode" id="cb882"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb882-1"><a href="13-classification.html#cb882-1"></a>house_ch13 &lt;-<span class="st"> </span>house_ch13 <span class="op">%&gt;%</span></span>
-<span id="cb882-2"><a href="13-classification.html#cb882-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">south =</span> <span class="dv">1</span> <span class="op">*</span><span class="st"> </span>(region <span class="op">==</span><span class="st"> &quot;South&quot;</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb898"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb898-1"><a href="13-classification.html#cb898-1"></a>house_ch13 &lt;-<span class="st"> </span>house_ch13 <span class="op">%&gt;%</span></span>
+<span id="cb898-2"><a href="13-classification.html#cb898-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">south =</span> <span class="dv">1</span> <span class="op">*</span><span class="st"> </span>(region <span class="op">==</span><span class="st"> &quot;South&quot;</span>))</span></code></pre></div>
 <p>Next, let’s fit a model and <code>tidy()</code> it:</p>
-<div class="sourceCode" id="cb883"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb883-1"><a href="13-classification.html#cb883-1"></a>house_south_model &lt;-<span class="st"> </span><span class="kw">glm</span>(dem_win <span class="op">~</span><span class="st"> </span>south, <span class="dt">family =</span> binomial, <span class="dt">data =</span> house_ch13)</span>
-<span id="cb883-2"><a href="13-classification.html#cb883-2"></a>house_south_model <span class="op">%&gt;%</span></span>
-<span id="cb883-3"><a href="13-classification.html#cb883-3"></a><span class="st">  </span><span class="kw">tidy</span>(<span class="dt">conf.int =</span> <span class="ot">TRUE</span>) <span class="op">%&gt;%</span></span>
-<span id="cb883-4"><a href="13-classification.html#cb883-4"></a><span class="st">  </span><span class="kw">select</span>(term, estimate)</span></code></pre></div>
+<div class="sourceCode" id="cb899"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb899-1"><a href="13-classification.html#cb899-1"></a>house_south_model &lt;-<span class="st"> </span><span class="kw">glm</span>(dem_win <span class="op">~</span><span class="st"> </span>south, <span class="dt">family =</span> binomial, <span class="dt">data =</span> house_ch13)</span>
+<span id="cb899-2"><a href="13-classification.html#cb899-2"></a>house_south_model <span class="op">%&gt;%</span></span>
+<span id="cb899-3"><a href="13-classification.html#cb899-3"></a><span class="st">  </span><span class="kw">tidy</span>(<span class="dt">conf.int =</span> <span class="ot">TRUE</span>) <span class="op">%&gt;%</span></span>
+<span id="cb899-4"><a href="13-classification.html#cb899-4"></a><span class="st">  </span><span class="kw">select</span>(term, estimate)</span></code></pre></div>
 <table class="table" style="font-size: 16px; margin-left: auto; margin-right: auto;">
 <caption style="font-size: initial !important;">
 <span id="tab:unnamed-chunk-606">TABLE 13.3: </span>Logistic regression table
@@ -1219,13 +1222,13 @@ p_{dem\_win} = \frac{1}{1 + e^{-(0.230 - 0.249 \times south)}}
 <p>Therefore, the predicted probability for an observation in the South is <span class="math inline">\(\frac{1}{1 + e^{-(0.230 - 0.249)}}\)</span> (0.495) and the predicted probability for an observation outside the South is <span class="math inline">\(\frac{1}{1 + e^{-(0.230)}}\)</span> (0.557) a difference of -0.062. Thus, an observation being the South is associated with a -0.062 decrease in the predicted probability of a Democratic victory.</p>
 <p>Note that you could also estimate this value through the so-called <strong>“divide by 4” rule</strong>: <span class="math inline">\(-0.249 / 4 \approx 0.062\)</span>. We’ll discuss this further when we talk about interpreting the coefficiences of continuous predictors in logistic regression models.</p>
 <p>Let’s now estimate the uncertainty around our coefficients. We’ll start by showing how you can do this through the bootstrap. We’ll begin by loading the <strong>infer</strong> package. We’re going to use the function <code>rep_sample_n()</code> to resample from our data 1,000 times:</p>
-<div class="sourceCode" id="cb884"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb884-1"><a href="13-classification.html#cb884-1"></a><span class="kw">library</span>(infer)</span>
-<span id="cb884-2"><a href="13-classification.html#cb884-2"></a></span>
-<span id="cb884-3"><a href="13-classification.html#cb884-3"></a>x &lt;-<span class="st"> </span>house_ch13 <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb884-4"><a href="13-classification.html#cb884-4"></a><span class="st">  </span><span class="kw">select</span>(dem_win, south) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb884-5"><a href="13-classification.html#cb884-5"></a><span class="st">  </span><span class="kw">rep_sample_n</span>(<span class="dt">size =</span> <span class="kw">nrow</span>(house_ch13), <span class="dt">replace =</span> <span class="ot">TRUE</span>, <span class="dt">reps =</span> <span class="dv">1000</span>)</span>
-<span id="cb884-6"><a href="13-classification.html#cb884-6"></a></span>
-<span id="cb884-7"><a href="13-classification.html#cb884-7"></a>x</span></code></pre></div>
+<div class="sourceCode" id="cb900"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb900-1"><a href="13-classification.html#cb900-1"></a><span class="kw">library</span>(infer)</span>
+<span id="cb900-2"><a href="13-classification.html#cb900-2"></a></span>
+<span id="cb900-3"><a href="13-classification.html#cb900-3"></a>x &lt;-<span class="st"> </span>house_ch13 <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb900-4"><a href="13-classification.html#cb900-4"></a><span class="st">  </span><span class="kw">select</span>(dem_win, south) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb900-5"><a href="13-classification.html#cb900-5"></a><span class="st">  </span><span class="kw">rep_sample_n</span>(<span class="dt">size =</span> <span class="kw">nrow</span>(house_ch13), <span class="dt">replace =</span> <span class="ot">TRUE</span>, <span class="dt">reps =</span> <span class="dv">1000</span>)</span>
+<span id="cb900-6"><a href="13-classification.html#cb900-6"></a></span>
+<span id="cb900-7"><a href="13-classification.html#cb900-7"></a>x</span></code></pre></div>
 <pre><code># A tibble: 9,557,000 x 3
 # Groups:   replicate [1,000]
    replicate dem_win south
@@ -1243,11 +1246,11 @@ p_{dem\_win} = \frac{1}{1 + e^{-(0.230 - 0.249 \times south)}}
 # … with 9,556,990 more rows</code></pre>
 <p>For each <code>replicate</code>, we have 9557 resamples of <code>dem_win</code> and <code>south</code>.</p>
 <p>Next, we are going to <code>nest()</code> our data by <code>replicate</code>:</p>
-<div class="sourceCode" id="cb886"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb886-1"><a href="13-classification.html#cb886-1"></a>x &lt;-<span class="st"> </span>x <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb886-2"><a href="13-classification.html#cb886-2"></a><span class="st">  </span><span class="kw">group_by</span>(replicate) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb886-3"><a href="13-classification.html#cb886-3"></a><span class="st">  </span><span class="kw">nest</span>()</span>
-<span id="cb886-4"><a href="13-classification.html#cb886-4"></a></span>
-<span id="cb886-5"><a href="13-classification.html#cb886-5"></a>x</span></code></pre></div>
+<div class="sourceCode" id="cb902"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb902-1"><a href="13-classification.html#cb902-1"></a>x &lt;-<span class="st"> </span>x <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb902-2"><a href="13-classification.html#cb902-2"></a><span class="st">  </span><span class="kw">group_by</span>(replicate) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb902-3"><a href="13-classification.html#cb902-3"></a><span class="st">  </span><span class="kw">nest</span>()</span>
+<span id="cb902-4"><a href="13-classification.html#cb902-4"></a></span>
+<span id="cb902-5"><a href="13-classification.html#cb902-5"></a>x</span></code></pre></div>
 <pre><code># A tibble: 1,000 x 2
 # Groups:   replicate [1,000]
    replicate data                
@@ -1265,10 +1268,10 @@ p_{dem\_win} = \frac{1}{1 + e^{-(0.230 - 0.249 \times south)}}
 # … with 990 more rows</code></pre>
 <p>After grouping by <code>replicate</code> and using <code>nest()</code>, we now have a dataset of 1,000 rows and a list column named <code>data</code>. Each element of <code>data</code> is a tibble consisting of one of the resampled datasets we created using <code>rep_sample_n()</code>.</p>
 <p>Now, we can use <code>map()</code> to run our logistic regression for each dataset:</p>
-<div class="sourceCode" id="cb888"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb888-1"><a href="13-classification.html#cb888-1"></a>x &lt;-<span class="st"> </span>x <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb888-2"><a href="13-classification.html#cb888-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">mod =</span> <span class="kw">map</span>(data, <span class="op">~</span><span class="st"> </span><span class="kw">glm</span>(dem_win <span class="op">~</span><span class="st"> </span>south, <span class="dt">family =</span> binomial, <span class="dt">data =</span> .)))</span>
-<span id="cb888-3"><a href="13-classification.html#cb888-3"></a></span>
-<span id="cb888-4"><a href="13-classification.html#cb888-4"></a>x</span></code></pre></div>
+<div class="sourceCode" id="cb904"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb904-1"><a href="13-classification.html#cb904-1"></a>x &lt;-<span class="st"> </span>x <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb904-2"><a href="13-classification.html#cb904-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">mod =</span> <span class="kw">map</span>(data, <span class="op">~</span><span class="st"> </span><span class="kw">glm</span>(dem_win <span class="op">~</span><span class="st"> </span>south, <span class="dt">family =</span> binomial, <span class="dt">data =</span> .)))</span>
+<span id="cb904-3"><a href="13-classification.html#cb904-3"></a></span>
+<span id="cb904-4"><a href="13-classification.html#cb904-4"></a>x</span></code></pre></div>
 <pre><code># A tibble: 1,000 x 3
 # Groups:   replicate [1,000]
    replicate data                 mod   
@@ -1285,10 +1288,10 @@ p_{dem\_win} = \frac{1}{1 + e^{-(0.230 - 0.249 \times south)}}
 10        10 &lt;tibble [9,557 × 2]&gt; &lt;glm&gt; 
 # … with 990 more rows</code></pre>
 <p>Now we have a new list column, <code>mod</code>, that contains the model objects created by <code>glm()</code>. We will now want to <code>tidy()</code> the object created by <code>glm()</code>:</p>
-<div class="sourceCode" id="cb890"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb890-1"><a href="13-classification.html#cb890-1"></a>x &lt;-<span class="st"> </span>x <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb890-2"><a href="13-classification.html#cb890-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">reg_results =</span> <span class="kw">map</span>(mod, <span class="op">~</span><span class="st"> </span><span class="kw">tidy</span>(.)))</span>
-<span id="cb890-3"><a href="13-classification.html#cb890-3"></a></span>
-<span id="cb890-4"><a href="13-classification.html#cb890-4"></a>x</span></code></pre></div>
+<div class="sourceCode" id="cb906"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb906-1"><a href="13-classification.html#cb906-1"></a>x &lt;-<span class="st"> </span>x <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb906-2"><a href="13-classification.html#cb906-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">reg_results =</span> <span class="kw">map</span>(mod, <span class="op">~</span><span class="st"> </span><span class="kw">tidy</span>(.)))</span>
+<span id="cb906-3"><a href="13-classification.html#cb906-3"></a></span>
+<span id="cb906-4"><a href="13-classification.html#cb906-4"></a>x</span></code></pre></div>
 <pre><code># A tibble: 1,000 x 4
 # Groups:   replicate [1,000]
    replicate data                 mod    reg_results     
@@ -1305,10 +1308,10 @@ p_{dem\_win} = \frac{1}{1 + e^{-(0.230 - 0.249 \times south)}}
 10        10 &lt;tibble [9,557 × 2]&gt; &lt;glm&gt;  &lt;tibble [2 × 5]&gt;
 # … with 990 more rows</code></pre>
 <p><code>tidy()</code> stores the coefficients in the <code>estimate</code> column, with each coefficient named in the <code>term</code> column. Thus, if we <code>filter()</code> by <code>term</code> and <code>pull(estimate)</code>, we can get the logistic regression coefficient for each bootstrap sample:</p>
-<div class="sourceCode" id="cb892"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb892-1"><a href="13-classification.html#cb892-1"></a>x &lt;-<span class="st"> </span>x <span class="op">%&gt;%</span></span>
-<span id="cb892-2"><a href="13-classification.html#cb892-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">disp_coef =</span> <span class="kw">map_dbl</span>(reg_results, <span class="op">~</span><span class="st"> </span><span class="kw">filter</span>(., term <span class="op">==</span><span class="st"> &quot;south&quot;</span>) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">pull</span>(estimate)))</span>
-<span id="cb892-3"><a href="13-classification.html#cb892-3"></a></span>
-<span id="cb892-4"><a href="13-classification.html#cb892-4"></a>x</span></code></pre></div>
+<div class="sourceCode" id="cb908"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb908-1"><a href="13-classification.html#cb908-1"></a>x &lt;-<span class="st"> </span>x <span class="op">%&gt;%</span></span>
+<span id="cb908-2"><a href="13-classification.html#cb908-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">disp_coef =</span> <span class="kw">map_dbl</span>(reg_results, <span class="op">~</span><span class="st"> </span><span class="kw">filter</span>(., term <span class="op">==</span><span class="st"> &quot;south&quot;</span>) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">pull</span>(estimate)))</span>
+<span id="cb908-3"><a href="13-classification.html#cb908-3"></a></span>
+<span id="cb908-4"><a href="13-classification.html#cb908-4"></a>x</span></code></pre></div>
 <pre><code># A tibble: 1,000 x 5
 # Groups:   replicate [1,000]
    replicate data                 mod    reg_results      disp_coef
@@ -1325,15 +1328,15 @@ p_{dem\_win} = \frac{1}{1 + e^{-(0.230 - 0.249 \times south)}}
 10        10 &lt;tibble [9,557 × 2]&gt; &lt;glm&gt;  &lt;tibble [2 × 5]&gt; -0.224379
 # … with 990 more rows</code></pre>
 <p>Now that we have 1,000 estimates from our bootstrap samples, we can construct a percentile-based confidence interval easily:</p>
-<div class="sourceCode" id="cb894"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb894-1"><a href="13-classification.html#cb894-1"></a>x <span class="op">%&gt;%</span></span>
-<span id="cb894-2"><a href="13-classification.html#cb894-2"></a><span class="st"> </span><span class="kw">pull</span>(disp_coef) <span class="op">%&gt;%</span></span>
-<span id="cb894-3"><a href="13-classification.html#cb894-3"></a><span class="st"> </span><span class="kw">quantile</span>(<span class="kw">c</span>(<span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb910"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb910-1"><a href="13-classification.html#cb910-1"></a>x <span class="op">%&gt;%</span></span>
+<span id="cb910-2"><a href="13-classification.html#cb910-2"></a><span class="st"> </span><span class="kw">pull</span>(disp_coef) <span class="op">%&gt;%</span></span>
+<span id="cb910-3"><a href="13-classification.html#cb910-3"></a><span class="st"> </span><span class="kw">quantile</span>(<span class="kw">c</span>(<span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span>))</span></code></pre></div>
 <pre><code>  2.5%    50%  97.5% 
 -0.333 -0.249 -0.166 </code></pre>
 <p>As we’ve seen before, these are very similar to what we observe using <code>tidy(conf.int = TRUE)</code>:</p>
-<div class="sourceCode" id="cb896"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb896-1"><a href="13-classification.html#cb896-1"></a>house_south_model <span class="op">%&gt;%</span></span>
-<span id="cb896-2"><a href="13-classification.html#cb896-2"></a><span class="st">  </span><span class="kw">tidy</span>(<span class="dt">conf.int =</span> <span class="ot">TRUE</span>) <span class="op">%&gt;%</span></span>
-<span id="cb896-3"><a href="13-classification.html#cb896-3"></a><span class="st">  </span><span class="kw">select</span>(term, estimate, conf.low, conf.high)</span></code></pre></div>
+<div class="sourceCode" id="cb912"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb912-1"><a href="13-classification.html#cb912-1"></a>house_south_model <span class="op">%&gt;%</span></span>
+<span id="cb912-2"><a href="13-classification.html#cb912-2"></a><span class="st">  </span><span class="kw">tidy</span>(<span class="dt">conf.int =</span> <span class="ot">TRUE</span>) <span class="op">%&gt;%</span></span>
+<span id="cb912-3"><a href="13-classification.html#cb912-3"></a><span class="st">  </span><span class="kw">select</span>(term, estimate, conf.low, conf.high)</span></code></pre></div>
 <table class="table" style="font-size: 16px; margin-left: auto; margin-right: auto;">
 <caption style="font-size: initial !important;">
 <span id="tab:unnamed-chunk-614">TABLE 13.4: </span>Logistic regression table
@@ -1387,10 +1390,10 @@ south
 </table>
 <p>Thus, from now on, we’ll just use <code>tidy(conf.int = TRUE)</code> when working with <code>glm()</code>, just as we did with <code>lm()</code>.</p>
 <p>Let’s try running a slightly more complicated version of the above model, where we use <code>region</code> as a predictor instead of <code>south</code>.</p>
-<div class="sourceCode" id="cb897"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb897-1"><a href="13-classification.html#cb897-1"></a>house_region_model &lt;-<span class="st"> </span><span class="kw">glm</span>(dem_win <span class="op">~</span><span class="st"> </span>region, <span class="dt">family =</span> binomial, <span class="dt">data =</span> house_ch13)</span>
-<span id="cb897-2"><a href="13-classification.html#cb897-2"></a>house_region_model <span class="op">%&gt;%</span></span>
-<span id="cb897-3"><a href="13-classification.html#cb897-3"></a><span class="st">  </span><span class="kw">tidy</span>(<span class="dt">conf.int =</span> <span class="ot">TRUE</span>) <span class="op">%&gt;%</span></span>
-<span id="cb897-4"><a href="13-classification.html#cb897-4"></a><span class="st">  </span><span class="kw">select</span>(term, estimate, conf.low, conf.high)</span></code></pre></div>
+<div class="sourceCode" id="cb913"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb913-1"><a href="13-classification.html#cb913-1"></a>house_region_model &lt;-<span class="st"> </span><span class="kw">glm</span>(dem_win <span class="op">~</span><span class="st"> </span>region, <span class="dt">family =</span> binomial, <span class="dt">data =</span> house_ch13)</span>
+<span id="cb913-2"><a href="13-classification.html#cb913-2"></a>house_region_model <span class="op">%&gt;%</span></span>
+<span id="cb913-3"><a href="13-classification.html#cb913-3"></a><span class="st">  </span><span class="kw">tidy</span>(<span class="dt">conf.int =</span> <span class="ot">TRUE</span>) <span class="op">%&gt;%</span></span>
+<span id="cb913-4"><a href="13-classification.html#cb913-4"></a><span class="st">  </span><span class="kw">select</span>(term, estimate, conf.low, conf.high)</span></code></pre></div>
 <table class="table" style="font-size: 16px; margin-left: auto; margin-right: auto;">
 <caption style="font-size: initial !important;">
 <span id="tab:unnamed-chunk-617">TABLE 13.5: </span>Logistic regression table
@@ -1488,12 +1491,12 @@ regionWest
 <li>Residuals <span class="math inline">\(y - \widehat{y}\)</span>, or the error between the observed value and the fitted value</li>
 </ol>
 <p>We obtained these values and other values using the <code>augment()</code> function from the <strong>broom</strong> package. Recall too that we used the <code>.se.fit</code> column to construct confidence intervals. We’ll see here how we can apply these same concepts to logistic regression.</p>
-<div class="sourceCode" id="cb898"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb898-1"><a href="13-classification.html#cb898-1"></a>regression_points &lt;-<span class="st"> </span>house_region_model <span class="op">%&gt;%</span></span>
-<span id="cb898-2"><a href="13-classification.html#cb898-2"></a><span class="st">  </span><span class="kw">augment</span>() <span class="op">%&gt;%</span></span>
-<span id="cb898-3"><a href="13-classification.html#cb898-3"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">conf.low =</span> .fitted <span class="op">-</span><span class="st"> </span><span class="dv">2</span> <span class="op">*</span><span class="st"> </span>.se.fit,</span>
-<span id="cb898-4"><a href="13-classification.html#cb898-4"></a>         <span class="dt">conf.high =</span> .fitted <span class="op">+</span><span class="st"> </span><span class="dv">2</span> <span class="op">*</span><span class="st"> </span>.se.fit) <span class="op">%&gt;%</span></span>
-<span id="cb898-5"><a href="13-classification.html#cb898-5"></a><span class="st">  </span><span class="kw">select</span>(dem_win, region, .fitted, conf.low, conf.high, .resid)</span>
-<span id="cb898-6"><a href="13-classification.html#cb898-6"></a>regression_points</span></code></pre></div>
+<div class="sourceCode" id="cb914"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb914-1"><a href="13-classification.html#cb914-1"></a>regression_points &lt;-<span class="st"> </span>house_region_model <span class="op">%&gt;%</span></span>
+<span id="cb914-2"><a href="13-classification.html#cb914-2"></a><span class="st">  </span><span class="kw">augment</span>() <span class="op">%&gt;%</span></span>
+<span id="cb914-3"><a href="13-classification.html#cb914-3"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">conf.low =</span> .fitted <span class="op">-</span><span class="st"> </span><span class="dv">2</span> <span class="op">*</span><span class="st"> </span>.se.fit,</span>
+<span id="cb914-4"><a href="13-classification.html#cb914-4"></a>         <span class="dt">conf.high =</span> .fitted <span class="op">+</span><span class="st"> </span><span class="dv">2</span> <span class="op">*</span><span class="st"> </span>.se.fit) <span class="op">%&gt;%</span></span>
+<span id="cb914-5"><a href="13-classification.html#cb914-5"></a><span class="st">  </span><span class="kw">select</span>(dem_win, region, .fitted, conf.low, conf.high, .resid)</span>
+<span id="cb914-6"><a href="13-classification.html#cb914-6"></a>regression_points</span></code></pre></div>
 <table class="table" style="font-size: 16px; margin-left: auto; margin-right: auto;">
 <caption style="font-size: initial !important;">
 <span id="tab:unnamed-chunk-619">TABLE 13.6: </span>Regression points (First 10 out of 4,201 district-years)
@@ -1724,12 +1727,12 @@ South
 </tbody>
 </table>
 <p>The syntax is the same, but the interpretation has to change, since the <code>.fitted</code>, <code>conf.low</code>, and <code>conf.high</code> columns are all on the logit scale. While we could try to interpret these values, <code>augment()</code> has the argument <code>type.predict = "response"</code> that allow us to present the results in terms of <em>predicted probabilities</em>:</p>
-<div class="sourceCode" id="cb899"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb899-1"><a href="13-classification.html#cb899-1"></a>regression_points &lt;-<span class="st"> </span>house_region_model <span class="op">%&gt;%</span></span>
-<span id="cb899-2"><a href="13-classification.html#cb899-2"></a><span class="st">  </span><span class="kw">augment</span>(<span class="dt">type.predict =</span> <span class="st">&quot;response&quot;</span>) <span class="op">%&gt;%</span></span>
-<span id="cb899-3"><a href="13-classification.html#cb899-3"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">conf.low =</span> .fitted <span class="op">-</span><span class="st"> </span><span class="dv">2</span> <span class="op">*</span><span class="st"> </span>.se.fit,</span>
-<span id="cb899-4"><a href="13-classification.html#cb899-4"></a>         <span class="dt">conf.high =</span> .fitted <span class="op">+</span><span class="st"> </span><span class="dv">2</span> <span class="op">*</span><span class="st"> </span>.se.fit) <span class="op">%&gt;%</span></span>
-<span id="cb899-5"><a href="13-classification.html#cb899-5"></a><span class="st">  </span><span class="kw">select</span>(dem_win, region, .fitted, conf.low, conf.high, .resid)</span>
-<span id="cb899-6"><a href="13-classification.html#cb899-6"></a>regression_points</span></code></pre></div>
+<div class="sourceCode" id="cb915"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb915-1"><a href="13-classification.html#cb915-1"></a>regression_points &lt;-<span class="st"> </span>house_region_model <span class="op">%&gt;%</span></span>
+<span id="cb915-2"><a href="13-classification.html#cb915-2"></a><span class="st">  </span><span class="kw">augment</span>(<span class="dt">type.predict =</span> <span class="st">&quot;response&quot;</span>) <span class="op">%&gt;%</span></span>
+<span id="cb915-3"><a href="13-classification.html#cb915-3"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">conf.low =</span> .fitted <span class="op">-</span><span class="st"> </span><span class="dv">2</span> <span class="op">*</span><span class="st"> </span>.se.fit,</span>
+<span id="cb915-4"><a href="13-classification.html#cb915-4"></a>         <span class="dt">conf.high =</span> .fitted <span class="op">+</span><span class="st"> </span><span class="dv">2</span> <span class="op">*</span><span class="st"> </span>.se.fit) <span class="op">%&gt;%</span></span>
+<span id="cb915-5"><a href="13-classification.html#cb915-5"></a><span class="st">  </span><span class="kw">select</span>(dem_win, region, .fitted, conf.low, conf.high, .resid)</span>
+<span id="cb915-6"><a href="13-classification.html#cb915-6"></a>regression_points</span></code></pre></div>
 <table class="table" style="font-size: 16px; margin-left: auto; margin-right: auto;">
 <caption style="font-size: initial !important;">
 <span id="tab:unnamed-chunk-621">TABLE 13.7: </span>Regression points (First 10 out of 4,201 district-years)
@@ -1968,13 +1971,13 @@ South
 <p>where <span class="math inline">\(Y_i\)</span> is the actual outcome and <span class="math inline">\(p_i\)</span> is the predicted probability from the logistic regression model.</p>
 <p>The sum of the individual deviance residuals is referred to as the <strong>deviance</strong> or <strong>residual deviance</strong>. The deviance is used to assess the model. As the name suggests, a model with a small deviance is preferred.</p>
 <p>However, you can also have <code>augment()</code> report residuals as differences between the observed outcome and the predicted probabilities by using <code>type.residuals = "response"</code>:</p>
-<div class="sourceCode" id="cb900"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb900-1"><a href="13-classification.html#cb900-1"></a>regression_points &lt;-<span class="st"> </span>house_region_model <span class="op">%&gt;%</span></span>
-<span id="cb900-2"><a href="13-classification.html#cb900-2"></a><span class="st">  </span><span class="kw">augment</span>(<span class="dt">type.predict =</span> <span class="st">&quot;response&quot;</span>,</span>
-<span id="cb900-3"><a href="13-classification.html#cb900-3"></a>          <span class="dt">type.residuals =</span> <span class="st">&quot;response&quot;</span>) <span class="op">%&gt;%</span></span>
-<span id="cb900-4"><a href="13-classification.html#cb900-4"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">conf.low =</span> .fitted <span class="op">-</span><span class="st"> </span><span class="dv">2</span> <span class="op">*</span><span class="st"> </span>.se.fit,</span>
-<span id="cb900-5"><a href="13-classification.html#cb900-5"></a>         <span class="dt">conf.high =</span> .fitted <span class="op">+</span><span class="st"> </span><span class="dv">2</span> <span class="op">*</span><span class="st"> </span>.se.fit) <span class="op">%&gt;%</span></span>
-<span id="cb900-6"><a href="13-classification.html#cb900-6"></a><span class="st">  </span><span class="kw">select</span>(dem_win, region, .fitted, conf.low, conf.high, .resid)</span>
-<span id="cb900-7"><a href="13-classification.html#cb900-7"></a>regression_points</span></code></pre></div>
+<div class="sourceCode" id="cb916"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb916-1"><a href="13-classification.html#cb916-1"></a>regression_points &lt;-<span class="st"> </span>house_region_model <span class="op">%&gt;%</span></span>
+<span id="cb916-2"><a href="13-classification.html#cb916-2"></a><span class="st">  </span><span class="kw">augment</span>(<span class="dt">type.predict =</span> <span class="st">&quot;response&quot;</span>,</span>
+<span id="cb916-3"><a href="13-classification.html#cb916-3"></a>          <span class="dt">type.residuals =</span> <span class="st">&quot;response&quot;</span>) <span class="op">%&gt;%</span></span>
+<span id="cb916-4"><a href="13-classification.html#cb916-4"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">conf.low =</span> .fitted <span class="op">-</span><span class="st"> </span><span class="dv">2</span> <span class="op">*</span><span class="st"> </span>.se.fit,</span>
+<span id="cb916-5"><a href="13-classification.html#cb916-5"></a>         <span class="dt">conf.high =</span> .fitted <span class="op">+</span><span class="st"> </span><span class="dv">2</span> <span class="op">*</span><span class="st"> </span>.se.fit) <span class="op">%&gt;%</span></span>
+<span id="cb916-6"><a href="13-classification.html#cb916-6"></a><span class="st">  </span><span class="kw">select</span>(dem_win, region, .fitted, conf.low, conf.high, .resid)</span>
+<span id="cb916-7"><a href="13-classification.html#cb916-7"></a>regression_points</span></code></pre></div>
 <table class="table" style="font-size: 16px; margin-left: auto; margin-right: auto;">
 <caption style="font-size: initial !important;">
 <span id="tab:unnamed-chunk-623">TABLE 13.8: </span>Regression points (First 10 out of 4,201 district-years)
@@ -2213,10 +2216,10 @@ South
 <li>We first “fit” the logistic regression model using the <code>glm(y ~ x, family, data)</code> function and save it in <code>house_year_model</code>.</li>
 <li>We get the regression table by applying the <code>tidy()</code> function from the <strong>broom</strong> package to <code>house_year_model</code>. We’ll print the <code>term</code>, <code>estimate</code>, <code>conf.low</code>, and <code>conf.high</code> columns.</li>
 </ol>
-<div class="sourceCode" id="cb901"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb901-1"><a href="13-classification.html#cb901-1"></a>house_year_model &lt;-<span class="st"> </span><span class="kw">glm</span>(dem_win <span class="op">~</span><span class="st"> </span>year, <span class="dt">family =</span> binomial, <span class="dt">data =</span> house_ch13)</span>
-<span id="cb901-2"><a href="13-classification.html#cb901-2"></a>house_year_model <span class="op">%&gt;%</span></span>
-<span id="cb901-3"><a href="13-classification.html#cb901-3"></a><span class="st">  </span><span class="kw">tidy</span>(<span class="dt">conf.int =</span> <span class="ot">TRUE</span>) <span class="op">%&gt;%</span></span>
-<span id="cb901-4"><a href="13-classification.html#cb901-4"></a><span class="st">  </span><span class="kw">select</span>(term, estimate, conf.low, conf.high)</span></code></pre></div>
+<div class="sourceCode" id="cb917"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb917-1"><a href="13-classification.html#cb917-1"></a>house_year_model &lt;-<span class="st"> </span><span class="kw">glm</span>(dem_win <span class="op">~</span><span class="st"> </span>year, <span class="dt">family =</span> binomial, <span class="dt">data =</span> house_ch13)</span>
+<span id="cb917-2"><a href="13-classification.html#cb917-2"></a>house_year_model <span class="op">%&gt;%</span></span>
+<span id="cb917-3"><a href="13-classification.html#cb917-3"></a><span class="st">  </span><span class="kw">tidy</span>(<span class="dt">conf.int =</span> <span class="ot">TRUE</span>) <span class="op">%&gt;%</span></span>
+<span id="cb917-4"><a href="13-classification.html#cb917-4"></a><span class="st">  </span><span class="kw">select</span>(term, estimate, conf.low, conf.high)</span></code></pre></div>
 <table class="table" style="font-size: 16px; margin-left: auto; margin-right: auto;">
 <caption style="font-size: initial !important;">
 <span id="tab:unnamed-chunk-626">TABLE 13.9: </span>Logistic regression table
@@ -2289,10 +2292,10 @@ p_{dem\_win} = \frac{1}{1 + e^{-(34.487 - 0.017 \times year)}}
 <li>We first “fit” the logistic regression model using the <code>glm(y ~ x1 * x2, family, data)</code> function and save it in <code>house_interact_model</code>.</li>
 <li>We get the regression table by applying the <code>tidy()</code> function from the <strong>broom</strong> package to <code>house_interact_model</code>. We’ll print the <code>term</code>, <code>estimate</code>, <code>conf.low</code>, and <code>conf.high</code> columns.</li>
 </ol>
-<div class="sourceCode" id="cb902"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb902-1"><a href="13-classification.html#cb902-1"></a>house_interact_model &lt;-<span class="st"> </span><span class="kw">glm</span>(dem_win <span class="op">~</span><span class="st"> </span>region <span class="op">*</span><span class="st"> </span>year, <span class="dt">family =</span> binomial <span class="dt">data =</span> house_ch13)</span>
-<span id="cb902-2"><a href="13-classification.html#cb902-2"></a>house_interact_model <span class="op">%&gt;%</span></span>
-<span id="cb902-3"><a href="13-classification.html#cb902-3"></a><span class="st">  </span><span class="kw">tidy</span>(<span class="dt">conf.int =</span> <span class="ot">TRUE</span>) <span class="op">%&gt;%</span></span>
-<span id="cb902-4"><a href="13-classification.html#cb902-4"></a><span class="st">  </span><span class="kw">select</span>(term, estimate, conf.low, conf.high)</span></code></pre></div>
+<div class="sourceCode" id="cb918"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb918-1"><a href="13-classification.html#cb918-1"></a>house_interact_model &lt;-<span class="st"> </span><span class="kw">glm</span>(dem_win <span class="op">~</span><span class="st"> </span>region <span class="op">*</span><span class="st"> </span>year, <span class="dt">family =</span> binomial <span class="dt">data =</span> house_ch13)</span>
+<span id="cb918-2"><a href="13-classification.html#cb918-2"></a>house_interact_model <span class="op">%&gt;%</span></span>
+<span id="cb918-3"><a href="13-classification.html#cb918-3"></a><span class="st">  </span><span class="kw">tidy</span>(<span class="dt">conf.int =</span> <span class="ot">TRUE</span>) <span class="op">%&gt;%</span></span>
+<span id="cb918-4"><a href="13-classification.html#cb918-4"></a><span class="st">  </span><span class="kw">select</span>(term, estimate, conf.low, conf.high)</span></code></pre></div>
 <table class="table" style="font-size: 16px; margin-left: auto; margin-right: auto;">
 <caption style="font-size: initial !important;">
 <span id="tab:unnamed-chunk-630">TABLE 13.10: </span>Logistic regression table
@@ -2430,13 +2433,13 @@ regionWest:year
 </table>
 <p>Now we can see how the effect of <code>year</code> varies by <code>region</code>. While the passage of time is associated with more Democratic victories in the Northeast and the West, <code>year</code> is associated with declining Democratic fortunes in the Midwest (<code>year</code>) and the South (<code>regionSouth:year</code>).</p>
 <p>Looking at predicted probabilities can also put this model in perspective. Let’s use <code>augment()</code> to generate the predictions. Remember that <code>type.predict = "response"</code> and <code>type.residuals = "response"</code> put the fitted values and the residuals on the probability scale.</p>
-<div class="sourceCode" id="cb903"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb903-1"><a href="13-classification.html#cb903-1"></a>regression_points &lt;-<span class="st"> </span>house_interact_model <span class="op">%&gt;%</span></span>
-<span id="cb903-2"><a href="13-classification.html#cb903-2"></a><span class="st">  </span><span class="kw">augment</span>(<span class="dt">type.predict =</span> <span class="st">&quot;response&quot;</span>,</span>
-<span id="cb903-3"><a href="13-classification.html#cb903-3"></a>          <span class="dt">type.residuals =</span> <span class="st">&quot;response&quot;</span>) <span class="op">%&gt;%</span></span>
-<span id="cb903-4"><a href="13-classification.html#cb903-4"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">conf.low =</span> .fitted <span class="op">-</span><span class="st"> </span><span class="dv">2</span> <span class="op">*</span><span class="st"> </span>.se.fit,</span>
-<span id="cb903-5"><a href="13-classification.html#cb903-5"></a>         <span class="dt">conf.high =</span> .fitted <span class="op">+</span><span class="st"> </span><span class="dv">2</span> <span class="op">*</span><span class="st"> </span>.se.fit) <span class="op">%&gt;%</span></span>
-<span id="cb903-6"><a href="13-classification.html#cb903-6"></a><span class="st">  </span><span class="kw">select</span>(dem_win, region, .fitted, conf.low, conf.high, .resid)</span>
-<span id="cb903-7"><a href="13-classification.html#cb903-7"></a>regression_points</span></code></pre></div>
+<div class="sourceCode" id="cb919"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb919-1"><a href="13-classification.html#cb919-1"></a>regression_points &lt;-<span class="st"> </span>house_interact_model <span class="op">%&gt;%</span></span>
+<span id="cb919-2"><a href="13-classification.html#cb919-2"></a><span class="st">  </span><span class="kw">augment</span>(<span class="dt">type.predict =</span> <span class="st">&quot;response&quot;</span>,</span>
+<span id="cb919-3"><a href="13-classification.html#cb919-3"></a>          <span class="dt">type.residuals =</span> <span class="st">&quot;response&quot;</span>) <span class="op">%&gt;%</span></span>
+<span id="cb919-4"><a href="13-classification.html#cb919-4"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">conf.low =</span> .fitted <span class="op">-</span><span class="st"> </span><span class="dv">2</span> <span class="op">*</span><span class="st"> </span>.se.fit,</span>
+<span id="cb919-5"><a href="13-classification.html#cb919-5"></a>         <span class="dt">conf.high =</span> .fitted <span class="op">+</span><span class="st"> </span><span class="dv">2</span> <span class="op">*</span><span class="st"> </span>.se.fit) <span class="op">%&gt;%</span></span>
+<span id="cb919-6"><a href="13-classification.html#cb919-6"></a><span class="st">  </span><span class="kw">select</span>(dem_win, region, .fitted, conf.low, conf.high, .resid)</span>
+<span id="cb919-7"><a href="13-classification.html#cb919-7"></a>regression_points</span></code></pre></div>
 <table class="table" style="font-size: 16px; margin-left: auto; margin-right: auto;">
 <caption style="font-size: initial !important;">
 <span id="tab:unnamed-chunk-632">TABLE 13.11: </span>Regression points (First 10 out of 4,201 district-years)
@@ -2667,12 +2670,12 @@ South
 </tbody>
 </table>
 <p>We can also use <code>augment</code> to make predictions for years that aren’t in our data. What would our model predict for the 2020 elections? We use the <code>newdata</code> argument in <code>augment()</code> to make these predictions.</p>
-<div class="sourceCode" id="cb904"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb904-1"><a href="13-classification.html#cb904-1"></a>house_interact_model <span class="op">%&gt;%</span></span>
-<span id="cb904-2"><a href="13-classification.html#cb904-2"></a><span class="st">  </span><span class="kw">augment</span>(<span class="dt">newdata =</span> <span class="kw">tibble</span>(<span class="dt">year =</span> <span class="kw">rep</span>(<span class="dv">2020</span>, <span class="dv">4</span>),</span>
-<span id="cb904-3"><a href="13-classification.html#cb904-3"></a>                           <span class="dt">region =</span> <span class="kw">c</span>(<span class="st">&quot;Midwest&quot;</span>, <span class="st">&quot;Northeast&quot;</span>, <span class="st">&quot;South&quot;</span>, <span class="st">&quot;West&quot;</span>)),</span>
-<span id="cb904-4"><a href="13-classification.html#cb904-4"></a>          <span class="dt">type.predict =</span> <span class="st">&quot;response&quot;</span>) <span class="op">%&gt;%</span></span>
-<span id="cb904-5"><a href="13-classification.html#cb904-5"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">conf.low =</span> .fitted <span class="op">-</span><span class="st"> </span><span class="dv">2</span> <span class="op">*</span><span class="st"> </span>.se.fit,</span>
-<span id="cb904-6"><a href="13-classification.html#cb904-6"></a>         <span class="dt">conf.high =</span> .fitted <span class="op">+</span><span class="st"> </span><span class="dv">2</span> <span class="op">*</span><span class="st"> </span>.se.fit)</span></code></pre></div>
+<div class="sourceCode" id="cb920"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb920-1"><a href="13-classification.html#cb920-1"></a>house_interact_model <span class="op">%&gt;%</span></span>
+<span id="cb920-2"><a href="13-classification.html#cb920-2"></a><span class="st">  </span><span class="kw">augment</span>(<span class="dt">newdata =</span> <span class="kw">tibble</span>(<span class="dt">year =</span> <span class="kw">rep</span>(<span class="dv">2020</span>, <span class="dv">4</span>),</span>
+<span id="cb920-3"><a href="13-classification.html#cb920-3"></a>                           <span class="dt">region =</span> <span class="kw">c</span>(<span class="st">&quot;Midwest&quot;</span>, <span class="st">&quot;Northeast&quot;</span>, <span class="st">&quot;South&quot;</span>, <span class="st">&quot;West&quot;</span>)),</span>
+<span id="cb920-4"><a href="13-classification.html#cb920-4"></a>          <span class="dt">type.predict =</span> <span class="st">&quot;response&quot;</span>) <span class="op">%&gt;%</span></span>
+<span id="cb920-5"><a href="13-classification.html#cb920-5"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">conf.low =</span> .fitted <span class="op">-</span><span class="st"> </span><span class="dv">2</span> <span class="op">*</span><span class="st"> </span>.se.fit,</span>
+<span id="cb920-6"><a href="13-classification.html#cb920-6"></a>         <span class="dt">conf.high =</span> .fitted <span class="op">+</span><span class="st"> </span><span class="dv">2</span> <span class="op">*</span><span class="st"> </span>.se.fit)</span></code></pre></div>
 <pre><code># A tibble: 4 x 6
    year region     .fitted   .se.fit conf.low conf.high
   &lt;dbl&gt; &lt;chr&gt;        &lt;dbl&gt;     &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;
@@ -2681,21 +2684,21 @@ South
 3  2020 South     0.247674 0.0142235 0.219227  0.276121
 4  2020 West      0.604990 0.0217154 0.561559  0.648420</code></pre>
 <p>These can easily be plotted using <code>ggplot()</code>:</p>
-<div class="sourceCode" id="cb906"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb906-1"><a href="13-classification.html#cb906-1"></a>house_interact_model <span class="op">%&gt;%</span></span>
-<span id="cb906-2"><a href="13-classification.html#cb906-2"></a><span class="st">  </span><span class="kw">augment</span>(<span class="dt">newdata =</span> <span class="kw">tibble</span>(<span class="dt">year =</span> <span class="kw">rep</span>(<span class="dv">2020</span>, <span class="dv">4</span>),</span>
-<span id="cb906-3"><a href="13-classification.html#cb906-3"></a>                           <span class="dt">region =</span> <span class="kw">c</span>(<span class="st">&quot;Midwest&quot;</span>, <span class="st">&quot;Northeast&quot;</span>, <span class="st">&quot;South&quot;</span>, <span class="st">&quot;West&quot;</span>)),</span>
-<span id="cb906-4"><a href="13-classification.html#cb906-4"></a>          <span class="dt">type.predict =</span> <span class="st">&quot;response&quot;</span>) <span class="op">%&gt;%</span></span>
-<span id="cb906-5"><a href="13-classification.html#cb906-5"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">conf.low =</span> .fitted <span class="op">-</span><span class="st"> </span><span class="dv">2</span> <span class="op">*</span><span class="st"> </span>.se.fit,</span>
-<span id="cb906-6"><a href="13-classification.html#cb906-6"></a>         <span class="dt">conf.high =</span> .fitted <span class="op">+</span><span class="st"> </span><span class="dv">2</span> <span class="op">*</span><span class="st"> </span>.se.fit) <span class="op">%&gt;%</span></span>
-<span id="cb906-7"><a href="13-classification.html#cb906-7"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">y =</span> .fitted,</span>
-<span id="cb906-8"><a href="13-classification.html#cb906-8"></a>             <span class="dt">ymin =</span> conf.low,</span>
-<span id="cb906-9"><a href="13-classification.html#cb906-9"></a>             <span class="dt">ymax =</span> conf.high,</span>
-<span id="cb906-10"><a href="13-classification.html#cb906-10"></a>             <span class="dt">x =</span> region)) <span class="op">+</span></span>
-<span id="cb906-11"><a href="13-classification.html#cb906-11"></a><span class="st">  </span><span class="kw">geom_point</span>() <span class="op">+</span></span>
-<span id="cb906-12"><a href="13-classification.html#cb906-12"></a><span class="st">  </span><span class="kw">geom_errorbar</span>() <span class="op">+</span></span>
-<span id="cb906-13"><a href="13-classification.html#cb906-13"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">y =</span> <span class="st">&quot;Predicted probability of a Democratic victory (2020)&quot;</span>,</span>
-<span id="cb906-14"><a href="13-classification.html#cb906-14"></a>       <span class="dt">x =</span> <span class="st">&quot;&quot;</span>) <span class="op">+</span></span>
-<span id="cb906-15"><a href="13-classification.html#cb906-15"></a><span class="st">  </span><span class="kw">theme_classic</span>()</span></code></pre></div>
+<div class="sourceCode" id="cb922"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb922-1"><a href="13-classification.html#cb922-1"></a>house_interact_model <span class="op">%&gt;%</span></span>
+<span id="cb922-2"><a href="13-classification.html#cb922-2"></a><span class="st">  </span><span class="kw">augment</span>(<span class="dt">newdata =</span> <span class="kw">tibble</span>(<span class="dt">year =</span> <span class="kw">rep</span>(<span class="dv">2020</span>, <span class="dv">4</span>),</span>
+<span id="cb922-3"><a href="13-classification.html#cb922-3"></a>                           <span class="dt">region =</span> <span class="kw">c</span>(<span class="st">&quot;Midwest&quot;</span>, <span class="st">&quot;Northeast&quot;</span>, <span class="st">&quot;South&quot;</span>, <span class="st">&quot;West&quot;</span>)),</span>
+<span id="cb922-4"><a href="13-classification.html#cb922-4"></a>          <span class="dt">type.predict =</span> <span class="st">&quot;response&quot;</span>) <span class="op">%&gt;%</span></span>
+<span id="cb922-5"><a href="13-classification.html#cb922-5"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">conf.low =</span> .fitted <span class="op">-</span><span class="st"> </span><span class="dv">2</span> <span class="op">*</span><span class="st"> </span>.se.fit,</span>
+<span id="cb922-6"><a href="13-classification.html#cb922-6"></a>         <span class="dt">conf.high =</span> .fitted <span class="op">+</span><span class="st"> </span><span class="dv">2</span> <span class="op">*</span><span class="st"> </span>.se.fit) <span class="op">%&gt;%</span></span>
+<span id="cb922-7"><a href="13-classification.html#cb922-7"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">y =</span> .fitted,</span>
+<span id="cb922-8"><a href="13-classification.html#cb922-8"></a>             <span class="dt">ymin =</span> conf.low,</span>
+<span id="cb922-9"><a href="13-classification.html#cb922-9"></a>             <span class="dt">ymax =</span> conf.high,</span>
+<span id="cb922-10"><a href="13-classification.html#cb922-10"></a>             <span class="dt">x =</span> region)) <span class="op">+</span></span>
+<span id="cb922-11"><a href="13-classification.html#cb922-11"></a><span class="st">  </span><span class="kw">geom_point</span>() <span class="op">+</span></span>
+<span id="cb922-12"><a href="13-classification.html#cb922-12"></a><span class="st">  </span><span class="kw">geom_errorbar</span>() <span class="op">+</span></span>
+<span id="cb922-13"><a href="13-classification.html#cb922-13"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">y =</span> <span class="st">&quot;Predicted probability of a Democratic victory (2020)&quot;</span>,</span>
+<span id="cb922-14"><a href="13-classification.html#cb922-14"></a>       <span class="dt">x =</span> <span class="st">&quot;&quot;</span>) <span class="op">+</span></span>
+<span id="cb922-15"><a href="13-classification.html#cb922-15"></a><span class="st">  </span><span class="kw">theme_classic</span>()</span></code></pre></div>
 <p><img src="Preceptor%E2%80%99s-Primer-for-Bayesian-Data-Science_files/figure-html/unnamed-chunk-634-1.png" width="\textwidth" style="display: block; margin: auto;" /></p>
 </div>
 <div id="fitting-many-models-using-map-1" class="section level3">
@@ -2703,24 +2706,24 @@ South
 <p>While it is interesting to see how Democrats perform by region over time, it would also be interesting to see how each state has changed in its partisan voting from 1976–2018. Have any seen particularly large increases (or decreases) in the probability of a Democratic candidate winning?</p>
 <p>The code to do this is very similar to the code we used for the gubernatorial forecasts in Chapter <a href="11-regression.html#regression">11</a> and the Seattle house prices in Chapter <a href="12-multiple-regression.html#multiple-regression">12</a>. However, we will use <code>glm()</code> instead of <code>lm()</code>.</p>
 <p>First, we’ll filter to the states that have at least 50 district-years in the dataset. Next, let’s use <code>map()</code> to learn about these districts:</p>
-<div class="sourceCode" id="cb907"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb907-1"><a href="13-classification.html#cb907-1"></a>infreq_states &lt;-<span class="st"> </span>house_ch13 <span class="op">%&gt;%</span></span>
-<span id="cb907-2"><a href="13-classification.html#cb907-2"></a><span class="st">  </span><span class="kw">count</span>(state) <span class="op">%&gt;%</span></span>
-<span id="cb907-3"><a href="13-classification.html#cb907-3"></a><span class="st">  </span><span class="kw">filter</span>(n <span class="op">&lt;</span><span class="st"> </span><span class="dv">50</span>) <span class="op">%&gt;%</span></span>
-<span id="cb907-4"><a href="13-classification.html#cb907-4"></a><span class="st">  </span><span class="kw">pull</span>(state)</span>
-<span id="cb907-5"><a href="13-classification.html#cb907-5"></a></span>
-<span id="cb907-6"><a href="13-classification.html#cb907-6"></a>house_state_model &lt;-<span class="st"> </span>house_ch13 <span class="op">%&gt;%</span></span>
-<span id="cb907-7"><a href="13-classification.html#cb907-7"></a><span class="st">  </span><span class="kw">filter</span>(<span class="op">!</span><span class="st"> </span>state <span class="op">%in%</span><span class="st">  </span>infreq_states) <span class="op">%&gt;%</span></span>
-<span id="cb907-8"><a href="13-classification.html#cb907-8"></a><span class="st">  </span><span class="kw">group_by</span>(state) <span class="op">%&gt;%</span></span>
-<span id="cb907-9"><a href="13-classification.html#cb907-9"></a><span class="st">  </span><span class="kw">nest</span>() <span class="op">%&gt;%</span></span>
-<span id="cb907-10"><a href="13-classification.html#cb907-10"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">mod =</span> <span class="kw">map</span>(data, <span class="op">~</span><span class="st"> </span><span class="kw">glm</span>(dem_win <span class="op">~</span><span class="st"> </span>year, <span class="dt">family =</span> binomial, <span class="dt">data =</span> .)),</span>
-<span id="cb907-11"><a href="13-classification.html#cb907-11"></a>         <span class="dt">reg_results =</span> <span class="kw">map</span>(mod, <span class="op">~</span><span class="st"> </span><span class="kw">tidy</span>(., <span class="dt">conf.int =</span> <span class="ot">TRUE</span>)),</span>
-<span id="cb907-12"><a href="13-classification.html#cb907-12"></a>         <span class="dt">year_coef =</span> <span class="kw">map_dbl</span>(reg_results, <span class="op">~</span><span class="st"> </span><span class="kw">filter</span>(., term <span class="op">==</span><span class="st"> &quot;year&quot;</span>) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">pull</span>(estimate)),</span>
-<span id="cb907-13"><a href="13-classification.html#cb907-13"></a>         <span class="dt">year_low =</span> <span class="kw">map_dbl</span>(reg_results, <span class="op">~</span><span class="st"> </span><span class="kw">filter</span>(., term <span class="op">==</span><span class="st"> &quot;year&quot;</span>) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">pull</span>(conf.low)),</span>
-<span id="cb907-14"><a href="13-classification.html#cb907-14"></a>         <span class="dt">year_high =</span> <span class="kw">map_dbl</span>(reg_results, <span class="op">~</span><span class="st"> </span><span class="kw">filter</span>(., term <span class="op">==</span><span class="st"> &quot;year&quot;</span>) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">pull</span>(conf.high)))</span>
-<span id="cb907-15"><a href="13-classification.html#cb907-15"></a></span>
-<span id="cb907-16"><a href="13-classification.html#cb907-16"></a><span class="kw">glimpse</span>(house_state_model)</span></code></pre></div>
-<pre><code>Observations: 38
-Variables: 7
+<div class="sourceCode" id="cb923"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb923-1"><a href="13-classification.html#cb923-1"></a>infreq_states &lt;-<span class="st"> </span>house_ch13 <span class="op">%&gt;%</span></span>
+<span id="cb923-2"><a href="13-classification.html#cb923-2"></a><span class="st">  </span><span class="kw">count</span>(state) <span class="op">%&gt;%</span></span>
+<span id="cb923-3"><a href="13-classification.html#cb923-3"></a><span class="st">  </span><span class="kw">filter</span>(n <span class="op">&lt;</span><span class="st"> </span><span class="dv">50</span>) <span class="op">%&gt;%</span></span>
+<span id="cb923-4"><a href="13-classification.html#cb923-4"></a><span class="st">  </span><span class="kw">pull</span>(state)</span>
+<span id="cb923-5"><a href="13-classification.html#cb923-5"></a></span>
+<span id="cb923-6"><a href="13-classification.html#cb923-6"></a>house_state_model &lt;-<span class="st"> </span>house_ch13 <span class="op">%&gt;%</span></span>
+<span id="cb923-7"><a href="13-classification.html#cb923-7"></a><span class="st">  </span><span class="kw">filter</span>(<span class="op">!</span><span class="st"> </span>state <span class="op">%in%</span><span class="st">  </span>infreq_states) <span class="op">%&gt;%</span></span>
+<span id="cb923-8"><a href="13-classification.html#cb923-8"></a><span class="st">  </span><span class="kw">group_by</span>(state) <span class="op">%&gt;%</span></span>
+<span id="cb923-9"><a href="13-classification.html#cb923-9"></a><span class="st">  </span><span class="kw">nest</span>() <span class="op">%&gt;%</span></span>
+<span id="cb923-10"><a href="13-classification.html#cb923-10"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">mod =</span> <span class="kw">map</span>(data, <span class="op">~</span><span class="st"> </span><span class="kw">glm</span>(dem_win <span class="op">~</span><span class="st"> </span>year, <span class="dt">family =</span> binomial, <span class="dt">data =</span> .)),</span>
+<span id="cb923-11"><a href="13-classification.html#cb923-11"></a>         <span class="dt">reg_results =</span> <span class="kw">map</span>(mod, <span class="op">~</span><span class="st"> </span><span class="kw">tidy</span>(., <span class="dt">conf.int =</span> <span class="ot">TRUE</span>)),</span>
+<span id="cb923-12"><a href="13-classification.html#cb923-12"></a>         <span class="dt">year_coef =</span> <span class="kw">map_dbl</span>(reg_results, <span class="op">~</span><span class="st"> </span><span class="kw">filter</span>(., term <span class="op">==</span><span class="st"> &quot;year&quot;</span>) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">pull</span>(estimate)),</span>
+<span id="cb923-13"><a href="13-classification.html#cb923-13"></a>         <span class="dt">year_low =</span> <span class="kw">map_dbl</span>(reg_results, <span class="op">~</span><span class="st"> </span><span class="kw">filter</span>(., term <span class="op">==</span><span class="st"> &quot;year&quot;</span>) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">pull</span>(conf.low)),</span>
+<span id="cb923-14"><a href="13-classification.html#cb923-14"></a>         <span class="dt">year_high =</span> <span class="kw">map_dbl</span>(reg_results, <span class="op">~</span><span class="st"> </span><span class="kw">filter</span>(., term <span class="op">==</span><span class="st"> &quot;year&quot;</span>) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">pull</span>(conf.high)))</span>
+<span id="cb923-15"><a href="13-classification.html#cb923-15"></a></span>
+<span id="cb923-16"><a href="13-classification.html#cb923-16"></a><span class="kw">glimpse</span>(house_state_model)</span></code></pre></div>
+<pre><code>Rows: 38
+Columns: 7
 Groups: state [38]
 $ state       &lt;chr&gt; &quot;Alabama&quot;, &quot;Arkansas&quot;, &quot;Arizona&quot;, &quot;California&quot;, &quot;Colorado…
 $ data        &lt;list&gt; [&lt;tbl_df[154 x 5]&gt;, &lt;tbl_df[88 x 5]&gt;, &lt;tbl_df[143 x 5]&gt;,…
@@ -2730,18 +2733,18 @@ $ year_coef   &lt;dbl&gt; -0.06747, -0.05540, 0.02080, 0.01670, -0.00268, 0.0472
 $ year_low    &lt;dbl&gt; -0.09811, -0.09382, -0.00711, 0.00683, -0.02954, 0.01515,…
 $ year_high   &lt;dbl&gt; -0.039188, -0.020154, 0.049793, 0.026642, 0.024115, 0.081…</code></pre>
 <p>The easiest way to see the results of these models is to plot the coefficients:</p>
-<div class="sourceCode" id="cb909"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb909-1"><a href="13-classification.html#cb909-1"></a>house_state_model <span class="op">%&gt;%</span></span>
-<span id="cb909-2"><a href="13-classification.html#cb909-2"></a><span class="st">  </span><span class="kw">ungroup</span>() <span class="op">%&gt;%</span></span>
-<span id="cb909-3"><a href="13-classification.html#cb909-3"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">state =</span> <span class="kw">fct_reorder</span>(state, year_coef)) <span class="op">%&gt;%</span></span>
-<span id="cb909-4"><a href="13-classification.html#cb909-4"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> state, <span class="dt">y =</span> year_coef, <span class="dt">ymin =</span> year_low, <span class="dt">ymax =</span> year_high)) <span class="op">+</span></span>
-<span id="cb909-5"><a href="13-classification.html#cb909-5"></a><span class="st">  </span><span class="kw">geom_point</span>() <span class="op">+</span></span>
-<span id="cb909-6"><a href="13-classification.html#cb909-6"></a><span class="st">  </span><span class="kw">geom_errorbar</span>() <span class="op">+</span></span>
-<span id="cb909-7"><a href="13-classification.html#cb909-7"></a><span class="st">  </span><span class="kw">theme_minimal</span>() <span class="op">+</span></span>
-<span id="cb909-8"><a href="13-classification.html#cb909-8"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">&quot;&quot;</span>,</span>
-<span id="cb909-9"><a href="13-classification.html#cb909-9"></a>       <span class="dt">y =</span> <span class="st">&quot;Coefficients of </span><span class="ch">\&quot;</span><span class="st">year</span><span class="ch">\&quot;</span><span class="st">&quot;</span>,</span>
-<span id="cb909-10"><a href="13-classification.html#cb909-10"></a>       <span class="dt">title =</span> <span class="st">&quot;Predicting Democratic victories in the U.S. House over time by state&quot;</span>,</span>
-<span id="cb909-11"><a href="13-classification.html#cb909-11"></a>       <span class="dt">subtitle =</span> <span class="st">&quot;Logistic regression coefficients for year plotted by state&quot;</span>) <span class="op">+</span></span>
-<span id="cb909-12"><a href="13-classification.html#cb909-12"></a><span class="st">  </span><span class="kw">coord_flip</span>()</span></code></pre></div>
+<div class="sourceCode" id="cb925"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb925-1"><a href="13-classification.html#cb925-1"></a>house_state_model <span class="op">%&gt;%</span></span>
+<span id="cb925-2"><a href="13-classification.html#cb925-2"></a><span class="st">  </span><span class="kw">ungroup</span>() <span class="op">%&gt;%</span></span>
+<span id="cb925-3"><a href="13-classification.html#cb925-3"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">state =</span> <span class="kw">fct_reorder</span>(state, year_coef)) <span class="op">%&gt;%</span></span>
+<span id="cb925-4"><a href="13-classification.html#cb925-4"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> state, <span class="dt">y =</span> year_coef, <span class="dt">ymin =</span> year_low, <span class="dt">ymax =</span> year_high)) <span class="op">+</span></span>
+<span id="cb925-5"><a href="13-classification.html#cb925-5"></a><span class="st">  </span><span class="kw">geom_point</span>() <span class="op">+</span></span>
+<span id="cb925-6"><a href="13-classification.html#cb925-6"></a><span class="st">  </span><span class="kw">geom_errorbar</span>() <span class="op">+</span></span>
+<span id="cb925-7"><a href="13-classification.html#cb925-7"></a><span class="st">  </span><span class="kw">theme_minimal</span>() <span class="op">+</span></span>
+<span id="cb925-8"><a href="13-classification.html#cb925-8"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">&quot;&quot;</span>,</span>
+<span id="cb925-9"><a href="13-classification.html#cb925-9"></a>       <span class="dt">y =</span> <span class="st">&quot;Coefficients of </span><span class="ch">\&quot;</span><span class="st">year</span><span class="ch">\&quot;</span><span class="st">&quot;</span>,</span>
+<span id="cb925-10"><a href="13-classification.html#cb925-10"></a>       <span class="dt">title =</span> <span class="st">&quot;Predicting Democratic victories in the U.S. House over time by state&quot;</span>,</span>
+<span id="cb925-11"><a href="13-classification.html#cb925-11"></a>       <span class="dt">subtitle =</span> <span class="st">&quot;Logistic regression coefficients for year plotted by state&quot;</span>) <span class="op">+</span></span>
+<span id="cb925-12"><a href="13-classification.html#cb925-12"></a><span class="st">  </span><span class="kw">coord_flip</span>()</span></code></pre></div>
 <p><img src="Preceptor%E2%80%99s-Primer-for-Bayesian-Data-Science_files/figure-html/unnamed-chunk-636-1.png" width="\textwidth" style="display: block; margin: auto;" /></p>
 <p>Consistent with the account we saw when looking at the effect of <code>year</code> overall, there are more states where the odds of a Democratic victory have been decreasing by year than ones where they have been increasing.</p>
 </div>
@@ -2749,21 +2752,21 @@ $ year_high   &lt;dbl&gt; -0.039188, -0.020154, 0.049793, 0.026642, 0.024115, 0.
 <h3><span class="header-section-number">13.1.8</span> Professional models</h3>
 <p>So far, we have been fitting linear regressions and logistic regressions using <code>lm()</code> and <code>glm()</code>. While these functions are well-known and easy to use, what if we wanted to fit another model? We’d have to learn a new function, which may have new syntax. It’d be much easier if we could use the same syntax for every model we fit.</p>
 <p>A collection of packages that helps address this issue is called <strong>tidymodels</strong>:</p>
-<div class="sourceCode" id="cb910"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb910-1"><a href="13-classification.html#cb910-1"></a><span class="kw">library</span>(tidymodels)</span></code></pre></div>
+<div class="sourceCode" id="cb926"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb926-1"><a href="13-classification.html#cb926-1"></a><span class="kw">library</span>(tidymodels)</span></code></pre></div>
 <p><strong>tidymodels</strong> includes many packages, but we’ll start by showing how to use <strong>parsnip</strong> to fit a logistic regression.</p>
 <p>First, in the <strong>tidymodels</strong> workflow, we have to save the <em>model specification</em>. We do that using two functions: <code>logistic_reg()</code> and <code>set_engine()</code>.</p>
-<div class="sourceCode" id="cb911"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb911-1"><a href="13-classification.html#cb911-1"></a>logistic_mod &lt;-<span class="st"> </span><span class="kw">logistic_reg</span>() <span class="op">%&gt;%</span></span>
-<span id="cb911-2"><a href="13-classification.html#cb911-2"></a><span class="st">  </span><span class="kw">set_engine</span>(<span class="st">&quot;glm&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb927"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb927-1"><a href="13-classification.html#cb927-1"></a>logistic_mod &lt;-<span class="st"> </span><span class="kw">logistic_reg</span>() <span class="op">%&gt;%</span></span>
+<span id="cb927-2"><a href="13-classification.html#cb927-2"></a><span class="st">  </span><span class="kw">set_engine</span>(<span class="st">&quot;glm&quot;</span>)</span></code></pre></div>
 <p><code>logistic_reg()</code> says that we want to fit a logistic regression, and <code>set_engine("glm")</code> specifies that we want to do it using <code>glm()</code>. Behind the scenes, <strong>parsnip</strong> uses many other packages to fit its models, but by unifying the syntax, it means that you don’t have to memorize how a lot of different functions work.</p>
 <p>Note that our new object, <code>logistic_mod</code>, doesn’t contain our data or a formula. In order actually to fit our model, we need to feed <code>logistic_mod</code> to a function called <code>fit()</code>. <code>fit()</code> is the general purpose function in <strong>parsnip</strong> for fitting any model specification. It takes as its first argument the model specification, but otherwise it operates similarly to <code>lm()</code> and <code>glm()</code>:</p>
-<div class="sourceCode" id="cb912"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb912-1"><a href="13-classification.html#cb912-1"></a>logistic_fit &lt;-<span class="st"> </span><span class="kw">fit</span>(logistic_mod,</span>
-<span id="cb912-2"><a href="13-classification.html#cb912-2"></a>                    <span class="kw">factor</span>(dem_win) <span class="op">~</span><span class="st"> </span>region <span class="op">*</span><span class="st"> </span>year,</span>
-<span id="cb912-3"><a href="13-classification.html#cb912-3"></a>                    <span class="dt">data =</span> house_ch13)</span></code></pre></div>
+<div class="sourceCode" id="cb928"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb928-1"><a href="13-classification.html#cb928-1"></a>logistic_fit &lt;-<span class="st"> </span><span class="kw">fit</span>(logistic_mod,</span>
+<span id="cb928-2"><a href="13-classification.html#cb928-2"></a>                    <span class="kw">factor</span>(dem_win) <span class="op">~</span><span class="st"> </span>region <span class="op">*</span><span class="st"> </span>year,</span>
+<span id="cb928-3"><a href="13-classification.html#cb928-3"></a>                    <span class="dt">data =</span> house_ch13)</span></code></pre></div>
 <p>(We have to wrap <code>dem_win</code> in <code>factor()</code>, because <code>fit()</code> is more careful than <code>glm()</code> in requiring that classification models actually have categorical outcomes.)</p>
 <p>One we have fit the model, how can we use it? The <code>glm</code> object is still stored in <code>logistic_fit$fit</code>, so we can access that and use <code>tidy()</code>, just like we did before:</p>
-<div class="sourceCode" id="cb913"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb913-1"><a href="13-classification.html#cb913-1"></a>logistic_fit<span class="op">$</span>fit <span class="op">%&gt;%</span></span>
-<span id="cb913-2"><a href="13-classification.html#cb913-2"></a><span class="st">  </span><span class="kw">tidy</span>(<span class="dt">conf.int =</span> <span class="ot">TRUE</span>) <span class="op">%&gt;%</span></span>
-<span id="cb913-3"><a href="13-classification.html#cb913-3"></a><span class="st">  </span><span class="kw">select</span>(term, estimate, conf.low, conf.high)</span></code></pre></div>
+<div class="sourceCode" id="cb929"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb929-1"><a href="13-classification.html#cb929-1"></a>logistic_fit<span class="op">$</span>fit <span class="op">%&gt;%</span></span>
+<span id="cb929-2"><a href="13-classification.html#cb929-2"></a><span class="st">  </span><span class="kw">tidy</span>(<span class="dt">conf.int =</span> <span class="ot">TRUE</span>) <span class="op">%&gt;%</span></span>
+<span id="cb929-3"><a href="13-classification.html#cb929-3"></a><span class="st">  </span><span class="kw">select</span>(term, estimate, conf.low, conf.high)</span></code></pre></div>
 <pre><code># A tibble: 8 x 4
   term                    estimate    conf.low   conf.high
   &lt;chr&gt;                      &lt;dbl&gt;       &lt;dbl&gt;       &lt;dbl&gt;
@@ -2810,22 +2813,22 @@ R_1(j,s) = \{\mathbf{x} \mid x_j &lt; s\} \mbox{  and  } R_2(j,s) = \{\mathbf{x}
 <div id="one-categorical-explanatory-variable-1" class="section level3">
 <h3><span class="header-section-number">13.2.2</span> One categorical explanatory variable</h3>
 <p>To create classification trees, we’ll use the <code>decision_tree()</code> model specification and the <code>"rpart"</code> engine. The syntax is very similar to when we used <code>logistic_reg()</code>. Note that our binary response variable has to be a factor, just like with <code>logistic_reg()</code>.</p>
-<div class="sourceCode" id="cb915"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb915-1"><a href="13-classification.html#cb915-1"></a>tree_mod &lt;-<span class="st"> </span><span class="kw">decision_tree</span>() <span class="op">%&gt;%</span></span>
-<span id="cb915-2"><a href="13-classification.html#cb915-2"></a><span class="st">  </span><span class="kw">set_engine</span>(<span class="st">&quot;rpart&quot;</span>,</span>
-<span id="cb915-3"><a href="13-classification.html#cb915-3"></a>             <span class="dt">model =</span> <span class="ot">TRUE</span>) <span class="op">%&gt;%</span></span>
-<span id="cb915-4"><a href="13-classification.html#cb915-4"></a><span class="st">  </span><span class="kw">set_mode</span>(<span class="st">&quot;classification&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb931"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb931-1"><a href="13-classification.html#cb931-1"></a>tree_mod &lt;-<span class="st"> </span><span class="kw">decision_tree</span>() <span class="op">%&gt;%</span></span>
+<span id="cb931-2"><a href="13-classification.html#cb931-2"></a><span class="st">  </span><span class="kw">set_engine</span>(<span class="st">&quot;rpart&quot;</span>,</span>
+<span id="cb931-3"><a href="13-classification.html#cb931-3"></a>             <span class="dt">model =</span> <span class="ot">TRUE</span>) <span class="op">%&gt;%</span></span>
+<span id="cb931-4"><a href="13-classification.html#cb931-4"></a><span class="st">  </span><span class="kw">set_mode</span>(<span class="st">&quot;classification&quot;</span>)</span></code></pre></div>
 <p>(Note that we added the argument <code>model = TRUE</code> to <code>set_engine()</code>. This saves the model frame, which we will need to avoid a warning when we plot the trees later.)</p>
 <p>The function <code>set_mode()</code> wasn’t necessary when we did logistic regression. Here it clarifies that we want a <em>classification</em> tree rather than a <em>regression</em> tree.</p>
 <p>Now that we have the object <code>tree_mod</code>, we can use <code>fit()</code> in the <strong>parsnip</strong> package. We’ll start by predicting <code>dem_win</code> with <code>region</code>:</p>
-<div class="sourceCode" id="cb916"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb916-1"><a href="13-classification.html#cb916-1"></a>house_region_tree &lt;-<span class="st"> </span><span class="kw">fit</span>(tree_mod,</span>
-<span id="cb916-2"><a href="13-classification.html#cb916-2"></a>                         <span class="kw">factor</span>(dem_win) <span class="op">~</span><span class="st"> </span>region, </span>
-<span id="cb916-3"><a href="13-classification.html#cb916-3"></a>                         <span class="dt">data =</span> house_ch13)</span></code></pre></div>
+<div class="sourceCode" id="cb932"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb932-1"><a href="13-classification.html#cb932-1"></a>house_region_tree &lt;-<span class="st"> </span><span class="kw">fit</span>(tree_mod,</span>
+<span id="cb932-2"><a href="13-classification.html#cb932-2"></a>                         <span class="kw">factor</span>(dem_win) <span class="op">~</span><span class="st"> </span>region, </span>
+<span id="cb932-3"><a href="13-classification.html#cb932-3"></a>                         <span class="dt">data =</span> house_ch13)</span></code></pre></div>
 <p>See how when using <strong>tidymodels</strong>, this is exactly the same as how we would fit a logistic regression, but with our model specification saved in <code>tree_mod</code> rather than the model specification we saved in <code>logistic_fit</code>.</p>
 <p>What was the result of our tree?</p>
-<div class="sourceCode" id="cb917"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb917-1"><a href="13-classification.html#cb917-1"></a>house_region_tree</span></code></pre></div>
+<div class="sourceCode" id="cb933"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb933-1"><a href="13-classification.html#cb933-1"></a>house_region_tree</span></code></pre></div>
 <pre><code>parsnip model object
 
-Fit time:  32ms 
+Fit time:  35ms 
 n= 9557 
 
 node), split, n, loss, yval, (yprob)
@@ -2835,16 +2838,16 @@ node), split, n, loss, yval, (yprob)
   2) region=Midwest,South 5589 2740 0 (0.511 0.489) *
   3) region=Northeast,West 3968 1580 1 (0.398 0.602) *</code></pre>
 <p>It’s not especially helpful to look at the results of a tree as text. In order to visualize the tree, we’ll use the <code>prp()</code> function in the <strong>rpart.plot</strong> package. Remember that the model object is stored in <code>house_region_tree$fit</code>.</p>
-<div class="sourceCode" id="cb919"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb919-1"><a href="13-classification.html#cb919-1"></a><span class="kw">library</span>(rpart.plot)</span>
-<span id="cb919-2"><a href="13-classification.html#cb919-2"></a></span>
-<span id="cb919-3"><a href="13-classification.html#cb919-3"></a>house_region_tree<span class="op">$</span>fit <span class="op">%&gt;%</span></span>
-<span id="cb919-4"><a href="13-classification.html#cb919-4"></a><span class="st">  </span><span class="kw">prp</span>(<span class="dt">extra =</span> <span class="dv">6</span>, <span class="dt">varlen =</span> <span class="dv">0</span>, <span class="dt">faclen =</span> <span class="dv">0</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb935"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb935-1"><a href="13-classification.html#cb935-1"></a><span class="kw">library</span>(rpart.plot)</span>
+<span id="cb935-2"><a href="13-classification.html#cb935-2"></a></span>
+<span id="cb935-3"><a href="13-classification.html#cb935-3"></a>house_region_tree<span class="op">$</span>fit <span class="op">%&gt;%</span></span>
+<span id="cb935-4"><a href="13-classification.html#cb935-4"></a><span class="st">  </span><span class="kw">prp</span>(<span class="dt">extra =</span> <span class="dv">6</span>, <span class="dt">varlen =</span> <span class="dv">0</span>, <span class="dt">faclen =</span> <span class="dv">0</span>)</span></code></pre></div>
 <p><img src="Preceptor%E2%80%99s-Primer-for-Bayesian-Data-Science_files/figure-html/unnamed-chunk-646-1.png" width="\textwidth" style="display: block; margin: auto;" /></p>
 <p>The arguments <code>varlen = 0</code> and <code>faclen = 0</code> ensure that the full variable names and factor levels are printed. The argument <code>extra = 6</code> shows the proportion of “yes” outcomes within a given partition. Since we’ll be using these same arguments throughout the chapter, we’ll create a new function that calls <code>prp()</code> but with these options as defaults:</p>
-<div class="sourceCode" id="cb920"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb920-1"><a href="13-classification.html#cb920-1"></a>prp_ch13 &lt;-<span class="st"> </span><span class="cf">function</span>(x, ...) <span class="kw">prp</span>(x, <span class="dt">extra =</span> <span class="dv">6</span>, <span class="dt">varlen =</span> <span class="dv">0</span>, <span class="dt">faclen =</span> <span class="dv">0</span>, ...)</span>
-<span id="cb920-2"><a href="13-classification.html#cb920-2"></a></span>
-<span id="cb920-3"><a href="13-classification.html#cb920-3"></a>house_region_tree<span class="op">$</span>fit <span class="op">%&gt;%</span></span>
-<span id="cb920-4"><a href="13-classification.html#cb920-4"></a><span class="st">  </span><span class="kw">prp_ch13</span>()</span></code></pre></div>
+<div class="sourceCode" id="cb936"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb936-1"><a href="13-classification.html#cb936-1"></a>prp_ch13 &lt;-<span class="st"> </span><span class="cf">function</span>(x, ...) <span class="kw">prp</span>(x, <span class="dt">extra =</span> <span class="dv">6</span>, <span class="dt">varlen =</span> <span class="dv">0</span>, <span class="dt">faclen =</span> <span class="dv">0</span>, ...)</span>
+<span id="cb936-2"><a href="13-classification.html#cb936-2"></a></span>
+<span id="cb936-3"><a href="13-classification.html#cb936-3"></a>house_region_tree<span class="op">$</span>fit <span class="op">%&gt;%</span></span>
+<span id="cb936-4"><a href="13-classification.html#cb936-4"></a><span class="st">  </span><span class="kw">prp_ch13</span>()</span></code></pre></div>
 <p><img src="Preceptor%E2%80%99s-Primer-for-Bayesian-Data-Science_files/figure-html/unnamed-chunk-647-1.png" width="\textwidth" style="display: block; margin: auto;" /></p>
 <p>How do we interpret this tree? Here we have two partitions, based on whether an observation is in the Midwest or South or not in the Midwest or South (i.e., in the Northeast or West). If an observation is in the Midwest or South, the tree classifies the observation as a 0, a Democratic loss. The “0.49” means that 49% of the observations in this node were Democratic wins. If an observation is not in the Midwest or South, the algorithm classifies the observation as a 1, a Democratic win; 60% of the observations in this node were Democratic wins.</p>
 <p>As you can see, the algorithm is very simple when you have one categorical explanatory variable: it just classifies every observation based on the most common response per category. Take a look at the following table:</p>
@@ -2899,22 +2902,22 @@ West
 <div id="one-numerical-explanatory-variable-1" class="section level3">
 <h3><span class="header-section-number">13.2.3</span> One numerical explanatory variable</h3>
 <p>Once we have created our model specification <code>tree_mod</code>, it is easy to use it to fit new models with different formulae and data. We can use the same approach to create a classification tree predicting <code>dem_win</code> with <code>year</code>:</p>
-<div class="sourceCode" id="cb921"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb921-1"><a href="13-classification.html#cb921-1"></a>house_year_tree &lt;-<span class="st"> </span><span class="kw">fit</span>(tree_mod,</span>
-<span id="cb921-2"><a href="13-classification.html#cb921-2"></a>                       <span class="kw">factor</span>(dem_win) <span class="op">~</span><span class="st"> </span>year,</span>
-<span id="cb921-3"><a href="13-classification.html#cb921-3"></a>                       <span class="dt">data =</span> house_ch13)</span>
-<span id="cb921-4"><a href="13-classification.html#cb921-4"></a></span>
-<span id="cb921-5"><a href="13-classification.html#cb921-5"></a>house_year_tree<span class="op">$</span>fit <span class="op">%&gt;%</span></span>
-<span id="cb921-6"><a href="13-classification.html#cb921-6"></a><span class="st">  </span><span class="kw">prp_ch13</span>()</span></code></pre></div>
+<div class="sourceCode" id="cb937"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb937-1"><a href="13-classification.html#cb937-1"></a>house_year_tree &lt;-<span class="st"> </span><span class="kw">fit</span>(tree_mod,</span>
+<span id="cb937-2"><a href="13-classification.html#cb937-2"></a>                       <span class="kw">factor</span>(dem_win) <span class="op">~</span><span class="st"> </span>year,</span>
+<span id="cb937-3"><a href="13-classification.html#cb937-3"></a>                       <span class="dt">data =</span> house_ch13)</span>
+<span id="cb937-4"><a href="13-classification.html#cb937-4"></a></span>
+<span id="cb937-5"><a href="13-classification.html#cb937-5"></a>house_year_tree<span class="op">$</span>fit <span class="op">%&gt;%</span></span>
+<span id="cb937-6"><a href="13-classification.html#cb937-6"></a><span class="st">  </span><span class="kw">prp_ch13</span>()</span></code></pre></div>
 <p><img src="Preceptor%E2%80%99s-Primer-for-Bayesian-Data-Science_files/figure-html/unnamed-chunk-649-1.png" width="\textwidth" style="display: block; margin: auto;" /></p>
 <p>Now, the algorithm creates cutpoints in the <code>year</code> variable in order to classify observations. This tree will classify observations before 1993 (the 1992 election cycle or earlier, since House elections only occur in even-numbered years) or between 2005 and 2009 (the 2006 and 2008 cycles) as Democratic victories and all other observations as Democratic losses.</p>
 <p>Eagle-eyed observers will notice that this is simply classifying every year based on whether the Democrats won a majority in that year, with one exception — observations in 2018 are predicted to be Democratic losses. Why is that? Recall that the algorithm uses a <em>complexity parameter</em>, <span class="math inline">\(c_p\)</span>, to avoid overfitting. The default value of <span class="math inline">\(c_p\)</span> in <code>rpart()</code> (the engine we are using) is 0.01; setting it to 0 allows one to see the maximum number of partitions that the algorithm will do.</p>
 <p>How can we change <span class="math inline">\(c_p\)</span>? We don’t need to create an entirely new model specification. Rather, we can use the <code>update()</code> function to change <span class="math inline">\(c_p\)</span> while leaving everything else about <code>tree_mod</code> the same. All we need to do is specify the parameter we want to change, which here is called <code>cost_complexity</code>:</p>
-<div class="sourceCode" id="cb922"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb922-1"><a href="13-classification.html#cb922-1"></a>house_year_tree_<span class="dv">0</span> &lt;-<span class="st"> </span><span class="kw">fit</span>(<span class="kw">update</span>(tree_mod, <span class="dt">cost_complexity =</span> <span class="dv">0</span>),</span>
-<span id="cb922-2"><a href="13-classification.html#cb922-2"></a>                         <span class="kw">factor</span>(dem_win) <span class="op">~</span><span class="st"> </span>year,</span>
-<span id="cb922-3"><a href="13-classification.html#cb922-3"></a>                         <span class="dt">data =</span> house_ch13)</span></code></pre></div>
+<div class="sourceCode" id="cb938"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb938-1"><a href="13-classification.html#cb938-1"></a>house_year_tree_<span class="dv">0</span> &lt;-<span class="st"> </span><span class="kw">fit</span>(<span class="kw">update</span>(tree_mod, <span class="dt">cost_complexity =</span> <span class="dv">0</span>),</span>
+<span id="cb938-2"><a href="13-classification.html#cb938-2"></a>                         <span class="kw">factor</span>(dem_win) <span class="op">~</span><span class="st"> </span>year,</span>
+<span id="cb938-3"><a href="13-classification.html#cb938-3"></a>                         <span class="dt">data =</span> house_ch13)</span></code></pre></div>
 <p>We can then look at the new tree and see what changed:</p>
-<div class="sourceCode" id="cb923"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb923-1"><a href="13-classification.html#cb923-1"></a>house_year_tree_<span class="dv">0</span><span class="op">$</span>fit <span class="op">%&gt;%</span></span>
-<span id="cb923-2"><a href="13-classification.html#cb923-2"></a><span class="st">  </span><span class="kw">prp_ch13</span>()</span></code></pre></div>
+<div class="sourceCode" id="cb939"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb939-1"><a href="13-classification.html#cb939-1"></a>house_year_tree_<span class="dv">0</span><span class="op">$</span>fit <span class="op">%&gt;%</span></span>
+<span id="cb939-2"><a href="13-classification.html#cb939-2"></a><span class="st">  </span><span class="kw">prp_ch13</span>()</span></code></pre></div>
 <p><img src="Preceptor%E2%80%99s-Primer-for-Bayesian-Data-Science_files/figure-html/unnamed-chunk-651-1.png" width="\textwidth" style="display: block; margin: auto;" /></p>
 <p>Now there is an additional partition that classifies observations where <code>year</code> <span class="math inline">\(\geq 2017\)</span> as 1.</p>
 <p>But which tree is better? We can answer that question using the <code>tune_grid()</code> function in the <strong>tune</strong> package, included as part of <strong>tidymodels</strong>. But for now, we’ll rely on the default value of <span class="math inline">\(c_p\)</span>, keeping in mind that changing that value could change the tree.</p>
@@ -3017,42 +3020,42 @@ With the value of `cost_complexity` chosen by `tune_grid()`, we retain the parti
 <div id="multiple-explanatory-variables" class="section level3">
 <h3><span class="header-section-number">13.2.4</span> Multiple explanatory variables</h3>
 <p>What if we wanted to predict <code>dem_win</code> based on <code>region</code> and <code>year</code>? The process is similar to what we’ve seen before. We’ll fit a new model called <code>region_year_tree</code> using our model specification <code>tree_mod</code>.</p>
-<div class="sourceCode" id="cb924"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb924-1"><a href="13-classification.html#cb924-1"></a>region_year_tree &lt;-<span class="st"> </span><span class="kw">fit</span>(tree_mod,</span>
-<span id="cb924-2"><a href="13-classification.html#cb924-2"></a>                        <span class="kw">factor</span>(dem_win) <span class="op">~</span><span class="st"> </span>region <span class="op">+</span><span class="st"> </span>year,</span>
-<span id="cb924-3"><a href="13-classification.html#cb924-3"></a>                        <span class="dt">data =</span> house_ch13)</span>
-<span id="cb924-4"><a href="13-classification.html#cb924-4"></a></span>
-<span id="cb924-5"><a href="13-classification.html#cb924-5"></a>region_year_tree<span class="op">$</span>fit <span class="op">%&gt;%</span></span>
-<span id="cb924-6"><a href="13-classification.html#cb924-6"></a><span class="st">  </span><span class="kw">prp_ch13</span>()</span></code></pre></div>
+<div class="sourceCode" id="cb940"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb940-1"><a href="13-classification.html#cb940-1"></a>region_year_tree &lt;-<span class="st"> </span><span class="kw">fit</span>(tree_mod,</span>
+<span id="cb940-2"><a href="13-classification.html#cb940-2"></a>                        <span class="kw">factor</span>(dem_win) <span class="op">~</span><span class="st"> </span>region <span class="op">+</span><span class="st"> </span>year,</span>
+<span id="cb940-3"><a href="13-classification.html#cb940-3"></a>                        <span class="dt">data =</span> house_ch13)</span>
+<span id="cb940-4"><a href="13-classification.html#cb940-4"></a></span>
+<span id="cb940-5"><a href="13-classification.html#cb940-5"></a>region_year_tree<span class="op">$</span>fit <span class="op">%&gt;%</span></span>
+<span id="cb940-6"><a href="13-classification.html#cb940-6"></a><span class="st">  </span><span class="kw">prp_ch13</span>()</span></code></pre></div>
 <p><img src="Preceptor%E2%80%99s-Primer-for-Bayesian-Data-Science_files/figure-html/unnamed-chunk-660-1.png" width="\textwidth" style="display: block; margin: auto;" /></p>
 <p>This tree classifies observations in the Northeast and West as a Democratic win and observations in the Midwest and South as a Democratic win before 1993 and a Democratic loss afterward.</p>
 <p>In the section on logistic regression, we used <code>map()</code> to fit many models to visualize the effect of <code>year</code> by <code>state</code>. When fitting classification trees, it is easy just to add <code>state</code> as a predictor and allow the complexity parameter to determine whether we ought to partition further states by <code>year</code>. In fact, unlike with <code>lm()</code> and <code>glm()</code>, we can include both <code>region</code> and <code>state</code> in the model, and the algorithm will decide whether it wants to use the additional information provided by <code>state</code> or just create partitions based on <code>region</code>. Let’s take a look:</p>
-<div class="sourceCode" id="cb925"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb925-1"><a href="13-classification.html#cb925-1"></a>state_year_tree &lt;-<span class="st"> </span><span class="kw">fit</span>(tree_mod,</span>
-<span id="cb925-2"><a href="13-classification.html#cb925-2"></a>                       <span class="kw">factor</span>(dem_win) <span class="op">~</span><span class="st"> </span>region <span class="op">+</span><span class="st"> </span>state <span class="op">+</span><span class="st"> </span>year,</span>
-<span id="cb925-3"><a href="13-classification.html#cb925-3"></a>                       <span class="dt">data =</span> house_ch13)</span>
-<span id="cb925-4"><a href="13-classification.html#cb925-4"></a></span>
-<span id="cb925-5"><a href="13-classification.html#cb925-5"></a>state_year_tree<span class="op">$</span>fit <span class="op">%&gt;%</span></span>
-<span id="cb925-6"><a href="13-classification.html#cb925-6"></a><span class="st">  </span><span class="kw">prp_ch13</span>()</span></code></pre></div>
+<div class="sourceCode" id="cb941"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb941-1"><a href="13-classification.html#cb941-1"></a>state_year_tree &lt;-<span class="st"> </span><span class="kw">fit</span>(tree_mod,</span>
+<span id="cb941-2"><a href="13-classification.html#cb941-2"></a>                       <span class="kw">factor</span>(dem_win) <span class="op">~</span><span class="st"> </span>region <span class="op">+</span><span class="st"> </span>state <span class="op">+</span><span class="st"> </span>year,</span>
+<span id="cb941-3"><a href="13-classification.html#cb941-3"></a>                       <span class="dt">data =</span> house_ch13)</span>
+<span id="cb941-4"><a href="13-classification.html#cb941-4"></a></span>
+<span id="cb941-5"><a href="13-classification.html#cb941-5"></a>state_year_tree<span class="op">$</span>fit <span class="op">%&gt;%</span></span>
+<span id="cb941-6"><a href="13-classification.html#cb941-6"></a><span class="st">  </span><span class="kw">prp_ch13</span>()</span></code></pre></div>
 <p><img src="Preceptor%E2%80%99s-Primer-for-Bayesian-Data-Science_files/figure-html/unnamed-chunk-661-1.png" width="\textwidth" style="display: block; margin: auto;" /></p>
 <p>Unfortunately, this is very difficult to read, since <code>prp()</code> tries to plot all the state names on one line. The [documentation][<a href="http://www.milbo.org/doc/prp.pdf" class="uri">http://www.milbo.org/doc/prp.pdf</a>] gives example code on how to wrap the factor labels across multiple lines, which we will adapt:</p>
-<div class="sourceCode" id="cb926"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb926-1"><a href="13-classification.html#cb926-1"></a>split.fun &lt;-<span class="st"> </span><span class="cf">function</span>(x, labs, digits, varlen, faclen) {</span>
-<span id="cb926-2"><a href="13-classification.html#cb926-2"></a>  </span>
-<span id="cb926-3"><a href="13-classification.html#cb926-3"></a>  <span class="co"># Replace commas with spaces (needed for strwrap)</span></span>
-<span id="cb926-4"><a href="13-classification.html#cb926-4"></a>  </span>
-<span id="cb926-5"><a href="13-classification.html#cb926-5"></a>  labs &lt;-<span class="st"> </span><span class="kw">gsub</span>(<span class="st">&quot;,&quot;</span>, <span class="st">&quot; &quot;</span>, labs)</span>
-<span id="cb926-6"><a href="13-classification.html#cb926-6"></a>  </span>
-<span id="cb926-7"><a href="13-classification.html#cb926-7"></a>  <span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span><span class="kw">length</span>(labs)) {</span>
-<span id="cb926-8"><a href="13-classification.html#cb926-8"></a>    </span>
-<span id="cb926-9"><a href="13-classification.html#cb926-9"></a>    <span class="co"># Split labs[i] into multiple lines</span></span>
-<span id="cb926-10"><a href="13-classification.html#cb926-10"></a>    </span>
-<span id="cb926-11"><a href="13-classification.html#cb926-11"></a>    labs[i] &lt;-<span class="st"> </span><span class="kw">paste</span>(<span class="kw">strwrap</span>(labs[i], <span class="dt">width =</span> <span class="dv">50</span>), <span class="dt">collapse =</span> <span class="st">&quot;</span><span class="ch">\n</span><span class="st">&quot;</span>)</span>
-<span id="cb926-12"><a href="13-classification.html#cb926-12"></a>  }</span>
-<span id="cb926-13"><a href="13-classification.html#cb926-13"></a>  </span>
-<span id="cb926-14"><a href="13-classification.html#cb926-14"></a>  labs</span>
-<span id="cb926-15"><a href="13-classification.html#cb926-15"></a>}</span></code></pre></div>
+<div class="sourceCode" id="cb942"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb942-1"><a href="13-classification.html#cb942-1"></a>split.fun &lt;-<span class="st"> </span><span class="cf">function</span>(x, labs, digits, varlen, faclen) {</span>
+<span id="cb942-2"><a href="13-classification.html#cb942-2"></a>  </span>
+<span id="cb942-3"><a href="13-classification.html#cb942-3"></a>  <span class="co"># Replace commas with spaces (needed for strwrap)</span></span>
+<span id="cb942-4"><a href="13-classification.html#cb942-4"></a>  </span>
+<span id="cb942-5"><a href="13-classification.html#cb942-5"></a>  labs &lt;-<span class="st"> </span><span class="kw">gsub</span>(<span class="st">&quot;,&quot;</span>, <span class="st">&quot; &quot;</span>, labs)</span>
+<span id="cb942-6"><a href="13-classification.html#cb942-6"></a>  </span>
+<span id="cb942-7"><a href="13-classification.html#cb942-7"></a>  <span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span><span class="kw">length</span>(labs)) {</span>
+<span id="cb942-8"><a href="13-classification.html#cb942-8"></a>    </span>
+<span id="cb942-9"><a href="13-classification.html#cb942-9"></a>    <span class="co"># Split labs[i] into multiple lines</span></span>
+<span id="cb942-10"><a href="13-classification.html#cb942-10"></a>    </span>
+<span id="cb942-11"><a href="13-classification.html#cb942-11"></a>    labs[i] &lt;-<span class="st"> </span><span class="kw">paste</span>(<span class="kw">strwrap</span>(labs[i], <span class="dt">width =</span> <span class="dv">50</span>), <span class="dt">collapse =</span> <span class="st">&quot;</span><span class="ch">\n</span><span class="st">&quot;</span>)</span>
+<span id="cb942-12"><a href="13-classification.html#cb942-12"></a>  }</span>
+<span id="cb942-13"><a href="13-classification.html#cb942-13"></a>  </span>
+<span id="cb942-14"><a href="13-classification.html#cb942-14"></a>  labs</span>
+<span id="cb942-15"><a href="13-classification.html#cb942-15"></a>}</span></code></pre></div>
 <p>Now we need to apply <code>split.fun</code> to <code>prp()</code>; we’ll also set <code>faclen = 2</code> in order to abbreviate the state names:</p>
-<div class="sourceCode" id="cb927"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb927-1"><a href="13-classification.html#cb927-1"></a>state_year_tree<span class="op">$</span>fit <span class="op">%&gt;%</span></span>
-<span id="cb927-2"><a href="13-classification.html#cb927-2"></a><span class="st">  </span><span class="kw">prp</span>(<span class="dt">split.fun =</span> split.fun,</span>
-<span id="cb927-3"><a href="13-classification.html#cb927-3"></a>      <span class="dt">faclen =</span> <span class="dv">2</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb943"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb943-1"><a href="13-classification.html#cb943-1"></a>state_year_tree<span class="op">$</span>fit <span class="op">%&gt;%</span></span>
+<span id="cb943-2"><a href="13-classification.html#cb943-2"></a><span class="st">  </span><span class="kw">prp</span>(<span class="dt">split.fun =</span> split.fun,</span>
+<span id="cb943-3"><a href="13-classification.html#cb943-3"></a>      <span class="dt">faclen =</span> <span class="dv">2</span>)</span></code></pre></div>
 <p><img src="Preceptor%E2%80%99s-Primer-for-Bayesian-Data-Science_files/figure-html/unnamed-chunk-663-1.png" width="\textwidth" style="display: block; margin: auto;" /></p>
 <p>This experience shows a tradeoff when working with decision trees: as they get more complex, they become more accurate but also harder to read.</p>
 </div>
@@ -3074,18 +3077,18 @@ With the value of `cost_complexity` chosen by `tune_grid()`, we retain the parti
 <div id="fitting-random-forests" class="section level3">
 <h3><span class="header-section-number">13.3.2</span> Fitting random forests</h3>
 <p>We will demonstrate by fitting a random forest to the House elections data, predicting <code>dem_win</code> with <code>region</code>, <code>state</code>, and <code>year</code>. We will use the <code>rand_forest()</code> function to create our model specification, setting the engine to <code>"randomForest"</code> and the mode to <code>"classification"</code>.</p>
-<div class="sourceCode" id="cb928"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb928-1"><a href="13-classification.html#cb928-1"></a>forest_mod &lt;-<span class="st"> </span><span class="kw">rand_forest</span>() <span class="op">%&gt;%</span></span>
-<span id="cb928-2"><a href="13-classification.html#cb928-2"></a><span class="st">  </span><span class="kw">set_engine</span>(<span class="st">&quot;randomForest&quot;</span>) <span class="op">%&gt;%</span></span>
-<span id="cb928-3"><a href="13-classification.html#cb928-3"></a><span class="st">  </span><span class="kw">set_mode</span>(<span class="st">&quot;classification&quot;</span>)</span>
-<span id="cb928-4"><a href="13-classification.html#cb928-4"></a></span>
-<span id="cb928-5"><a href="13-classification.html#cb928-5"></a>house_forest &lt;-<span class="st"> </span><span class="kw">fit</span>(forest_mod,</span>
-<span id="cb928-6"><a href="13-classification.html#cb928-6"></a>                    <span class="kw">factor</span>(dem_win) <span class="op">~</span><span class="st"> </span>region <span class="op">+</span><span class="st"> </span>state <span class="op">+</span><span class="st"> </span>year,</span>
-<span id="cb928-7"><a href="13-classification.html#cb928-7"></a>                    <span class="dt">data =</span> house_ch13)</span>
-<span id="cb928-8"><a href="13-classification.html#cb928-8"></a></span>
-<span id="cb928-9"><a href="13-classification.html#cb928-9"></a>house_forest</span></code></pre></div>
+<div class="sourceCode" id="cb944"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb944-1"><a href="13-classification.html#cb944-1"></a>forest_mod &lt;-<span class="st"> </span><span class="kw">rand_forest</span>() <span class="op">%&gt;%</span></span>
+<span id="cb944-2"><a href="13-classification.html#cb944-2"></a><span class="st">  </span><span class="kw">set_engine</span>(<span class="st">&quot;randomForest&quot;</span>) <span class="op">%&gt;%</span></span>
+<span id="cb944-3"><a href="13-classification.html#cb944-3"></a><span class="st">  </span><span class="kw">set_mode</span>(<span class="st">&quot;classification&quot;</span>)</span>
+<span id="cb944-4"><a href="13-classification.html#cb944-4"></a></span>
+<span id="cb944-5"><a href="13-classification.html#cb944-5"></a>house_forest &lt;-<span class="st"> </span><span class="kw">fit</span>(forest_mod,</span>
+<span id="cb944-6"><a href="13-classification.html#cb944-6"></a>                    <span class="kw">factor</span>(dem_win) <span class="op">~</span><span class="st"> </span>region <span class="op">+</span><span class="st"> </span>state <span class="op">+</span><span class="st"> </span>year,</span>
+<span id="cb944-7"><a href="13-classification.html#cb944-7"></a>                    <span class="dt">data =</span> house_ch13)</span>
+<span id="cb944-8"><a href="13-classification.html#cb944-8"></a></span>
+<span id="cb944-9"><a href="13-classification.html#cb944-9"></a>house_forest</span></code></pre></div>
 <pre><code>parsnip model object
 
-Fit time:  19.9s 
+Fit time:  19.6s 
 
 Call:
  randomForest(x = as.data.frame(x), y = y) 
@@ -3099,11 +3102,11 @@ Confusion matrix:
 0 2349 2084       0.470
 1 1356 3768       0.265</code></pre>
 <p>We see under “OOB estimate of error rate” that this model has an error rate of 36% (or, looking at it the other way, an accuracy of 64%). We can see how the error rate of our algorithm changes as we add trees by looking at <code>house_forest$fit$err.rate[, "OOB"]</code>. By default, <code>randomForest()</code> (the engine we specified) grows 500 trees.</p>
-<div class="sourceCode" id="cb930"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb930-1"><a href="13-classification.html#cb930-1"></a><span class="kw">tibble</span>(<span class="st">`</span><span class="dt">Error rate</span><span class="st">`</span> =<span class="st"> </span>house_forest<span class="op">$</span>fit<span class="op">$</span>err.rate[, <span class="st">&quot;OOB&quot;</span>],</span>
-<span id="cb930-2"><a href="13-classification.html#cb930-2"></a>       <span class="dt">Trees =</span> <span class="dv">1</span><span class="op">:</span><span class="dv">500</span>) <span class="op">%&gt;%</span></span>
-<span id="cb930-3"><a href="13-classification.html#cb930-3"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> Trees, <span class="dt">y =</span> <span class="st">`</span><span class="dt">Error rate</span><span class="st">`</span>)) <span class="op">+</span></span>
-<span id="cb930-4"><a href="13-classification.html#cb930-4"></a><span class="st">  </span><span class="kw">geom_line</span>() <span class="op">+</span></span>
-<span id="cb930-5"><a href="13-classification.html#cb930-5"></a><span class="st">  </span><span class="kw">theme_classic</span>()</span></code></pre></div>
+<div class="sourceCode" id="cb946"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb946-1"><a href="13-classification.html#cb946-1"></a><span class="kw">tibble</span>(<span class="st">`</span><span class="dt">Error rate</span><span class="st">`</span> =<span class="st"> </span>house_forest<span class="op">$</span>fit<span class="op">$</span>err.rate[, <span class="st">&quot;OOB&quot;</span>],</span>
+<span id="cb946-2"><a href="13-classification.html#cb946-2"></a>       <span class="dt">Trees =</span> <span class="dv">1</span><span class="op">:</span><span class="dv">500</span>) <span class="op">%&gt;%</span></span>
+<span id="cb946-3"><a href="13-classification.html#cb946-3"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> Trees, <span class="dt">y =</span> <span class="st">`</span><span class="dt">Error rate</span><span class="st">`</span>)) <span class="op">+</span></span>
+<span id="cb946-4"><a href="13-classification.html#cb946-4"></a><span class="st">  </span><span class="kw">geom_line</span>() <span class="op">+</span></span>
+<span id="cb946-5"><a href="13-classification.html#cb946-5"></a><span class="st">  </span><span class="kw">theme_classic</span>()</span></code></pre></div>
 <p><img src="Preceptor%E2%80%99s-Primer-for-Bayesian-Data-Science_files/figure-html/unnamed-chunk-665-1.png" width="\textwidth" style="display: block; margin: auto;" /></p>
 <p>We can see that in this case, the accuracy improves as we add more trees until about 300 trees where accuracy stabilizes.</p>
 <p>Random forests often perform better than other methods. However, a disadvantage of random forests is that we lose interpretability—we don’t get anything like the coefficients from a logistic regression or the single tree from CART.</p>
@@ -3128,16 +3131,16 @@ Confusion matrix:
 <li>A random forest using <code>state</code> and <code>year</code></li>
 </ul>
 <p>Those last two models we already have saved as <code>state_year_tree</code> and <code>house_forest</code> respectively. We’ll create the logistic and linear regressions and save them as <code>house_logistic</code> and <code>house_linear</code>:</p>
-<div class="sourceCode" id="cb931"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb931-1"><a href="13-classification.html#cb931-1"></a>house_logistic &lt;-<span class="st"> </span><span class="kw">fit</span>(logistic_mod,</span>
-<span id="cb931-2"><a href="13-classification.html#cb931-2"></a>                      <span class="kw">factor</span>(dem_win) <span class="op">~</span><span class="st"> </span>state <span class="op">*</span><span class="st"> </span>year,</span>
-<span id="cb931-3"><a href="13-classification.html#cb931-3"></a>                      <span class="dt">data =</span> house_ch13)</span>
-<span id="cb931-4"><a href="13-classification.html#cb931-4"></a></span>
-<span id="cb931-5"><a href="13-classification.html#cb931-5"></a>house_linear &lt;-<span class="st"> </span><span class="kw">fit</span>(<span class="kw">linear_reg</span>(),</span>
-<span id="cb931-6"><a href="13-classification.html#cb931-6"></a>                    dem_win <span class="op">~</span><span class="st"> </span>state <span class="op">*</span><span class="st"> </span>year,</span>
-<span id="cb931-7"><a href="13-classification.html#cb931-7"></a>                    <span class="dt">data =</span> house_ch13)</span></code></pre></div>
+<div class="sourceCode" id="cb947"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb947-1"><a href="13-classification.html#cb947-1"></a>house_logistic &lt;-<span class="st"> </span><span class="kw">fit</span>(logistic_mod,</span>
+<span id="cb947-2"><a href="13-classification.html#cb947-2"></a>                      <span class="kw">factor</span>(dem_win) <span class="op">~</span><span class="st"> </span>state <span class="op">*</span><span class="st"> </span>year,</span>
+<span id="cb947-3"><a href="13-classification.html#cb947-3"></a>                      <span class="dt">data =</span> house_ch13)</span>
+<span id="cb947-4"><a href="13-classification.html#cb947-4"></a></span>
+<span id="cb947-5"><a href="13-classification.html#cb947-5"></a>house_linear &lt;-<span class="st"> </span><span class="kw">fit</span>(<span class="kw">linear_reg</span>(),</span>
+<span id="cb947-6"><a href="13-classification.html#cb947-6"></a>                    dem_win <span class="op">~</span><span class="st"> </span>state <span class="op">*</span><span class="st"> </span>year,</span>
+<span id="cb947-7"><a href="13-classification.html#cb947-7"></a>                    <span class="dt">data =</span> house_ch13)</span></code></pre></div>
 <p>Note that fitting a linear regression is as simple as using the model specification <code>linear_reg()</code>, which by default uses <code>lm()</code> as its engine.</p>
 <p>How can we extract the predictions for each of these models? <strong>tidymodels</strong> provides a unified function, <code>predict()</code>. The first argument of the function is the fitted model object. It also requires the argument <code>new_data</code>, which is the dataset on which you will be making your predictions. Here, we are making predictions on our original data (<code>house_ch13</code>). For example:</p>
-<div class="sourceCode" id="cb932"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb932-1"><a href="13-classification.html#cb932-1"></a><span class="kw">predict</span>(house_logistic, <span class="dt">new_data =</span> house_ch13)</span></code></pre></div>
+<div class="sourceCode" id="cb948"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb948-1"><a href="13-classification.html#cb948-1"></a><span class="kw">predict</span>(house_logistic, <span class="dt">new_data =</span> house_ch13)</span></code></pre></div>
 <pre><code># A tibble: 9,557 x 1
    .pred_class
    &lt;fct&gt;      
@@ -3154,7 +3157,7 @@ Confusion matrix:
 # … with 9,547 more rows</code></pre>
 <p>The result is a tibble with the predicted outcomes stored in the column <code>.pred_class</code>.</p>
 <p>For the linear model, the result is going to be a number, not a class:</p>
-<div class="sourceCode" id="cb934"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb934-1"><a href="13-classification.html#cb934-1"></a><span class="kw">predict</span>(house_linear, <span class="dt">new_data =</span> house_ch13)</span></code></pre></div>
+<div class="sourceCode" id="cb950"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb950-1"><a href="13-classification.html#cb950-1"></a><span class="kw">predict</span>(house_linear, <span class="dt">new_data =</span> house_ch13)</span></code></pre></div>
 <pre><code># A tibble: 9,557 x 1
          .pred
          &lt;dbl&gt;
@@ -3170,21 +3173,21 @@ Confusion matrix:
 10 7.82609e- 1
 # … with 9,547 more rows</code></pre>
 <p>We can interpret this as a predicted probability and classify responses <span class="math inline">\(&gt; 0.5\)</span> as <span class="math inline">\(1\)</span> and <span class="math inline">\(&lt; 0.5\)</span> as <span class="math inline">\(0\)</span>:</p>
-<div class="sourceCode" id="cb936"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb936-1"><a href="13-classification.html#cb936-1"></a><span class="dv">1</span> <span class="op">*</span><span class="st"> </span>(<span class="kw">predict</span>(house_linear, <span class="dt">new_data =</span> house_ch13) <span class="op">&gt;</span><span class="st"> </span><span class="fl">0.5</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb952"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb952-1"><a href="13-classification.html#cb952-1"></a><span class="dv">1</span> <span class="op">*</span><span class="st"> </span>(<span class="kw">predict</span>(house_linear, <span class="dt">new_data =</span> house_ch13) <span class="op">&gt;</span><span class="st"> </span><span class="fl">0.5</span>)</span></code></pre></div>
 <p>Let’s put it all together in a tibble called <code>house_preds</code>:</p>
-<div class="sourceCode" id="cb937"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb937-1"><a href="13-classification.html#cb937-1"></a>house_preds &lt;-<span class="st"> </span>house_ch13 <span class="op">%&gt;%</span></span>
-<span id="cb937-2"><a href="13-classification.html#cb937-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">modal =</span> <span class="dv">1</span>,</span>
-<span id="cb937-3"><a href="13-classification.html#cb937-3"></a>         <span class="dt">logistic =</span> <span class="kw">predict</span>(house_logistic, <span class="dt">new_data =</span> house_ch13) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb937-4"><a href="13-classification.html#cb937-4"></a><span class="st">           </span><span class="kw">pull</span>(.pred_class),</span>
-<span id="cb937-5"><a href="13-classification.html#cb937-5"></a>         <span class="dt">linear =</span> <span class="dv">1</span> <span class="op">*</span><span class="st"> </span>(<span class="kw">predict</span>(house_linear, <span class="dt">new_data =</span> house_ch13) <span class="op">&gt;</span><span class="st"> </span><span class="fl">0.5</span>),</span>
-<span id="cb937-6"><a href="13-classification.html#cb937-6"></a>         <span class="dt">tree =</span> <span class="kw">predict</span>(state_year_tree, <span class="dt">new_data =</span> house_ch13) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb937-7"><a href="13-classification.html#cb937-7"></a><span class="st">           </span><span class="kw">pull</span>(.pred_class),</span>
-<span id="cb937-8"><a href="13-classification.html#cb937-8"></a>         <span class="dt">forest =</span> <span class="kw">predict</span>(house_forest, <span class="dt">new_data =</span> house_ch13) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb937-9"><a href="13-classification.html#cb937-9"></a><span class="st">           </span><span class="kw">pull</span>(.pred_class))</span></code></pre></div>
+<div class="sourceCode" id="cb953"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb953-1"><a href="13-classification.html#cb953-1"></a>house_preds &lt;-<span class="st"> </span>house_ch13 <span class="op">%&gt;%</span></span>
+<span id="cb953-2"><a href="13-classification.html#cb953-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">modal =</span> <span class="dv">1</span>,</span>
+<span id="cb953-3"><a href="13-classification.html#cb953-3"></a>         <span class="dt">logistic =</span> <span class="kw">predict</span>(house_logistic, <span class="dt">new_data =</span> house_ch13) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb953-4"><a href="13-classification.html#cb953-4"></a><span class="st">           </span><span class="kw">pull</span>(.pred_class),</span>
+<span id="cb953-5"><a href="13-classification.html#cb953-5"></a>         <span class="dt">linear =</span> <span class="dv">1</span> <span class="op">*</span><span class="st"> </span>(<span class="kw">predict</span>(house_linear, <span class="dt">new_data =</span> house_ch13) <span class="op">&gt;</span><span class="st"> </span><span class="fl">0.5</span>),</span>
+<span id="cb953-6"><a href="13-classification.html#cb953-6"></a>         <span class="dt">tree =</span> <span class="kw">predict</span>(state_year_tree, <span class="dt">new_data =</span> house_ch13) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb953-7"><a href="13-classification.html#cb953-7"></a><span class="st">           </span><span class="kw">pull</span>(.pred_class),</span>
+<span id="cb953-8"><a href="13-classification.html#cb953-8"></a>         <span class="dt">forest =</span> <span class="kw">predict</span>(house_forest, <span class="dt">new_data =</span> house_ch13) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb953-9"><a href="13-classification.html#cb953-9"></a><span class="st">           </span><span class="kw">pull</span>(.pred_class))</span></code></pre></div>
 <p>We’ll start by looking at five random rows of <code>house_preds</code>.</p>
-<div class="sourceCode" id="cb938"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb938-1"><a href="13-classification.html#cb938-1"></a>house_preds <span class="op">%&gt;%</span></span>
-<span id="cb938-2"><a href="13-classification.html#cb938-2"></a><span class="st">  </span><span class="kw">select</span>(<span class="op">-</span>region, <span class="op">-</span>state) <span class="op">%&gt;%</span></span>
-<span id="cb938-3"><a href="13-classification.html#cb938-3"></a><span class="st">  </span><span class="kw">sample_n</span>(<span class="dv">5</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb954"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb954-1"><a href="13-classification.html#cb954-1"></a>house_preds <span class="op">%&gt;%</span></span>
+<span id="cb954-2"><a href="13-classification.html#cb954-2"></a><span class="st">  </span><span class="kw">select</span>(<span class="op">-</span>region, <span class="op">-</span>state) <span class="op">%&gt;%</span></span>
+<span id="cb954-3"><a href="13-classification.html#cb954-3"></a><span class="st">  </span><span class="kw">sample_n</span>(<span class="dv">5</span>)</span></code></pre></div>
 <table>
 <thead>
 <tr>
@@ -3367,11 +3370,11 @@ PA-15
 </table>
 <p>In these five districts, the Democrats won two and therefore our <code>modal</code> prediction, which always predicts a Democratic win, classifies 40% of the observations correctly. For these districts, the logistic, linear, and classification tree models all classify SC-02 in 2010 correctly as a Democratic loss and misclassify the remaining districts, for an accuracy of 20%. Finally, the random forest model classifies SC-02 in 2010 correctly as a Democratic loss and also correctly classifies PA-17 in 2002 as a Democratic win, for an accuracy of 40%.</p>
 <p>Now let’s calculate the overall accuracy of our five models. We simply need to calculate the proportion of observations where the predicted value equals <code>dem_win</code>:</p>
-<div class="sourceCode" id="cb939"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb939-1"><a href="13-classification.html#cb939-1"></a><span class="kw">tibble</span>(<span class="dt">modal =</span> <span class="kw">mean</span>(house_preds<span class="op">$</span>modal <span class="op">==</span><span class="st"> </span>house_preds<span class="op">$</span>dem_win),</span>
-<span id="cb939-2"><a href="13-classification.html#cb939-2"></a>       <span class="dt">logistic =</span> <span class="kw">mean</span>(house_preds<span class="op">$</span>logistic <span class="op">==</span><span class="st"> </span>house_preds<span class="op">$</span>dem_win),</span>
-<span id="cb939-3"><a href="13-classification.html#cb939-3"></a>       <span class="dt">linear =</span> <span class="kw">mean</span>(house_preds<span class="op">$</span>linear <span class="op">==</span><span class="st"> </span>house_preds<span class="op">$</span>dem_win),</span>
-<span id="cb939-4"><a href="13-classification.html#cb939-4"></a>       <span class="dt">tree =</span> <span class="kw">mean</span>(house_preds<span class="op">$</span>tree <span class="op">==</span><span class="st"> </span>house_preds<span class="op">$</span>dem_win),</span>
-<span id="cb939-5"><a href="13-classification.html#cb939-5"></a>       <span class="dt">forest =</span> <span class="kw">mean</span>(house_preds<span class="op">$</span>forest <span class="op">==</span><span class="st"> </span>house_preds<span class="op">$</span>dem_win))</span></code></pre></div>
+<div class="sourceCode" id="cb955"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb955-1"><a href="13-classification.html#cb955-1"></a><span class="kw">tibble</span>(<span class="dt">modal =</span> <span class="kw">mean</span>(house_preds<span class="op">$</span>modal <span class="op">==</span><span class="st"> </span>house_preds<span class="op">$</span>dem_win),</span>
+<span id="cb955-2"><a href="13-classification.html#cb955-2"></a>       <span class="dt">logistic =</span> <span class="kw">mean</span>(house_preds<span class="op">$</span>logistic <span class="op">==</span><span class="st"> </span>house_preds<span class="op">$</span>dem_win),</span>
+<span id="cb955-3"><a href="13-classification.html#cb955-3"></a>       <span class="dt">linear =</span> <span class="kw">mean</span>(house_preds<span class="op">$</span>linear <span class="op">==</span><span class="st"> </span>house_preds<span class="op">$</span>dem_win),</span>
+<span id="cb955-4"><a href="13-classification.html#cb955-4"></a>       <span class="dt">tree =</span> <span class="kw">mean</span>(house_preds<span class="op">$</span>tree <span class="op">==</span><span class="st"> </span>house_preds<span class="op">$</span>dem_win),</span>
+<span id="cb955-5"><a href="13-classification.html#cb955-5"></a>       <span class="dt">forest =</span> <span class="kw">mean</span>(house_preds<span class="op">$</span>forest <span class="op">==</span><span class="st"> </span>house_preds<span class="op">$</span>dem_win))</span></code></pre></div>
 <pre><code># A tibble: 1 x 5
      modal logistic   linear     tree   forest
      &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;
@@ -3405,32 +3408,32 @@ PA-15
 <h3><span class="header-section-number">13.4.3</span> Out-of-sample predictions</h3>
 <p>We saw that our models predicted 64%-65% of the House races from 1976–2018 accurately using <code>state</code> and <code>year</code> as predictors. However, these models were fitted on the same data that we used to evaluate their predictions. These are called <em>in-sample</em> predictions. A more strenuous test of a model’s performance is whether it can generate good predictions on data that were not used in fitting the model. For election forecasting, for example, we are much more interested in forecasting the 2020 election results (which we don’t know) than the 1976–2018 election results (which we know). The 2020 predictions are an example of <em>out-of-sample</em> predictions.</p>
 <p>While we can’t evaluate our models’ performance on the 2020 elections (yet!), we can take a look at the process by fitting our logistic, classification tree, and random forest models on the data we have pre-2018 and then evaluating their accuracy on the 2018 election results. Let’s start by creating tibbles of our pre-2018 and 2018 data:</p>
-<div class="sourceCode" id="cb941"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb941-1"><a href="13-classification.html#cb941-1"></a>house_pre_<span class="dv">2018</span> &lt;-<span class="st"> </span>house_ch13 <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">filter</span>(year <span class="op">!=</span><span class="st"> </span><span class="dv">2018</span>)</span>
-<span id="cb941-2"><a href="13-classification.html#cb941-2"></a>house_<span class="dv">2018</span> &lt;-<span class="st"> </span>house_ch13 <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">filter</span>(year <span class="op">==</span><span class="st"> </span><span class="dv">2018</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb957"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb957-1"><a href="13-classification.html#cb957-1"></a>house_pre_<span class="dv">2018</span> &lt;-<span class="st"> </span>house_ch13 <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">filter</span>(year <span class="op">!=</span><span class="st"> </span><span class="dv">2018</span>)</span>
+<span id="cb957-2"><a href="13-classification.html#cb957-2"></a>house_<span class="dv">2018</span> &lt;-<span class="st"> </span>house_ch13 <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">filter</span>(year <span class="op">==</span><span class="st"> </span><span class="dv">2018</span>)</span></code></pre></div>
 <p>Next, we’ll fit the models on the pre-2018 data:</p>
-<div class="sourceCode" id="cb942"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb942-1"><a href="13-classification.html#cb942-1"></a>house_logistic_pre &lt;-<span class="st"> </span><span class="kw">fit</span>(logistic_mod,</span>
-<span id="cb942-2"><a href="13-classification.html#cb942-2"></a>                           <span class="kw">factor</span>(dem_win) <span class="op">~</span><span class="st"> </span>state <span class="op">*</span><span class="st"> </span>year,</span>
-<span id="cb942-3"><a href="13-classification.html#cb942-3"></a>                           <span class="dt">data =</span> house_pre_<span class="dv">2018</span>)</span>
-<span id="cb942-4"><a href="13-classification.html#cb942-4"></a></span>
-<span id="cb942-5"><a href="13-classification.html#cb942-5"></a>house_tree_pre &lt;-<span class="st"> </span><span class="kw">fit</span>(tree_mod,</span>
-<span id="cb942-6"><a href="13-classification.html#cb942-6"></a>                       <span class="kw">factor</span>(dem_win) <span class="op">~</span><span class="st"> </span>state <span class="op">+</span><span class="st"> </span>year,</span>
-<span id="cb942-7"><a href="13-classification.html#cb942-7"></a>                       <span class="dt">data =</span> house_pre_<span class="dv">2018</span>)</span>
-<span id="cb942-8"><a href="13-classification.html#cb942-8"></a></span>
-<span id="cb942-9"><a href="13-classification.html#cb942-9"></a>house_forest_pre &lt;-<span class="st"> </span><span class="kw">fit</span>(forest_mod,</span>
-<span id="cb942-10"><a href="13-classification.html#cb942-10"></a>                         <span class="kw">factor</span>(dem_win) <span class="op">~</span><span class="st"> </span>state <span class="op">+</span><span class="st"> </span>year,</span>
-<span id="cb942-11"><a href="13-classification.html#cb942-11"></a>                         <span class="dt">data =</span> house_pre_<span class="dv">2018</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb958"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb958-1"><a href="13-classification.html#cb958-1"></a>house_logistic_pre &lt;-<span class="st"> </span><span class="kw">fit</span>(logistic_mod,</span>
+<span id="cb958-2"><a href="13-classification.html#cb958-2"></a>                           <span class="kw">factor</span>(dem_win) <span class="op">~</span><span class="st"> </span>state <span class="op">*</span><span class="st"> </span>year,</span>
+<span id="cb958-3"><a href="13-classification.html#cb958-3"></a>                           <span class="dt">data =</span> house_pre_<span class="dv">2018</span>)</span>
+<span id="cb958-4"><a href="13-classification.html#cb958-4"></a></span>
+<span id="cb958-5"><a href="13-classification.html#cb958-5"></a>house_tree_pre &lt;-<span class="st"> </span><span class="kw">fit</span>(tree_mod,</span>
+<span id="cb958-6"><a href="13-classification.html#cb958-6"></a>                       <span class="kw">factor</span>(dem_win) <span class="op">~</span><span class="st"> </span>state <span class="op">+</span><span class="st"> </span>year,</span>
+<span id="cb958-7"><a href="13-classification.html#cb958-7"></a>                       <span class="dt">data =</span> house_pre_<span class="dv">2018</span>)</span>
+<span id="cb958-8"><a href="13-classification.html#cb958-8"></a></span>
+<span id="cb958-9"><a href="13-classification.html#cb958-9"></a>house_forest_pre &lt;-<span class="st"> </span><span class="kw">fit</span>(forest_mod,</span>
+<span id="cb958-10"><a href="13-classification.html#cb958-10"></a>                         <span class="kw">factor</span>(dem_win) <span class="op">~</span><span class="st"> </span>state <span class="op">+</span><span class="st"> </span>year,</span>
+<span id="cb958-11"><a href="13-classification.html#cb958-11"></a>                         <span class="dt">data =</span> house_pre_<span class="dv">2018</span>)</span></code></pre></div>
 <p>We’ll then generate predictions using <code>new_data = house_2018</code>:</p>
-<div class="sourceCode" id="cb943"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb943-1"><a href="13-classification.html#cb943-1"></a>house_<span class="dv">2018</span>_preds &lt;-<span class="st"> </span>house_<span class="dv">2018</span> <span class="op">%&gt;%</span></span>
-<span id="cb943-2"><a href="13-classification.html#cb943-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">logistic =</span> <span class="kw">predict</span>(house_logistic_pre, <span class="dt">new_data =</span> house_<span class="dv">2018</span>) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb943-3"><a href="13-classification.html#cb943-3"></a><span class="st">           </span><span class="kw">pull</span>(.pred_class),</span>
-<span id="cb943-4"><a href="13-classification.html#cb943-4"></a>         <span class="dt">tree =</span> <span class="kw">predict</span>(house_tree_pre, <span class="dt">new_data =</span> house_<span class="dv">2018</span>)  <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb943-5"><a href="13-classification.html#cb943-5"></a><span class="st">           </span><span class="kw">pull</span>(.pred_class),</span>
-<span id="cb943-6"><a href="13-classification.html#cb943-6"></a>         <span class="dt">forest =</span> <span class="kw">predict</span>(house_forest_pre, <span class="dt">new_data =</span> house_<span class="dv">2018</span>)  <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb943-7"><a href="13-classification.html#cb943-7"></a><span class="st">           </span><span class="kw">pull</span>(.pred_class))</span></code></pre></div>
+<div class="sourceCode" id="cb959"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb959-1"><a href="13-classification.html#cb959-1"></a>house_<span class="dv">2018</span>_preds &lt;-<span class="st"> </span>house_<span class="dv">2018</span> <span class="op">%&gt;%</span></span>
+<span id="cb959-2"><a href="13-classification.html#cb959-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">logistic =</span> <span class="kw">predict</span>(house_logistic_pre, <span class="dt">new_data =</span> house_<span class="dv">2018</span>) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb959-3"><a href="13-classification.html#cb959-3"></a><span class="st">           </span><span class="kw">pull</span>(.pred_class),</span>
+<span id="cb959-4"><a href="13-classification.html#cb959-4"></a>         <span class="dt">tree =</span> <span class="kw">predict</span>(house_tree_pre, <span class="dt">new_data =</span> house_<span class="dv">2018</span>)  <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb959-5"><a href="13-classification.html#cb959-5"></a><span class="st">           </span><span class="kw">pull</span>(.pred_class),</span>
+<span id="cb959-6"><a href="13-classification.html#cb959-6"></a>         <span class="dt">forest =</span> <span class="kw">predict</span>(house_forest_pre, <span class="dt">new_data =</span> house_<span class="dv">2018</span>)  <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb959-7"><a href="13-classification.html#cb959-7"></a><span class="st">           </span><span class="kw">pull</span>(.pred_class))</span></code></pre></div>
 <p>Finally, let’s take a look at the accuracy of the three models:</p>
-<div class="sourceCode" id="cb944"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb944-1"><a href="13-classification.html#cb944-1"></a><span class="kw">tibble</span>(<span class="dt">logistic =</span> <span class="kw">mean</span>(house_<span class="dv">2018</span>_preds<span class="op">$</span>logistic <span class="op">==</span><span class="st"> </span>house_<span class="dv">2018</span>_preds<span class="op">$</span>dem_win),</span>
-<span id="cb944-2"><a href="13-classification.html#cb944-2"></a>       <span class="dt">tree =</span> <span class="kw">mean</span>(house_<span class="dv">2018</span>_preds<span class="op">$</span>tree <span class="op">==</span><span class="st"> </span>house_<span class="dv">2018</span>_preds<span class="op">$</span>dem_win),</span>
-<span id="cb944-3"><a href="13-classification.html#cb944-3"></a>       <span class="dt">forest =</span> <span class="kw">mean</span>(house_<span class="dv">2018</span>_preds<span class="op">$</span>forest <span class="op">==</span><span class="st"> </span>house_<span class="dv">2018</span>_preds<span class="op">$</span>dem_win))</span></code></pre></div>
+<div class="sourceCode" id="cb960"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb960-1"><a href="13-classification.html#cb960-1"></a><span class="kw">tibble</span>(<span class="dt">logistic =</span> <span class="kw">mean</span>(house_<span class="dv">2018</span>_preds<span class="op">$</span>logistic <span class="op">==</span><span class="st"> </span>house_<span class="dv">2018</span>_preds<span class="op">$</span>dem_win),</span>
+<span id="cb960-2"><a href="13-classification.html#cb960-2"></a>       <span class="dt">tree =</span> <span class="kw">mean</span>(house_<span class="dv">2018</span>_preds<span class="op">$</span>tree <span class="op">==</span><span class="st"> </span>house_<span class="dv">2018</span>_preds<span class="op">$</span>dem_win),</span>
+<span id="cb960-3"><a href="13-classification.html#cb960-3"></a>       <span class="dt">forest =</span> <span class="kw">mean</span>(house_<span class="dv">2018</span>_preds<span class="op">$</span>forest <span class="op">==</span><span class="st"> </span>house_<span class="dv">2018</span>_preds<span class="op">$</span>dem_win))</span></code></pre></div>
 <pre><code># A tibble: 1 x 3
   logistic     tree   forest
      &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;
