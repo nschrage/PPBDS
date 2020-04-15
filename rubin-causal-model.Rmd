@@ -5,18 +5,14 @@
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
-library(knitr)
-library(kableExtra)
+library(gt)
 library(tidyverse)
 ```
 
-<!-- DK: Change tables to gt. -->
+The Rubin Causal Model (RCM) is an approach to the statistical analysis of cause and effect based on the framework of potential outcomes, named after Donald Rubin.^[This chapter remixes some material from [Rubin Causal Model (Wikipedia)](https://en.wikipedia.org/wiki/Rubin_causal_model). <br /> The name "Rubin Causal Model" was first coined by Paul W. Holland (1986).]  
 
-The Rubin Causal Model (RCM) is an approach to the statistical analysis of cause and effect based on the framework of potential outcomes, named after Donald Rubin.^[This chapter remixes some material from [Rubin Causal Model (Wikipedia)](https://en.wikipedia.org/wiki/Rubin_causal_model). <br /> The name "Rubin Causal Model" was first coined by Paul W. Holland (1986).  The potential outcomes framework was first proposed by Jerzy Neyman in his 1923 Master's thesis (Neyman 1923), though he discussed it only in the context of completely randomized experiments (Rubin 2005)..]  
-
-<!-- Perhaps the credit to Wikipedia should be added to the attributions page
-rather than here. Perhaps this footnote is too much detail. We are not writing Wikipedia entries anymore. -->
-
+<!-- AR: Perhaps the credit to Wikipedia should be added to the attributions page
+rather than here.-->
 
 The Rubin Causal Model (RCM) is based on the idea of **potential outcomes.**  For example, let's say you took aspirin and now no longer have a headache. To measure the causal effect of taking the aspirin, we need to compare the outcome for you in one alternative future (where you took the aspirin) to another (where you did not). Since it is impossible to see both potential outcomes at once, one of the potential outcomes is always missing. This dilemma is the "fundamental problem of causal inference."
 
@@ -41,25 +37,27 @@ In most circumstances, we are interested in comparing two futures, one generally
 
 Suppose that Joe is participating in an FDA test for a new hypertension drug. If we were omniscient, we would know the outcomes for Joe under both treatment (the new drug) and control (either no treatment or the current standard treatment). The causal effect, or treatment effect, is the difference between these two potential outcomes. 
 
-<!-- Should we stick with this notation? Should the numbers be written in math font? Should we use **gt** tables? -->
+<!-- AR: Should we stick with this notation? -->
 
-```{r first_example, echo = FALSE}
+```{r, echo = FALSE}
 # First, we create a tibble with the values we want for the table
 
-tibble(`Subject` = "Joe",
-       `$Y_t(u)$` = c("$130$"),
-       `$Y_c(u)$` = c("$135$"),
-       `$Y_t(u) - Y_c(u)$` = c("$-5$")) %>%
+tibble(subject = "Joe",
+       ytreat = "130",
+       ycontrol = "135",
+       ydiff = "-5") %>%
   
-  # Then, we use the kable function to make it pretty
+  # Then, we use the gt function to make it pretty
   
-  kable() %>%
-  kable_styling(bootstrap_options = "striped",
-                full_width = FALSE,
-                position = "left") %>%
-  column_spec(1,
-              bold = TRUE,
-              border_right = TRUE)
+  gt() %>%
+  cols_label(subject = md("$$\\mathbf{Subject}$$"),
+                ytreat = md("$$Y_t(u)$$"),
+                ycontrol = md("$$Y_c(u)$$"),
+                ydiff = md("$$Y_t(u) - Y_c(u)$$")) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(subject))) %>%
+  tab_style(cell_text(weight = "bold"),
+            location = cells_body(columns = vars(subject)))
 ```
 
 
@@ -83,7 +81,7 @@ A moment's reflection highlights the problem: we can't increase Joe's height. Th
 
 ### Average treatment effect
 
-<!-- Calling this the "average treatment effect" rather than "average causal
+<!-- AR: Calling this the "average treatment effect" rather than "average causal
 effect" throughout -->
 
 <!-- DK: I think that this transition is a little rough. We want to do two things. First, we want to go from one person to 6 people. There is a lot to talk about in just that step, before we go into a concept like ATE. Specifically, we can now expand the concept of Estimand and discuss it again. The more that I think about it, the more important this concept becomes. We need a precise definition. Let's do the following. First, add the notion of 6 people above, before the first explanation of Estimand. Now, you can talk about Estimands. There are a lot of them! Starting with the unobserved potential outcome for one person, to the causal effect for one person (which, of course, is just subtraction, but, still walk through it slowly), to the most positive and most negative causal effect. The median causal effect. The median percentage change. The total number of people for whom the causal effect is positive. And so on. There are a lot of things one might care about! -->
@@ -129,23 +127,25 @@ effect" throughout -->
 
 Consider a larger sample of patients: 
 
-```{r average_treatment_effect, echo = FALSE}
+```{r, echo = FALSE}
 # First, we create a tibble with the values we want for the table
 
-tibble(`Subject` = c("Joe", "Mary", "Sally", "Bob", "James", "MEAN"),
-       `$Y_t(u)$` = c("$130$", "$130$", "$130$", "$140$", "$145$", "$135$"),
-       `$Y_c(u)$` = c("$135$", "$145$", "$145$", "$150$", "$140$", "$143$"),
-       `$Y_t(u) - Y_c(u)$` = c("$-5$", "$-15$", "$-15$", "$-10$", "$+5$", "$-8$")) %>%
+tibble(subject = c("Joe", "Mary", "Sally", "Bob", "James", "MEAN"),
+       ytreat = c("130", "130", "130", "140", "145", "135"),
+       ycontrol = c("135", "145", "145", "150", "140", "143"),
+       ydiff = c("-5", "-15", "-15", "-10", "+5", "-8")) %>%
   
-  # Then, we use the kable function to make it pretty
+  # Then, we use the gt function to make it pretty
   
-  kable() %>%
-  kable_styling(bootstrap_options = "striped",
-                full_width = FALSE,
-                position = "left") %>%
-  column_spec(1,
-              bold = TRUE,
-              border_right = TRUE)
+  gt() %>%
+  cols_label(subject = md("$$\\mathbf{Subject}$$"),
+                ytreat = md("$$Y_t(u)$$"),
+                ycontrol = md("$$Y_c(u)$$"),
+                ydiff = md("$$Y_t(u) - Y_c(u)$$")) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(subject))) %>%
+  tab_style(cell_text(weight = "bold"),
+            location = cells_body(columns = vars(subject)))
 ```
 
 The causal effect is different for every subject, but the drug works for Joe, Mary, Sally and Bob because the causal effect is negative. Their blood pressure is lower with the drug than it would have been if each did not take the drug. For James, however, the drug causes an *increase* in blood pressure. 
@@ -158,23 +158,25 @@ Note that we can calculate the average treatment effect in this case because we 
 
 The results we have seen up to this point could never be measured in practice. It is impossible, by definition, to observe the effects of more than one treatment on a single subject. Joe cannot both take the pill and not take the pill at the same time! Therefore, the data we actually observe would look something like this: 
 
-```{r random_assignment, echo = FALSE}
+```{r, echo = FALSE}
 # First, we create a tibble with the values we want for the table
 
-tibble(`Subject` = c("Joe", "Mary", "Sally", "Bob", "James", "MEAN"),
-       `$Y_t(u)$` = c("$130$", "$120$", "$?$", "$?$", "$115$", "$121.67$"),
-       `$Y_c(u)$` = c("$?$", "$?$", "$125$", "$130$", "$?$", "$127.5$"),
-       `$Y_t(u) - Y_c(u)$` = c("$?$", "$?$", "$?$", "$?$", "$?$", "$-5.83$")) %>%
+tibble(subject = c("Joe", "Mary", "Sally", "Bob", "James", "MEAN"),
+       ytreat = c("130", "120", "?", "?", "115", "121.67"),
+       ycontrol = c("?", "?", "125", "130", "?", "127.5"),
+       ydiff = c("?", "?", "?", "?", "?", "-5.83")) %>%
   
-  # Then, we use the kable function to make it pretty
+  # Then, we use the gt function to make it pretty
   
-  kable() %>%
-  kable_styling(bootstrap_options = "striped",
-                full_width = FALSE,
-                position = "left") %>%
-  column_spec(1,
-              bold = TRUE,
-              border_right = TRUE)
+  gt() %>%
+  cols_label(subject = md("$$\\mathbf{Subject}$$"),
+                ytreat = md("$$Y_t(u)$$"),
+                ycontrol = md("$$Y_c(u)$$"),
+                ydiff = md("$$Y_t(u) - Y_c(u)$$")) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(subject))) %>%
+  tab_style(cell_text(weight = "bold"),
+            location = cells_body(columns = vars(subject)))
 ```
 
 Question marks are responses that could not be observed. The **Fundamental Problem of Causal Inference**^[Holland 1986.] is that directly observing unit-level causal effects is impossible. However, this does not make *causal inference* impossible. Certain techniques and assumptions allow the fundamental problem to be overcome.
@@ -184,20 +186,22 @@ One way we could solve this problem is by filling in the missing values for trea
 ```{r, echo = FALSE}
 # First, we create a tibble with the values we want for the table
 
-tibble(`Subject` = c("Joe", "Mary", "Sally", "Bob", "James", "MEAN"),
-       `$Y_t(u)$` = c("$130$", "$120$", "$121.67$", "$121.67$", "$115$", "$121.67$"),
-       `$Y_c(u)$` = c("$127.5$", "$127.5$", "$125$", "$130$", "$127.5$", "$127.5$"),
-       `$Y_t(u) - Y_c(u)$` = c("$2.5$", "$-7.5$", "$-3.33$", "$-8.33$", "$-12.5$", "$-5.83$")) %>%
+tibble(subject = c("Joe", "Mary", "Sally", "Bob", "James", "MEAN"),
+       ytreat = c("130", "120", "121.67", "121.67", "115", "121.67"),
+       ycontrol = c("127.5", "127.5", "125", "130", "127.5", "127.5"),
+       ydiff = c("2.5", "-7.5", "-3.33", "-8.33", "-12.5", "-5.83")) %>%
   
-  # Then, we use the kable function to make it pretty
+  # Then, we use the gt function to make it pretty
   
-  kable() %>%
-  kable_styling(bootstrap_options = "striped",
-                full_width = FALSE,
-                position = "left") %>%
-  column_spec(1,
-              bold = TRUE,
-              border_right = TRUE)
+  gt() %>%
+  cols_label(subject = md("$$\\mathbf{Subject}$$"),
+                ytreat = md("$$Y_t(u)$$"),
+                ycontrol = md("$$Y_c(u)$$"),
+                ydiff = md("$$Y_t(u) - Y_c(u)$$")) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(subject))) %>%
+  tab_style(cell_text(weight = "bold"),
+            location = cells_body(columns = vars(subject)))
 ```
 
 We see that this method doesn't change our estimate of the treatment mean ($121.67$), the control mean ($127.5$), or the mean difference between treatment and control ($-5.83$).  However, it does allow us to make predictions for individual observations.  For example, now we predict that Joe's systolic blood pressure under control would have been $127.5$.
@@ -209,21 +213,24 @@ However, with only two observations in the control group, we can simply note tha
 ```{r, echo = FALSE}
 # First, we create a tibble with the values we want for the table
 
-tibble(`Subject` = c("Joe", "Mary", "Sally", "Bob", "James", "MEAN"),
-       `$Y_t(u)$` = c("$130$", "$120$", "$121.67$ $(115, 130)$", "$121.67$ $(115, 130)$", "$115$", "$121.67$"),
-       `$Y_c(u)$` = c("$127.5$ $(125, 130)$", "$127.5$ $(125, 130)$", "$125$", "$130$", "$127.5$ $(125, 130)$", "$127.5$"),
-       `$Y_t(u) - Y_c(u)$` = c("$2.5$", "$-7.5$", "$-3.33$", "$-8.33$", "$-12.5$", "$-5.83$")) %>%
+tibble(subject = c("Joe", "Mary", "Sally", "Bob", "James", "MEAN"),
+       ytreat = c("130", "120", "121.67 (115, 130)", "121.67 (115, 130)", "115", "121.67"),
+       ycontrol = c("127.5 (125, 130)", "127.5 (125, 130)", "125", "130", "127.5 (125, 130)", "127.5"),
+       ydiff = c("2.5", "-7.5", "-3.33", "-8.33", "-12.5", "-5.83")) %>%
   
-  # Then, we use the kable function to make it pretty
+  # Then, we use the gt function to make it pretty
   
-  kable() %>%
-  kable_styling(bootstrap_options = "striped",
-                full_width = FALSE,
-                position = "left") %>%
-  column_spec(1,
-              bold = TRUE,
-              border_right = TRUE)
+  gt() %>%
+  cols_label(subject = md("$$\\mathbf{Subject}$$"),
+                ytreat = md("$$Y_t(u)$$"),
+                ycontrol = md("$$Y_c(u)$$"),
+                ydiff = md("$$Y_t(u) - Y_c(u)$$")) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(subject))) %>%
+  tab_style(cell_text(weight = "bold"),
+            location = cells_body(columns = vars(subject)))
 ```
+
 
 We may wonder still whether this is a good estimate for Joe.  After all, we are guessing here that the treatment is likely to *raise* his blood pressure, given that his observed blood pressure under treatment was still higher than the average blood pressure under control ($130 > 127.5$).
 
@@ -236,20 +243,22 @@ Thus, another way we can fill in our missing values is by adding our estimate of
 ```{r, echo = FALSE}
 # First, we create a tibble with the values we want for the table
 
-tibble(`Subject` = c("Joe", "Mary", "Sally", "Bob", "James", "MEAN"),
-       `$Y_t(u)$` = c("$130$", "$120$", "$119.17$", "$124.17$", "$115$", "$121.67$"),
-       `$Y_c(u)$` = c("$135.83$", "$125.83$", "$125$", "$130$", "$120.83$", "$127.5$"),
-       `$Y_t(u) - Y_c(u)$` = c("$-5.83$", "$-5.83$", "$-5.83$", "$-5.83$", "$-5.83$", "$-5.83$")) %>%
+tibble(subject = c("Joe", "Mary", "Sally", "Bob", "James", "MEAN"),
+       ytreat = c("130", "120", "119.17", "124.17", "115", "121.67"),
+       ycontrol = c("135.83", "125.83", "125", "130", "120.83", "127.5"),
+       ydiff = c("-5.83", "-5.83", "-5.83", "-5.83", "-5.83", "-5.83")) %>%
   
-  # Then, we use the kable function to make it pretty
+  # Then, we use the gt function to make it pretty
   
-  kable() %>%
-  kable_styling(bootstrap_options = "striped",
-                full_width = FALSE,
-                position = "left") %>%
-  column_spec(1,
-              bold = TRUE,
-              border_right = TRUE)
+  gt() %>%
+  cols_label(subject = md("$$\\mathbf{Subject}$$"),
+                ytreat = md("$$Y_t(u)$$"),
+                ycontrol = md("$$Y_c(u)$$"),
+                ydiff = md("$$Y_t(u) - Y_c(u)$$")) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(subject))) %>%
+  tab_style(cell_text(weight = "bold"),
+            location = cells_body(columns = vars(subject)))
 ```
 
 Do we think that if Joe didn't take the drug, his systolic blood pressure would be exactly $135.83$? Of course not! We have some uncertainty around these numbers, as well.  There are two main sources of uncertainty we have to take into account when making a prediction for Joe:
@@ -276,73 +285,79 @@ Randomized assignment is the best assignment mechanism for inferring average tre
 
 However, when the sample size is small, our estimated average treatment effect may deviate considerably from the truth.  For example, the data in the last section were from just one possible random assignment, where Joe, Mary and James receive the treatment.  Here's another possible random assignment, where Joe, Mary and Sally receive the treatment:
 
-```{r random_assignment_2, echo = FALSE}
+```{r, echo = FALSE}
 # First, we create a tibble with the values we want for the table
 
-tibble(`Subject` = c("Joe", "Mary", "Sally", "Bob", "James", "MEAN"),
-       `$Y_t(u)$` = c("$130$", "$120$", "$100$", "$?$", "$?$", "$115$"),
-       `$Y_c(u)$` = c("$?$", "$?$", "$?$", "$130$", "$120$", "$123$"),
-       `$Y_t(u) - Y_c(u)$` = c("$?$", "$?$", "$?$", "$?$", "$?$", "$-8.33$")) %>%
+tibble(subject = c("Joe", "Mary", "Sally", "Bob", "James", "MEAN"),
+       ytreat = c("130", "120", "100", "?", "?", "115"),
+       ycontrol = c("?", "?", "?", "130", "120", "123"),
+       ydiff = c("?", "?", "?", "?", "?", "-8.33")) %>%
   
-  # Then, we use the kable function to make it pretty
+  # Then, we use the gt function to make it pretty
   
-  kable() %>%
-  kable_styling(bootstrap_options = "striped",
-                full_width = FALSE,
-                position = "left") %>%
-  column_spec(1,
-              bold = TRUE,
-              border_right = TRUE)
+  gt() %>%
+  cols_label(subject = md("$$\\mathbf{Subject}$$"),
+                ytreat = md("$$Y_t(u)$$"),
+                ycontrol = md("$$Y_c(u)$$"),
+                ydiff = md("$$Y_t(u) - Y_c(u)$$")) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(subject))) %>%
+  tab_style(cell_text(weight = "bold"),
+            location = cells_body(columns = vars(subject)))
 ```
 
 Note that with one assignment, the estimate of the ATE is $-5.83$, while with another it is $-8.33$.  Assume that these data are the truth: 
 
-```{r true_data, echo = FALSE}
+```{r, echo = FALSE}
 # First, we create a tibble with the values we want for the table
 
-tibble(`Subject` = c("Joe", "Mary", "Sally", "Bob", "James", "MEAN"),
-       `$Y_t(u)$` = c("$130$", "$120$", "$100$", "$110$", "$115$", "$115$"),
-       `$Y_c(u)$` = c("$115$", "$125$", "$125$", "$130$", "$120$", "$123$"),
-       `$Y_t(u) - Y_c(u)$` = c("$+15$", "$-5$", "$-25$", "$-20$", "$-5$", "$-8$")) %>%
+tibble(subject = c("Joe", "Mary", "Sally", "Bob", "James", "MEAN"),
+       ytreat = c("130", "120", "100", "110", "115", "115"),
+       ycontrol = c("115", "125", "130", "130", "120", "123"),
+       ydiff = c("+15", "-5", "-25", "-20", "-5", "-8")) %>%
   
-  # Then, we use the kable function to make it pretty
+  # Then, we use the gt function to make it pretty
   
-  kable() %>%
-  kable_styling(bootstrap_options = "striped",
-                full_width = FALSE,
-                position = "left") %>%
-  column_spec(1,
-              bold = TRUE,
-              border_right = TRUE)
+  gt() %>%
+  cols_label(subject = md("$$\\mathbf{Subject}$$"),
+                ytreat = md("$$Y_t(u)$$"),
+                ycontrol = md("$$Y_c(u)$$"),
+                ydiff = md("$$Y_t(u) - Y_c(u)$$")) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(subject))) %>%
+  tab_style(cell_text(weight = "bold"),
+            location = cells_body(columns = vars(subject)))
 ```
 
 Thus, the true average treatment effect is $-8$.  However, our estimates of the average treatment effect vary because our sample is small and the responses have a large variance. If the sample were larger and the variance were less, the average treatment effect would be closer to the true average treatment effect regardless of the specific units randomly assigned to treatment.
 
 ### Permutation tests
 
-<!-- This section attempts to describe permutation tests in a non-frequentist
+<!-- AR: This section attempts to describe permutation tests in a non-frequentist
 way; thus, there are no references to a "test statistic" or to the "sharp null." Worth keeping?
 -->
 
 Let's say we observed the following results, which we know came from a random treatment assignment:
 
-```{r permutation_setup, echo = FALSE}
+```{r, echo = FALSE}
 # First, we create a tibble with the values we want for the table
 
-tibble(`Subject` = c("Mary", "Sally", "Bob", "James", "MEAN"),
-       `$Y_t(u)$` = c("$120$", "$100$", "$?$", "$?$", "$110$"),
-       `$Y_c(u)$` = c("$?$", "$?$", "$130$", "$120$", "$125$"),
-       `$Y_t(u) - Y_c(u)$` = c("$?$", "$?$", "$?$", "$?$", "$-15$")) %>%
+tibble(subject = c("Mary", "Sally", "Bob", "James", "MEAN"),
+       ytreat = c("120", "100", "?", "?", "110"),
+       ycontrol = c("?", "?", "130", "120", "125"),
+       ydiff = c("?", "?", "?", "?", "-15")) %>%
   
-  # Then, we use the kable function to make it pretty
+  # Then, we use the gt function to make it pretty
   
-  kable() %>%
-  kable_styling(bootstrap_options = "striped",
-                full_width = FALSE,
-                position = "left") %>%
-  column_spec(1,
-              bold = TRUE,
-              border_right = TRUE)
+  gt() %>%
+  cols_label(subject = md("$$\\mathbf{Subject}$$"),
+                ytreat = md("$$Y_t(u)$$"),
+                ycontrol = md("$$Y_c(u)$$"),
+                ydiff = md("$$Y_t(u) - Y_c(u)$$")) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(subject))) %>%
+  tab_style(cell_text(weight = "bold"),
+            location = cells_body(columns = vars(subject)))
 ```
 
 The drug looks very useful!  However, how likely is it that we would observe these results if the drug did nothing at all?  That is, how confident should we be that the drug is actually helpful?
@@ -351,25 +366,24 @@ To answer this question, we can use a **permutation test**.^[See [this post](htt
 
 This is easiest to understand visually:
 
-```{r all_permutations, echo = FALSE}
+```{r, echo = FALSE}
 # First, we create a tibble with the values we want for the table
 
-tibble(`Permutation` = c("#1", "#2", "#3", "#4", "#5", "#6"),
-       `$120$` = c("T", "T", "T", "C", "C", "C"),
-       `$100$` = c("T", "C", "C", "T", "T", "C"),
-       `$130$` = c("C", "T", "C", "T", "C", "T"),
-       `$120$ ` = c("C", "C", "T", "C", "T", "T"),
-       `ATE` = c("$-15$", "$+15$", "$+5$", "$-5$", "$-15$", "$+15$")) %>%
+tibble(Permutation = c("#1", "#2", "#3", "#4", "#5", "#6"),
+       `120` = c("T", "T", "T", "C", "C", "C"),
+       `100` = c("T", "C", "C", "T", "T", "C"),
+       `130` = c("C", "T", "C", "T", "C", "T"),
+       `120 ` = c("C", "C", "T", "C", "T", "T"),
+       ATE = c("-15", "+15", "+5", "-5", "-15", "+15")) %>%
        
-  # Then, we use the kable function to make it pretty
+  # Then, we use the gt function to make it pretty
   
-  kable() %>%
-  kable_styling(bootstrap_options = "striped",
-                full_width = FALSE,
-                position = "left") %>%
-  column_spec(1,
-              bold = TRUE,
-              border_right = TRUE)
+  gt() %>%
+  cols_label(Permutation = md("**Permutation**")) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(Permutation))) %>%
+  tab_style(cell_text(weight = "bold"),
+            location = cells_body(columns = vars(Permutation)))
 ```
 
 Here, permutation #1 is what we actually observed, and permutations #2-6 are all the possible rearrangement of the two "treatment" labels and the two "control" labels.  What do we see?  4/6 (67%) of the permutations produce calculated ATEs are at least as large as the effect we actually observed ($-15$), and two of them are the opposite sign!  We therefore should not have much confidence from these data alone that the drug really lowers blood pressure, even though the effect size appeared large.  The moral of the story?  Don't conduct an experiment on only four people!
@@ -386,44 +400,48 @@ With a large enough sample and randomized assignment, we can get a good estimate
 
 Why is that?  Consider the use of the *perfect doctor* as an assignment mechanism. The perfect doctor knows how each subject will respond to the drug or the control and assigns each subject to the treatment that will most benefit her. The perfect doctor knows this information about a sample of patients: 
 
-```{r true_data_perfect_doctor, echo = FALSE}
+```{r, echo = FALSE}
 # First, we create a tibble with the values we want for the table
 
-tibble(`Subject` = c("Joe", "Mary", "Sally", "Bob", "James", "Susie", "MEAN"),
-       `$Y_t(u)$` = c("$130$", "$120$", "$100$", "$115$", "$120$", "$135$", "$120$"),
-       `$Y_c(u)$` = c("$115$", "$125$", "$150$", "$125$", "$130$", "$105$", "$125$"),
-       `$Y_t(u) - Y_c(u)$` = c("$+15$", "$-5$", "$-50$", "$-10$", "$-10$", "$+30$", "$-5$")) %>%
+tibble(subject = c("Joe", "Mary", "Sally", "Bob", "James", "Susie", "MEAN"),
+       ytreat = c("130", "120", "100", "115", "125", "135", "120"),
+       ycontrol = c("115", "125", "150", "125", "130", "105", "125"),
+       ydiff = c("+15", "-5", "-50", "-10", "-10", "+30", "-15")) %>%
   
-  # Then, we use the kable function to make it pretty
+  # Then, we use the gt function to make it pretty
   
-  kable() %>%
-  kable_styling(bootstrap_options = "striped",
-                full_width = FALSE,
-                position = "left") %>%
-  column_spec(1,
-              bold = TRUE,
-              border_right = TRUE)
+  gt() %>%
+  cols_label(subject = md("$$\\mathbf{Subject}$$"),
+                ytreat = md("$$Y_t(u)$$"),
+                ycontrol = md("$$Y_c(u)$$"),
+                ydiff = md("$$Y_t(u) - Y_c(u)$$")) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(subject))) %>%
+  tab_style(cell_text(weight = "bold"),
+            location = cells_body(columns = vars(subject)))
 ```
 
 Based on this knowledge she would make the following treatment assignments: 
 
-```{r perfect_doctor, echo = FALSE}
+```{r, echo = FALSE}
 # First, we create a tibble with the values we want for the table
 
-tibble(`Subject` = c("Joe", "Mary", "Sally", "Bob", "James", "Susie", "MEAN"),
-       `$Y_t(u)$` = c("$?$", "$120$", "$100$", "$115$", "$120$", "$?$", "$113.75$"),
-       `$Y_c(u)$` = c("$115$", "$?$", "$?$", "$?$", "$?$", "$105$", "$110$"),
-       `$Y_t(u) - Y_c(u)$` = c("$?$", "$?$", "$?$", "$?$", "$?$", "$?$", "$+3.75$")) %>%
+tibble(subject = c("Joe", "Mary", "Sally", "Bob", "James", "Susie", "MEAN"),
+       ytreat = c("?", "120", "100", "115", "125", "?", "113.75"),
+       ycontrol = c("115", "?", "?", "?", "?", "105", "110"),
+       ydiff = c("?", "?", "?", "?", "?", "?", "+3.75")) %>%
   
-  # Then, we use the kable function to make it pretty
+  # Then, we use the gt function to make it pretty
   
-  kable() %>%
-  kable_styling(bootstrap_options = "striped",
-                full_width = FALSE,
-                position = "left") %>%
-  column_spec(1,
-              bold = TRUE,
-              border_right = TRUE)
+  gt() %>%
+  cols_label(subject = md("$$\\mathbf{Subject}$$"),
+                ytreat = md("$$Y_t(u)$$"),
+                ycontrol = md("$$Y_c(u)$$"),
+                ydiff = md("$$Y_t(u) - Y_c(u)$$")) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(subject))) %>%
+  tab_style(cell_text(weight = "bold"),
+            location = cells_body(columns = vars(subject)))
 ```
 
 The perfect doctor distorts the averages of both $Y_t(u)$ and $Y_c(u)$ by filtering out poor responses to both the treatment and control. The difference in means thus is distorted in a direction that depends on the details. For instance, a subject like Susie who is harmed by taking the drug would be assigned to the control group by the perfect doctor and thus the negative effect of the drug would be masked.
@@ -449,26 +467,27 @@ In the context of our example, Joe's blood pressure should not depend on whether
 
 SUTVA violation makes causal inference more difficult. We can account for dependent observations by considering more treatments. We create 4 treatments by taking into account whether or not Mary receives treatment:
 
-```{r joe_mary, echo = FALSE}
+```{r, echo = FALSE}
 # First, we create a tibble with the values we want for the table
 
-tibble(`Subject` = c("Joe"),
-       `Joe = c,<br />Mary = t` = c("$140$"),
-       `Joe = t,<br />Mary = t` = c("$130$"),
-       `Joe = c,<br />Mary = c` = c("$125$"),
-       `Joe = t,<br />Mary = c` = c("$120$")) %>%
+tibble(subject = c("Joe"),
+       ct = "140",
+       tt = "130",
+       cc = "125",
+       tc = "120") %>%
   
-  # Then, we use the kable function to make it pretty. escape = FALSE is also
-  # required for the linebreaks
+  # Then, we use the gt function to make it pretty.
   
-  kable(escape = FALSE) %>%
-  
-  kable_styling(bootstrap_options = "striped",
-                full_width = FALSE,
-                position = "left") %>%
-  column_spec(1,
-              bold = TRUE,
-              border_right = TRUE)
+  gt() %>%
+  cols_label(subject = md("**Subject**"),
+             ct = html("Joe = c,<br />Mary = t"),
+             tt = html("Joe = t,<br />Mary = t"),
+             cc = html("Joe = c,<br />Mary = c"),
+             tc = html("Joe = t,<br />Mary = c")) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(subject))) %>%
+  tab_style(cell_text(weight = "bold"),
+            location = cells_body(columns = vars(subject)))
 ```
 
 Recall that a causal effect is defined as the difference between two potential outcomes. In this case, there are multiple causal effects because there are more than two potential outcomes:
@@ -522,14 +541,10 @@ The causal effect of a treatment on a single unit at a point in time is the diff
 
 ## References
 
-<!-- Need to integrate this with the rest of the book -->
+<!-- AR: Need to integrate this with the rest of the book -->
 
 Cox, D. R. (1958). *Planning of Experiments.* Wiley.
 
 Holland, Paul W. (1986). "Statistics and Causal Inference." *J. Amer. Statist. Assoc.* 81 (396): 945–960. doi:10.1080/01621459.1986.10478354.
 
-Neyman, Jerzy. (1923). *Sur les applications de la theorie des probabilites aux experiences agricoles: Essai des principes.* Master's Thesis. Excerpts reprinted in English, Statistical Science, Vol. 5, pp. 463–472. (D. M. Dabrowska, and T. P. Speed, Translators.)
-
 Rubin, Donald (1974). "Estimating Causal Effects of Treatments in Randomized and Nonrandomized Studies." *J. Educ. Psychol.* 66 (5): 688–701 [p. 689]. doi:10.1037/h0037350.
-
-Rubin, Donald (2005). "Causal Inference Using Potential Outcomes." *J. Amer. Statist. Assoc.* 100 (469): 322–331. doi:10.1198/016214504000001880.
