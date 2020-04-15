@@ -14,28 +14,157 @@ The Rubin Causal Model (RCM) is an approach to the statistical analysis of cause
 <!-- AR: Perhaps the credit to Wikipedia should be added to the attributions page
 rather than here.-->
 
-The Rubin Causal Model (RCM) is based on the idea of **potential outcomes.**  For example, let's say you took aspirin and now no longer have a headache. To measure the causal effect of taking the aspirin, we need to compare the outcome for you in one alternative future (where you took the aspirin) to another (where you did not). Since it is impossible to see both potential outcomes at once, one of the potential outcomes is always missing. This dilemma is the "fundamental problem of causal inference."
-
 ## What is a causal effect?
 
-<!-- DK: Get rid of quote. Start with FDA example. Or something political? -->
-
-Rubin defines a "causal effect": 
-
-> Intuitively, the causal effect of one treatment, E, over another, C, for a particular unit and an interval of time from $t_1$ to $t_2$ is the difference between what would have happened at time $t_2$ if the unit had been exposed to E initiated at $t_1$ and what would have happened at $t_2$ if the unit had been exposed to C initiated at $t_1$: 'If an hour ago I had taken two aspirins instead of just a glass of water, my headache would now be gone,' or 'because an hour ago I took two aspirins instead of just a glass of water, my headache is now gone.' Our definition of the causal effect of the E versus C treatment will reflect this intuitive meaning.^[Rubin 1974.]
-
-Thus, according to the RCM, the causal effect of your taking or not taking aspirin one hour ago is the difference between how your head would have felt in case 1 (taking the aspirin) and case 2 (not taking the aspirin). If your headache would remain without aspirin but disappear if you took aspirin, then the causal effect of taking aspirin is headache relief.
+The Rubin Causal Model (RCM) is based on the idea of **potential outcomes.**  For example, let's say you took blood pressure medicine and then measure your blood pressure. To measure the causal effect of taking the medicine, we need to compare the outcome for you in one alternative future (where you took the medicine) to another (where you did not). Since it is impossible to see both potential outcomes at once, one of the potential outcomes is always missing. This dilemma is the "fundamental problem of causal inference."
 
 In most circumstances, we are interested in comparing two futures, one generally termed "treatment" and the other "control." These labels are somewhat arbitrary. The difference between the potential outcome under treatment and the potential outcome under control is called a "causal effect" or a "treatment effect."  The scenario that didn't actually happen, and thus that we didn't observe, is called a "counterfactual."
 
+Thus, according to the RCM, the **causal effect** of your taking or not taking the medicine is the *difference* between what your blood pressure would have been under "treatment" (taking the medicine) and "control" (not taking the medicine). If your systolic blood pressure would have been 140 without the medicine and was 120 with it, then the causal effect of taking the medicine is a 20-point reduction in your systolic blood pressure.
 
 ### Everything is a missing data problem
 
-<!-- DK: Section here outlining simple average income in the US. The mechanisms by which you find out some things and don't find out other things are critical to understand when trying to make statistical inferences. -->
+<!-- AR: This perhaps could be introduced even earlier, before the students are
+assigned the RCM chapter.  Could be a motivating idea for the whole book. -->
 
-### Potential outcomes
+Before we discuss the RCM in more detail, it's worth discussing in general the problem of **missing data**.  Why is that?  When you don't observe certain counterfactuals, that's just one example of a missing piece of data.  Missing data problems arise whenever you want to make statistical inferences.
 
-Suppose that Joe is participating in an FDA test for a new hypertension drug. If we were omniscient, we would know the outcomes for Joe under both treatment (the new drug) and control (either no treatment or the current standard treatment). The causal effect, or treatment effect, is the difference between these two potential outcomes. 
+For example, let's say that before you test a new blood pressure medicine, you want to know the average systolic blood pressure of United States adults.  At first, this seems like a much easier problem---there's nothing causal here!  If you knew the true values, you could build a dataset like this: 
+
+
+```{r, echo = FALSE}
+# First, we create a tibble with the values we want for the table
+
+tibble(subject = c("Person 1", "Person 2", "Person 3", "...", "Person N"),
+       `Blood Pressure` = c("130", "110", "115", "...", "140")) %>%
+  
+  # Then, we use the gt function to make it pretty
+  
+  gt() %>%
+  cols_label(subject = md("**Person**")) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(subject))) %>%
+  tab_style(cell_text(weight = "bold"),
+            location = cells_body(columns = vars(subject)))
+```
+
+Then, your answer is simply the average of all the values. 
+
+But do we have this table?  No!  What we actually have is this:
+
+```{r, echo = FALSE}
+# First, we create a tibble with the values we want for the table
+
+tibble(subject = c("Person 1", "Person 2", "Person 3", "...", "Person N"),
+       `Blood Pressure` = c("?", "?", "?", "...", "?")) %>%
+  
+  # Then, we use the gt function to make it pretty
+  
+  gt() %>%
+  cols_label(subject = md("**Person**")) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(subject))) %>%
+  tab_style(cell_text(weight = "bold"),
+            location = cells_body(columns = vars(subject)))
+```
+
+That is, we have a lot of *missing data*.
+
+But maybe we could survey 1,000 people, and ask them to report their blood pressures:
+
+```{r, echo = FALSE}
+# First, we create a tibble with the values we want for the table
+
+tibble(subject = c("Respondent 1", "Respondent 2", "Respondent 3", "...", "Respondent 1,000"),
+       `Blood Pressure` = c("130", "110", "115", "...", "140")) %>%
+  
+  # Then, we use the gt function to make it pretty
+  
+  gt() %>%
+  cols_label(subject = md("**Respondent**")) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(subject))) %>%
+  tab_style(cell_text(weight = "bold"),
+            location = cells_body(columns = vars(subject)))
+```
+
+At least then we could have an average blood pressure for the respondents in our sample, right?
+
+Not so fast! It is probably not fair to assume that every blood pressure measurement is perfectly accurate.  Some survey respondents may misremember or round the values, or use measurements from a doctor's visit long ago.  (How many American adults own blood pressure monitors?)  Furthermore, blood pressure monitors aren't 100% accurate.
+
+One's blood pressure reading also isn't a single, constant number, even if it could be perfectly measured: it depends on the time of day, whether one exercised or ate before taking the measurement, and so on.
+
+So what we really should do is think of each measurement as being drawn from a distribution of potential values for each person; we could construct a *confidence interval* around each of the values to try to reflect these sources of error.  Let's say that a fair CI is 15 points in either direction.  (It may actually be higher; this is just for illustration.)  Then our table really looks something like this:
+
+```{r, echo = FALSE}
+# First, we create a tibble with the values we want for the table
+
+tibble(subject = c("Respondent 1", "Respondent 2", "Respondent 3", "...", "Respondent 1,000"),
+       `Blood Pressure` = c("130 (115, 145)", "110 (95, 125)", "115 (100, 130)", "...", "140 (125, 155)")) %>%
+  
+  # Then, we use the gt function to make it pretty
+  
+  gt() %>%
+  cols_label(subject = md("**Respondent**")) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(subject))) %>%
+  tab_style(cell_text(weight = "bold"),
+            location = cells_body(columns = vars(subject)))
+```
+
+OK, so with all this information, we can compute an average blood pressure reading for our respondents, and we can also get a sense of how confident we should be in that average.  With a big enough sample, we can probably get a pretty good measure of the average blood pressure for that sample.  Have we solved our problem?  That is, can we now assume that our estimate of the average blood pressure in our sample is a good estimate of the average blood pressure in the U.S. adult population?
+
+<!-- AR: Talking about sampling here so we can reference it later -->
+
+Well, let's see how many of the missing values we have filled in to our table of the population:
+
+```{r, echo = FALSE}
+# First, we create a tibble with the values we want for the table
+
+tibble(subject = c("Person 1", "Person 2", "Person 3", "...", "Person N"),
+       `Blood Pressure` = c("?", "?", "?", "...", "?")) %>%
+  
+  # Then, we use the gt function to make it pretty
+  
+  gt() %>%
+  cols_label(subject = md("**Person**")) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(subject))) %>%
+  tab_style(cell_text(weight = "bold"),
+            location = cells_body(columns = vars(subject)))
+```
+
+Alas, since the U.S. population is over 300 million, we can't even see our 1,000 respondents!  If we want to assume that our estimate for our respondents is a good estimate for the population, we need to assume that their blood pressures are, on average, the same as the blood pressures of the people we *didn't* survey.
+
+For that to be true, it means that the *sampling mechanism* can't be related to someone's blood pressure.  For example, let's say that we surveyed 1,000 Harvard undergraduates.  Do we think that Harvard undergraduates have average blood pressure? No! Harvard undergraduates are younger than average, and younger people have lower blood pressures.
+
+So we should *randomly* sample the population.  Then, there won't be any systematic relationship between being chosen for our sample and blood pressure.  (There may be a relationship by chance, but taking a bigger sample reduces that possibility.)
+
+But even randomly choosing whom to survey may not totally solve our problem.  Some people may not fill out our survey, after all.  So our table for our survey may look like this:
+
+```{r, echo = FALSE}
+# First, we create a tibble with the values we want for the table
+
+tibble(subject = c("Respondent 1", "Respondent 2", "Respondent 3", "...", "Respondent 1,000"),
+       `Blood Pressure` = c("130", "?", "115", "...", "140")) %>%
+  
+  # Then, we use the gt function to make it pretty
+  
+  gt() %>%
+  cols_label(subject = md("**Respondent**")) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(subject))) %>%
+  tab_style(cell_text(weight = "bold"),
+            location = cells_body(columns = vars(subject)))
+```
+
+So not only do we have all the ? values in the population table, we also have a ? for one of our survey respondents (Respondent 2).  Can we just fill in the ? for Respondent 2 with the average of the other respondents?  Only if the factors that led Respondent 2 not to answer the survey had nothing to do with blood pressure.  Let's say that poorer respondents were less likely to fill out the survey, for example.  If poorer respondents also had higher blood pressure on average, our estimate of the average blood pressure *among those who answered the survey* will be biased downwards as an estimate for the population, even if we surveyed people at random. 
+
+So missing data is not just a problem for estimating causal effects.  The mechanisms by which you find out some things and don't find out other things are critical to understand when trying to make statistical inferences.
+
+### Potential outcomes: introduction to the Rubin Table
+
+Suppose that Joe is participating in an FDA test for a new hypertension drug. If we were omniscient, we would know the outcomes for Joe under both treatment (the new drug) and control (either no treatment or the current standard treatment). The causal effect, or treatment effect, is the difference between these two potential outcomes. We can present this with the following table of potential outcomes, which we will call a Rubin Table:
 
 <!-- AR: Should we stick with this notation? -->
 
@@ -75,31 +204,272 @@ This definition of causal effects becomes much more problematic if there is no w
 
 A moment's reflection highlights the problem: we can't increase Joe's height. There is no way to observe, even conceptually, what Joe's weight would be if he were taller because there is no way to make him taller. We can't manipulate Joe's height, so it makes no sense to investigate the causal effect of height on weight. Hence the slogan: **No causation without manipulation.**
 
+### Estimands
 
-<!-- DK: We need to take slow steps from the basic Rubin Table --- I just coined that phrase --- to more complex versions. For example, we need a table that starts from treatment/control and then points out that there are many causal effects which one might measure, starting from just that case. Not just the difference, but also the ratio, the percentage change and so on. That may seem trivial but it helps the next step. Add a section named "Estimand" here. Of course, all these estimands can be derived from the primitives of the potential outcomes, but they are still useful when we make more complex models later. Obviously, we need to refer back to this concept. -->
+Let's look again at our basic Rubin Table for Joe:
 
+```{r, echo = FALSE}
+# First, we create a tibble with the values we want for the table
 
-### Average treatment effect
+tibble(subject = "Joe",
+       ytreat = "130",
+       ycontrol = "135",
+       ydiff = "-5") %>%
+  
+  # Then, we use the gt function to make it pretty
+  
+  gt() %>%
+  cols_label(subject = md("$$\\mathbf{Subject}$$"),
+                ytreat = md("$$Y_t(u)$$"),
+                ycontrol = md("$$Y_c(u)$$"),
+                ydiff = md("$$Y_t(u) - Y_c(u)$$")) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(subject))) %>%
+  tab_style(cell_text(weight = "bold"),
+            location = cells_body(columns = vars(subject)))
+```
+
+We have Joe's potential outcome under treatment, Joe's potential outcome under control, and the difference between the two.  The difference is often called the "treatment effect."  But it is in fact only one possible **estimand**.  An estimand is some quantity in the real world that we are trying to measure.  Note that we could also estimate the ratio of potential outcomes for Joe:
+
+```{r, echo = FALSE}
+# First, we create a tibble with the values we want for the table
+
+tibble(subject = "Joe",
+       ytreat = "130",
+       ycontrol = "135",
+       yratio = "26/27") %>%
+  
+  # Then, we use the gt function to make it pretty
+  
+  gt() %>%
+  cols_label(subject = md("$$\\mathbf{Subject}$$"),
+                ytreat = md("$$Y_t(u)$$"),
+                ycontrol = md("$$Y_c(u)$$"),
+                yratio = md("$$Y_t(u) / Y_c(u)$$")) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(subject))) %>%
+  tab_style(cell_text(weight = "bold"),
+            location = cells_body(columns = vars(subject)))
+```
+
+Or the percentage change in potential outcomes:
+
+```{r, echo = FALSE}
+# First, we create a tibble with the values we want for the table
+
+tibble(subject = "Joe",
+       ytreat = "130",
+       ycontrol = "135",
+       yperc = "-3.7%") %>%
+  
+  # Then, we use the gt function to make it pretty
+  
+  gt() %>%
+  cols_label(subject = md("$$\\mathbf{Subject}$$"),
+                ytreat = md("$$Y_t(u)$$"),
+                ycontrol = md("$$Y_c(u)$$"),
+                yperc = md("$$(Y_t(u) - Y_c(u)) * 100 / Y_c(u)$$")) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(subject))) %>%
+  tab_style(cell_text(weight = "bold"),
+            location = cells_body(columns = vars(subject)))
+```
+
+Now, let's consider a larger sample of patients: 
+
+```{r, echo = FALSE}
+# First, we create a tibble with the values we want for the table
+
+tibble(subject = c("Joe", "Mary", "Sally", "Bob", "James", "MEAN"),
+       ytreat = c("130", "130", "130", "140", "145", "135"),
+       ycontrol = c("135", "145", "145", "150", "140", "143"),
+       ydiff = c("-5", "-15", "-15", "-10", "+5", "-8")) %>%
+  
+  # Then, we use the gt function to make it pretty
+  
+  gt() %>%
+  cols_label(subject = md("$$\\mathbf{Subject}$$"),
+                ytreat = md("$$Y_t(u)$$"),
+                ycontrol = md("$$Y_c(u)$$"),
+                ydiff = md("$$Y_t(u) - Y_c(u)$$")) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(subject))) %>%
+  tab_style(cell_text(weight = "bold"),
+            location = cells_body(columns = vars(subject)))
+```
+
+From this Rubin Table, there are many possible estimands.  Here are just a sampling:
+
+- One potential outcome for one person, such as Joe's potential outcome under treatment ($130$).  
+- A causal effect for one person, such as for Mary.  This is the difference between the potential outcomes, which we have provided as its own column ($130 - 145 = -15$).
+- The most positive causal effect.  Here, that is $+5$, from Bob ($145 - 140 = +5$).
+- The most negative causal effect.  Here, that is $-15$, from either Mary or Sally (both $130 -145 = -15$).
+- The median causal effect ($-10$).
+- The median percentage change.  To do this, calculate the percentage change for each person.  You'll get 5 percentages: $-3.7\%$, $-10.3\%$, $-10.3\%$, $-6.7\%$, and $3.6\%$.  The median is $-6.7\%$.
+- The total number of people for whom the causal effect is positive: $4$.
+- And so on. There are a lot of things one might care about!
+
+<!-- AR: the ATE is just another estimand--and a particularly important one--so
+I think it should be mentioned here.  We can talk about calculating it from
+actual data later.-->
 
 <!-- AR: Calling this the "average treatment effect" rather than "average causal
 effect" throughout -->
 
-<!-- DK: I think that this transition is a little rough. We want to do two things. First, we want to go from one person to 6 people. There is a lot to talk about in just that step, before we go into a concept like ATE. Specifically, we can now expand the concept of Estimand and discuss it again. The more that I think about it, the more important this concept becomes. We need a precise definition. Let's do the following. First, add the notion of 6 people above, before the first explanation of Estimand. Now, you can talk about Estimands. There are a lot of them! Starting with the unobserved potential outcome for one person, to the causal effect for one person (which, of course, is just subtraction, but, still walk through it slowly), to the most positive and most negative causal effect. The median causal effect. The median percentage change. The total number of people for whom the causal effect is positive. And so on. There are a lot of things one might care about! -->
+One very common estimand has its own name, the **average treatment effect**.  The average treatment effect (often abbreviated **ATE**) is the mean of all the causal effects.  Here, the mean is $-8$.
 
-<!-- Again, all of these can be derived if you know the full Rubin Table. -->
+All of these can be derived if you know the full Rubin Table, but in real life only one of these potential outcomes can actually be observed.  Still, the **estimand** is the value that you would calculate, if you had the full Rubin Table.
 
-<!-- Second, after going through this, put the survey section here. That is, we never care about just 6 people. They are always a sample from a larger population that we care about. Explain, in fact, that Joe this week is not the same as Joe next year. The causal effect might be different. Show the full Rubin Table, which includes rows for people we don't know and rows for the same people in the future. Indeed, it includes a row for Joe now, Joe in a year, Joe in two years, et cetera. This provides an excuse to talk about sampling, stability, et cetera. -->
+Of course, we don't have the full Rubin Table. It is impossible, by definition, to observe the effects of more than one treatment on a single subject. Joe cannot both take the pill and not take the pill at the same time! Therefore, the data we actually observe would look something like this: 
 
-<!-- In fact, because time is continuous, there is a row for Joe now, Joe one second from now, Joe one day from now and so on. The Rubin Table extends downward forever. Which is why we need assumptions, most specifically that the causal effect for Joe now is the same as all the ones for Joe in the future. Is that plausible? Sort of. Joe now and Joe in one second are pretty similar! Joe now and Joe in 30 years are less so. -->
+```{r, echo = FALSE}
+# First, we create a tibble with the values we want for the table
 
-<!-- DK: So far, we have extended RCM by adding rows to our Rubin Table. Now we add columns. Provie an example with three potential outcomes, like control versus 2 possible treatments. (Still keep the table you have. Same people. Still FDA.) There are 3, obvious, causal effects we might want in that case. Spell them out clearly, even in the case in which we are just looking at simple differences. Revisit the concept of an estimand. -->
+tibble(subject = c("Joe", "Mary", "Sally", "Bob", "James", "MEAN"),
+       ytreat = c("130", "120", "?", "?", "115", "121.67"),
+       ycontrol = c("?", "?", "125", "130", "?", "127.5"),
+       ydiff = c("?", "?", "?", "?", "?", "-5.83")) %>%
+  
+  # Then, we use the gt function to make it pretty
+  
+  gt() %>%
+  cols_label(subject = md("$$\\mathbf{Subject}$$"),
+                ytreat = md("$$Y_t(u)$$"),
+                ycontrol = md("$$Y_c(u)$$"),
+                ydiff = md("$$Y_t(u) - Y_c(u)$$")) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(subject))) %>%
+  tab_style(cell_text(weight = "bold"),
+            location = cells_body(columns = vars(subject)))
+```
 
-<!-- Next step is are a limited set numeric treatments, like taking one pill, two pills, ... up to 5 pills. This looks at lot like 3 categorical treatments, but it is different since the treatments have a numeric relationship with each other. Hint at how that may provide more modeling options later. -->
+Question marks are responses that could not be observed. The **Fundamental Problem of Causal Inference**^[Holland 1986.] is that directly observing unit-level causal effects is impossible.
 
-<!-- Final step is the extension to continuous treatments. Instead of a whole pill, how about 1000 mg (milligrams)? How about 1001? And so on. Indeed, there are an infinite number of possible treatments. The Rubin Table extends to the right forever. Again, assumptions come to our rescue. Or rather, we just throw up our hands and only try to estimate a few things. -->
+### The infinite Rubin Table: many kinds of missing data
 
-<!-- DK: One cool way to think about this is to start with the infinite RT. First we throw out the rows that we thing are duplicates. Second, we throw out the columns that we don't care about. (Not sure what to do with rows/columns that we do care about --- like people not in the sample, or outcomes in the future ---  but which we have no data for.) Now, we have something limited with which we can work. But the infinite RT is always there! -->
+While this is what our *observed* Rubin Table may look like, just filling in these question marks likely wouldn't be enough to answer our scientific question of interest.  We are likely interested in whether the new blood pressure drug works *in general*, not just for these six people. Just as when we were considering estimating the average blood pressure of every adult in the U.S., we'll need to think about whether our *sample* is representative of the population.  Thus, we usually have (at least) two main sources of missing data:
 
+1. For the units in our sample, we only see one potential outcome
+1. For the units outside our sample, we see *no* potential outcomes
+
+Furthermore, even if we did want to know just about these six people, do we only care about their outcomes this year?  No!  We also care about Joe's potential outcomes one year from now, two years from now, and so on.
+
+So our full Rubin Table includes people we know (Joe) and people we don't (for example, Tyrone), both now and in the future:
+
+```{r, echo = FALSE}
+# First, we create a tibble with the values we want for the table
+
+tibble(subject = c("Joe this year", "Joe next year", "Joe two years from now", "Tyrone this year", "Tyrone next year", "Tyrone two years from now", "...", "Person n at time t"),
+       ytreat = c("130", "?", "?", "?", "?", "?", "?", "?"),
+       ycontrol = c("?", "?", "?", "?", "?", "?", "?", "?"),
+       ydiff = c("?", "?", "?", "?", "?", "?", "?", "?")) %>%
+  
+  # Then, we use the gt function to make it pretty
+  
+  gt() %>%
+  cols_label(subject = md("$$\\mathbf{Subject}$$"),
+                ytreat = md("$$Y_t(u)$$"),
+                ycontrol = md("$$Y_c(u)$$"),
+                ydiff = md("$$Y_t(u) - Y_c(u)$$")) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(subject))) %>%
+  tab_style(cell_text(weight = "bold"),
+            location = cells_body(columns = vars(subject)))
+```
+
+In fact, because time is continuous, there is a row for Joe now, Joe one second from now, Joe one day from now and so on. The Rubin Table extends downward forever. Thus, in order to estimate any causal effect, we need assumptions, so we aren't dealing with an infinite table.
+
+The most obvious way to eliminate some rows from the table is to assume the causal effect for Joe now is the same as all the ones for Joe in the future. Is that plausible? Sort of. Joe now and Joe in one second are pretty similar! Joe now and Joe in 30 years are less so.  Unfortunately, there's no magic way to get a good estimate of every missing value in the infinite Rubin Table!
+
+Not only can we extend the Rubin Table by adding people not in our sample to the rows, but we can also add additional treatments to the columns.  Let's go back to the original six people in our sample. What if instead of testing one blood pressure drug, we wanted to test two?  We'll call the original treatment $t$ and the new treatment $t'$.
+
+```{r, echo = FALSE}
+# First, we create a tibble with the values we want for the table
+
+tibble(subject = c("Joe", "Mary", "Sally", "Bob", "James", "MEAN"),
+       ytreat = c("130", "120", "?", "?", "115", "121.67"),
+       ytreat2 = c("?", "?", "?", "?", "?", "?"),
+       ycontrol = c("?", "?", "125", "130", "?", "127.5")) %>%
+  
+  # Then, we use the gt function to make it pretty
+  
+  gt() %>%
+  cols_label(subject = md("$$\\mathbf{Subject}$$"),
+             ytreat = md("$$Y_t(u)$$"),
+             ytreat2 = md("$$Y_{t'}(u)$$"),
+             ycontrol = md("$$Y_c(u)$$")) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(subject))) %>%
+  tab_style(cell_text(weight = "bold"),
+            location = cells_body(columns = vars(subject)))
+```
+
+Note that for Joe, we now have three causal effects we can estimate: the difference between the original treatment and the new treatment, the difference between the original treatment and control, and the difference between the new treatment and control.  And that's just when looking at differences!  Recall there are many other potential estimands we could be interested in, such as ratios, percent changes, and so on.
+
+Even if you have just one medication that you are testing, there still could be multiple treatments.  For example, the patients could take a different number of pills:
+
+```{r, echo = FALSE}
+# First, we create a tibble with the values we want for the table
+
+tibble(subject = c("Joe", "Mary", "Sally", "Bob", "James", "MEAN"),
+       ytreat = c("130", "120", "?", "?", "115", "121.67"),
+       ytreat2 = c("?", "?", "?", "?", "?", "?"),
+       ytreat3 = c("?", "?", "?", "?", "?", "?"),
+       ytreat4 = c("?", "?", "?", "?", "?", "?"),
+       ytreat5 = c("?", "?", "?", "?", "?", "?"),
+       ycontrol = c("?", "?", "125", "130", "?", "127.5")) %>%
+  
+  # Then, we use the gt function to make it pretty
+  
+  gt() %>%
+  cols_label(subject = md("$$\\mathbf{Subject}$$"),
+             ytreat = md("$$Y_{\\text{1 pill}}(u)$$"),
+             ytreat2 = md("$$Y_{\\text{2 pills}}(u)$$"),
+             ytreat3 = md("$$Y_{\\text{3 pills}}(u)$$"),
+             ytreat4 = md("$$Y_{\\text{4 pills}}(u)$$"),
+             ytreat5 = md("$$Y_{\\text{5 pills}}(u)$$"),
+             ycontrol = md("$$Y_c(u)$$")) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(subject))) %>%
+  tab_style(cell_text(weight = "bold"),
+            location = cells_body(columns = vars(subject)))
+```
+
+Again, there are many possible estimands.  It's worth noting when the treatments have some numeric relationship to each other, though, there may be reasonable assumptions we can use to help fill in the missing values---but we aren't there yet!
+
+Instead of considering the treatment in terms of discrete pills, we could also consider different doses: 1000 mg, 1001 mg, and so on:
+
+```{r, echo = FALSE}
+# First, we create a tibble with the values we want for the table
+
+tibble(subject = c("Joe", "Mary", "Sally", "Bob", "James", "MEAN"),
+       ytreat = c("130", "120", "?", "?", "115", "121.67"),
+       ytreat1001 = c("?", "?", "?", "?", "?", "?"),
+       ytreat1002 = c("?", "?", "?", "?", "?", "?"),
+       yellipsis = c("?", "?", "?", "?", "?", "?"),
+       ycontrol = c("?", "?", "125", "130", "?", "127.5")) %>%
+  
+  # Then, we use the gt function to make it pretty
+  
+  gt() %>%
+  cols_label(subject = md("$$\\mathbf{Subject}$$"),
+             ytreat = md("$$Y_{\\text{1000 mg}}(u)$$"),
+             ytreat1001 = md("$$Y_{\\text{1001 mg}}(u)$$"),
+             ytreat1002 = md("$$Y_{\\text{1002 mg}}(u)$$"),
+             yellipsis = md("$$Y_{\text{...}}(u)$$"),
+             ycontrol = md("$$Y_c(u)$$")) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(subject))) %>%
+  tab_style(cell_text(weight = "bold"),
+            location = cells_body(columns = vars(subject)))
+```
+
+Indeed, there are an infinite number of possible treatments. The Rubin Table extends to the right forever. Again, assumptions come to our rescue. Or rather, we just throw up our hands and only try to estimate a few things.  This is why it is crucial to define one's estimand precisely: if we are interested in the difference in potential outcomes between one 1000 mg pill of the new drug versus control, we can ignore all the other possible columns in the infinite Rubin Table.
+
+Thus, whenever you are considering a causal question, the best way to think about it is to start with the infinite Rubin Table.  First we throw out the rows we think are duplicates (such as all the observations for Joe one second from now, two seconds from now, etc.) or that are outside the scope of what we are interested in for now (maybe we don't care about outcomes 30 years in the future for this study).  Second, we throw out the columns that we don't care about, which are all the possible treatments we aren't considering.  Finally, we define precisely---in terms of potential outcomes---our estimand.  It may be something simple, such as the average treatment effect, or something more complex.  Once we have done these steps, we can start thinking about how to fill in the question marks.  But remember that the infinite Rubin Table is always there, and you should be conscious of which rows and columns you are throwing out!
+
+
+## How do we fill in the missing values?
 
 <!-- All the above starts with the introduction of the 6 person example. Are we ready, at this point, to talk about estimation? No! Right now, I think it goes a little quickly. Too early to start talking about ATE. Instead: -->
 
@@ -123,65 +493,7 @@ effect" throughout -->
 
 <!-- With that clear --- and is there a way to add a little normal distribution density to a RT? or something like that? --- we can go on to talk about the uncertainty in the unobserved potential outcome. Indeed, even if we could magically see it, there would still be a PDF because of measurement error. That is the minimum amount of uncertainty we deal with. There are two sources: model uncertainty, which goes away with big N, and individual variation which does not. Fill in the ? with those confidence intervals, the second much wider than the first. In explaining this, you may assume that someone has read the probability and Bayesian chapter of the book. -->
 
-
-
-Consider a larger sample of patients: 
-
-```{r, echo = FALSE}
-# First, we create a tibble with the values we want for the table
-
-tibble(subject = c("Joe", "Mary", "Sally", "Bob", "James", "MEAN"),
-       ytreat = c("130", "130", "130", "140", "145", "135"),
-       ycontrol = c("135", "145", "145", "150", "140", "143"),
-       ydiff = c("-5", "-15", "-15", "-10", "+5", "-8")) %>%
-  
-  # Then, we use the gt function to make it pretty
-  
-  gt() %>%
-  cols_label(subject = md("$$\\mathbf{Subject}$$"),
-                ytreat = md("$$Y_t(u)$$"),
-                ycontrol = md("$$Y_c(u)$$"),
-                ydiff = md("$$Y_t(u) - Y_c(u)$$")) %>%
-  tab_style(cell_borders(sides = "right"),
-            location = cells_body(columns = vars(subject))) %>%
-  tab_style(cell_text(weight = "bold"),
-            location = cells_body(columns = vars(subject)))
-```
-
-The causal effect is different for every subject, but the drug works for Joe, Mary, Sally and Bob because the causal effect is negative. Their blood pressure is lower with the drug than it would have been if each did not take the drug. For James, however, the drug causes an *increase* in blood pressure. 
-
-One may calculate the **average treatment effect** (often abbreviated ATE) by taking the mean of all the causal effects.  Here, the mean is $-8$.
-
-Note that we can calculate the average treatment effect in this case because we are omniscient and know all the potential outcomes under both treatment and control.  We will soon see what assumptions we need to make in order to calculate the average treatment effect in the real world where only one potential outcome can ever be observed.  In particular, while we cannot estimate individual causal effects without very strong assumptions, randomized experiments can allow for good estimates of the ATE, as we will see later in this chapter.
-
-## The fundamental problem of causal inference
-
-The results we have seen up to this point could never be measured in practice. It is impossible, by definition, to observe the effects of more than one treatment on a single subject. Joe cannot both take the pill and not take the pill at the same time! Therefore, the data we actually observe would look something like this: 
-
-```{r, echo = FALSE}
-# First, we create a tibble with the values we want for the table
-
-tibble(subject = c("Joe", "Mary", "Sally", "Bob", "James", "MEAN"),
-       ytreat = c("130", "120", "?", "?", "115", "121.67"),
-       ycontrol = c("?", "?", "125", "130", "?", "127.5"),
-       ydiff = c("?", "?", "?", "?", "?", "-5.83")) %>%
-  
-  # Then, we use the gt function to make it pretty
-  
-  gt() %>%
-  cols_label(subject = md("$$\\mathbf{Subject}$$"),
-                ytreat = md("$$Y_t(u)$$"),
-                ycontrol = md("$$Y_c(u)$$"),
-                ydiff = md("$$Y_t(u) - Y_c(u)$$")) %>%
-  tab_style(cell_borders(sides = "right"),
-            location = cells_body(columns = vars(subject))) %>%
-  tab_style(cell_text(weight = "bold"),
-            location = cells_body(columns = vars(subject)))
-```
-
-Question marks are responses that could not be observed. The **Fundamental Problem of Causal Inference**^[Holland 1986.] is that directly observing unit-level causal effects is impossible. However, this does not make *causal inference* impossible. Certain techniques and assumptions allow the fundamental problem to be overcome.
-
-One way we could solve this problem is by filling in the missing values for treatment and control with the mean values.  That is, let's say we wanted to know what Joe's outcome would have been under control.  We then just plug in the observed mean ($127.5$) of the control observations for Joe's outcome:
+Let's go back to a simple version of the Rubin Table: six people and one binary treatment variable. One way we could solve this problem is by filling in the missing values for treatment and control with the mean values.  That is, let's say we wanted to know what Joe's outcome would have been under control.  We then just plug in the observed mean ($127.5$) of the control observations for Joe's outcome:
 
 ```{r, echo = FALSE}
 # First, we create a tibble with the values we want for the table
@@ -516,28 +828,9 @@ When dealing with human subjects, there is a particular concern regarding extern
 
 This can lead to a version of the above concern.  Suppose again that the blood pressure drug works when combined with a controlled diet, say a low-salt diet, but it doesn't work for those who have a high-salt diet.  If the subjects in the experiment are paying greater attention to their blood pressure than they otherwise would and thus are eating lower sodium diets than other people, one could make the mistaken inference that it was the blood pressure drug alone that led to a decrease in blood pressure, and not the combination of the drug and the experimental subjects' changing behavior.
 
-### Survey research and external validity
-
-<!-- DK: Move this higher. -->
-
-In political science and other social sciences, survey research poses some particular problems of external validity.  Let's say that you want to measure presidential approval among all U.S. voters.  How can you make sure that the sample you collect is representative of your sampling frame?  (In the language of survey sampling, the "sampling frame" is the population you want to study: here, voters in the United States.)
-
-The most natural approach is to engage in a simple random sample: each U.S. voter has the same probability of being in the survey.  This would ensure that one's sample was on average representative of the population, although there will still be some sampling error because the sample is finite.  About 139 million people voted in the 2016 general election,^[See [here](http://www.electproject.org/2016g).] so if one wanted a sample of 1,390 voters, one would like a sampling method that gives each voter an equivalent 0.001% chance of being surveyed.
-
-But of course, there's no method of assuring that each voter has an equivalent chance of being in your survey!  Let's say that you decided to conduct your survey via random digit dialing, where you call possible phone numbers at random and give your survey to those who answer.  There are many possible sources of bias in this measure:
-
-- Some voters may not have telephone numbers
-- Some voters may be more likely to answer the phone and take your survey than others
-- Some people may lie or misremember about whether they voted in the 2016 general election
-- More subtly, respondents' presidential approval may be affected by other questions you ask in the survey. (Perhaps this is what you are studying, for instance if you were testing the effect of a particular message on presidential approval, but if not, you need to be careful in interpreting your results.)
-
-And these are just the most obvious!  If you take a course in survey research, you'll learn more about the ways in which pollsters attempt to deal with these problems.
-
-With the growing popularity of survey experiments in social research, it is always worth considering how the sampling was conducted.
-
 ## Conclusion
 
-The causal effect of a treatment on a single unit at a point in time is the difference between the outcome variable with the treatment and without the treatment. The Fundamental Problem of Causal Inference is that it is impossible to observe the causal effect on a single unit. You either take the aspirin now or you don't. As a consequence, assumptions must be made in order to estimate the missing counterfactuals.
+The causal effect of a treatment on a single unit at a point in time is the difference between the outcome variable with the treatment and without the treatment. The Fundamental Problem of Causal Inference is that it is impossible to observe the causal effect on a single unit. You either take the blood pressure drug or you don't. As a consequence, assumptions must be made in order to estimate the missing counterfactuals.
 
 ## References
 
@@ -546,5 +839,3 @@ The causal effect of a treatment on a single unit at a point in time is the diff
 Cox, D. R. (1958). *Planning of Experiments.* Wiley.
 
 Holland, Paul W. (1986). "Statistics and Causal Inference." *J. Amer. Statist. Assoc.* 81 (396): 945–960. doi:10.1080/01621459.1986.10478354.
-
-Rubin, Donald (1974). "Estimating Causal Effects of Treatments in Randomized and Nonrandomized Studies." *J. Educ. Psychol.* 66 (5): 688–701 [p. 689]. doi:10.1037/h0037350.
