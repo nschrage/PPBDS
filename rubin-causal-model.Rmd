@@ -164,7 +164,7 @@ So missing data is not just a problem for estimating causal effects.  The mechan
 
 ### Potential outcomes: introduction to the Rubin Table
 
-Suppose that Joe is participating in an FDA test for a new hypertension drug. If we were omniscient, we would know the outcomes for Joe under both treatment (the new drug) and control (either no treatment or the current standard treatment). The causal effect, or treatment effect, is the difference between these two potential outcomes. We can present this with the following table of potential outcomes, which we will call a Rubin Table:
+Suppose that Joe is participating in an FDA test for a new hypertension drug. If we were omniscient, we would know the outcomes for Joe under both treatment (the new drug) and control (either no treatment or the current standard treatment). The causal effect, or treatment effect, is the difference between these two potential outcomes. We can present this with the following table of potential outcomes, which we will call a **Rubin Table**:
 
 <!-- AR: Should we stick with this notation? -->
 
@@ -456,7 +456,7 @@ tibble(subject = c("Joe", "Mary", "Sally", "Bob", "James", "MEAN"),
              ytreat = md("$$Y_{\\text{1000 mg}}(u)$$"),
              ytreat1001 = md("$$Y_{\\text{1001 mg}}(u)$$"),
              ytreat1002 = md("$$Y_{\\text{1002 mg}}(u)$$"),
-             yellipsis = md("$$Y_{\text{...}}(u)$$"),
+             yellipsis = md("$$Y_{\\text{...}}(u)$$"),
              ycontrol = md("$$Y_c(u)$$")) %>%
   tab_style(cell_borders(sides = "right"),
             location = cells_body(columns = vars(subject))) %>%
@@ -471,37 +471,15 @@ Thus, whenever you are considering a causal question, the best way to think abou
 
 ## How do we fill in the missing values?
 
-<!-- All the above starts with the introduction of the 6 person example. Are we ready, at this point, to talk about estimation? No! Right now, I think it goes a little quickly. Too early to start talking about ATE. Instead: -->
-
-<!-- Talk about how you fill in the question marks, but going back to the 6 people and just the treatment/control. Start case is that you can't fill them in. You can never know! Next step is that, even if you could know, everyone is different, so every causal effect is different. But not much you can do with that easier. So, we start making assumptions. And "assumption" means a "model," and all models have parameters.  -->
-
-<!-- One model might be that the causal effect is the same for everyone. There is a single parameter, tau, which we then estimate. Once we have an estimate, we can fill in the Rubin Table because, knowing it, we know what the unseen potential outcome is for each person. This provides another opportunity to introduce the concept of estimand, which is tau in this case. -->
-  
-<!-- A second model might be that the causal effect is the same within categories. That is, it is tau_1 for men and tau_2 for women.  A third model might be . . . The key concept is that we can't make any progress unless we make some assumptions. That is an inescapable result of the fundamental problem of causal inference. So we make some assumptions, which give us some models. -->
-
-
-
-<!-- DK: And now, finally, we can estimate ATE, as we do below. But we should highlight that this is just one model. A different model, like tau varies by gender, would require a different thing to estimate. ATE is not really special. It is just one model which allows us to fill in the question marks. So, we do this twice. Filling in the question marks differently each time. And this highlights the dilemma. We can never really know what Joe's outcome under control would have been. In fact, with just two different models, we have two different guesses. -->
-
-<!-- And now revisit the concept of estimand. Because things get a bit circular here! Let's say that the estimand we really care about is --- What is the lowest blood pressure after treatment? That is not an unreasonable thing to want to know. But we are not, under either of our two models, estimating that directly! Instead, we are estimating tau (or tau_1 and tau_2) and then using those estimates to populate the table. Then, with the complete table, we can get the number we really care about. We use one estimand (tau) to get another estimand (lowest blood pressure under treatment), rather than going for the second estimand immediately.  This is important. -->
-
-<!-- DK: Leftover discussion. Not sure it still matters.  How do we fill in the question marks? One answer: Take the mean of the column. Consider the control group. You have their blood pressure. If I find a new person, whose blood pressure you don't know, what would you guess? The mean, obviously. Fill those in. Now you can estimate the causal effect for each person, and the average causal effect. Cool! Is that a good model? No! It sucks, because you have information for each person you are not using: their blood pressure under the other outcome. How to use it? Make a new model in which there is a single parameter, tau, which is the constant treatment effect for everyone. Estimate that. Fill in the ?.  -->
-
-<!-- Only at the very end of this discussion to we mention that, even though there are a lot of estimands that one might be interested in, some, like ATE, are very popular. Then, go through ATE as an example. -->
-
-<!-- DK: At this point, we have Need to add uncertainty into the mix, both the uncertainty in estimating t and the uncertainty in predicting the ? for specific individuals. Maybe mention measurement error? Evn though we pretend that the potential outcomes are fixed (a long with pre-treatment covariates), we never know them exactly. Someone's blood pressure is never exactly 130. There is uncertainty, perhaps best considered as a PDF. And different people might have different amounts of uncertainty.  -->
-
-<!-- With that clear --- and is there a way to add a little normal distribution density to a RT? or something like that? --- we can go on to talk about the uncertainty in the unobserved potential outcome. Indeed, even if we could magically see it, there would still be a PDF because of measurement error. That is the minimum amount of uncertainty we deal with. There are two sources: model uncertainty, which goes away with big N, and individual variation which does not. Fill in the ? with those confidence intervals, the second much wider than the first. In explaining this, you may assume that someone has read the probability and Bayesian chapter of the book. -->
-
-Let's go back to a simple version of the Rubin Table: six people and one binary treatment variable. One way we could solve this problem is by filling in the missing values for treatment and control with the mean values.  That is, let's say we wanted to know what Joe's outcome would have been under control.  We then just plug in the observed mean ($127.5$) of the control observations for Joe's outcome:
+Let's return to our finite Rubin Table with six people and one treatment:
 
 ```{r, echo = FALSE}
 # First, we create a tibble with the values we want for the table
 
 tibble(subject = c("Joe", "Mary", "Sally", "Bob", "James", "MEAN"),
-       ytreat = c("130", "120", "121.67", "121.67", "115", "121.67"),
-       ycontrol = c("127.5", "127.5", "125", "130", "127.5", "127.5"),
-       ydiff = c("2.5", "-7.5", "-3.33", "-8.33", "-12.5", "-5.83")) %>%
+       ytreat = c("130", "120", "?", "?", "115", "121.67"),
+       ycontrol = c("?", "?", "125", "130", "?", "127.5"),
+       ydiff = c("?", "?", "?", "?", "?", "-5.83")) %>%
   
   # Then, we use the gt function to make it pretty
   
@@ -516,19 +494,35 @@ tibble(subject = c("Joe", "Mary", "Sally", "Bob", "James", "MEAN"),
             location = cells_body(columns = vars(subject)))
 ```
 
-We see that this method doesn't change our estimate of the treatment mean ($121.67$), the control mean ($127.5$), or the mean difference between treatment and control ($-5.83$).  However, it does allow us to make predictions for individual observations.  For example, now we predict that Joe's systolic blood pressure under control would have been $127.5$.
+How can we fill in the question marks?  Because of the fundamental problem of causal inference, we can never *know* what the values are for the missing values.  Furthermore, even if we could know, everyone is different, so every causal effect is different.  But we can't make any decisions unless we make some assumptions.  "Assumption" just means that we need a "model," and all models have parameters.
 
-But how confident should we be that Joe's outcome under control is $127.5$?  Not very!  Even if plugging in the average outcome value for the control observations is a good prediction for Joe (and it may well not be), we should recognize that we have a great deal of *uncertainty* about that value.  In Chapter \@ref(confidence-intervals), we show how to construct a *confidence interval* around a quantity of interest; later in this chapter we'll discuss *permutation tests*, a way of quantifying uncertainty for randomized experiences.
+One model might be that the causal effect is the same for everyone. There is a single parameter, $\tau$, which we then estimate. Once we have an estimate, we can fill in the Rubin Table because, knowing it, we know what the unseen potential outcome is for each person. Now our estimand is $\tau$; whether this is a good estimand depends on how close the real world conforms to our assumption that the causal effect is the same for everyone.
 
-However, with only two observations in the control group, we can simply note that we've observed values under control as low as $125$ and as high as $130$, so we don't have good reason to think that Joe's value will be precisely $127.5$.  Here's the same table, but with some makeshift confidence intervals, taken from the lowest and highest values observed under treatment and control:
+We'll talk more about how you might calculate $\tau$ later.  Right now, just know that if you had an estimate for $\tau$, you could add it to the observed value of every observation in the control group (or subtract it from the observed value of every observation in the treatment group), and thus fill in all the missing values.
+  
+A second model might be that the causal effect is the same within categories. For example, perhaps it is $\tau_1$ for men and $\tau_2$ for women.  A third model might be that the causal effect is a number $\tau$ multiplied by age: $\tau \times age$. The key concept is that we can't make any progress unless we make some assumptions. That is an inescapable result of the fundamental problem of causal inference. So we make some assumptions, which give us some models.
+
+Note that *some* estimands may not require filling in all the question marks in the Rubin Table.  For example, we'll see that with randomized assignment to treatment, we can get a good estimate of the *average* treatment effect even without filling in every question mark---the average treatment effect is just a single number.  If you wanted, however, to use your estimate of the average treatment effect to fill in the missing *individual* treatment effects, you would need an additional assumption, such as that the treatment effect is constant for everyone.
+
+### Average treatment effect
+
+The average treatment effect is the average difference in *potential* outcomes between the treated group and the control group.  As we noted before, this is a popular estimand.  Why?
+
+1. There's an obvious *estimator* for this estimand: the difference in *observed* outcomes between the treated group and the control group.
+1. If treatment is *randomly assigned*, the estimator is *unbiased*: you can be pretty confident in the estimate if you have a large enough treatment and control group.
+1. If you are willing to assume that the causal effect is the same for everyone (a big assumption!), you can use your estimate of the ATE to fill in the missing individual values in your Rubin Table.
+
+Note that just because the ATE is a convenient estimand doesn't necessarily mean that it is a useful one.  In particular, consider point #3.  Let's say that a treatment is very beneficial to women but mildly harmful to men.  You'd want to give the treatment only to women.  However, the average treatment effect, even if you estimate it correctly, will be a single positive number (since the beneficial effect for women is larger than the harmful effect for women).  So while our model to estimate the ATE is simple and thus alluring---with randomized treatment assignment, a difference in means will do the trick---don't assume that it's always the right model for your problem.
+
+Let's now walk through how we would estimate the ATE in our blood pressure example.
 
 ```{r, echo = FALSE}
 # First, we create a tibble with the values we want for the table
 
 tibble(subject = c("Joe", "Mary", "Sally", "Bob", "James", "MEAN"),
-       ytreat = c("130", "120", "121.67 (115, 130)", "121.67 (115, 130)", "115", "121.67"),
-       ycontrol = c("127.5 (125, 130)", "127.5 (125, 130)", "125", "130", "127.5 (125, 130)", "127.5"),
-       ydiff = c("2.5", "-7.5", "-3.33", "-8.33", "-12.5", "-5.83")) %>%
+       ytreat = c("130", "120", "?", "?", "115", "121.67"),
+       ycontrol = c("?", "?", "125", "130", "?", "127.5"),
+       ydiff = c("?", "?", "?", "?", "?", "-5.83")) %>%
   
   # Then, we use the gt function to make it pretty
   
@@ -543,14 +537,36 @@ tibble(subject = c("Joe", "Mary", "Sally", "Bob", "James", "MEAN"),
             location = cells_body(columns = vars(subject)))
 ```
 
+The simplest way to estimate the ATE is to take the mean of the treated group ($121.67$) and the mean of the control group ($127.5$) and then take the difference in those means ($-5.83$).  We'll call this estimate of the ATE $\widehat{ATE}$, pronounced "ATE-hat."
 
-We may wonder still whether this is a good estimate for Joe.  After all, we are guessing here that the treatment is likely to *raise* his blood pressure, given that his observed blood pressure under treatment was still higher than the average blood pressure under control ($130 > 127.5$).
+So estimating the ATE is easy.  But is our $\widehat{ATE}$ a good estimate of the true ATE?  After all, if we knew all the missing values in the Rubin Table, we could calculate the true ATE perfectly.  But those missing values may be wildly different from the observed values.  Consider this unobservable true Rubin Table:
 
-A way to make a better prediction for Joe is to use an estimate of the average treatment effect.  If we knew that the drug lowered blood pressure on average, that would help us make decisions even if we can't observe the causal effect of the drug on individual people (because we don't observe counterfactuals).
+```{r, echo = FALSE}
+# First, we create a tibble with the values we want for the table
 
-The most natural place to start is with the difference in the sample mean outcomes between treatment and control, $-5.83$.  Note that unlike earlier, this is an *estimate* of the ATE, not the ATE itself.  Why?  Because we have missing data!  For each unit, we only observe one of the potential outcomes.
+tibble(subject = c("Joe", "Mary", "Sally", "Bob", "James", "MEAN"),
+       ytreat = c("130", "120", "135", "140", "115", "128"),
+       ycontrol = c("120", "110", "125", "130", "105", "118"),
+       ydiff = c("+10", "+10", "+10", "+10", "+10", "+10")) %>%
+  
+  # Then, we use the gt function to make it pretty
+  
+  gt() %>%
+  cols_label(subject = md("$$\\mathbf{Subject}$$"),
+                ytreat = md("$$Y_t(u)$$"),
+                ycontrol = md("$$Y_c(u)$$"),
+                ydiff = md("$$Y_t(u) - Y_c(u)$$")) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(subject))) %>%
+  tab_style(cell_text(weight = "bold"),
+            location = cells_body(columns = vars(subject)))
+```
 
-Thus, another way we can fill in our missing values is by adding our estimate of the ATE to the observed value under control (for units in the control group) or by subtracting our estimate of the ATE from the observed value under treatment (for units in the treatment group), like so:
+In this example, there is indeed a single causal effect for everyone: $+10$.  Note that the *observed* values are all the same, but the unobserved values were such that our estimated ATE, $-5.83$, is pretty far from the real ATE, $+10$.
+
+We'll consider in a little bit when it is reasonable to assume that our estimate of the ATE is a good one.  (The best way, as we'll see, is randomized assignment to treatment.)
+
+But for now, let's assume we have a good estimate.  How can we use that to fill in the missing values in the Rubin Table?  Well, we'll need another assumption: that the treatment effect is the same for everyone. Let's  fill in our missing values is by adding our estimate of the ATE to the observed value under control (for units in the control group) or by subtracting our estimate of the ATE from the observed value under treatment (for units in the treatment group), like so:
 
 ```{r, echo = FALSE}
 # First, we create a tibble with the values we want for the table
@@ -573,10 +589,14 @@ tibble(subject = c("Joe", "Mary", "Sally", "Bob", "James", "MEAN"),
             location = cells_body(columns = vars(subject)))
 ```
 
-Do we think that if Joe didn't take the drug, his systolic blood pressure would be exactly $135.83$? Of course not! We have some uncertainty around these numbers, as well.  There are two main sources of uncertainty we have to take into account when making a prediction for Joe:
+Note that for some estimands, filling in the same causal effect for everyone would be nonsensical.  For example, let's say you were interested in the lowest potential blood pressure under treatment.  That's not an unreasonable thing to want to know!  But assuming that everyone has the same causal effect means that your estimate of the lowest potential blood pressure is either the smallest observed treatment value or the smallest observed control value minus your estimate of the ATE, whichever is smaller. This isn't a reasonable estimate of the lowest potential blood pressure under treatment.  Thus, we need a different model if we have a different estimand.
 
-1. **Uncertainty in estimating the ATE**.  Especially with five subjects, we may not have a good estimate of the ATE.  With this miniscule sample, the uncertainty might be gigantic, like ($-25$, $13$), which would lead to a prediction for Joe of ($117, 155$).  As we get a larger sample size, this uncertainty decreases.
+In general, do we think that if Joe didn't take the drug, his systolic blood pressure would be exactly $135.83$? Of course not! We have some uncertainty around these numbers.  There are two main sources of uncertainty we have to take into account when making a prediction for Joe:
+
+1. **Uncertainty in estimating the ATE**.  Even if treatment is randomly assigned, and thus we think our estimate of the ATE is unbiased, we still may not have a very precise estimate of the ATE if our sample is small.  With this miniscule sample (five sujects!), the uncertainty might be gigantic, perhaps someting like ($-25$, $13$), which would lead to a prediction for Joe of ($117, 155$).  As we get a larger sample size, this uncertainty decreases.  But remember the infinite Rubin Table!  We may not just be interested in the effect on Joe, a person in our sample, but on Tyrone, for whom we observe neither potential outcome.  Even if we have a good estimate of the ATE for *this sample*, it may be a bad estimate of the ATE for the *population* if not all people have the same chance of being included in our sample.
 1. **Individual variation**.  Even if we have a perfect estimate of the *average* treatment effect, it still may be the case that the effect *for Joe* is higher or lower than average.  We can assume this away if we say that the treatment effect is constant for everyone, but that is not likely to be true in the real world -- and this source of uncertainty does not go away simply by collecting more observations.  So with a large sample, let's say that we calculated a confidence interval around the ATE of ($-6, -5.67$), leading to an interval for Joe's outcome under control of ($135.67, 136$).  The uncertainty due to individual variation may still be a great deal higher---say ($120, 152$).  These numbers are simply illustrative, but they highlight an important point: even if you have a good estimate of the ATE, you should still be much more uncertain about the causal effect for any *particular individual*.
+
+The main takeaway is that we can get rid of #1 by collecting more data, but the only way to get rid of #2 is through making assumptions, potentially very strong ones.
 
 ### The assignment mechanism
 
