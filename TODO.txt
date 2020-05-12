@@ -1,5 +1,69 @@
 # Summer 
 
+## Book Building
+
+* [*Bookdown*](https://bookdown.org/yihui/bookdown/) is the key reference. [Hands-On Machine Learning with R](https://github.com/koalaverse/homlr) does the nicest job that I have seen in making clean Rmd go to clean html. See their [repo](https://bradleyboehmke.github.io/HOML/).
+
+* Clone/download and build book yourself. 
+
+* Is there an easy way to knit a single chapter? There ought to be, but I can't find it. Why doesn't bookdown::preview_chapter() work? We need a way for chapter-writers like Jessica to work, and, right now their chapter will not build.
+
+* Where does the book go? We currently use [Github pages](https://pages.github.com/). We should use a better location for the permanent version. We need separate locations: a permanent released version which does not change all semester and a development version which we work on live. Explore how ModernDive does things: [here](https://moderndive.com/) and [here](https://github.com/moderndive/ModernDive_book).  Come up with a plan to move the whole thing to Netifly and use [Github Actions](https://github.com/davidkane9/PPBDS/actions/new) [to deploy](https://www.hvitfeldt.me/blog/bookdown-netlify-github-actions/). I have a Netifly account. Sign up for a free account yourself and experiment.  
+
+* While pondering the above, experiment by setting up a release version using the code as of the [one release](https://github.com/davidkane9/PPBDS/releases/tag/v1.0) which I tagged. We can do this "by hand" the first time. The [545 book](https://github.com/rstudio-education/stat545) may handle this intelligently. Maybe we need to create a branch for such a release?
+
+* Get Github Actions working. Explore how to use Github actions to check that the book is working each time someone makes a change. Continuous integration is the nectar of the Gods.
+
+* `knitr::include_graphics()` does not seem to produce an error when we build the book, even if the file is missing. How can we make sure it does error? And what should our standard use of this tool look like? One approach: [Using Images in Figures](http://zevross.com/blog/2017/06/19/tips-and-tricks-for-working-with-images-and-figures-in-r-markdown-documents/).  Related: Offer an opinion about the best way to include Allison's [cartoons](https://github.com/allisonhorst/stats-illustrations). We don't want to include all these and then have to edit them all.
+
+
+* What default options do we need, and where are they set. The index.Rmd file used to include:
+
+# options(width = 80, digits = 7, bookdown.clean_book = TRUE, knitr.kable.NA = 'NA')
+# 
+# knitr::opts_chunk$set(
+#   tidy = FALSE, 
+#   out.width = '\\textwidth', 
+#   fig.align = "center", 
+#   comment = NA) 
+
+I just deleted it. Does it matter? This seems like a hack, especially for when you want to compile a single chapter. What is the cool way to handle that?
+
+* How can we make the book build faster? Maybe we should use cache=TRUE for the slow chunks. But which chunks are those?
+
+* Build it under 4.0.
+
+* How do we print it? I like the PDF version of Rafa's [book](https://leanpub.com/datasciencebook) available from Lean Pub. How hard is that to make?  
+
+* Is there a way to print out messages during the book building process so that you know where the process is? Recall that we can't (?) use R code chunk names because duplicate code chunk names cause (still?) the process to blow up.
+
+* Think about the data directory. Do we really need all these files? Couldn't we create them on the fly? What do we do when we need to update them?
+
+* Think about the images directory. What a pile of crap! Do we need all these? How can we re-organize to make it more maintainable in the future. Maybe start by making a new img/ directory and then just moving over the images we are currently using?
+
+* Think about the bib/ directory. We need to fix our citations. Automate the citation of whatever packages we are using. The references are a mess, put together from 3 different original sources. First, there a bib directory, with three files in it. Second, within index.Rmd there was a call to knitr::write_bib, which is a famously dangerous and confusing function. I guess that this creates packages.bib. (I have since deleted this.) Third, there is the links.md file, which is supposed to replace a lot of the references like @R-readr, mainly in chapter 2. That seems not to work at all. Come up with a plan to deal with all these.
+
+* Think about packages. Note that the [545 book](https://github.com/rstudio-education/stat545) uses a fairly sophisticated plan, involving the new **renv** package.
+
+
+* Can you rebuild just a single chapter and then commit/push it? Right now, I have to rebuild the whole thing each time I want to make a single change. Takes too long.
+
+
+* How do we centralize the loading of packages? What is our plan for loading libraries and removing them when they are no longer need? Chapter 11 contained an annoying bug: rvest and purrr both have pluck() as a function. Need to ensure that you get the purrr version if you need it. Bug only showed up when Chapter 5 (with rvest loaded) was used in the build. Organize packages. What are all the packages we need? How do we ensure that we cite them all, as we should? Where do we load them? Again, there must be best practices for stuff like this. Only use high quality packages, and recommend the same to readers. When are different packages introduced? Where is this written down? Need to be intentional about what we introduced outside of the tidyverse --- janitor, ggthemes, reprex, fs, skimr, gt, googlesheets4, infer, gtsummary --- and when we do it. One annoyance is that new contributors have to try to compile the book a dozen times before it will work because there is no way to know, ahead of time, which packages are required. Make the book an R package?
+
+* Consider the use of before_chapter_script: "_common.R" in the DS _bookdown.yml as well as the associated _common.R file. Is this an approach we should copy? The lack of this why I can't get all the DS chapters to work. Combine _common.R, common.R and index.Rmd information into one place. Need to figure out how this works in bookdown. I think we need one file which only runs once when you make the book. That files does a bunch of stuff involving copying over files. But you don't maintain state after running that file, so any new functions are lost. Then you have a second file, like _common.R, which is run at the start of compiling each chapter.
+
+* The book has lots of references, especially to other chapters. Many of these don't work because the referred-to chapters don't exist. We need a thorough clean up.
+
+* Deal with bibliography. Our source books use very different approaches. write_bib() is infamous for making trouble. I like the way that MD writes out new versions of citations associated with R packages that have been updated.
+
+* Seems like all chapters generate references at the end. That is fine, but it should be standardized. Or do all those references belong at the end?
+
+
+
+
+
+
 The world confronts us. We must make decisions. The data we want is missing. So, we create models, make estimates, admit to our uncertainty, and then decide. 
 
 ## Unclassified Items
@@ -26,6 +90,19 @@ The world confronts us. We must make decisions. The data we want is missing. So,
 plot(cars)
 ```
 ````
+
+### From the Bookdown book
+
+preview_chapter() and serve_book() as aid to chapter writers. 
+
+webshot() tool for including images taken from webpages. Everytime we mention how cool source X is, we should provide a webshot of it. (And we should test that it exists.) Make the productivity chapter include way less of our prose.
+
+switch to tufte() style, ask Healy.
+
+Kindle book
+
+put the book on bookdown.org, or class assignments
+
 
 Key concepts which need to be put everywhere:
 
