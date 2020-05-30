@@ -6,7 +6,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <title>10.2 Uncertainty in simple linear regressions | Preceptor’s Primer for Bayesian Data Science</title>
   <meta name="description" content="10.2 Uncertainty in simple linear regressions | Preceptor’s Primer for Bayesian Data Science" />
-  <meta name="generator" content="bookdown 0.17 and GitBook 2.6.7" />
+  <meta name="generator" content="bookdown 0.19 and GitBook 2.6.7" />
 
   <meta property="og:title" content="10.2 Uncertainty in simple linear regressions | Preceptor’s Primer for Bayesian Data Science" />
   <meta property="og:type" content="book" />
@@ -24,7 +24,7 @@
 <meta name="author" content="David Kane" />
 
 
-<meta name="date" content="2020-05-16" />
+<meta name="date" content="2020-05-30" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -608,13 +608,13 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <h2><span class="header-section-number">10.2</span> Uncertainty in simple linear regressions</h2>
 <p>You might be wondering what the remaining five columns created by <code>tidy()</code> are: <code>std.error</code>, <code>statistic</code>, <code>p.value</code>, <code>conf.low</code> and <code>conf.high</code>. They are the <em>standard error</em>, <em>test statistic</em>, <em>p-value</em>, <em>lower 95% confidence interval bound</em>, and <em>upper 95% confidence interval bound</em>. We will focus on the confidence interval bounds. We have already explored the concept of confidence intervals in Chapter <a href="confidence-intervals.html#confidence-intervals">7</a>. These bounds are an application of the same concept, but applied to the slope of our simple linear regression.</p>
 <p>Let’s load the <strong>infer</strong> package. We’re going to use the function <code>rep_sample_n()</code> to resample from our data 1,000 times:</p>
-<div class="sourceCode" id="cb689"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb689-1"><a href="uncertainty-in-simple-linear-regressions.html#cb689-1"></a><span class="kw">library</span>(infer)</span>
-<span id="cb689-2"><a href="uncertainty-in-simple-linear-regressions.html#cb689-2"></a></span>
-<span id="cb689-3"><a href="uncertainty-in-simple-linear-regressions.html#cb689-3"></a>x &lt;-<span class="st"> </span>evals_ch11 <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb689-4"><a href="uncertainty-in-simple-linear-regressions.html#cb689-4"></a><span class="st">  </span><span class="kw">select</span>(score, bty_avg) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb689-5"><a href="uncertainty-in-simple-linear-regressions.html#cb689-5"></a><span class="st">  </span><span class="kw">rep_sample_n</span>(<span class="dt">size =</span> <span class="kw">nrow</span>(evals_ch11), <span class="dt">replace =</span> <span class="ot">TRUE</span>, <span class="dt">reps =</span> <span class="dv">1000</span>)</span>
-<span id="cb689-6"><a href="uncertainty-in-simple-linear-regressions.html#cb689-6"></a></span>
-<span id="cb689-7"><a href="uncertainty-in-simple-linear-regressions.html#cb689-7"></a>x</span></code></pre></div>
+<div class="sourceCode" id="cb690"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb690-1"><a href="uncertainty-in-simple-linear-regressions.html#cb690-1"></a><span class="kw">library</span>(infer)</span>
+<span id="cb690-2"><a href="uncertainty-in-simple-linear-regressions.html#cb690-2"></a></span>
+<span id="cb690-3"><a href="uncertainty-in-simple-linear-regressions.html#cb690-3"></a>x &lt;-<span class="st"> </span>evals_ch11 <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb690-4"><a href="uncertainty-in-simple-linear-regressions.html#cb690-4"></a><span class="st">  </span><span class="kw">select</span>(score, bty_avg) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb690-5"><a href="uncertainty-in-simple-linear-regressions.html#cb690-5"></a><span class="st">  </span><span class="kw">rep_sample_n</span>(<span class="dt">size =</span> <span class="kw">nrow</span>(evals_ch11), <span class="dt">replace =</span> <span class="ot">TRUE</span>, <span class="dt">reps =</span> <span class="dv">1000</span>)</span>
+<span id="cb690-6"><a href="uncertainty-in-simple-linear-regressions.html#cb690-6"></a></span>
+<span id="cb690-7"><a href="uncertainty-in-simple-linear-regressions.html#cb690-7"></a>x</span></code></pre></div>
 <pre><code>## # A tibble: 463,000 x 3
 ## # Groups:   replicate [1,000]
 ##    replicate score bty_avg
@@ -632,11 +632,11 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 ## # … with 462,990 more rows</code></pre>
 <p>For each <code>replicate</code>, we have 463 resamples of <code>score</code> and <code>bty_avg</code>.</p>
 <p>Next, we are going to introduce a new function: <code>nest()</code>:</p>
-<div class="sourceCode" id="cb691"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb691-1"><a href="uncertainty-in-simple-linear-regressions.html#cb691-1"></a>x &lt;-<span class="st"> </span>x <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb691-2"><a href="uncertainty-in-simple-linear-regressions.html#cb691-2"></a><span class="st">  </span><span class="kw">group_by</span>(replicate) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb691-3"><a href="uncertainty-in-simple-linear-regressions.html#cb691-3"></a><span class="st">  </span><span class="kw">nest</span>()</span>
-<span id="cb691-4"><a href="uncertainty-in-simple-linear-regressions.html#cb691-4"></a></span>
-<span id="cb691-5"><a href="uncertainty-in-simple-linear-regressions.html#cb691-5"></a>x</span></code></pre></div>
+<div class="sourceCode" id="cb692"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb692-1"><a href="uncertainty-in-simple-linear-regressions.html#cb692-1"></a>x &lt;-<span class="st"> </span>x <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb692-2"><a href="uncertainty-in-simple-linear-regressions.html#cb692-2"></a><span class="st">  </span><span class="kw">group_by</span>(replicate) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb692-3"><a href="uncertainty-in-simple-linear-regressions.html#cb692-3"></a><span class="st">  </span><span class="kw">nest</span>()</span>
+<span id="cb692-4"><a href="uncertainty-in-simple-linear-regressions.html#cb692-4"></a></span>
+<span id="cb692-5"><a href="uncertainty-in-simple-linear-regressions.html#cb692-5"></a>x</span></code></pre></div>
 <pre><code>## # A tibble: 1,000 x 2
 ## # Groups:   replicate [1,000]
 ##    replicate data              
@@ -656,10 +656,10 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <!-- DK: This transition goes a bit fast. We need to take a tour of the tibbles in data. Look at one. Look at another. See that they are different. Explain how this is a more industrial strength way of using rep_sample(). But maybe that means that rep_sample_n(), used alone, is a bad hack. Maybe we should have done it this way, with nest(), in chapters 9 and 10. In fact, maybe we could get rid of rep_sample_n and use something in **rsample** to accomplish these two steps. -->
 <p>Now, we can use <code>map()</code> to run our linear regression for each dataset:</p>
 <!-- DK: Whoah! Note that this use of "." is different than the "." that we saw before. Or, rather, a "." within a map function refers to the next item in the list which is driving the map. -->
-<div class="sourceCode" id="cb693"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb693-1"><a href="uncertainty-in-simple-linear-regressions.html#cb693-1"></a>x &lt;-<span class="st"> </span>x <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb693-2"><a href="uncertainty-in-simple-linear-regressions.html#cb693-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">mod =</span> <span class="kw">map</span>(data, <span class="op">~</span><span class="st"> </span><span class="kw">lm</span>(score <span class="op">~</span><span class="st"> </span>bty_avg, <span class="dt">data =</span> .)))</span>
-<span id="cb693-3"><a href="uncertainty-in-simple-linear-regressions.html#cb693-3"></a></span>
-<span id="cb693-4"><a href="uncertainty-in-simple-linear-regressions.html#cb693-4"></a>x</span></code></pre></div>
+<div class="sourceCode" id="cb694"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb694-1"><a href="uncertainty-in-simple-linear-regressions.html#cb694-1"></a>x &lt;-<span class="st"> </span>x <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb694-2"><a href="uncertainty-in-simple-linear-regressions.html#cb694-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">mod =</span> <span class="kw">map</span>(data, <span class="op">~</span><span class="st"> </span><span class="kw">lm</span>(score <span class="op">~</span><span class="st"> </span>bty_avg, <span class="dt">data =</span> .)))</span>
+<span id="cb694-3"><a href="uncertainty-in-simple-linear-regressions.html#cb694-3"></a></span>
+<span id="cb694-4"><a href="uncertainty-in-simple-linear-regressions.html#cb694-4"></a>x</span></code></pre></div>
 <pre><code>## # A tibble: 1,000 x 3
 ## # Groups:   replicate [1,000]
 ##    replicate data               mod   
@@ -679,10 +679,10 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <p>In this case, <code>map()</code> is iterating over <code>data</code>, which is a column in the tibble <code>x</code>. <code>map()</code> goes through each item of <code>data</code>, passing each to the function which is its <code>.f</code> input, in this case an anonymous function built around <code>lm()</code>. So, each time <code>lm()</code> runs it is using a different row from the <code>data</code> variable. <code>map()</code> is iterating over <code>data</code>, passing each element in <code>data</code> as an argument to <code>lm()</code>.</p>
 <p>Now we have a new list column, <code>mod</code>, that contains the model objects created by <code>lm()</code>. We will now want to <code>tidy()</code> the object created by <code>lm()</code>:</p>
 <!-- DK: Again, too fast! Need to look at mod. Show us the first model. Show us the second. They are different. Why? Is this what you expected? -->
-<div class="sourceCode" id="cb695"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb695-1"><a href="uncertainty-in-simple-linear-regressions.html#cb695-1"></a>x &lt;-<span class="st"> </span>x <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb695-2"><a href="uncertainty-in-simple-linear-regressions.html#cb695-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">reg_results =</span> <span class="kw">map</span>(mod, <span class="op">~</span><span class="st"> </span><span class="kw">tidy</span>(.)))</span>
-<span id="cb695-3"><a href="uncertainty-in-simple-linear-regressions.html#cb695-3"></a></span>
-<span id="cb695-4"><a href="uncertainty-in-simple-linear-regressions.html#cb695-4"></a>x</span></code></pre></div>
+<div class="sourceCode" id="cb696"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb696-1"><a href="uncertainty-in-simple-linear-regressions.html#cb696-1"></a>x &lt;-<span class="st"> </span>x <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb696-2"><a href="uncertainty-in-simple-linear-regressions.html#cb696-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">reg_results =</span> <span class="kw">map</span>(mod, <span class="op">~</span><span class="st"> </span><span class="kw">tidy</span>(.)))</span>
+<span id="cb696-3"><a href="uncertainty-in-simple-linear-regressions.html#cb696-3"></a></span>
+<span id="cb696-4"><a href="uncertainty-in-simple-linear-regressions.html#cb696-4"></a>x</span></code></pre></div>
 <pre><code>## # A tibble: 1,000 x 4
 ## # Groups:   replicate [1,000]
 ##    replicate data               mod    reg_results     
@@ -700,10 +700,10 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 ## # … with 990 more rows</code></pre>
 <p><code>tidy()</code> stores the coefficients in the <code>estimate</code> column, with each coefficient named in the <code>term</code> column. Thus, if we <code>filter()</code> by <code>term</code> and <code>pull(estimate)</code>, we can get the regression coefficient for each bootstrap sample:</p>
 <!-- DK: Show us this! And talk about this anonymous function, built from two parts. -->
-<div class="sourceCode" id="cb697"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb697-1"><a href="uncertainty-in-simple-linear-regressions.html#cb697-1"></a>x &lt;-<span class="st"> </span>x <span class="op">%&gt;%</span></span>
-<span id="cb697-2"><a href="uncertainty-in-simple-linear-regressions.html#cb697-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">disp_coef =</span> <span class="kw">map_dbl</span>(reg_results, <span class="op">~</span><span class="st"> </span><span class="kw">filter</span>(., term <span class="op">==</span><span class="st"> &quot;bty_avg&quot;</span>) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">pull</span>(estimate)))</span>
-<span id="cb697-3"><a href="uncertainty-in-simple-linear-regressions.html#cb697-3"></a></span>
-<span id="cb697-4"><a href="uncertainty-in-simple-linear-regressions.html#cb697-4"></a>x</span></code></pre></div>
+<div class="sourceCode" id="cb698"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb698-1"><a href="uncertainty-in-simple-linear-regressions.html#cb698-1"></a>x &lt;-<span class="st"> </span>x <span class="op">%&gt;%</span></span>
+<span id="cb698-2"><a href="uncertainty-in-simple-linear-regressions.html#cb698-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">disp_coef =</span> <span class="kw">map_dbl</span>(reg_results, <span class="op">~</span><span class="st"> </span><span class="kw">filter</span>(., term <span class="op">==</span><span class="st"> &quot;bty_avg&quot;</span>) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">pull</span>(estimate)))</span>
+<span id="cb698-3"><a href="uncertainty-in-simple-linear-regressions.html#cb698-3"></a></span>
+<span id="cb698-4"><a href="uncertainty-in-simple-linear-regressions.html#cb698-4"></a>x</span></code></pre></div>
 <pre><code>## # A tibble: 1,000 x 5
 ## # Groups:   replicate [1,000]
 ##    replicate data               mod    reg_results      disp_coef
@@ -720,9 +720,9 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 ## 10        10 &lt;tibble [463 × 2]&gt; &lt;lm&gt;   &lt;tibble [2 × 5]&gt;    0.0693
 ## # … with 990 more rows</code></pre>
 <p>Now that we have 1,000 estimates from our bootstrap samples, we can construct a percentile-based confidence interval easily:</p>
-<div class="sourceCode" id="cb699"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb699-1"><a href="uncertainty-in-simple-linear-regressions.html#cb699-1"></a>x <span class="op">%&gt;%</span></span>
-<span id="cb699-2"><a href="uncertainty-in-simple-linear-regressions.html#cb699-2"></a><span class="st"> </span><span class="kw">pull</span>(disp_coef) <span class="op">%&gt;%</span></span>
-<span id="cb699-3"><a href="uncertainty-in-simple-linear-regressions.html#cb699-3"></a><span class="st"> </span><span class="kw">quantile</span>(<span class="kw">c</span>(<span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb700"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb700-1"><a href="uncertainty-in-simple-linear-regressions.html#cb700-1"></a>x <span class="op">%&gt;%</span></span>
+<span id="cb700-2"><a href="uncertainty-in-simple-linear-regressions.html#cb700-2"></a><span class="st"> </span><span class="kw">pull</span>(disp_coef) <span class="op">%&gt;%</span></span>
+<span id="cb700-3"><a href="uncertainty-in-simple-linear-regressions.html#cb700-3"></a><span class="st"> </span><span class="kw">quantile</span>(<span class="kw">c</span>(<span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span>))</span></code></pre></div>
 <pre><code>##   2.5%    50%  97.5% 
 ## 0.0321 0.0654 0.0998</code></pre>
 <p>Now let’s return to our example for Joe. Since our slope coefficient is measured with some uncertainty, our estimate of his potential outcome under the “treatment” of having a “beauty” score of 8 is also measured with some uncertainty, and that should be reflected in our table:</p>
@@ -766,10 +766,10 @@ $<span class="math inline">\(4.067\)</span> <span class="math inline">\((4.034,\
 <div id="using-lm-and-tidy-as-a-shortcut-2" class="section level3">
 <h3><span class="header-section-number">10.2.1</span> Using <code>lm()</code> and <code>tidy()</code> as a shortcut</h3>
 <p>While this process is relatively straightforward, there’s a simple shortcut we can use. Take a look at the results from <code>score_model %&gt;% tidy(conf.int = TRUE)</code>:</p>
-<div class="sourceCode" id="cb701"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb701-1"><a href="uncertainty-in-simple-linear-regressions.html#cb701-1"></a>score_model <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb701-2"><a href="uncertainty-in-simple-linear-regressions.html#cb701-2"></a><span class="st">  </span><span class="kw">tidy</span>(<span class="dt">conf.int =</span> <span class="ot">TRUE</span>) <span class="op">%&gt;%</span></span>
-<span id="cb701-3"><a href="uncertainty-in-simple-linear-regressions.html#cb701-3"></a><span class="st">  </span><span class="kw">filter</span>(term <span class="op">==</span><span class="st"> &quot;bty_avg&quot;</span>) <span class="op">%&gt;%</span></span>
-<span id="cb701-4"><a href="uncertainty-in-simple-linear-regressions.html#cb701-4"></a><span class="st">  </span><span class="kw">select</span>(estimate, conf.low, conf.high)</span></code></pre></div>
+<div class="sourceCode" id="cb702"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb702-1"><a href="uncertainty-in-simple-linear-regressions.html#cb702-1"></a>score_model <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb702-2"><a href="uncertainty-in-simple-linear-regressions.html#cb702-2"></a><span class="st">  </span><span class="kw">tidy</span>(<span class="dt">conf.int =</span> <span class="ot">TRUE</span>) <span class="op">%&gt;%</span></span>
+<span id="cb702-3"><a href="uncertainty-in-simple-linear-regressions.html#cb702-3"></a><span class="st">  </span><span class="kw">filter</span>(term <span class="op">==</span><span class="st"> &quot;bty_avg&quot;</span>) <span class="op">%&gt;%</span></span>
+<span id="cb702-4"><a href="uncertainty-in-simple-linear-regressions.html#cb702-4"></a><span class="st">  </span><span class="kw">select</span>(estimate, conf.low, conf.high)</span></code></pre></div>
 <pre><code>## # A tibble: 1 x 3
 ##   estimate conf.low conf.high
 ##      &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;
@@ -829,10 +829,10 @@ FIGURE 10.7: Example of observed value, fitted value, and residual.
 </div>
 <p>Now say we want to compute both the fitted value <span class="math inline">\(\widehat{y} = b_0 + b_1 \cdot x\)</span> and the residual <span class="math inline">\(y - \widehat{y}\)</span> for <em>all</em> 463 courses in the study. Recall that each course corresponds to one of the 463 rows in the <code>evals_ch11</code> data frame and also one of the 463 points in the regression plot.</p>
 <p>We could repeat the previous calculations we performed by hand 463 times, but that would be tedious and time consuming. Instead, let’s do this using a computer with the <code>augment()</code> function in the <strong>broom</strong> package. Let’s apply the <code>augment()</code> function to <code>score_model</code>, which is where we saved our <code>lm()</code> model in the previous section. We present the results of only the 21st through 24th courses for brevity’s sake.</p>
-<div class="sourceCode" id="cb704"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb704-1"><a href="uncertainty-in-simple-linear-regressions.html#cb704-1"></a>regression_points &lt;-<span class="st"> </span>score_model <span class="op">%&gt;%</span></span>
-<span id="cb704-2"><a href="uncertainty-in-simple-linear-regressions.html#cb704-2"></a><span class="st">  </span><span class="kw">augment</span>() <span class="op">%&gt;%</span></span>
-<span id="cb704-3"><a href="uncertainty-in-simple-linear-regressions.html#cb704-3"></a><span class="st">  </span><span class="kw">select</span>(score, bty_avg, .fitted, .resid)</span>
-<span id="cb704-4"><a href="uncertainty-in-simple-linear-regressions.html#cb704-4"></a>regression_points</span></code></pre></div>
+<div class="sourceCode" id="cb705"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb705-1"><a href="uncertainty-in-simple-linear-regressions.html#cb705-1"></a>regression_points &lt;-<span class="st"> </span>score_model <span class="op">%&gt;%</span></span>
+<span id="cb705-2"><a href="uncertainty-in-simple-linear-regressions.html#cb705-2"></a><span class="st">  </span><span class="kw">augment</span>() <span class="op">%&gt;%</span></span>
+<span id="cb705-3"><a href="uncertainty-in-simple-linear-regressions.html#cb705-3"></a><span class="st">  </span><span class="kw">select</span>(score, bty_avg, .fitted, .resid)</span>
+<span id="cb705-4"><a href="uncertainty-in-simple-linear-regressions.html#cb705-4"></a>regression_points</span></code></pre></div>
 <table>
 <caption>
 <span id="tab:unnamed-chunk-387">TABLE 10.5: </span>Regression points (for only the 21st through 24th courses)
@@ -928,9 +928,9 @@ bty_avg
 </ul>
 <p>At this point, you can skip ahead if you like to Section <a href="leastsquares.html#leastsquares">10.5</a> to learn about the processes behind what makes “best-fitting” regression lines. As a primer, a “best-fitting” line refers to the line that minimizes the <em>sum of squared residuals</em> out of all possible lines we can draw through the points. In Section <a href="model2.html#model2">10.3</a>, we’ll discuss another common scenario of having a categorical explanatory variable and a numerical outcome variable.</p>
 <p>Constructing a measure of uncertainty around the fitted values can also be done using the <code>augment()</code> function. The simplest way to do this is through the standard error method that we learned in the last chapter. Note that <code>augment()</code> saves the standard errors of the fitted values in a column called <code>.se.fit</code>:</p>
-<div class="sourceCode" id="cb705"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb705-1"><a href="uncertainty-in-simple-linear-regressions.html#cb705-1"></a>score_model <span class="op">%&gt;%</span></span>
-<span id="cb705-2"><a href="uncertainty-in-simple-linear-regressions.html#cb705-2"></a><span class="st">  </span><span class="kw">augment</span>() <span class="op">%&gt;%</span></span>
-<span id="cb705-3"><a href="uncertainty-in-simple-linear-regressions.html#cb705-3"></a><span class="st">  </span><span class="kw">select</span>(score, bty_avg, .fitted, .se.fit, .resid)</span></code></pre></div>
+<div class="sourceCode" id="cb706"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb706-1"><a href="uncertainty-in-simple-linear-regressions.html#cb706-1"></a>score_model <span class="op">%&gt;%</span></span>
+<span id="cb706-2"><a href="uncertainty-in-simple-linear-regressions.html#cb706-2"></a><span class="st">  </span><span class="kw">augment</span>() <span class="op">%&gt;%</span></span>
+<span id="cb706-3"><a href="uncertainty-in-simple-linear-regressions.html#cb706-3"></a><span class="st">  </span><span class="kw">select</span>(score, bty_avg, .fitted, .se.fit, .resid)</span></code></pre></div>
 <pre><code>## # A tibble: 463 x 5
 ##    score bty_avg .fitted .se.fit   .resid
 ##    &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;    &lt;dbl&gt;
@@ -946,11 +946,11 @@ bty_avg
 ## 10   4.5    3.17    4.09  0.0321  0.409  
 ## # … with 453 more rows</code></pre>
 <p>Now that we have the standard error of the fitted values, we can construct a confidence interval easily:</p>
-<div class="sourceCode" id="cb707"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb707-1"><a href="uncertainty-in-simple-linear-regressions.html#cb707-1"></a>score_model <span class="op">%&gt;%</span></span>
-<span id="cb707-2"><a href="uncertainty-in-simple-linear-regressions.html#cb707-2"></a><span class="st">  </span><span class="kw">augment</span>() <span class="op">%&gt;%</span></span>
-<span id="cb707-3"><a href="uncertainty-in-simple-linear-regressions.html#cb707-3"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">conf.low =</span> .fitted <span class="op">-</span><span class="st"> </span><span class="dv">2</span> <span class="op">*</span><span class="st"> </span>.se.fit,</span>
-<span id="cb707-4"><a href="uncertainty-in-simple-linear-regressions.html#cb707-4"></a>         <span class="dt">conf.high =</span> .fitted <span class="op">+</span><span class="st"> </span><span class="dv">2</span> <span class="op">*</span><span class="st"> </span>.se.fit) <span class="op">%&gt;%</span></span>
-<span id="cb707-5"><a href="uncertainty-in-simple-linear-regressions.html#cb707-5"></a><span class="st">  </span><span class="kw">select</span>(score, bty_avg, .fitted, conf.low, conf.high, .resid)</span></code></pre></div>
+<div class="sourceCode" id="cb708"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb708-1"><a href="uncertainty-in-simple-linear-regressions.html#cb708-1"></a>score_model <span class="op">%&gt;%</span></span>
+<span id="cb708-2"><a href="uncertainty-in-simple-linear-regressions.html#cb708-2"></a><span class="st">  </span><span class="kw">augment</span>() <span class="op">%&gt;%</span></span>
+<span id="cb708-3"><a href="uncertainty-in-simple-linear-regressions.html#cb708-3"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">conf.low =</span> .fitted <span class="op">-</span><span class="st"> </span><span class="dv">2</span> <span class="op">*</span><span class="st"> </span>.se.fit,</span>
+<span id="cb708-4"><a href="uncertainty-in-simple-linear-regressions.html#cb708-4"></a>         <span class="dt">conf.high =</span> .fitted <span class="op">+</span><span class="st"> </span><span class="dv">2</span> <span class="op">*</span><span class="st"> </span>.se.fit) <span class="op">%&gt;%</span></span>
+<span id="cb708-5"><a href="uncertainty-in-simple-linear-regressions.html#cb708-5"></a><span class="st">  </span><span class="kw">select</span>(score, bty_avg, .fitted, conf.low, conf.high, .resid)</span></code></pre></div>
 <pre><code>## # A tibble: 463 x 6
 ##    score bty_avg .fitted conf.low conf.high   .resid
 ##    &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;    &lt;dbl&gt;

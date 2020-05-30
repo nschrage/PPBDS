@@ -6,7 +6,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <title>7.3 Width of confidence intervals | Preceptor’s Primer for Bayesian Data Science</title>
   <meta name="description" content="7.3 Width of confidence intervals | Preceptor’s Primer for Bayesian Data Science" />
-  <meta name="generator" content="bookdown 0.17 and GitBook 2.6.7" />
+  <meta name="generator" content="bookdown 0.19 and GitBook 2.6.7" />
 
   <meta property="og:title" content="7.3 Width of confidence intervals | Preceptor’s Primer for Bayesian Data Science" />
   <meta property="og:type" content="book" />
@@ -24,7 +24,7 @@
 <meta name="author" content="David Kane" />
 
 
-<meta name="date" content="2020-05-16" />
+<meta name="date" content="2020-05-30" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -617,15 +617,15 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <p>Specifically, we’ll first take 30 different random samples of size <span class="math inline">\(n = 50\)</span> balls from the urn. Then we’ll construct ten percentile-based confidence intervals using each of the three different confidence levels.</p>
 <p>Finally, we’ll compare the widths of these intervals.</p>
 <p>We’ll start by walking through the process for the 80% confidence intervals. We begin by taking 10 random samples from the urn of size <span class="math inline">\(n = 50\)</span>:</p>
-<div class="sourceCode" id="cb620"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb620-1"><a href="ci-width.html#cb620-1"></a><span class="kw">set.seed</span>(<span class="dv">9</span>)</span>
-<span id="cb620-2"><a href="ci-width.html#cb620-2"></a></span>
-<span id="cb620-3"><a href="ci-width.html#cb620-3"></a><span class="co"># Compute 80% confidence intervals</span></span>
-<span id="cb620-4"><a href="ci-width.html#cb620-4"></a></span>
-<span id="cb620-5"><a href="ci-width.html#cb620-5"></a><span class="co"># Get 10 random samples</span></span>
-<span id="cb620-6"><a href="ci-width.html#cb620-6"></a></span>
-<span id="cb620-7"><a href="ci-width.html#cb620-7"></a>perc_cis_<span class="dv">80</span> &lt;-<span class="st"> </span>urn <span class="op">%&gt;%</span></span>
-<span id="cb620-8"><a href="ci-width.html#cb620-8"></a><span class="st">  </span><span class="kw">rep_sample_n</span>(<span class="dt">size =</span> <span class="dv">50</span>, <span class="dt">reps =</span> <span class="dv">10</span>)</span>
-<span id="cb620-9"><a href="ci-width.html#cb620-9"></a>perc_cis_<span class="dv">80</span></span></code></pre></div>
+<div class="sourceCode" id="cb621"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb621-1"><a href="ci-width.html#cb621-1"></a><span class="kw">set.seed</span>(<span class="dv">9</span>)</span>
+<span id="cb621-2"><a href="ci-width.html#cb621-2"></a></span>
+<span id="cb621-3"><a href="ci-width.html#cb621-3"></a><span class="co"># Compute 80% confidence intervals</span></span>
+<span id="cb621-4"><a href="ci-width.html#cb621-4"></a></span>
+<span id="cb621-5"><a href="ci-width.html#cb621-5"></a><span class="co"># Get 10 random samples</span></span>
+<span id="cb621-6"><a href="ci-width.html#cb621-6"></a></span>
+<span id="cb621-7"><a href="ci-width.html#cb621-7"></a>perc_cis_<span class="dv">80</span> &lt;-<span class="st"> </span>urn <span class="op">%&gt;%</span></span>
+<span id="cb621-8"><a href="ci-width.html#cb621-8"></a><span class="st">  </span><span class="kw">rep_sample_n</span>(<span class="dt">size =</span> <span class="dv">50</span>, <span class="dt">reps =</span> <span class="dv">10</span>)</span>
+<span id="cb621-9"><a href="ci-width.html#cb621-9"></a>perc_cis_<span class="dv">80</span></span></code></pre></div>
 <pre><code>## # A tibble: 500 x 3
 ## # Groups:   replicate [10]
 ##    replicate ball_ID color
@@ -643,15 +643,15 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 ## # … with 490 more rows</code></pre>
 <!-- DK: Is this the first time we are using nest? If so, it is going way too fast! -->
 <p>Next, we’ll construct a confidence interval for each one. This will require <code>nest</code>ing the data by sample and then <code>map</code>ping to construct each confidence interval. Let’s grab 1,000 bootstrap replicates for each sample:</p>
-<div class="sourceCode" id="cb622"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb622-1"><a href="ci-width.html#cb622-1"></a>perc_cis_<span class="dv">80</span> &lt;-<span class="st"> </span>perc_cis_<span class="dv">80</span> <span class="op">%&gt;%</span></span>
-<span id="cb622-2"><a href="ci-width.html#cb622-2"></a><span class="st">  </span></span>
-<span id="cb622-3"><a href="ci-width.html#cb622-3"></a><span class="st">  </span><span class="co"># For each one, construct a CI</span></span>
-<span id="cb622-4"><a href="ci-width.html#cb622-4"></a><span class="st">  </span></span>
-<span id="cb622-5"><a href="ci-width.html#cb622-5"></a><span class="st">  </span><span class="kw">group_by</span>(replicate) <span class="op">%&gt;%</span></span>
-<span id="cb622-6"><a href="ci-width.html#cb622-6"></a><span class="st">  </span><span class="kw">nest</span>() <span class="op">%&gt;%</span></span>
-<span id="cb622-7"><a href="ci-width.html#cb622-7"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">boots =</span> <span class="kw">map</span>(data, <span class="op">~</span><span class="st"> </span><span class="kw">rep_sample_n</span>(., <span class="dt">size =</span> <span class="dv">50</span>, <span class="dt">replace =</span> <span class="ot">TRUE</span>, <span class="dt">reps =</span> <span class="dv">1000</span>)))</span>
-<span id="cb622-8"><a href="ci-width.html#cb622-8"></a></span>
-<span id="cb622-9"><a href="ci-width.html#cb622-9"></a>perc_cis_<span class="dv">80</span></span></code></pre></div>
+<div class="sourceCode" id="cb623"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb623-1"><a href="ci-width.html#cb623-1"></a>perc_cis_<span class="dv">80</span> &lt;-<span class="st"> </span>perc_cis_<span class="dv">80</span> <span class="op">%&gt;%</span></span>
+<span id="cb623-2"><a href="ci-width.html#cb623-2"></a><span class="st">  </span></span>
+<span id="cb623-3"><a href="ci-width.html#cb623-3"></a><span class="st">  </span><span class="co"># For each one, construct a CI</span></span>
+<span id="cb623-4"><a href="ci-width.html#cb623-4"></a><span class="st">  </span></span>
+<span id="cb623-5"><a href="ci-width.html#cb623-5"></a><span class="st">  </span><span class="kw">group_by</span>(replicate) <span class="op">%&gt;%</span></span>
+<span id="cb623-6"><a href="ci-width.html#cb623-6"></a><span class="st">  </span><span class="kw">nest</span>() <span class="op">%&gt;%</span></span>
+<span id="cb623-7"><a href="ci-width.html#cb623-7"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">boots =</span> <span class="kw">map</span>(data, <span class="op">~</span><span class="st"> </span><span class="kw">rep_sample_n</span>(., <span class="dt">size =</span> <span class="dv">50</span>, <span class="dt">replace =</span> <span class="ot">TRUE</span>, <span class="dt">reps =</span> <span class="dv">1000</span>)))</span>
+<span id="cb623-8"><a href="ci-width.html#cb623-8"></a></span>
+<span id="cb623-9"><a href="ci-width.html#cb623-9"></a>perc_cis_<span class="dv">80</span></span></code></pre></div>
 <pre><code>## # A tibble: 10 x 3
 ## # Groups:   replicate [10]
 ##    replicate data              boots                
@@ -668,11 +668,11 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 ## 10        10 &lt;tibble [50 × 2]&gt; &lt;tibble [50,000 × 3]&gt;</code></pre>
 <!-- DK: Need to make variable name choice, like `boots` more consistent across chapters. Wouldn't `data` be better? Also, the next chunk of code is very confusing! Isn't there an easier way? We do something like this in each of the next few chapters. Worth getting right! -->
 <p>Now that we have a list column called <code>boots</code> for each of our original 10 samples, we can now get 1,000 estimates per sample of <code>prop_red</code> from the bootstrap:</p>
-<div class="sourceCode" id="cb624"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb624-1"><a href="ci-width.html#cb624-1"></a>perc_cis_<span class="dv">80</span> &lt;-<span class="st"> </span>perc_cis_<span class="dv">80</span> <span class="op">%&gt;%</span></span>
-<span id="cb624-2"><a href="ci-width.html#cb624-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">prop_red_results =</span> <span class="kw">map</span>(boots, <span class="op">~</span><span class="st"> </span><span class="kw">group_by</span>(., replicate) <span class="op">%&gt;%</span></span>
-<span id="cb624-3"><a href="ci-width.html#cb624-3"></a><span class="st">                                            </span><span class="kw">summarize</span>(<span class="dt">prop_red =</span> <span class="kw">mean</span>(color <span class="op">==</span><span class="st"> &quot;red&quot;</span>))),</span>
-<span id="cb624-4"><a href="ci-width.html#cb624-4"></a>         <span class="dt">prop_red =</span> <span class="kw">map</span>(prop_red_results, <span class="op">~</span><span class="st"> </span><span class="kw">pull</span>(., prop_red)))</span>
-<span id="cb624-5"><a href="ci-width.html#cb624-5"></a>perc_cis_<span class="dv">80</span></span></code></pre></div>
+<div class="sourceCode" id="cb625"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb625-1"><a href="ci-width.html#cb625-1"></a>perc_cis_<span class="dv">80</span> &lt;-<span class="st"> </span>perc_cis_<span class="dv">80</span> <span class="op">%&gt;%</span></span>
+<span id="cb625-2"><a href="ci-width.html#cb625-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">prop_red_results =</span> <span class="kw">map</span>(boots, <span class="op">~</span><span class="st"> </span><span class="kw">group_by</span>(., replicate) <span class="op">%&gt;%</span></span>
+<span id="cb625-3"><a href="ci-width.html#cb625-3"></a><span class="st">                                            </span><span class="kw">summarize</span>(<span class="dt">prop_red =</span> <span class="kw">mean</span>(color <span class="op">==</span><span class="st"> &quot;red&quot;</span>))),</span>
+<span id="cb625-4"><a href="ci-width.html#cb625-4"></a>         <span class="dt">prop_red =</span> <span class="kw">map</span>(prop_red_results, <span class="op">~</span><span class="st"> </span><span class="kw">pull</span>(., prop_red)))</span>
+<span id="cb625-5"><a href="ci-width.html#cb625-5"></a>perc_cis_<span class="dv">80</span></span></code></pre></div>
 <pre><code>## # A tibble: 10 x 5
 ## # Groups:   replicate [10]
 ##    replicate data            boots              prop_red_results    prop_red    
@@ -688,12 +688,12 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 ##  9         9 &lt;tibble [50 × … &lt;tibble [50,000 ×… &lt;tibble [1,000 × 2… &lt;dbl [1,000…
 ## 10        10 &lt;tibble [50 × … &lt;tibble [50,000 ×… &lt;tibble [1,000 × 2… &lt;dbl [1,000…</code></pre>
 <p>Finally, we will use the list column <code>prop_red</code> to get the lower and upper bounds of our confidence intervals and note the level of confidence we used:</p>
-<div class="sourceCode" id="cb626"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb626-1"><a href="ci-width.html#cb626-1"></a>perc_cis_<span class="dv">80</span> &lt;-<span class="st"> </span>perc_cis_<span class="dv">80</span> <span class="op">%&gt;%</span></span>
-<span id="cb626-2"><a href="ci-width.html#cb626-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">lower =</span> <span class="kw">map_dbl</span>(prop_red, <span class="op">~</span><span class="st"> </span><span class="kw">quantile</span>(., <span class="dt">probs =</span> <span class="fl">0.1</span>)),</span>
-<span id="cb626-3"><a href="ci-width.html#cb626-3"></a>         <span class="dt">upper =</span> <span class="kw">map_dbl</span>(prop_red, <span class="op">~</span><span class="st"> </span><span class="kw">quantile</span>(., <span class="dt">probs =</span> <span class="fl">0.9</span>)),</span>
-<span id="cb626-4"><a href="ci-width.html#cb626-4"></a>         <span class="dt">confidence_level =</span> <span class="st">&quot;80%&quot;</span>) <span class="op">%&gt;%</span></span>
-<span id="cb626-5"><a href="ci-width.html#cb626-5"></a><span class="st">  </span><span class="kw">select</span>(replicate, lower, upper, confidence_level)</span>
-<span id="cb626-6"><a href="ci-width.html#cb626-6"></a>perc_cis_<span class="dv">80</span></span></code></pre></div>
+<div class="sourceCode" id="cb627"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb627-1"><a href="ci-width.html#cb627-1"></a>perc_cis_<span class="dv">80</span> &lt;-<span class="st"> </span>perc_cis_<span class="dv">80</span> <span class="op">%&gt;%</span></span>
+<span id="cb627-2"><a href="ci-width.html#cb627-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">lower =</span> <span class="kw">map_dbl</span>(prop_red, <span class="op">~</span><span class="st"> </span><span class="kw">quantile</span>(., <span class="dt">probs =</span> <span class="fl">0.1</span>)),</span>
+<span id="cb627-3"><a href="ci-width.html#cb627-3"></a>         <span class="dt">upper =</span> <span class="kw">map_dbl</span>(prop_red, <span class="op">~</span><span class="st"> </span><span class="kw">quantile</span>(., <span class="dt">probs =</span> <span class="fl">0.9</span>)),</span>
+<span id="cb627-4"><a href="ci-width.html#cb627-4"></a>         <span class="dt">confidence_level =</span> <span class="st">&quot;80%&quot;</span>) <span class="op">%&gt;%</span></span>
+<span id="cb627-5"><a href="ci-width.html#cb627-5"></a><span class="st">  </span><span class="kw">select</span>(replicate, lower, upper, confidence_level)</span>
+<span id="cb627-6"><a href="ci-width.html#cb627-6"></a>perc_cis_<span class="dv">80</span></span></code></pre></div>
 <pre><code>## # A tibble: 10 x 4
 ## # Groups:   replicate [10]
 ##    replicate lower upper confidence_level
@@ -709,50 +709,50 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 ##  9         9  0.32  0.48 80%             
 ## 10        10  0.26  0.42 80%</code></pre>
 <p>Now we can do the same for the 95% and 99% confidence intervals:</p>
-<div class="sourceCode" id="cb628"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb628-1"><a href="ci-width.html#cb628-1"></a><span class="co"># Compute 95% confidence intervals</span></span>
-<span id="cb628-2"><a href="ci-width.html#cb628-2"></a></span>
-<span id="cb628-3"><a href="ci-width.html#cb628-3"></a><span class="co"># Get 10 random samples</span></span>
-<span id="cb628-4"><a href="ci-width.html#cb628-4"></a></span>
-<span id="cb628-5"><a href="ci-width.html#cb628-5"></a>perc_cis_<span class="dv">95</span> &lt;-<span class="st"> </span>urn <span class="op">%&gt;%</span></span>
-<span id="cb628-6"><a href="ci-width.html#cb628-6"></a><span class="st">  </span><span class="kw">rep_sample_n</span>(<span class="dt">size =</span> <span class="dv">50</span>, <span class="dt">reps =</span> <span class="dv">10</span>) <span class="op">%&gt;%</span></span>
-<span id="cb628-7"><a href="ci-width.html#cb628-7"></a><span class="st">  </span></span>
-<span id="cb628-8"><a href="ci-width.html#cb628-8"></a><span class="st">  </span><span class="co"># For each one, construct a CI</span></span>
-<span id="cb628-9"><a href="ci-width.html#cb628-9"></a><span class="st">  </span></span>
-<span id="cb628-10"><a href="ci-width.html#cb628-10"></a><span class="st">  </span><span class="kw">group_by</span>(replicate) <span class="op">%&gt;%</span></span>
-<span id="cb628-11"><a href="ci-width.html#cb628-11"></a><span class="st">  </span><span class="kw">nest</span>() <span class="op">%&gt;%</span></span>
-<span id="cb628-12"><a href="ci-width.html#cb628-12"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">boots =</span> <span class="kw">map</span>(data, <span class="op">~</span><span class="st"> </span><span class="kw">rep_sample_n</span>(., <span class="dt">size =</span> <span class="dv">50</span>, <span class="dt">replace =</span> <span class="ot">TRUE</span>, <span class="dt">reps =</span> <span class="dv">1000</span>)),</span>
-<span id="cb628-13"><a href="ci-width.html#cb628-13"></a>         <span class="dt">prop_red_results =</span> <span class="kw">map</span>(boots, <span class="op">~</span><span class="st"> </span><span class="kw">group_by</span>(., replicate) <span class="op">%&gt;%</span></span>
-<span id="cb628-14"><a href="ci-width.html#cb628-14"></a><span class="st">                                  </span><span class="kw">summarize</span>(<span class="dt">prop_red =</span> <span class="kw">mean</span>(color <span class="op">==</span><span class="st"> &quot;red&quot;</span>))),</span>
-<span id="cb628-15"><a href="ci-width.html#cb628-15"></a>         <span class="dt">prop_red =</span> <span class="kw">map</span>(prop_red_results, <span class="op">~</span><span class="st"> </span><span class="kw">pull</span>(., prop_red)),</span>
-<span id="cb628-16"><a href="ci-width.html#cb628-16"></a>         <span class="dt">lower =</span> <span class="kw">map_dbl</span>(prop_red, <span class="op">~</span><span class="st"> </span><span class="kw">quantile</span>(., <span class="dt">probs =</span> <span class="fl">0.025</span>)),</span>
-<span id="cb628-17"><a href="ci-width.html#cb628-17"></a>         <span class="dt">upper =</span> <span class="kw">map_dbl</span>(prop_red, <span class="op">~</span><span class="st"> </span><span class="kw">quantile</span>(., <span class="dt">probs =</span> <span class="fl">0.975</span>)),</span>
-<span id="cb628-18"><a href="ci-width.html#cb628-18"></a>         <span class="dt">confidence_level =</span> <span class="st">&quot;95%&quot;</span>) <span class="op">%&gt;%</span></span>
-<span id="cb628-19"><a href="ci-width.html#cb628-19"></a><span class="st">  </span><span class="kw">select</span>(replicate, lower, upper, confidence_level)</span>
-<span id="cb628-20"><a href="ci-width.html#cb628-20"></a></span>
-<span id="cb628-21"><a href="ci-width.html#cb628-21"></a></span>
-<span id="cb628-22"><a href="ci-width.html#cb628-22"></a><span class="co"># Compute 99% confidence intervals</span></span>
-<span id="cb628-23"><a href="ci-width.html#cb628-23"></a></span>
-<span id="cb628-24"><a href="ci-width.html#cb628-24"></a><span class="co"># Get 10 random samples</span></span>
-<span id="cb628-25"><a href="ci-width.html#cb628-25"></a></span>
-<span id="cb628-26"><a href="ci-width.html#cb628-26"></a>perc_cis_<span class="dv">99</span> &lt;-<span class="st"> </span>urn <span class="op">%&gt;%</span></span>
-<span id="cb628-27"><a href="ci-width.html#cb628-27"></a><span class="st">  </span><span class="kw">rep_sample_n</span>(<span class="dt">size =</span> <span class="dv">50</span>, <span class="dt">reps =</span> <span class="dv">10</span>) <span class="op">%&gt;%</span></span>
-<span id="cb628-28"><a href="ci-width.html#cb628-28"></a><span class="st">  </span></span>
-<span id="cb628-29"><a href="ci-width.html#cb628-29"></a><span class="st">  </span><span class="co"># For each one, construct a CI</span></span>
-<span id="cb628-30"><a href="ci-width.html#cb628-30"></a><span class="st">  </span></span>
-<span id="cb628-31"><a href="ci-width.html#cb628-31"></a><span class="st">  </span><span class="kw">group_by</span>(replicate) <span class="op">%&gt;%</span></span>
-<span id="cb628-32"><a href="ci-width.html#cb628-32"></a><span class="st">  </span><span class="kw">nest</span>() <span class="op">%&gt;%</span></span>
-<span id="cb628-33"><a href="ci-width.html#cb628-33"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">boots =</span> <span class="kw">map</span>(data, <span class="op">~</span><span class="st"> </span><span class="kw">rep_sample_n</span>(., <span class="dt">size =</span> <span class="dv">50</span>, <span class="dt">replace =</span> <span class="ot">TRUE</span>, <span class="dt">reps =</span> <span class="dv">1000</span>)),</span>
-<span id="cb628-34"><a href="ci-width.html#cb628-34"></a>         <span class="dt">prop_red_results =</span> <span class="kw">map</span>(boots, <span class="op">~</span><span class="st"> </span><span class="kw">group_by</span>(., replicate) <span class="op">%&gt;%</span></span>
-<span id="cb628-35"><a href="ci-width.html#cb628-35"></a><span class="st">                                  </span><span class="kw">summarize</span>(<span class="dt">prop_red =</span> <span class="kw">mean</span>(color <span class="op">==</span><span class="st"> &quot;red&quot;</span>))),</span>
-<span id="cb628-36"><a href="ci-width.html#cb628-36"></a>         <span class="dt">prop_red =</span> <span class="kw">map</span>(prop_red_results, <span class="op">~</span><span class="st"> </span><span class="kw">pull</span>(., prop_red)),</span>
-<span id="cb628-37"><a href="ci-width.html#cb628-37"></a>         <span class="dt">lower =</span> <span class="kw">map_dbl</span>(prop_red, <span class="op">~</span><span class="st"> </span><span class="kw">quantile</span>(., <span class="dt">probs =</span> <span class="fl">0.005</span>)),</span>
-<span id="cb628-38"><a href="ci-width.html#cb628-38"></a>         <span class="dt">upper =</span> <span class="kw">map_dbl</span>(prop_red, <span class="op">~</span><span class="st"> </span><span class="kw">quantile</span>(., <span class="dt">probs =</span> <span class="fl">0.995</span>)),</span>
-<span id="cb628-39"><a href="ci-width.html#cb628-39"></a>         <span class="dt">confidence_level =</span> <span class="st">&quot;99%&quot;</span>) <span class="op">%&gt;%</span></span>
-<span id="cb628-40"><a href="ci-width.html#cb628-40"></a><span class="st">  </span><span class="kw">select</span>(replicate, lower, upper, confidence_level)</span>
-<span id="cb628-41"><a href="ci-width.html#cb628-41"></a></span>
-<span id="cb628-42"><a href="ci-width.html#cb628-42"></a><span class="co"># Combine into single data frame</span></span>
-<span id="cb628-43"><a href="ci-width.html#cb628-43"></a></span>
-<span id="cb628-44"><a href="ci-width.html#cb628-44"></a>percentile_cis_by_level &lt;-<span class="st"> </span><span class="kw">bind_rows</span>(perc_cis_<span class="dv">80</span>, perc_cis_<span class="dv">95</span>, perc_cis_<span class="dv">99</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb629"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb629-1"><a href="ci-width.html#cb629-1"></a><span class="co"># Compute 95% confidence intervals</span></span>
+<span id="cb629-2"><a href="ci-width.html#cb629-2"></a></span>
+<span id="cb629-3"><a href="ci-width.html#cb629-3"></a><span class="co"># Get 10 random samples</span></span>
+<span id="cb629-4"><a href="ci-width.html#cb629-4"></a></span>
+<span id="cb629-5"><a href="ci-width.html#cb629-5"></a>perc_cis_<span class="dv">95</span> &lt;-<span class="st"> </span>urn <span class="op">%&gt;%</span></span>
+<span id="cb629-6"><a href="ci-width.html#cb629-6"></a><span class="st">  </span><span class="kw">rep_sample_n</span>(<span class="dt">size =</span> <span class="dv">50</span>, <span class="dt">reps =</span> <span class="dv">10</span>) <span class="op">%&gt;%</span></span>
+<span id="cb629-7"><a href="ci-width.html#cb629-7"></a><span class="st">  </span></span>
+<span id="cb629-8"><a href="ci-width.html#cb629-8"></a><span class="st">  </span><span class="co"># For each one, construct a CI</span></span>
+<span id="cb629-9"><a href="ci-width.html#cb629-9"></a><span class="st">  </span></span>
+<span id="cb629-10"><a href="ci-width.html#cb629-10"></a><span class="st">  </span><span class="kw">group_by</span>(replicate) <span class="op">%&gt;%</span></span>
+<span id="cb629-11"><a href="ci-width.html#cb629-11"></a><span class="st">  </span><span class="kw">nest</span>() <span class="op">%&gt;%</span></span>
+<span id="cb629-12"><a href="ci-width.html#cb629-12"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">boots =</span> <span class="kw">map</span>(data, <span class="op">~</span><span class="st"> </span><span class="kw">rep_sample_n</span>(., <span class="dt">size =</span> <span class="dv">50</span>, <span class="dt">replace =</span> <span class="ot">TRUE</span>, <span class="dt">reps =</span> <span class="dv">1000</span>)),</span>
+<span id="cb629-13"><a href="ci-width.html#cb629-13"></a>         <span class="dt">prop_red_results =</span> <span class="kw">map</span>(boots, <span class="op">~</span><span class="st"> </span><span class="kw">group_by</span>(., replicate) <span class="op">%&gt;%</span></span>
+<span id="cb629-14"><a href="ci-width.html#cb629-14"></a><span class="st">                                  </span><span class="kw">summarize</span>(<span class="dt">prop_red =</span> <span class="kw">mean</span>(color <span class="op">==</span><span class="st"> &quot;red&quot;</span>))),</span>
+<span id="cb629-15"><a href="ci-width.html#cb629-15"></a>         <span class="dt">prop_red =</span> <span class="kw">map</span>(prop_red_results, <span class="op">~</span><span class="st"> </span><span class="kw">pull</span>(., prop_red)),</span>
+<span id="cb629-16"><a href="ci-width.html#cb629-16"></a>         <span class="dt">lower =</span> <span class="kw">map_dbl</span>(prop_red, <span class="op">~</span><span class="st"> </span><span class="kw">quantile</span>(., <span class="dt">probs =</span> <span class="fl">0.025</span>)),</span>
+<span id="cb629-17"><a href="ci-width.html#cb629-17"></a>         <span class="dt">upper =</span> <span class="kw">map_dbl</span>(prop_red, <span class="op">~</span><span class="st"> </span><span class="kw">quantile</span>(., <span class="dt">probs =</span> <span class="fl">0.975</span>)),</span>
+<span id="cb629-18"><a href="ci-width.html#cb629-18"></a>         <span class="dt">confidence_level =</span> <span class="st">&quot;95%&quot;</span>) <span class="op">%&gt;%</span></span>
+<span id="cb629-19"><a href="ci-width.html#cb629-19"></a><span class="st">  </span><span class="kw">select</span>(replicate, lower, upper, confidence_level)</span>
+<span id="cb629-20"><a href="ci-width.html#cb629-20"></a></span>
+<span id="cb629-21"><a href="ci-width.html#cb629-21"></a></span>
+<span id="cb629-22"><a href="ci-width.html#cb629-22"></a><span class="co"># Compute 99% confidence intervals</span></span>
+<span id="cb629-23"><a href="ci-width.html#cb629-23"></a></span>
+<span id="cb629-24"><a href="ci-width.html#cb629-24"></a><span class="co"># Get 10 random samples</span></span>
+<span id="cb629-25"><a href="ci-width.html#cb629-25"></a></span>
+<span id="cb629-26"><a href="ci-width.html#cb629-26"></a>perc_cis_<span class="dv">99</span> &lt;-<span class="st"> </span>urn <span class="op">%&gt;%</span></span>
+<span id="cb629-27"><a href="ci-width.html#cb629-27"></a><span class="st">  </span><span class="kw">rep_sample_n</span>(<span class="dt">size =</span> <span class="dv">50</span>, <span class="dt">reps =</span> <span class="dv">10</span>) <span class="op">%&gt;%</span></span>
+<span id="cb629-28"><a href="ci-width.html#cb629-28"></a><span class="st">  </span></span>
+<span id="cb629-29"><a href="ci-width.html#cb629-29"></a><span class="st">  </span><span class="co"># For each one, construct a CI</span></span>
+<span id="cb629-30"><a href="ci-width.html#cb629-30"></a><span class="st">  </span></span>
+<span id="cb629-31"><a href="ci-width.html#cb629-31"></a><span class="st">  </span><span class="kw">group_by</span>(replicate) <span class="op">%&gt;%</span></span>
+<span id="cb629-32"><a href="ci-width.html#cb629-32"></a><span class="st">  </span><span class="kw">nest</span>() <span class="op">%&gt;%</span></span>
+<span id="cb629-33"><a href="ci-width.html#cb629-33"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">boots =</span> <span class="kw">map</span>(data, <span class="op">~</span><span class="st"> </span><span class="kw">rep_sample_n</span>(., <span class="dt">size =</span> <span class="dv">50</span>, <span class="dt">replace =</span> <span class="ot">TRUE</span>, <span class="dt">reps =</span> <span class="dv">1000</span>)),</span>
+<span id="cb629-34"><a href="ci-width.html#cb629-34"></a>         <span class="dt">prop_red_results =</span> <span class="kw">map</span>(boots, <span class="op">~</span><span class="st"> </span><span class="kw">group_by</span>(., replicate) <span class="op">%&gt;%</span></span>
+<span id="cb629-35"><a href="ci-width.html#cb629-35"></a><span class="st">                                  </span><span class="kw">summarize</span>(<span class="dt">prop_red =</span> <span class="kw">mean</span>(color <span class="op">==</span><span class="st"> &quot;red&quot;</span>))),</span>
+<span id="cb629-36"><a href="ci-width.html#cb629-36"></a>         <span class="dt">prop_red =</span> <span class="kw">map</span>(prop_red_results, <span class="op">~</span><span class="st"> </span><span class="kw">pull</span>(., prop_red)),</span>
+<span id="cb629-37"><a href="ci-width.html#cb629-37"></a>         <span class="dt">lower =</span> <span class="kw">map_dbl</span>(prop_red, <span class="op">~</span><span class="st"> </span><span class="kw">quantile</span>(., <span class="dt">probs =</span> <span class="fl">0.005</span>)),</span>
+<span id="cb629-38"><a href="ci-width.html#cb629-38"></a>         <span class="dt">upper =</span> <span class="kw">map_dbl</span>(prop_red, <span class="op">~</span><span class="st"> </span><span class="kw">quantile</span>(., <span class="dt">probs =</span> <span class="fl">0.995</span>)),</span>
+<span id="cb629-39"><a href="ci-width.html#cb629-39"></a>         <span class="dt">confidence_level =</span> <span class="st">&quot;99%&quot;</span>) <span class="op">%&gt;%</span></span>
+<span id="cb629-40"><a href="ci-width.html#cb629-40"></a><span class="st">  </span><span class="kw">select</span>(replicate, lower, upper, confidence_level)</span>
+<span id="cb629-41"><a href="ci-width.html#cb629-41"></a></span>
+<span id="cb629-42"><a href="ci-width.html#cb629-42"></a><span class="co"># Combine into single data frame</span></span>
+<span id="cb629-43"><a href="ci-width.html#cb629-43"></a></span>
+<span id="cb629-44"><a href="ci-width.html#cb629-44"></a>percentile_cis_by_level &lt;-<span class="st"> </span><span class="kw">bind_rows</span>(perc_cis_<span class="dv">80</span>, perc_cis_<span class="dv">95</span>, perc_cis_<span class="dv">99</span>)</span></code></pre></div>
 <p>Observe that as the confidence level increases from 80% to 95% to 99%, the confidence intervals tend to get wider as seen in Table <a href="ci-width.html#tab:perc-cis-average-width">7.2</a> where we compare their average widths.</p>
 <table class="table" style="font-size: 16px; margin-left: auto; margin-right: auto;">
 <caption style="font-size: initial !important;">
@@ -801,42 +801,42 @@ Mean width
 <div id="fitting-multiple-models-using-map" class="section level3">
 <h3><span class="header-section-number">7.3.2</span> Fitting multiple models using <code>map()</code></h3>
 <p>Note that we have used the same code three times. That means we should write a function! Let’s adapt the code from the last section to take 10 samples of an arbitrary size and then construct confidence intervals of an arbitrary level:</p>
-<div class="sourceCode" id="cb629"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb629-1"><a href="ci-width.html#cb629-1"></a>urn_confidence &lt;-<span class="st"> </span><span class="cf">function</span>(bowl, <span class="dt">n =</span> <span class="dv">50</span>, <span class="dt">level =</span> <span class="fl">0.95</span>) {</span>
-<span id="cb629-2"><a href="ci-width.html#cb629-2"></a>  </span>
-<span id="cb629-3"><a href="ci-width.html#cb629-3"></a>  <span class="co"># Get lower and upper probabilities</span></span>
-<span id="cb629-4"><a href="ci-width.html#cb629-4"></a>  </span>
-<span id="cb629-5"><a href="ci-width.html#cb629-5"></a>  lower_prob =<span class="st"> </span>(<span class="dv">1</span> <span class="op">-</span><span class="st"> </span>level) <span class="op">/</span><span class="st"> </span><span class="dv">2</span></span>
-<span id="cb629-6"><a href="ci-width.html#cb629-6"></a>  upper_prob =<span class="st"> </span>level <span class="op">+</span><span class="st"> </span>lower_prob</span>
-<span id="cb629-7"><a href="ci-width.html#cb629-7"></a>  </span>
-<span id="cb629-8"><a href="ci-width.html#cb629-8"></a>  <span class="co"># Get 10 random samples</span></span>
-<span id="cb629-9"><a href="ci-width.html#cb629-9"></a>  </span>
-<span id="cb629-10"><a href="ci-width.html#cb629-10"></a>  bowl <span class="op">%&gt;%</span></span>
-<span id="cb629-11"><a href="ci-width.html#cb629-11"></a><span class="st">    </span><span class="kw">rep_sample_n</span>(<span class="dt">size =</span> n, <span class="dt">reps =</span> <span class="dv">10</span>) <span class="op">%&gt;%</span></span>
-<span id="cb629-12"><a href="ci-width.html#cb629-12"></a><span class="st">    </span></span>
-<span id="cb629-13"><a href="ci-width.html#cb629-13"></a><span class="st">      </span><span class="co"># For each one, construct a CI</span></span>
-<span id="cb629-14"><a href="ci-width.html#cb629-14"></a><span class="st">    </span></span>
-<span id="cb629-15"><a href="ci-width.html#cb629-15"></a><span class="st">    </span><span class="kw">group_by</span>(replicate) <span class="op">%&gt;%</span></span>
-<span id="cb629-16"><a href="ci-width.html#cb629-16"></a><span class="st">    </span><span class="kw">nest</span>() <span class="op">%&gt;%</span></span>
-<span id="cb629-17"><a href="ci-width.html#cb629-17"></a><span class="st">    </span><span class="kw">mutate</span>(<span class="dt">boots =</span> <span class="kw">map</span>(data, <span class="op">~</span><span class="st"> </span><span class="kw">rep_sample_n</span>(., <span class="dt">size =</span> n, <span class="dt">replace =</span> <span class="ot">TRUE</span>, <span class="dt">reps =</span> <span class="dv">1000</span>)),</span>
-<span id="cb629-18"><a href="ci-width.html#cb629-18"></a>           <span class="dt">prop_red_results =</span> <span class="kw">map</span>(boots, <span class="op">~</span><span class="st"> </span><span class="kw">group_by</span>(., replicate) <span class="op">%&gt;%</span></span>
-<span id="cb629-19"><a href="ci-width.html#cb629-19"></a><span class="st">                                    </span><span class="kw">summarize</span>(<span class="dt">prop_red =</span> <span class="kw">mean</span>(color <span class="op">==</span><span class="st"> &quot;red&quot;</span>))),</span>
-<span id="cb629-20"><a href="ci-width.html#cb629-20"></a>           <span class="dt">prop_red =</span> <span class="kw">map</span>(prop_red_results, <span class="op">~</span><span class="st"> </span><span class="kw">pull</span>(., prop_red)),</span>
-<span id="cb629-21"><a href="ci-width.html#cb629-21"></a>           <span class="dt">lower =</span> <span class="kw">map_dbl</span>(prop_red, <span class="op">~</span><span class="st"> </span><span class="kw">quantile</span>(., <span class="dt">probs =</span> lower_prob)),</span>
-<span id="cb629-22"><a href="ci-width.html#cb629-22"></a>           <span class="dt">upper =</span> <span class="kw">map_dbl</span>(prop_red, <span class="op">~</span><span class="st"> </span><span class="kw">quantile</span>(., <span class="dt">probs =</span> upper_prob)),</span>
-<span id="cb629-23"><a href="ci-width.html#cb629-23"></a>           <span class="dt">sample_size =</span> n,</span>
-<span id="cb629-24"><a href="ci-width.html#cb629-24"></a>           <span class="dt">confidence_level =</span> level) <span class="op">%&gt;%</span></span>
-<span id="cb629-25"><a href="ci-width.html#cb629-25"></a><span class="st">    </span><span class="kw">select</span>(replicate, lower, upper, sample_size, confidence_level)</span>
-<span id="cb629-26"><a href="ci-width.html#cb629-26"></a>}</span></code></pre></div>
+<div class="sourceCode" id="cb630"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb630-1"><a href="ci-width.html#cb630-1"></a>urn_confidence &lt;-<span class="st"> </span><span class="cf">function</span>(bowl, <span class="dt">n =</span> <span class="dv">50</span>, <span class="dt">level =</span> <span class="fl">0.95</span>) {</span>
+<span id="cb630-2"><a href="ci-width.html#cb630-2"></a>  </span>
+<span id="cb630-3"><a href="ci-width.html#cb630-3"></a>  <span class="co"># Get lower and upper probabilities</span></span>
+<span id="cb630-4"><a href="ci-width.html#cb630-4"></a>  </span>
+<span id="cb630-5"><a href="ci-width.html#cb630-5"></a>  lower_prob =<span class="st"> </span>(<span class="dv">1</span> <span class="op">-</span><span class="st"> </span>level) <span class="op">/</span><span class="st"> </span><span class="dv">2</span></span>
+<span id="cb630-6"><a href="ci-width.html#cb630-6"></a>  upper_prob =<span class="st"> </span>level <span class="op">+</span><span class="st"> </span>lower_prob</span>
+<span id="cb630-7"><a href="ci-width.html#cb630-7"></a>  </span>
+<span id="cb630-8"><a href="ci-width.html#cb630-8"></a>  <span class="co"># Get 10 random samples</span></span>
+<span id="cb630-9"><a href="ci-width.html#cb630-9"></a>  </span>
+<span id="cb630-10"><a href="ci-width.html#cb630-10"></a>  bowl <span class="op">%&gt;%</span></span>
+<span id="cb630-11"><a href="ci-width.html#cb630-11"></a><span class="st">    </span><span class="kw">rep_sample_n</span>(<span class="dt">size =</span> n, <span class="dt">reps =</span> <span class="dv">10</span>) <span class="op">%&gt;%</span></span>
+<span id="cb630-12"><a href="ci-width.html#cb630-12"></a><span class="st">    </span></span>
+<span id="cb630-13"><a href="ci-width.html#cb630-13"></a><span class="st">      </span><span class="co"># For each one, construct a CI</span></span>
+<span id="cb630-14"><a href="ci-width.html#cb630-14"></a><span class="st">    </span></span>
+<span id="cb630-15"><a href="ci-width.html#cb630-15"></a><span class="st">    </span><span class="kw">group_by</span>(replicate) <span class="op">%&gt;%</span></span>
+<span id="cb630-16"><a href="ci-width.html#cb630-16"></a><span class="st">    </span><span class="kw">nest</span>() <span class="op">%&gt;%</span></span>
+<span id="cb630-17"><a href="ci-width.html#cb630-17"></a><span class="st">    </span><span class="kw">mutate</span>(<span class="dt">boots =</span> <span class="kw">map</span>(data, <span class="op">~</span><span class="st"> </span><span class="kw">rep_sample_n</span>(., <span class="dt">size =</span> n, <span class="dt">replace =</span> <span class="ot">TRUE</span>, <span class="dt">reps =</span> <span class="dv">1000</span>)),</span>
+<span id="cb630-18"><a href="ci-width.html#cb630-18"></a>           <span class="dt">prop_red_results =</span> <span class="kw">map</span>(boots, <span class="op">~</span><span class="st"> </span><span class="kw">group_by</span>(., replicate) <span class="op">%&gt;%</span></span>
+<span id="cb630-19"><a href="ci-width.html#cb630-19"></a><span class="st">                                    </span><span class="kw">summarize</span>(<span class="dt">prop_red =</span> <span class="kw">mean</span>(color <span class="op">==</span><span class="st"> &quot;red&quot;</span>))),</span>
+<span id="cb630-20"><a href="ci-width.html#cb630-20"></a>           <span class="dt">prop_red =</span> <span class="kw">map</span>(prop_red_results, <span class="op">~</span><span class="st"> </span><span class="kw">pull</span>(., prop_red)),</span>
+<span id="cb630-21"><a href="ci-width.html#cb630-21"></a>           <span class="dt">lower =</span> <span class="kw">map_dbl</span>(prop_red, <span class="op">~</span><span class="st"> </span><span class="kw">quantile</span>(., <span class="dt">probs =</span> lower_prob)),</span>
+<span id="cb630-22"><a href="ci-width.html#cb630-22"></a>           <span class="dt">upper =</span> <span class="kw">map_dbl</span>(prop_red, <span class="op">~</span><span class="st"> </span><span class="kw">quantile</span>(., <span class="dt">probs =</span> upper_prob)),</span>
+<span id="cb630-23"><a href="ci-width.html#cb630-23"></a>           <span class="dt">sample_size =</span> n,</span>
+<span id="cb630-24"><a href="ci-width.html#cb630-24"></a>           <span class="dt">confidence_level =</span> level) <span class="op">%&gt;%</span></span>
+<span id="cb630-25"><a href="ci-width.html#cb630-25"></a><span class="st">    </span><span class="kw">select</span>(replicate, lower, upper, sample_size, confidence_level)</span>
+<span id="cb630-26"><a href="ci-width.html#cb630-26"></a>}</span></code></pre></div>
 <p>Note that we saved the sample size as <code>sample_size</code> and the confidence level as <code>confidence_level</code> for convenient display later.</p>
 <p>So we now could create our objects like so:</p>
-<div class="sourceCode" id="cb630"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb630-1"><a href="ci-width.html#cb630-1"></a>perc_cis_<span class="dv">80</span> &lt;-<span class="st"> </span><span class="kw">urn_confidence</span>(<span class="dt">bowl =</span> urn, <span class="dt">n =</span> <span class="dv">50</span>, <span class="dt">level =</span> <span class="fl">0.80</span>)</span>
-<span id="cb630-2"><a href="ci-width.html#cb630-2"></a>perc_cis_<span class="dv">95</span> &lt;-<span class="st"> </span><span class="kw">urn_confidence</span>(<span class="dt">bowl =</span> urn, <span class="dt">n =</span> <span class="dv">50</span>, <span class="dt">level =</span> <span class="fl">0.95</span>)</span>
-<span id="cb630-3"><a href="ci-width.html#cb630-3"></a>perc_cis_<span class="dv">99</span> &lt;-<span class="st"> </span><span class="kw">urn_confidence</span>(<span class="dt">bowl =</span> urn, <span class="dt">n =</span> <span class="dv">50</span>, <span class="dt">level =</span> <span class="fl">0.99</span>)</span>
-<span id="cb630-4"><a href="ci-width.html#cb630-4"></a></span>
-<span id="cb630-5"><a href="ci-width.html#cb630-5"></a><span class="co"># Combine into single data frame</span></span>
-<span id="cb630-6"><a href="ci-width.html#cb630-6"></a></span>
-<span id="cb630-7"><a href="ci-width.html#cb630-7"></a>percentile_cis_by_level &lt;-<span class="st"> </span><span class="kw">bind_rows</span>(perc_cis_<span class="dv">80</span>, perc_cis_<span class="dv">95</span>, perc_cis_<span class="dv">99</span>)</span>
-<span id="cb630-8"><a href="ci-width.html#cb630-8"></a>percentile_cis_by_level</span></code></pre></div>
+<div class="sourceCode" id="cb631"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb631-1"><a href="ci-width.html#cb631-1"></a>perc_cis_<span class="dv">80</span> &lt;-<span class="st"> </span><span class="kw">urn_confidence</span>(<span class="dt">bowl =</span> urn, <span class="dt">n =</span> <span class="dv">50</span>, <span class="dt">level =</span> <span class="fl">0.80</span>)</span>
+<span id="cb631-2"><a href="ci-width.html#cb631-2"></a>perc_cis_<span class="dv">95</span> &lt;-<span class="st"> </span><span class="kw">urn_confidence</span>(<span class="dt">bowl =</span> urn, <span class="dt">n =</span> <span class="dv">50</span>, <span class="dt">level =</span> <span class="fl">0.95</span>)</span>
+<span id="cb631-3"><a href="ci-width.html#cb631-3"></a>perc_cis_<span class="dv">99</span> &lt;-<span class="st"> </span><span class="kw">urn_confidence</span>(<span class="dt">bowl =</span> urn, <span class="dt">n =</span> <span class="dv">50</span>, <span class="dt">level =</span> <span class="fl">0.99</span>)</span>
+<span id="cb631-4"><a href="ci-width.html#cb631-4"></a></span>
+<span id="cb631-5"><a href="ci-width.html#cb631-5"></a><span class="co"># Combine into single data frame</span></span>
+<span id="cb631-6"><a href="ci-width.html#cb631-6"></a></span>
+<span id="cb631-7"><a href="ci-width.html#cb631-7"></a>percentile_cis_by_level &lt;-<span class="st"> </span><span class="kw">bind_rows</span>(perc_cis_<span class="dv">80</span>, perc_cis_<span class="dv">95</span>, perc_cis_<span class="dv">99</span>)</span>
+<span id="cb631-8"><a href="ci-width.html#cb631-8"></a>percentile_cis_by_level</span></code></pre></div>
 <pre><code>## # A tibble: 30 x 5
 ## # Groups:   replicate [10]
 ##    replicate lower upper sample_size confidence_level
@@ -854,8 +854,8 @@ Mean width
 ## # … with 20 more rows</code></pre>
 <p>But this still isn’t the best way. Note that we have three objects we need to deal with. Furthermore, we don’t actually know that the names are accurate! Perhaps we made a mistake and created <code>perc_cis_99</code> with the code <code>perc_cis_99 &lt;- urn_confidence(urn, 50, 0.95)</code>; our object name will now be misleading as to what’s actually in the object.</p>
 <p>Instead, let’s store our results in a single tibble by using <code>map()</code> to create a list column.</p>
-<div class="sourceCode" id="cb632"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb632-1"><a href="ci-width.html#cb632-1"></a><span class="kw">tibble</span>(<span class="dt">level =</span> <span class="kw">c</span>(<span class="fl">0.80</span>, <span class="fl">0.95</span>, <span class="fl">0.99</span>)) <span class="op">%&gt;%</span></span>
-<span id="cb632-2"><a href="ci-width.html#cb632-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">data =</span> <span class="kw">map</span>(level, <span class="op">~</span><span class="st"> </span><span class="kw">urn_confidence</span>(<span class="dt">bowl =</span> urn, <span class="dt">n =</span> <span class="dv">50</span>, <span class="dt">level =</span> .)))</span></code></pre></div>
+<div class="sourceCode" id="cb633"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb633-1"><a href="ci-width.html#cb633-1"></a><span class="kw">tibble</span>(<span class="dt">level =</span> <span class="kw">c</span>(<span class="fl">0.80</span>, <span class="fl">0.95</span>, <span class="fl">0.99</span>)) <span class="op">%&gt;%</span></span>
+<span id="cb633-2"><a href="ci-width.html#cb633-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">data =</span> <span class="kw">map</span>(level, <span class="op">~</span><span class="st"> </span><span class="kw">urn_confidence</span>(<span class="dt">bowl =</span> urn, <span class="dt">n =</span> <span class="dv">50</span>, <span class="dt">level =</span> .)))</span></code></pre></div>
 <pre><code>## # A tibble: 3 x 2
 ##   level data             
 ##   &lt;dbl&gt; &lt;list&gt;           
@@ -863,10 +863,10 @@ Mean width
 ## 2  0.95 &lt;tibble [10 × 5]&gt;
 ## 3  0.99 &lt;tibble [10 × 5]&gt;</code></pre>
 <p>Now that we have a list column, we want to <code>unnest()</code> it so we can see our actual data. Further, we won’t need the redundant column <code>level</code> any more:</p>
-<div class="sourceCode" id="cb634"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb634-1"><a href="ci-width.html#cb634-1"></a><span class="kw">tibble</span>(<span class="dt">level =</span> <span class="kw">c</span>(<span class="fl">0.80</span>, <span class="fl">0.95</span>, <span class="fl">0.99</span>)) <span class="op">%&gt;%</span></span>
-<span id="cb634-2"><a href="ci-width.html#cb634-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">data =</span> <span class="kw">map</span>(level, <span class="op">~</span><span class="st"> </span><span class="kw">urn_confidence</span>(<span class="dt">bowl =</span> urn, <span class="dt">n =</span> <span class="dv">50</span>, <span class="dt">level =</span> .))) <span class="op">%&gt;%</span></span>
-<span id="cb634-3"><a href="ci-width.html#cb634-3"></a><span class="st">  </span><span class="kw">unnest</span>(data) <span class="op">%&gt;%</span></span>
-<span id="cb634-4"><a href="ci-width.html#cb634-4"></a><span class="st">  </span><span class="kw">select</span>(<span class="op">-</span>level)</span></code></pre></div>
+<div class="sourceCode" id="cb635"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb635-1"><a href="ci-width.html#cb635-1"></a><span class="kw">tibble</span>(<span class="dt">level =</span> <span class="kw">c</span>(<span class="fl">0.80</span>, <span class="fl">0.95</span>, <span class="fl">0.99</span>)) <span class="op">%&gt;%</span></span>
+<span id="cb635-2"><a href="ci-width.html#cb635-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">data =</span> <span class="kw">map</span>(level, <span class="op">~</span><span class="st"> </span><span class="kw">urn_confidence</span>(<span class="dt">bowl =</span> urn, <span class="dt">n =</span> <span class="dv">50</span>, <span class="dt">level =</span> .))) <span class="op">%&gt;%</span></span>
+<span id="cb635-3"><a href="ci-width.html#cb635-3"></a><span class="st">  </span><span class="kw">unnest</span>(data) <span class="op">%&gt;%</span></span>
+<span id="cb635-4"><a href="ci-width.html#cb635-4"></a><span class="st">  </span><span class="kw">select</span>(<span class="op">-</span>level)</span></code></pre></div>
 <pre><code>## # A tibble: 30 x 5
 ##    replicate lower upper sample_size confidence_level
 ##        &lt;int&gt; &lt;dbl&gt; &lt;dbl&gt;       &lt;dbl&gt;            &lt;dbl&gt;
@@ -882,26 +882,26 @@ Mean width
 ## 10        10  0.28  0.44          50              0.8
 ## # … with 20 more rows</code></pre>
 <p>Now that we can create an object with any confidence level we please, why not calculate the widths for confidence levels from 0.50 to 0.99 and plot the results?</p>
-<div class="sourceCode" id="cb636"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb636-1"><a href="ci-width.html#cb636-1"></a><span class="co"># Same code as before, but for more levels</span></span>
-<span id="cb636-2"><a href="ci-width.html#cb636-2"></a></span>
-<span id="cb636-3"><a href="ci-width.html#cb636-3"></a><span class="kw">tibble</span>(<span class="dt">level =</span> <span class="kw">seq</span>(<span class="fl">0.50</span>, <span class="fl">0.99</span>, <span class="dt">by =</span> <span class="fl">0.01</span>)) <span class="op">%&gt;%</span></span>
-<span id="cb636-4"><a href="ci-width.html#cb636-4"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">data =</span> <span class="kw">map</span>(level, <span class="op">~</span><span class="st"> </span><span class="kw">urn_confidence</span>(<span class="dt">bowl =</span> urn, <span class="dt">n =</span> <span class="dv">50</span>, <span class="dt">level =</span> .))) <span class="op">%&gt;%</span></span>
-<span id="cb636-5"><a href="ci-width.html#cb636-5"></a><span class="st">  </span><span class="kw">unnest</span>(data) <span class="op">%&gt;%</span></span>
-<span id="cb636-6"><a href="ci-width.html#cb636-6"></a><span class="st">  </span><span class="kw">select</span>(<span class="op">-</span>level) <span class="op">%&gt;%</span></span>
-<span id="cb636-7"><a href="ci-width.html#cb636-7"></a><span class="st">  </span></span>
-<span id="cb636-8"><a href="ci-width.html#cb636-8"></a><span class="st">  </span><span class="co"># Calculate mean widths</span></span>
-<span id="cb636-9"><a href="ci-width.html#cb636-9"></a><span class="st">  </span></span>
-<span id="cb636-10"><a href="ci-width.html#cb636-10"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">width =</span> upper <span class="op">-</span><span class="st"> </span>lower) <span class="op">%&gt;%</span></span>
-<span id="cb636-11"><a href="ci-width.html#cb636-11"></a><span class="st">  </span><span class="kw">group_by</span>(confidence_level) <span class="op">%&gt;%</span></span>
-<span id="cb636-12"><a href="ci-width.html#cb636-12"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">mean_width =</span> <span class="kw">mean</span>(width)) <span class="op">%&gt;%</span></span>
-<span id="cb636-13"><a href="ci-width.html#cb636-13"></a><span class="st">  </span></span>
-<span id="cb636-14"><a href="ci-width.html#cb636-14"></a><span class="st">  </span><span class="co"># Plot results</span></span>
-<span id="cb636-15"><a href="ci-width.html#cb636-15"></a><span class="st">  </span></span>
-<span id="cb636-16"><a href="ci-width.html#cb636-16"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> confidence_level, <span class="dt">y =</span> mean_width)) <span class="op">+</span></span>
-<span id="cb636-17"><a href="ci-width.html#cb636-17"></a><span class="st">  </span><span class="kw">geom_point</span>() <span class="op">+</span></span>
-<span id="cb636-18"><a href="ci-width.html#cb636-18"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">&quot;Confidence level&quot;</span>,</span>
-<span id="cb636-19"><a href="ci-width.html#cb636-19"></a>       <span class="dt">y =</span> <span class="st">&quot;Mean width&quot;</span>,</span>
-<span id="cb636-20"><a href="ci-width.html#cb636-20"></a>       <span class="dt">title =</span> <span class="st">&quot;Change in mean width of CI as level increase&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb637"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb637-1"><a href="ci-width.html#cb637-1"></a><span class="co"># Same code as before, but for more levels</span></span>
+<span id="cb637-2"><a href="ci-width.html#cb637-2"></a></span>
+<span id="cb637-3"><a href="ci-width.html#cb637-3"></a><span class="kw">tibble</span>(<span class="dt">level =</span> <span class="kw">seq</span>(<span class="fl">0.50</span>, <span class="fl">0.99</span>, <span class="dt">by =</span> <span class="fl">0.01</span>)) <span class="op">%&gt;%</span></span>
+<span id="cb637-4"><a href="ci-width.html#cb637-4"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">data =</span> <span class="kw">map</span>(level, <span class="op">~</span><span class="st"> </span><span class="kw">urn_confidence</span>(<span class="dt">bowl =</span> urn, <span class="dt">n =</span> <span class="dv">50</span>, <span class="dt">level =</span> .))) <span class="op">%&gt;%</span></span>
+<span id="cb637-5"><a href="ci-width.html#cb637-5"></a><span class="st">  </span><span class="kw">unnest</span>(data) <span class="op">%&gt;%</span></span>
+<span id="cb637-6"><a href="ci-width.html#cb637-6"></a><span class="st">  </span><span class="kw">select</span>(<span class="op">-</span>level) <span class="op">%&gt;%</span></span>
+<span id="cb637-7"><a href="ci-width.html#cb637-7"></a><span class="st">  </span></span>
+<span id="cb637-8"><a href="ci-width.html#cb637-8"></a><span class="st">  </span><span class="co"># Calculate mean widths</span></span>
+<span id="cb637-9"><a href="ci-width.html#cb637-9"></a><span class="st">  </span></span>
+<span id="cb637-10"><a href="ci-width.html#cb637-10"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">width =</span> upper <span class="op">-</span><span class="st"> </span>lower) <span class="op">%&gt;%</span></span>
+<span id="cb637-11"><a href="ci-width.html#cb637-11"></a><span class="st">  </span><span class="kw">group_by</span>(confidence_level) <span class="op">%&gt;%</span></span>
+<span id="cb637-12"><a href="ci-width.html#cb637-12"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">mean_width =</span> <span class="kw">mean</span>(width)) <span class="op">%&gt;%</span></span>
+<span id="cb637-13"><a href="ci-width.html#cb637-13"></a><span class="st">  </span></span>
+<span id="cb637-14"><a href="ci-width.html#cb637-14"></a><span class="st">  </span><span class="co"># Plot results</span></span>
+<span id="cb637-15"><a href="ci-width.html#cb637-15"></a><span class="st">  </span></span>
+<span id="cb637-16"><a href="ci-width.html#cb637-16"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> confidence_level, <span class="dt">y =</span> mean_width)) <span class="op">+</span></span>
+<span id="cb637-17"><a href="ci-width.html#cb637-17"></a><span class="st">  </span><span class="kw">geom_point</span>() <span class="op">+</span></span>
+<span id="cb637-18"><a href="ci-width.html#cb637-18"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">&quot;Confidence level&quot;</span>,</span>
+<span id="cb637-19"><a href="ci-width.html#cb637-19"></a>       <span class="dt">y =</span> <span class="st">&quot;Mean width&quot;</span>,</span>
+<span id="cb637-20"><a href="ci-width.html#cb637-20"></a>       <span class="dt">title =</span> <span class="st">&quot;Change in mean width of CI as level increase&quot;</span>)</span></code></pre></div>
 <p><img src="Preceptor%E2%80%99s-Primer-for-Bayesian-Data-Science_files/figure-html/unnamed-chunk-326-1.png" width="\textwidth" /></p>
 <p>As the confidence level gets larger, the width of the interval gets larger too.</p>
 </div>
@@ -909,16 +909,16 @@ Mean width
 <h3><span class="header-section-number">7.3.3</span> Impact of sample size</h3>
 <p>This time, let’s fix the confidence level at 95%, but consider three different sample sizes for <span class="math inline">\(n\)</span>: 25, 50, and 100. Specifically, we’ll first take 10 different random samples of size 25, 10 different random samples of size 50, and 10 different random samples of size 100. We’ll then construct 95% percentile-based confidence intervals for each sample. Finally, we’ll compare the widths of these intervals.</p>
 <p>Note that now that we have a function, <code>urn_confidence()</code>, we can do this very easily!</p>
-<div class="sourceCode" id="cb637"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb637-1"><a href="ci-width.html#cb637-1"></a><span class="kw">set.seed</span>(<span class="dv">9</span>)</span>
-<span id="cb637-2"><a href="ci-width.html#cb637-2"></a></span>
-<span id="cb637-3"><a href="ci-width.html#cb637-3"></a></span>
-<span id="cb637-4"><a href="ci-width.html#cb637-4"></a>perc_cis_n_<span class="dv">25</span>  &lt;-<span class="st"> </span><span class="kw">urn_confidence</span>(<span class="dt">bowl =</span> urn, <span class="dt">n =</span> <span class="dv">25</span>, <span class="dt">level =</span> <span class="fl">0.95</span>)</span>
-<span id="cb637-5"><a href="ci-width.html#cb637-5"></a>perc_cis_n_<span class="dv">50</span>  &lt;-<span class="st"> </span><span class="kw">urn_confidence</span>(<span class="dt">bowl =</span> urn, <span class="dt">n =</span> <span class="dv">50</span>, <span class="dt">level =</span> <span class="fl">0.95</span>)</span>
-<span id="cb637-6"><a href="ci-width.html#cb637-6"></a>perc_cis_n_<span class="dv">100</span> &lt;-<span class="st"> </span><span class="kw">urn_confidence</span>(<span class="dt">bowl =</span> urn, <span class="dt">n =</span> <span class="dv">100</span>, <span class="dt">level =</span> <span class="fl">0.95</span>)</span>
-<span id="cb637-7"><a href="ci-width.html#cb637-7"></a></span>
-<span id="cb637-8"><a href="ci-width.html#cb637-8"></a><span class="co"># Combine into single data frame</span></span>
-<span id="cb637-9"><a href="ci-width.html#cb637-9"></a></span>
-<span id="cb637-10"><a href="ci-width.html#cb637-10"></a>percentile_cis_by_n &lt;-<span class="st"> </span><span class="kw">bind_rows</span>(perc_cis_n_<span class="dv">25</span>, perc_cis_n_<span class="dv">50</span>, perc_cis_n_<span class="dv">100</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb638"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb638-1"><a href="ci-width.html#cb638-1"></a><span class="kw">set.seed</span>(<span class="dv">9</span>)</span>
+<span id="cb638-2"><a href="ci-width.html#cb638-2"></a></span>
+<span id="cb638-3"><a href="ci-width.html#cb638-3"></a></span>
+<span id="cb638-4"><a href="ci-width.html#cb638-4"></a>perc_cis_n_<span class="dv">25</span>  &lt;-<span class="st"> </span><span class="kw">urn_confidence</span>(<span class="dt">bowl =</span> urn, <span class="dt">n =</span> <span class="dv">25</span>, <span class="dt">level =</span> <span class="fl">0.95</span>)</span>
+<span id="cb638-5"><a href="ci-width.html#cb638-5"></a>perc_cis_n_<span class="dv">50</span>  &lt;-<span class="st"> </span><span class="kw">urn_confidence</span>(<span class="dt">bowl =</span> urn, <span class="dt">n =</span> <span class="dv">50</span>, <span class="dt">level =</span> <span class="fl">0.95</span>)</span>
+<span id="cb638-6"><a href="ci-width.html#cb638-6"></a>perc_cis_n_<span class="dv">100</span> &lt;-<span class="st"> </span><span class="kw">urn_confidence</span>(<span class="dt">bowl =</span> urn, <span class="dt">n =</span> <span class="dv">100</span>, <span class="dt">level =</span> <span class="fl">0.95</span>)</span>
+<span id="cb638-7"><a href="ci-width.html#cb638-7"></a></span>
+<span id="cb638-8"><a href="ci-width.html#cb638-8"></a><span class="co"># Combine into single data frame</span></span>
+<span id="cb638-9"><a href="ci-width.html#cb638-9"></a></span>
+<span id="cb638-10"><a href="ci-width.html#cb638-10"></a>percentile_cis_by_n &lt;-<span class="st"> </span><span class="kw">bind_rows</span>(perc_cis_n_<span class="dv">25</span>, perc_cis_n_<span class="dv">50</span>, perc_cis_n_<span class="dv">100</span>)</span></code></pre></div>
 <p>Let’s compare the average widths in Table <a href="ci-width.html#tab:perc-cis-average-width-2">7.3</a>. Observe that as the confidence intervals are constructed from larger and larger sample sizes, they tend to get narrower.</p>
 <!-- Should switch all kable() tables to gt(), I think. Perhaps with a theme! Or at least with standard formatting. -->
 <table class="table" style="font-size: 16px; margin-left: auto; margin-right: auto;">
@@ -965,26 +965,26 @@ Mean width
 <p>The moral of the story is:  <strong>Larger sample sizes tend to produce narrower confidence intervals.</strong> Recall that this was a key message in Subsection <a href="sampling-framework.html#moral-of-the-story">6.3.3</a>. As we used larger and larger shovels for our samples, the sample proportions red, <span class="math inline">\(\widehat{p}\)</span>, tended to vary less. In other words, our estimates got more and more <em>precise</em>.</p>
 <p>Recall that we visualized these results in Figure <a href="sampling-framework.html#fig:comparing-sampling-distributions-3">6.18</a>, where we compared the <em>sampling distributions</em> for <span class="math inline">\(\widehat{p}\)</span> based on samples of size <span class="math inline">\(n\)</span> equal to 25, 50, and 100. We also quantified the sampling variation of these sampling distributions using their standard deviation, which has that special name: the <em>standard error</em>. So as the sample size increases, the standard error decreases.</p>
 <p>Let’s do this again, but creating everything in a single tibble so we can look at sample sizes from 25 to 200:</p>
-<div class="sourceCode" id="cb638"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb638-1"><a href="ci-width.html#cb638-1"></a><span class="co"># Same code as before, but for more sample sizes</span></span>
-<span id="cb638-2"><a href="ci-width.html#cb638-2"></a></span>
-<span id="cb638-3"><a href="ci-width.html#cb638-3"></a><span class="kw">tibble</span>(<span class="dt">n =</span> <span class="kw">seq</span>(<span class="dv">25</span>, <span class="dv">200</span>, <span class="dt">by =</span> <span class="dv">5</span>)) <span class="op">%&gt;%</span></span>
-<span id="cb638-4"><a href="ci-width.html#cb638-4"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">data =</span> <span class="kw">map</span>(n, <span class="op">~</span><span class="st"> </span><span class="kw">urn_confidence</span>(<span class="dt">bowl =</span> urn, <span class="dt">n =</span> ., <span class="dt">level =</span> <span class="fl">0.95</span>))) <span class="op">%&gt;%</span></span>
-<span id="cb638-5"><a href="ci-width.html#cb638-5"></a><span class="st">  </span><span class="kw">unnest</span>(data) <span class="op">%&gt;%</span></span>
-<span id="cb638-6"><a href="ci-width.html#cb638-6"></a><span class="st">  </span><span class="kw">select</span>(<span class="op">-</span>n) <span class="op">%&gt;%</span></span>
-<span id="cb638-7"><a href="ci-width.html#cb638-7"></a><span class="st">  </span></span>
-<span id="cb638-8"><a href="ci-width.html#cb638-8"></a><span class="st">  </span><span class="co"># Calculate mean widths</span></span>
-<span id="cb638-9"><a href="ci-width.html#cb638-9"></a><span class="st">  </span></span>
-<span id="cb638-10"><a href="ci-width.html#cb638-10"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">width =</span> upper <span class="op">-</span><span class="st"> </span>lower) <span class="op">%&gt;%</span></span>
-<span id="cb638-11"><a href="ci-width.html#cb638-11"></a><span class="st">  </span><span class="kw">group_by</span>(sample_size) <span class="op">%&gt;%</span></span>
-<span id="cb638-12"><a href="ci-width.html#cb638-12"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">mean_width =</span> <span class="kw">mean</span>(width)) <span class="op">%&gt;%</span></span>
-<span id="cb638-13"><a href="ci-width.html#cb638-13"></a><span class="st">  </span></span>
-<span id="cb638-14"><a href="ci-width.html#cb638-14"></a><span class="st">  </span><span class="co"># Plot results</span></span>
-<span id="cb638-15"><a href="ci-width.html#cb638-15"></a><span class="st">  </span></span>
-<span id="cb638-16"><a href="ci-width.html#cb638-16"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> sample_size, <span class="dt">y =</span> mean_width)) <span class="op">+</span></span>
-<span id="cb638-17"><a href="ci-width.html#cb638-17"></a><span class="st">  </span><span class="kw">geom_point</span>() <span class="op">+</span></span>
-<span id="cb638-18"><a href="ci-width.html#cb638-18"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">&quot;Sample size&quot;</span>,</span>
-<span id="cb638-19"><a href="ci-width.html#cb638-19"></a>       <span class="dt">y =</span> <span class="st">&quot;Mean width&quot;</span>,</span>
-<span id="cb638-20"><a href="ci-width.html#cb638-20"></a>       <span class="dt">title =</span> <span class="st">&quot;Change in mean width of CI as sample size decreases&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb639"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb639-1"><a href="ci-width.html#cb639-1"></a><span class="co"># Same code as before, but for more sample sizes</span></span>
+<span id="cb639-2"><a href="ci-width.html#cb639-2"></a></span>
+<span id="cb639-3"><a href="ci-width.html#cb639-3"></a><span class="kw">tibble</span>(<span class="dt">n =</span> <span class="kw">seq</span>(<span class="dv">25</span>, <span class="dv">200</span>, <span class="dt">by =</span> <span class="dv">5</span>)) <span class="op">%&gt;%</span></span>
+<span id="cb639-4"><a href="ci-width.html#cb639-4"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">data =</span> <span class="kw">map</span>(n, <span class="op">~</span><span class="st"> </span><span class="kw">urn_confidence</span>(<span class="dt">bowl =</span> urn, <span class="dt">n =</span> ., <span class="dt">level =</span> <span class="fl">0.95</span>))) <span class="op">%&gt;%</span></span>
+<span id="cb639-5"><a href="ci-width.html#cb639-5"></a><span class="st">  </span><span class="kw">unnest</span>(data) <span class="op">%&gt;%</span></span>
+<span id="cb639-6"><a href="ci-width.html#cb639-6"></a><span class="st">  </span><span class="kw">select</span>(<span class="op">-</span>n) <span class="op">%&gt;%</span></span>
+<span id="cb639-7"><a href="ci-width.html#cb639-7"></a><span class="st">  </span></span>
+<span id="cb639-8"><a href="ci-width.html#cb639-8"></a><span class="st">  </span><span class="co"># Calculate mean widths</span></span>
+<span id="cb639-9"><a href="ci-width.html#cb639-9"></a><span class="st">  </span></span>
+<span id="cb639-10"><a href="ci-width.html#cb639-10"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">width =</span> upper <span class="op">-</span><span class="st"> </span>lower) <span class="op">%&gt;%</span></span>
+<span id="cb639-11"><a href="ci-width.html#cb639-11"></a><span class="st">  </span><span class="kw">group_by</span>(sample_size) <span class="op">%&gt;%</span></span>
+<span id="cb639-12"><a href="ci-width.html#cb639-12"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">mean_width =</span> <span class="kw">mean</span>(width)) <span class="op">%&gt;%</span></span>
+<span id="cb639-13"><a href="ci-width.html#cb639-13"></a><span class="st">  </span></span>
+<span id="cb639-14"><a href="ci-width.html#cb639-14"></a><span class="st">  </span><span class="co"># Plot results</span></span>
+<span id="cb639-15"><a href="ci-width.html#cb639-15"></a><span class="st">  </span></span>
+<span id="cb639-16"><a href="ci-width.html#cb639-16"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> sample_size, <span class="dt">y =</span> mean_width)) <span class="op">+</span></span>
+<span id="cb639-17"><a href="ci-width.html#cb639-17"></a><span class="st">  </span><span class="kw">geom_point</span>() <span class="op">+</span></span>
+<span id="cb639-18"><a href="ci-width.html#cb639-18"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">&quot;Sample size&quot;</span>,</span>
+<span id="cb639-19"><a href="ci-width.html#cb639-19"></a>       <span class="dt">y =</span> <span class="st">&quot;Mean width&quot;</span>,</span>
+<span id="cb639-20"><a href="ci-width.html#cb639-20"></a>       <span class="dt">title =</span> <span class="st">&quot;Change in mean width of CI as sample size decreases&quot;</span>)</span></code></pre></div>
 <p><img src="Preceptor%E2%80%99s-Primer-for-Bayesian-Data-Science_files/figure-html/unnamed-chunk-328-1.png" width="\textwidth" /></p>
 <p>As the sample size gets larger, the width of the interval gets smaller.</p>
 <!-- 
