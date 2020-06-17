@@ -1,0 +1,752 @@
+---
+title: "What is Simpson's Paradox?"
+output:
+  xaringan::moon_reader:
+    lib_dir: libs
+    
+    # allows you to set a style theme
+    
+    #css: [ "ninjutsu"] <- can't use this because it messing up the rest of the css       if you want to use columns, etc. or other styling options! Is this the case         for other options?
+    
+    nature:
+      ratio: 16:10
+      
+      # make it so that incremental slides are not numbered in slide numbers
+      
+      countIncrementalSlides: false
+    
+    # setting seal = false gets rid of the automatic title slide. Set class: title-slide at the top of first slide to create your own title slide below
+    
+    seal: false
+      
+# create a new slide with ---      
+      
+---
+
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(fig.width = 6, message = F, warning = F, 
+                      comment = "", cache = F)
+library(tidyverse)
+library(xaringan)
+library(gganimate)
+library(tidyverse)
+library(kableExtra)
+library(broom)
+library(skimr)
+library(ISLR)
+library(fivethirtyeight)
+library(animation)
+library(rstanarm)
+
+```
+
+
+```{r data_loading, include = FALSE}
+
+# create data subset used in chapter for the credit example
+
+credit_ch12 <- Credit %>% 
+  as_tibble() %>% 
+  select(ID, debt = Balance, credit_limit = Limit, 
+         income = Income, credit_rating = Rating, age = Age)
+
+```
+
+
+```{r basic_plot, include = FALSE, message = FALSE, fig.align= "center", fig.height= 3, fig.width=4}
+
+# create basic plot of debt v. income
+
+credit_ch12 %>%
+  ggplot(aes(x = income, y = debt)) + 
+  geom_point() +
+  geom_smooth(method = lm, se = FALSE) +
+  ggtitle("Credit Card Debt v. Income") +
+  theme_bw() +
+  xlab("Income (in $1,000)") +
+  ylab("Debt")
+
+```
+
+```{r regression_example_no_controls, include = FALSE}
+
+# Fit regression model:
+
+debt_model_1 <- lm(debt ~ income, data = credit_ch12)
+
+# Get regression table data:
+
+debt_model_table_1 <- debt_model_1 %>%
+  tidy(conf.int = TRUE) %>%
+  select(Term = term, Estimate = estimate, Conf.Low = conf.low, Conf.High = conf.high)
+
+```
+
+
+```{r debt_model_1_table, results = "asis", include = FALSE}
+
+# create kable table of model results
+
+debt_model_1_table_table <- kable(debt_model_table_1, format = "html",
+      digits = 2,
+      caption = "Explaining Debt with Income") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), 
+                full_width = F, 
+                position = "center")
+
+
+# create kable table with highlighted row
+
+debt_model_1_table_table_highlight <- kable(debt_model_table_1, format = "html",
+      digits = 2,
+      caption = "Explaining Debt with Income") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), 
+                full_width = F, 
+                position = "center") %>%
+   row_spec(2:2, bold = T, color = "black", background = "yellow")
+
+
+```
+
+
+
+```{r assign_groups_credit_limit_groups, include = FALSE}
+
+# get quantiles of the credit limit data to use to assign groups 
+
+quantiles <- quantile(credit_ch12$credit_limit, c(.25, .5, .75))
+
+
+# create a new dataset for the credit data with groups
+
+new_credit <- credit_ch12
+
+
+# create a group variable with placeholder NAs
+
+new_credit$group <- rep(NA, nrow(new_credit))
+
+# assign groups to the group variable based on credit limits and quantile cutoffs
+
+new_credit$group[new_credit$credit_limit < quantiles[1]] <- "low"
+new_credit$group[new_credit$credit_limit < quantiles[2] & 
+                   new_credit$credit_limit >= quantiles[1]] <- "med-low"
+new_credit$group[new_credit$credit_limit < quantiles[3] & 
+                   new_credit$credit_limit >= quantiles[2]] <- "med-high"
+new_credit$group[new_credit$credit_limit >= quantiles[3]] <- "high"
+
+# create another dataset that contains all the data regardless of group and
+# assigns it the aggregate group "all"
+
+all_credits_grouped <- credit_ch12 %>%
+  mutate(group = "all")
+
+# combine the aggregate and individual groups
+
+credits_to_graph <- rbind(new_credit, all_credits_grouped)
+
+```
+
+
+```{r plots, include = FALSE, fig.height= 3, fig.width=4}
+
+# plot the aggregate data with no regression line
+
+all_no_line <- credits_to_graph %>%
+  filter(group == "all") %>%
+  ggplot(aes(x = income, y = debt, color = group)) + 
+  geom_point() +
+  theme_bw() +
+  scale_color_manual(values = c("black")) +
+  labs(color = "Credit Limit Bracket") +
+  xlab("Income (in 1,000s) ") +
+  ylab("Credit Card Debt (in $)") +
+  theme(legend.position = "bottom") +
+  ggtitle("Simpson's Paradox: Credit Example") +
+  coord_cartesian(ylim = c(-100,2000))
+
+
+# plot the aggregate data with a regression line
+
+all_line <- credits_to_graph %>%
+  filter(group == "all") %>%
+  ggplot(aes(x = income, y = debt, color = group)) + 
+  geom_point() +
+  geom_smooth(aes(color = group), method = lm, se = FALSE) +
+  theme_bw()+
+  scale_color_manual(values = c("black")) +
+  labs(color = "Credit Limit Bracket") +
+  xlab("Income (in 1,000s) ") +
+  ylab("Credit Card Debt (in $)") +
+  theme(legend.position = "bottom") +
+  ggtitle("Simpson's Paradox: Credit Example") +
+  coord_cartesian(ylim = c(-100,2000))
+
+
+# plot the groups without a regression line
+
+groups_no_line <- credits_to_graph %>%
+  filter(group != "all") %>%
+  ggplot(aes(x = income, y = debt, color = group)) + 
+  geom_point() +
+  theme_bw() +
+  labs(color = "Credit Limit Bracket") +
+  xlab("Income (in 1,000s) ") +
+  ylab("Credit Card Debt (in $)") +
+  theme(legend.position = "bottom") +
+  ggtitle("Simpson's Paradox: Credit Example") +
+  coord_cartesian(ylim = c(-100,2000))
+
+
+# plot the groups with a regression line
+
+groups_line <- credits_to_graph %>%
+  filter(group != "all") %>%
+  ggplot(aes(x = income, y = debt, color = group)) + 
+  geom_point() +
+  geom_smooth(aes(color = group), method = lm, se = FALSE) +
+  theme_bw() +
+  labs(color = "Credit Limit Bracket") +
+  xlab("Income (in 1,000s) ") +
+  ylab("Credit Card Debt (in $)") +
+  theme(legend.position = "bottom") +
+  ggtitle("Simpson's Paradox: Credit Example") +
+  coord_cartesian(ylim = c(-100,2000))
+
+```
+
+
+```{r credit_animation, include = FALSE, fig.height=3, fig.width=4}
+
+# use the animation package to create a gif that moves through the plots
+
+saveGIF(
+  expr = {
+    plot(all_no_line)
+    plot(all_line)
+    plot(groups_no_line)
+    plot(groups_line)
+  },
+  
+  # change the interval between the images to double it
+  
+  interval = 2,
+  movie.name = "credit.gif",
+)
+```
+
+
+
+```{r gif_changing_slope, include = FALSE}
+
+# save r default colors:
+
+ggplot_red <- "#F8766D"
+ggplot_blue <- "#00BFC4"
+ggplot_purple <- "#C77CFF"
+ggplot_green <- "#7CAE00"
+
+
+# create a new variable called phase_in_1 to group indicate grouping with
+# med-low and low combined
+
+credits_to_graph$phase_in_1 <- NA
+
+credits_to_graph$phase_in_1[credits_to_graph$group == "low" | 
+                              credits_to_graph$group == "med-low"] <- "low & med-low"
+
+credits_to_graph$phase_in_1[credits_to_graph$group == "high"] <- "high"
+credits_to_graph$phase_in_1[credits_to_graph$group == "med-high"] <- "med-high"
+
+
+# create a new variable called phase_in_2 to group indicate grouping with
+# med-low, low, and med-high combined
+
+credits_to_graph$phase_in_2 <- NA
+
+credits_to_graph$phase_in_2[credits_to_graph$phase_in_1 == "low & med-low"] <- "low, med-low, med-high"
+
+credits_to_graph$phase_in_2[credits_to_graph$group == "med-high"] <- "low, med-low, med-high"
+
+credits_to_graph$phase_in_2[credits_to_graph$group == "high"] <- "high"
+
+
+# plot the groups determined by phase_in_1 variable with regression line
+
+groups_line_phase_1 <- credits_to_graph %>%
+  filter(group != "all") %>%
+  ggplot(aes(x = income, y = debt, color = phase_in_1)) + 
+  geom_point() +
+  geom_smooth(aes(color = phase_in_1), method = lm, se = FALSE) +
+  theme_bw() +
+  labs(color = "Credit Limit Bracket") +
+  xlab("Income (in 1,000s) ") +
+  ylab("Credit Card Debt (in $)") +
+  theme(legend.position = "bottom") +
+  ggtitle("Simpson's Paradox: Credit Example") +
+  coord_cartesian(ylim = c(-100,2000)) +
+  scale_color_manual(values = c(ggplot_red, "black", ggplot_blue))
+
+
+# plot the groups determined by phase_in_2 variable with regression line
+
+groups_line_phase_2 <- credits_to_graph %>%
+  filter(group != "all") %>%
+  ggplot(aes(x = income, y = debt, color = phase_in_2)) + 
+  geom_point() +
+  geom_smooth(aes(color = phase_in_2), method = lm, se = FALSE) +
+  theme_bw() +
+  labs(color = "Credit Limit Bracket") +
+  xlab("Income (in 1,000s) ") +
+  ylab("Credit Card Debt (in $)") +
+  theme(legend.position = "bottom") +
+  ggtitle("Simpson's Paradox: Credit Example") +
+  coord_cartesian(ylim = c(-100,2000)) +
+  scale_color_manual(values = c(ggplot_red, "black"))
+
+
+```
+
+
+```{r credit_animation_changing_line, include = FALSE, fig.height=3, fig.width=4}
+
+# create a gif using the animate package to show the changing line animation
+
+animation::saveGIF(
+  expr = {
+    plot(groups_no_line)
+    plot(groups_line)
+    plot(groups_line_phase_1)
+    plot(groups_line_phase_2)
+    plot(all_line)
+  },
+    # change the interval between the images
+  
+  interval = 2,
+  movie.name = "credit_changing_line.gif"
+)
+```
+
+
+```{r regression_example, include = FALSE}
+
+# Fit regression model with second predictor for income:
+
+debt_model_2 <- lm(debt ~ credit_limit + income, data = credit_ch12)
+
+# Get regression table:
+
+debt_model_table_2 <- debt_model_2 %>%
+  tidy(conf.int = TRUE) %>%
+  select(Term = term, Estimate = estimate, Conf.Low = conf.low, Conf.High = conf.high)
+
+```
+
+
+```{r debt_model_2_table, results = "asis", echo = FALSE}
+
+# create kable table for the second table
+
+debt_model_2_table_table <- kable(debt_model_table_2, format = "html",
+      digits = 2,
+      caption = "Explaining Debt with Income and Credit Limit") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), 
+                full_width = F, 
+                position = "center")
+
+# create kable table with highlighted row for the second table
+
+debt_model_2_table_table_highlight <- kable(debt_model_table_2, format = "html",
+      digits = 2,
+      caption = "Explaining Debt with Income and Credit Limit") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), 
+                full_width = F, 
+                position = "center") %>%
+   row_spec(3:3, bold = T, color = "black", background = "yellow")
+```
+
+
+```{r histogram_plot, echo = FALSE, fig.align = "center"}
+
+# calculate quantiles
+
+quantiles <- quantile(credit_ch12$credit_limit, c(.25, .5, .75))
+
+# create first histogram with no quantiles
+
+hist_no_quantiles <- credit_ch12 %>%
+  ggplot(aes(x = credit_limit)) +
+  geom_histogram(bins = 40, color = "white") +
+  theme_bw() +
+  ggtitle("Histogram of Credit Limit Broken into 4 Brackets") +
+  xlab("Credit Limit") +
+  ylab("Count")
+
+# create histogram with one vline for 1st quantile
+
+hist_2_quantiles <- credit_ch12 %>%
+  ggplot(aes(x = credit_limit)) +
+  geom_histogram(bins = 40, color = "white") +
+  geom_vline(xintercept = quantiles[1], size = 1.5, linetype = 2, color = "red") +
+  theme_bw() +
+  ggtitle("Histogram of Credit Limit Broken into 4 Brackets") +
+  xlab("Credit Limit") +
+  ylab("Count")
+
+# create histogram with one vline for 1st and one for 2nd quantile
+
+hist_3_quantiles <- credit_ch12 %>%
+  ggplot(aes(x = credit_limit)) +
+  geom_histogram(bins = 40, color = "white") +
+  geom_vline(xintercept = quantiles[1], size = 1.5, linetype = 2, color = "red") +
+  geom_vline(xintercept = quantiles[2], size = 1.5, linetype = 2, color = "red") +
+  theme_bw() +
+  ggtitle("Histogram of Credit Limit Broken into 4 Brackets") +
+  xlab("Credit Limit") +
+  ylab("Count")
+
+# create histogram with vlines for all quantiles
+
+hist_4_quantiles <- credit_ch12 %>%
+  ggplot(aes(x = credit_limit)) +
+  geom_histogram(bins = 40, color = "white") +
+    geom_vline(xintercept = quantiles[1], size = 1.5, linetype = 2, color = "red") +
+  geom_vline(xintercept = quantiles[2], size = 1.5, linetype = 2, color = "red") +
+  geom_vline(xintercept = quantiles[3], size = 1.5, linetype = 2, color = "red") +
+  theme_bw() +
+  ggtitle("Histogram of Credit Limit Broken into 4 Brackets") +
+  xlab("Credit Limit") +
+  ylab("Count")
+
+```
+
+```{r histogram_gif, include = FALSE}
+
+# create a gif with the animation package to show the histogram with quantiles being added
+
+animation::saveGIF(
+  expr = {
+    plot(hist_no_quantiles)
+    plot(hist_2_quantiles)
+    plot(hist_3_quantiles)
+    plot(hist_4_quantiles)
+    plot(hist_4_quantiles)
+  },
+  movie.name = "histogram.gif"
+)
+```
+
+
+class: title-slide, center
+
+## Exploring the Credit Card Debt and Income Example of Simpson's Paradox
+
+<!-- embed credit gif -->
+
+![](credit.gif)
+
+---
+
+<!-- create left column -->
+
+.pull-left[
+
+```{r echo = FALSE}
+
+all_no_line
+
+```
+
+]
+
+<!-- create right column -->
+
+.pull-right[
+
+## The plot on the left presents a scatter plot of an individual's credit debt versus their income. 
+
+{{content}}
+
+]
+--
+
++ When a basic linear regression line is added, we see that the relationship between income and credit debt is clearly positive. 
+
+
+
+---
+
+<!-- create left column -->
+
+.pull-left[
+
+```{r echo = FALSE}
+
+all_line
+
+```
+
+]
+
+<!-- create right column -->
+
+.pull-right[
+
+## The plot on the left presents a scatter plot of an individual's credit debt versus their income. 
+
++ When a basic linear regression line is added, we see that the relationship between income and credit debt is clearly positive. 
+
+]
+
+
+---
+
+# A Simple Linear Regression Using Income to Explain Debt Confirms the Positive Relationship
+
+
+```{r show_table_of_debt_model_1, echo = FALSE}
+debt_model_1_table_table
+```
+
+---
+
+# A Simple Linear Regression Using Income to Explain Debt Confirms the Positive Relationship
+
+
+```{r show_table_of_debt_model_1_highlighted, echo = FALSE}
+debt_model_1_table_table_highlight
+```
+
+--
+
+When we perform a simple linear regression using income to explain debt in this data, we find that an increase in income by $1,000 is associated with a $`r round(coef(debt_model_1)[2],2)` increase in debt. 
+
+---
+
+# The Puzzle
+
+## So why is it that the coefficient on income is *negative* when we control for credit limit in a multiple linear regression using both income and credit limit as explanatory variables?
+
+```{r show_table_of_debt_model_2, echo = FALSE}
+debt_model_2_table_table
+```
+
+
+---
+
+# The Puzzle
+
+## So why is it that the coefficient on income is *negative* when we control for credit limit in a multiple linear regression using both income and credit limit as explanatory variables?
+
+```{r show_table_of_debt_model_2_highlighted, echo = FALSE}
+debt_model_2_table_table_highlight
+```
+
+--
+Now, we expect that if two individuals of the same credit limit differ by $1,000 in income, the individual with the higher income will have $`r -1 * round(coef(debt_model_2)[3],2)` *less* in debt.
+---
+
+# Examining the Credit Limit Variable
+
+<!-- create left column -->
+
+.pull-left[
+
+![](histogram.gif)
+
+]
+
+<!-- create right column -->
+
+.pull-right[
+
+### The plot on the left shows a histogram which reveals the general distribution of the credit limit variable.
+
+{{content}}
+
+]
+
+--
+
++ The red lines divide the distribution into four equally size groups or *quantiles*:
+
+{{content}}
+
+--
+    1. "Low" Credit Limit Scores between $0 and $3,088.
+    
+{{content}}
+
+--
+    2. "Med-Low" Credit Limit Scores between $3,088 and $4,622.
+
+{{content}}
+
+--
+    3. "Med-High" Credit Limit Scores between $4,622 and $5,873.
+    
+{{content}}
+
+--
+    4. "High" Credit Limit Scores between $5,873 and $13,913.
+
+
+---
+
+
+# Revealing the Credit Limit Group Trends in the Plot
+
+<!-- create left column -->
+
+.pull-left[
+
+```{r all_no_line_plot, echo = FALSE}
+all_no_line
+```
+
+]
+
+<!-- create right column -->
+
+.pull-right[
+
+### How do the credit limit groupings break down the data of income v. credit limit in the scatter plot?
+
+]
+
+
+
+---
+
+# Revealing the Credit Limit Group Trends in the Plot
+
+<!-- create left column -->
+
+.pull-left[
+
+```{r groups_no_line_plot, echo = FALSE}
+groups_no_line
+```
+
+]
+
+<!-- create right column -->
+
+.pull-right[
+
+### How do the credit limit groupings break down the data of income v. credit limit in the scatter plot?
+
+
+{{content}}
+
+]
+
+--
++ We can now add in linear regression lines for each group to examine the within-group relationships between income and debt
+
+---
+
+# Revealing the Credit Limit Group Trends in the Plot
+
+<!-- create left column -->
+
+.pull-left[
+
+```{r groups_line_plot, echo = FALSE}
+groups_line
+```
+
+]
+
+<!-- create right column -->
+
+.pull-right[
+
+### How do the credit limit groupings break down the data of income v. credit limit in the scatter plot?
+
++ We can now add in linear regression lines for each group to examine the within-group relationships between income and debt
+
+{{content}}
+
+]
+--
+    + As we can see, the relationship has largely reversed within each group 
+
+---
+
+# Revealing the Credit Limit Group Trends in the Plot
+
+<!-- create left column -->
+
+.pull-left[
+
+![](credit.gif)
+
+]
+
+<!-- create right column -->
+
+.pull-right[
+
+### Aggregate Trend
+
+{{content}}
+
+
+]
+--
+
++ The relationship between income and debt is positive
+
+{{content}}
+
+--
+
+### Group Trends
+
+{{content}}
+
+--
++ Within the "medium-low" and "medium high" credit limit groups, the relationship between debt and income is negative
+
+{{content}}
+
+--
+
++ In the "low" credit limit group, the relationship is relatively flat 
+
+{{content}}
+
+--
+
++ In the “high” credit limit group the relationship remains positive, but the slope is shallower than the slope of the regression line for the aggregate group
+
+---
+
+class: middle
+
+<!-- create left column -->
+
+.pull-left[
+
+![](credit_changing_line.gif)
+
+]
+
+<!-- create right column -->
+
+.pull-right[
+
+### The final visual below demonstrates how the process of aggregating the groups together generates the reversal of the relationship between income and debt. 
+
+{{content}}
+
+]
+
+--
+
+In this example, credit limit is a *confounding variable* of the relationship between credit card debt and income. Thus, credit limit needs to be accounted for in any appropriate model for the relationship between debt and income.
+
+
+---
