@@ -1,0 +1,286 @@
+---
+title: "Power and Errors"
+output:
+  xaringan::moon_reader:
+    lib_dir: libs
+    
+    nature:
+      ratio: 16:10
+      
+      # make it so that incremental slides are not numbered in slide numbers
+      
+      countIncrementalSlides: false
+    
+    # setting seal = false gets rid of the automatic title slide. Set class: title-slide at the top of first slide to create your own title slide below
+    
+    seal: false
+      
+# create a new slide with ---      
+      
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(fig.width = 6, message = F, warning = F, 
+                      comment = "", cache = F)
+
+## flipbook package
+source(file = "https://raw.githubusercontent.com/EvaMaeRey/little_flipbooks_library/master/xaringan_reveal_parentheses_balanced.R")
+
+library(tidyverse)
+
+## slide presentater
+library(xaringan)
+library(gov.1005.data)
+
+## Andrew Timm's package for determining Type M factor and Type S prob
+library(retrodesign)
+
+library(gganimate)
+
+## load in qscores
+data("qscores")
+
+gov <- qscores %>%
+  filter(department == "Government") 
+  
+
+econ <- qscores %>%
+  filter(department == "Economics")
+
+dat <- gov %>%
+  full_join(econ)
+
+## determine true effect given all data 
+mod <- lm(workload ~ department, dat)
+
+## calculate Type M and Type S rates for experiment testing difference in means between Gov and Ec courses
+retrodesign(mod$coefficients[2],2.89)
+```
+
+```{r, include = F}
+
+## set up polygons, shaded red areas on main fig
+cord.x <- c(-7.987, seq(-7.987,-5.66462,.01),-5.66462)
+cord.y <- c(0,dnorm(seq(-7.987,-5.66462,.01),1.55,2.89),0) 
+cord.xx <- c(11.087, seq(11.087,5.66,-.01),5.66) 
+cord.yy <- c(0,dnorm(seq(11.087,5.66462,-.01),1.55,2.89),0)
+
+
+coord_l <- data.frame(x= cord.x, y = cord.y)
+coord_r <- data.frame(x = cord.xx, y = cord.yy)
+```
+
+```{r p1, echo = F}
+
+## fig1, empty plot
+plot1 <- ggplot(dat) +
+  xlim(1.55-3.3*2.89,1.55+3.3*2.89) +
+  theme(axis.title = element_blank())
+
+## fig2, true distribution of effect size
+plot2 <- plot1 + 
+  stat_function(fun = dnorm, args = list(mean = -mod$coefficients[2], sd = 2.89), size = 1)  
+
+## fig3, true dist + true effect size
+plot3 <- plot2 +
+  geom_segment(aes(x = -mod$coefficients[2], y = 0, xend = -mod$coefficients[2], yend = dnorm(-mod$coefficients[2],-mod$coefficients[2],2.89)), color = "blue", size = 1.2)
+
+## fig4, true dist, true effect size, + null hypothesis
+plot4 <- plot3 + 
+  geom_segment(aes(x = 0, y = 0, xend = 0, yend = dnorm(0,-mod$coefficients[2],2.89)), color = "red", size = 1.2) 
+
+## fig5, true dist, true effect size, null, + null confidence intervals
+plot5 <- plot4 +
+  geom_segment(aes(x = sd(dat$workload)*1.96, y = 0, xend = sd(dat$workload)*1.96, yend = dnorm(sd(dat$workload)*1.96,-mod$coefficients[2],sd(dat$workload))), size = 1.2) + 
+  geom_segment(aes(x = sd(dat$workload)*-1.96, y = 0, xend = sd(dat$workload)*-1.96, yend = dnorm(sd(dat$workload)*-1.96,-mod$coefficients[2],sd(dat$workload))), size = 1.2) 
+
+## fig6, fig5 + shaded Type S region
+plot6 <- plot5 +
+  geom_polygon(data = coord_l, aes(x = x, y = y), fill = "red", color = "red") 
+
+## fig7, fig5 + shaded Type M region
+plot7 <- plot5 +
+  geom_polygon(data = coord_r, aes(x = x, y = y), fill = "red", color = "red") 
+
+##animated plot, goes through building the plot
+plot_anim <- plot6 +
+
+## Includes both polygons
+    geom_polygon(data = coord_r, aes(x = x, y = y), fill = "red", color = "red") 
+  
+```
+
+<!-- align in center -->
+
+.center[
+
+# So What?
+
+<!-- embed animation -->
+
+```{r, echo = F}
+plot_anim +
+  transition_layers(transition_length = 0.8)
+```
+
+]
+
+---
+## The scary thing about Type M and Type S errors is that these errors arise when p-values are low. Since studies with high p-values get little attention, a shocking amount of experiments are susceptible to these errors, particularly experiments with low "power", or a low chance of correctly rejecting the null when the alternative hypothesis is true. 
+
+#### Let's consider our qguide data on workload in the Government and Economics departments. Qualitatively, we can observe that there is a weak positive relationship between being in Economics, and a higher workload. Though we cannot determine causation, a linear model would estimate that a course being in Ec is correlated with an increase in 1.55 hours of work per week, as compared to a course in Government. However, if we have to sample the data, there is a wide variety of possible effects we could observe.  
+
+
+---
+
+<!-- create a left column -->
+
+.pull-left[
+
+##### Let's plot the distribution of potential effect sizes we could observe in the data. 
+
+]
+
+<!-- interval slide -->
+
+--
+
+<!-- create a right column -->
+
+.pull-right[
+
+```{r, echo = FALSE}
+plot2
+```
+
+] 
+
+---
+
+.pull-left[
+
+##### This distribution is centered at 1.55, the true effect size, since we expect our model to obtain that result most frequently. Let's plot that true effect size in blue.
+]
+
+.pull-right[
+
+```{r, echo = FALSE}
+plot2
+```
+
+] 
+
+---
+
+
+.pull-left[
+
+##### This distribution is centered at 1.55, the true effect size, since we expect our model to obtain that result most frequently. Let's plot that true effect size in blue.
+]
+
+.pull-right[
+
+```{r, echo = FALSE}
+plot3
+```
+
+] 
+---
+
+
+.pull-left[
+
+##### However, we must be cognizant that we don't want to wrongly reject the null hypothesis. If the true effect size was 0, the distribution of possible results would be very similar to the true distribution. Let's plot our null hypothesis in red. 
+]
+
+.pull-right[
+
+```{r, echo = FALSE}
+plot3
+```
+
+]
+---
+
+
+.pull-left[
+
+##### However, we must be cognizant that we don't want to wrongly reject the null hypothesis. If the true effect size was 0, the distribution of possible results would be very similar to the true distribution. Let's plot our null hypothesis in red. 
+]
+
+.pull-right[
+
+```{r, echo = FALSE}
+plot4
+```
+
+]
+---
+
+<!-- create a left column -->
+
+.pull-left[
+##### Any results within 1.96 standard errors of 0 won't reject the null, and will fail to demonstrate the true effect with statistical significance. We would need a much larger dataset to compensate. We can plot that confidence interval on our graph of distributions.
+]
+
+.pull-right[
+```{r, echo = FALSE, warning = FALSE}
+plot4
+```
+
+] 
+---
+
+
+.pull-left[
+##### Any results within 1.96 standard errors of 0 won't reject the null, and will fail to demonstrate the true effect with statistical significance. We would need a much larger dataset to compensate. We can plot that confidence interval on our graph of distributions.
+]
+
+.pull-right[
+```{r, echo = FALSE, warning = FALSE}
+plot5
+```
+
+] 
+---
+
+.pull-left[
+##### Only the results to the left and right of this confidence interval will have statistical significance, and because power is low, we wouldn't expect these results very frequently. However, results with statistical significence are drastically overrepresented in academic publishing[^1]. 
+]
+
+.pull-right[
+```{r, echo = FALSE}
+plot5
+```
+
+] 
+---
+
+.pull-left[
+##### All the results in the left shaded area are examples of Type S errors. We can calculate that in this experiment, Type S errors will make up about ~7.5% of all statistically significant results.
+]
+
+.pull-right[
+```{r, echo = FALSE}
+plot6
+```
+
+] 
+
+---
+
+.pull-left[
+##### All the results in the right shaded areas are examples of Type M errors. Given statistical significance, all results which aren't examples of Type S errors will overestimate the true effect by a factor of 4.5!
+]
+
+.pull-right[
+
+```{r, echo = FALSE}
+plot7
+```
+
+
+] 
+---
+
+

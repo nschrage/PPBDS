@@ -1,0 +1,272 @@
+---
+title: "Type S and M errors"
+output:
+  xaringan::moon_reader:
+    lib_dir: libs
+    
+    nature:
+      ratio: 16:10
+      
+      # make it so that incremental slides are not numbered in slide numbers
+      
+      countIncrementalSlides: false
+    
+    # setting seal = false gets rid of the automatic title slide. Set class: title-slide at the top of first slide to create your own title slide below
+    
+    seal: false
+      
+# create a new slide with ---      
+      
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(fig.width = 6, message = F, warning = F, 
+                      comment = "", cache = F)
+
+## flipbook package
+source(file = "https://raw.githubusercontent.com/EvaMaeRey/little_flipbooks_library/master/xaringan_reveal_parentheses_balanced.R")
+
+library(tidyverse)
+
+## slide presenter package
+library(xaringan)
+
+library(gov.1005.data)
+library(gganimate)
+```
+
+```{r, include = F}
+# Little bit complicated here, recreates sim_plot function from retrodesign but customized
+## Set statistical significance requirement (alpha / p < 0.05)
+alpha = 0.05
+
+## 5000 sims, infinite degrees of freedom
+df = Inf
+n.sims = 5000
+
+## True effect
+A = 0.5
+
+## 95% quantiles
+z <- qt(1 - alpha/2, df)
+
+## Calculate power 
+p.hi <- 1 - pt(z - A, df)
+p.lo <- pt(-z - A, df)
+power <- p.hi + p.lo
+
+## Calculate Type S error prob
+typeS <- p.lo/power
+
+## 5000 sims of random generation for t-distribution
+estimate <- A + rt(n.sims, df)
+
+## Sample 1000 to add in some funky randomness
+estimate <- sample(estimate, 1000)
+
+## Build dataframe that we'll plug into our plots
+dat <- data.frame(y = estimate) %>%
+
+## Change shape depending on type of error
+  mutate(pch = case_when(y < -1.96 ~ 16,
+                           y > 1.96 ~ 17,
+                           TRUE ~ 15),
+
+## Need an x for geom_point
+         x = seq_along(y),
+  
+## Change color depending on whether error or stat insignificant
+         color = case_when(abs(y) < 1.96 ~ "grey",
+                           TRUE ~ "black"),
+         )
+```
+
+```{r p1, echo = F}
+
+## plot time!
+
+## fig1, scatterplot of randomly generated estimates
+plot <- ggplot(dat, aes(x = x, y = y, group = y, col = color)) +
+  guides(colour = "none") + 
+  xlab("n") +
+
+## Custom legend
+  scale_shape_manual(values = c(16,17,15), name = " ", labels = c("Statistically Insignificant", "Type S Errors","Type M Errors")) +
+  guides(shape = guide_legend(override.aes=list(colour=c("grey", "black", "black")))) + 
+  scale_color_manual(values = c("black", "grey")) + 
+  geom_point(aes(pch = as.factor(pch)), size = 3) 
+
+## fig2, add in true estimand
+plot2 <- plot +
+  geom_hline(yintercept = A, linetype = "dashed", size = 1)
+
+## fig3, add in conf_int
+plot3 <- plot2 + 
+  geom_hline(yintercept = s * z, size = 1) + 
+  geom_hline(yintercept = -s * z, size = 1) 
+
+## fig4, zoom in on Type M
+plot4 <- plot3 +
+  ylim(1.94,4)
+
+## fig5, zoom in on Type S
+plot5 <- plot3 +
+  ylim(-2.5,-1.94)
+```
+
+<!-- align center -->
+
+.center[
+
+# What do Type M and S errors look like?
+```{r, echo = F}
+
+## animation of estimates being generated
+plot3 +
+  transition_reveal(x)
+```
+
+]
+
+---
+## Definitions
+
+-Type M, or magnitude errors, occur when the test statistic drastically exaggerates the true effect. If a test has a true effect of 2, and our sample has a mean effect size of 20, we will have a Type M error.
+
+
+-Type S, or sign errors, occur when the test statistic is in the opposite direction of the true effect. If a test has a true effect size of 2, and our sample has a mean effect size of -2, we will have a Type S error. 
+
+
+---
+<!-- create a left column -->
+
+
+.pull-left[
+
+##### To demonstrate potential Type S and Type M errors, let's simulate 5000 random draws from a population with a true mean of 0.5 and SD of 1.
+
+]
+
+--
+
+<!-- create a right column -->
+
+.pull-right[
+
+```{r, echo = FALSE}
+plot
+```
+
+] 
+
+---
+
+.pull-left[
+
+##### A dashed line can represent this true mean.
+
+]
+
+.pull-right[
+```{r, echo = FALSE}
+plot
+```
+
+] 
+
+---
+
+
+.pull-left[
+
+##### A dashed line can represent this true mean.
+]
+
+.pull-right[
+
+```{r, echo = FALSE}
+plot2
+```
+
+] 
+---
+
+
+.pull-left[
+
+##### Assuming normality, any results within the standard confidence interval of -1.96 to 1.96 won't be statistically significant. 
+]
+
+.pull-right[
+
+```{r, echo = FALSE}
+plot2
+```
+
+]
+---
+
+
+.pull-left[
+##### Assuming normality, any results within the standard confidence interval of -1.96 to 1.96 won't be statistically significant. 
+]
+
+.pull-right[
+```{r, echo = FALSE}
+plot3
+```
+
+] 
+---
+
+.pull-left[
+##### This leaves two types of results that will be statistically significant, but erroneous. Results above the upper bound of our confidence interval will be Type M errors.
+]
+
+.pull-right[
+```{r, echo = FALSE}
+plot3
+```
+
+] 
+---
+
+.pull-left[
+##### This leaves two types of results that will be statistically significant, but erroneous. Results above the upper bound of our confidence interval will be Type M errors.
+]
+
+.pull-right[
+```{r, echo = FALSE}
+plot4
+```
+
+] 
+
+---
+
+.pull-left[
+
+##### And results below the lower bound of our confidence interval will be Type S errors.
+
+]
+
+.pull-right[
+
+```{r, echo = FALSE}
+plot4
+```
+]
+---
+.pull-left[
+##### And results below the lower bound of our confidence interval will be Type S errors.
+] 
+
+.pull-right[
+
+```{r, echo = FALSE}
+plot5
+```
+]
+---
+
+

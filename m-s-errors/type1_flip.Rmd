@@ -1,0 +1,245 @@
+---
+title: "Type 1 Errors?"
+output:
+  xaringan::moon_reader:
+    lib_dir: libs
+    
+    nature:
+      ratio: 16:10
+      
+      # make it so that incremental slides are not numbered in slide numbers
+      
+      countIncrementalSlides: false
+    
+    # setting seal = false gets rid of the automatic title slide. Set class: title-slide at the top of first slide to create your own title slide below
+    
+    seal: false
+      
+# create a new slide with ---      
+      
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(fig.width = 6, message = F, warning = F, 
+                      comment = "", cache = F)
+
+
+library(tidyverse)
+library(xaringan)
+library(gov.1005.data)
+library(gganimate)
+```
+
+```{r, include = F}
+
+## qguide data
+data("qscores")
+
+gov <- qscores %>%
+  filter(department == "Government") 
+  
+
+comp_sci <- qscores %>%
+  filter(department == "Computer Science")
+
+econ <- qscores %>%
+  filter(department == "Economics")
+
+## testing 10,000 times
+n=10000 
+t1err=0
+
+## each test, make new 5-course sample from each department
+for (i in 1:n){
+   x <- sample(gov$workload,5)
+   y <- sample(econ$workload,5)
+   
+## if p-value of t.test is less than 0.05, fail to reject the null and add 1 to number of Type 1 Errors
+   if (((t.test(x,y, alternative = "two.sided"))$p.value)<=0.05) (t1err=t1err+1) 
+}
+
+t1_freq <- t1err / n
+
+## Generate fake data for plotting
+set.seed(12345)
+fake_data_gov <- data.frame(x = rnorm(5, mean(gov$workload-1), 0.9), y = jitter(rep(0.05,5),amount = 0.05), dep = rep("Government", 5))
+fake_data_econ <- data.frame(x = rnorm(5, mean(econ$workload + 1), 0.9), y = jitter(rep(0.05,5),amount = 0.05), dep = rep("Economics", 5))
+fake_data_1 <- fake_data_gov %>%
+  full_join(fake_data_econ)
+
+```
+
+```{r p1, echo = F}
+
+##fig1, blank plot
+plot <- ggplot(fake_data_1,aes(x = x, y = y, colour = as.factor(dep))) +
+  xlim(0,15) +  
+  ylim(-0.05,0.3) +
+  coord_cartesian(clip = "off") 
+
+##fig2, add gov workload distribution
+plot1 <- plot +
+  stat_function(fun = dnorm, args = list(mean = mean(gov$workload), sd = sd(gov$workload)), colour = "#F8766D", size = 1.2) 
+
+##fig3, add ec workload distribution
+plot2 <- plot1 + 
+  stat_function(fun = dnorm, args = list(mean = mean(econ$workload), sd = sd(econ$workload)), colour = "#7CAE00", size = 1.2) 
+
+##fig4, jitter in fake data
+plot3 <- plot2 +
+  geom_jitter(size = 2, show.legend = F) +
+  scale_color_manual(values = c("#F8766D", "#7CAE00"))
+
+##fig5, boxplot for ranges
+plot4 <- plot3 +
+  geom_boxplot(data = fake_data_1, aes(x = x, y = y, colour = dep), varwidth = T, show.legend = F, orientation = "y")
+
+```
+
+<!-- align in center -->
+
+.center[
+# Type 1 Errors
+
+```{r, echo = F}
+
+## quick animation
+
+## generate fake data, two identical groups, ten iterations
+x <- data.frame(x = c(rnorm(50,6,3), rnorm(50,-6,3)), group = c(rep(1,50), rep(2,50)), y = rnorm(100,0,3), id = rep(seq(1:10),10))
+
+## plot fake data, color by group
+ggplot(x, aes(x = x, y = y, color = as.factor(group))) +
+  ylim(-15,15) +
+  xlim(-15,15) +
+  geom_point(size = 2) +
+  guides(color = F) +
+
+## transition by iteration
+  transition_states(id) +
+
+## strip theme
+  theme(axis.line=element_blank(),axis.text.x=element_blank(),
+          axis.text.y=element_blank(),axis.ticks=element_blank(),
+          axis.title.x=element_blank(),
+          axis.title.y=element_blank()) +
+  scale_color_manual(values = c("#F8766D", "#7CAE00"))
+
+```
+]
+---
+
+## We want to test if there is a statistically significant difference in means between the workload of courses in the Government department and courses in the Economics department. Looking at Q-guide data from Fall 2019, we see that Government courses average about 5.3 hours per week, and Economics courses average about 6 hours. This is not a very big difference, and a t-test on all this data would fail to reject the null. However, we can only see the reported workload for 5 randomly chosen courses in each department.
+
+
+---
+
+<!-- create a left column -->
+
+.pull-left[
+
+##### Assuming normality, let's plot the true distribution of course workload in the Government department, in red.
+  
+
+]
+
+<!-- interval slide -->
+
+--
+
+<!-- create a right column -->
+
+.pull-right[
+
+```{r, echo = FALSE}
+plot1
+```
+
+] 
+
+---
+
+.pull-left[
+
+##### Now, in green, let's plot the distribution of courses in the Econ department.
+]
+
+.pull-right[
+```{r, echo = FALSE}
+plot1
+```
+
+] 
+
+---
+
+
+.pull-left[
+
+##### Now, in green, let's plot the distribution of courses in the Econ department. 
+]
+
+.pull-right[
+```{r, echo = FALSE}
+plot2
+```
+
+] 
+---
+
+
+.pull-left[
+
+##### There are many unique 5-course samples we could take from this data. One such sample could look like this:
+
+]
+
+.pull-right[
+```{r, echo = FALSE}
+plot2
+```
+
+]
+---
+
+<!-- create a left column -->
+
+.pull-left[
+##### There are many unique 5-course samples we could take from this data. One such sample could look like this:
+]
+
+.pull-right[
+```{r, echo = FALSE}
+plot3
+```
+
+] 
+---
+<!-- create a left column -->
+
+.pull-left[
+##### We see that our samples are really different, even though the full populations aren't. Using this sample, we'd conclude the true means were different and incorrectly reject the null hypothesis. This is a Type 1 error!
+]
+
+.pull-right[
+```{r, echo = FALSE}
+plot4
+```
+
+] 
+---
+<!-- create a left column -->
+
+.pull-left[
+##### If we simulate a real 5-course sampling of the government and economics departments, many times, we see that we will get a type 1 error, with statistical significance, about 2.5% of the time.
+]
+
+.pull-right[
+```{r, echo = FALSE}
+plot4
+```
+
+] 
+---
+
+

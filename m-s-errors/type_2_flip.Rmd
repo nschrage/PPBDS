@@ -1,0 +1,236 @@
+---
+title: "Type 2 Errors"
+output:
+  xaringan::moon_reader:
+    lib_dir: libs
+    
+    nature:
+      ratio: 16:10
+      
+      # make it so that incremental slides are not numbered in slide numbers
+      
+      countIncrementalSlides: false
+    
+    # setting seal = false gets rid of the automatic title slide. Set class: title-slide at the top of first slide to create your own title slide below
+    
+    seal: false
+      
+# create a new slide with ---      
+      
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(fig.width = 6, message = F, warning = F, 
+                      comment = "", cache = F)
+
+
+library(tidyverse)
+library(xaringan)
+library(gov.1005.data)
+library(gganimate)
+```
+
+```{r, include = F}
+
+## qguide data
+data("qscores")
+
+gov <- qscores %>%
+  filter(department == "Government") 
+  
+
+comp <- qscores %>%
+  filter(department == "Computer Science")
+
+## testing 10,000 times
+n=10000 
+t2err=0
+
+## each test, make new 5-course sample from each department
+for (i in 1:n){
+   x <- sample(gov$workload,5)
+   y <- sample(comp$workload,5)
+  
+## if p-value of t.test is greater than 0.05, fail to reject the null and add 1 to number of Type 2 Errors
+   if (((t.test(x,y, alternative = "two.sided"))$p.value)>0.05) (t2err=t2err+1) 
+}
+t2_freq <- t2err / n
+
+## Generate some fake data for plotting
+set.seed(12345)
+fake_data_gov <- data.frame(x = rnorm(5, mean(gov$workload+2.2), 1), y = jitter(rep(0.08,5),amount = 0.05), dep = rep("Government", 5))
+fake_data_comp <- data.frame(x = rnorm(5, mean(comp$workload - 2.6), 1), y = jitter(rep(0.05,5),amount = 0.05), dep = rep("Economics", 5))
+fake_data_2 <- fake_data_gov %>%
+  full_join(fake_data_comp)
+```
+
+```{r p1, echo = F}
+
+##fig1, empty plot
+plot <- ggplot(fake_data_2, aes(x = x, y = y, colour = dep)) +
+  xlim(0,17.5) +  
+  ylim(-0.05,0.3) +
+  coord_cartesian(clip = "off")
+
+##fig2, add true distribution of gov workload
+plot1 <- plot +
+  stat_function(fun = dnorm, args = list(mean = mean(gov$workload), sd = sd(gov$workload)), colour = "#F8766D", size = 1.2) 
+
+##fig3, add true distribution of cs workload
+plot2 <- plot1 + 
+  stat_function(fun = dnorm, args = list(mean = mean(comp$workload), sd = sd(gov$workload)), colour = "#00BFC4", size = 1.2) 
+
+##fig4, jitter in fake data
+plot3 <- plot2 +
+  geom_jitter(size = 2, show.legend = F) +
+  scale_color_manual(values = c("#00BFC4", "#F8766D"))
+
+##fig5, boxplots to represent ranges
+plot4 <- plot3 +
+  geom_boxplot(varwidth = T, show.legend = F, orientation = "y")
+
+```
+
+.center[
+
+# Type 2 Errors
+```{r, echo = F}
+
+## quick animation
+
+## more fake data, 2 different groups, 10 iterations
+x <- data.frame(x = c(rnorm(50,5,3), rnorm(50,5,3)), group = c(rep(1,50), rep(2,50)), y = rnorm(100,0,3), id = rep(seq(1:10),10))
+
+## Plot fake data, coloring by group
+ggplot(x, aes(x = x, y = y, color = as.factor(group))) +
+  ylim(-15,15) +
+  xlim(-12,18) +
+  geom_point(size = 2) +
+  guides(color = F) +
+
+## animate along iteration
+  transition_states(id) +
+  
+## strip theme
+  theme(axis.line=element_blank(),axis.text.x=element_blank(),
+          axis.text.y=element_blank(),axis.ticks=element_blank(),
+          axis.title.x=element_blank(),
+          axis.title.y=element_blank())
+```
+
+]
+
+---
+
+
+## Now, we want to test if there is a difference in workloads between the Computer Science and Government departments. We already know that Government courses average about 5 hours per week, and Computer Science courses average about 11 hours. A t-test of the full data would reject the null and see a significant difference in means. However, we are again limited and can only see the reported workload for 5 randomly chosen courses in each department.
+
+
+---
+
+<!-- create a left column -->
+
+.pull-left[
+
+##### Once more, let's plot the true distribution of Government courses.
+
+]
+
+--
+
+<!-- create a right column -->
+
+.pull-right[
+
+```{r, echo = FALSE}
+plot1
+```
+
+] 
+
+---
+
+.pull-left[
+
+##### Now, in blue, we'll draw the true distribution of courses in CS.
+
+]
+
+.pull-right[
+```{r, echo = FALSE}
+plot1
+```
+
+] 
+
+---
+
+
+.pull-left[
+
+##### Now, in blue, we'll draw the true distribution of courses in CS.
+
+]
+
+.pull-right[
+
+```{r, echo = FALSE}
+plot2
+```
+
+] 
+---
+
+
+.pull-left[
+
+##### Again, we could sample these distributions in many, many ways. A type 2 error occurs when the samples we take are similar, even though the true distributions are different. 
+]
+
+.pull-right[
+
+```{r, echo = FALSE}
+plot2
+```
+
+]
+---
+
+
+.pull-left[
+##### Again, we could sample these distributions in many, many ways. A type 2 error occurs when the samples we take are similar, even though the true distributions are different. 
+]
+
+.pull-right[
+```{r, echo = FALSE}
+plot3
+```
+
+] 
+---
+
+.pull-left[
+##### We see that our samples are really similar, even though the full populations aren't. Using this sample, we'd conclude the true means were very close, and fail to reject the null hypothesis, even though using a complete dataset shows the alternate hypothesis is correct. This is a Type 2 error!
+]
+
+.pull-right[
+```{r, echo = FALSE}
+plot4
+```
+
+] 
+---
+
+.pull-left[
+##### If we simulate a real 5-course sampling of the government and CS departments, many times, we see that we will get a type 2 error about 52% of the time. We get so many errors because our sample size is small, and so the effect isn't large enough to show up consistently.  
+]
+
+.pull-right[
+```{r, echo = FALSE}
+plot4
+```
+
+] 
+---
+
+
