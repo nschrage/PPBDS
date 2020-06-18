@@ -5,15 +5,6 @@ output_yaml:
 
 # Continuous Response II {#multiple-regression}
 
-<<<<<<< HEAD
-<!-- EC: removed chapter references -->
-
-=======
-<!-- This is really just a test for Round 2. -->
-
-<!-- EC: removed chapter references -->
-
->>>>>>> origin/Chapter11
 Earlier we introduced ideas related to modeling for explanation, in particular that the goal of modeling is to make explicit the relationship between some outcome variable $y$ and some explanatory variable $x$. While there are many approaches to modeling, we focused on one particular technique: *linear regression*, one of the most commonly used and easy-to-understand approaches to modeling. To keep things simple, we only considered models with one explanatory $x$ variable that was either numerical or categorical.
 
 In this chapter on multiple regression, we'll start considering models that include more than one explanatory variable $x$. You can imagine when trying to model a particular outcome variable, like teaching evaluation scores as in Section \@ref(model1) or life expectancy as in Section \@ref(model2), that it would be useful to include more than just one explanatory variable's worth of information. 
@@ -22,18 +13,14 @@ Since our regression models will now consider more than one explanatory variable
 
 ### Needed packages {-}
 
-Let's load all the packages needed for this chapter (this assumes you've already installed them). Recall from our discussion in Section \@ref(tidyverse-package) that loading the **tidyverse** package by running `library(tidyverse)` loads the following commonly used data science packages all at once:
+Let's load all the packages needed for this chapter (this assumes you've already installed them). Recall that loading the **tidyverse** package by running `library(tidyverse)` loads the following commonly used data science packages all at once:
 
 * **ggplot2** for data visualization
 * **dplyr** for data wrangling
 * **tidyr** for converting data to "tidy" format
 * **readr** for importing spreadsheet data into R
 
-<!-- EC: Include descriptions of the "more advanced" packages -->
-
 * As well as the more advanced **purrr**, **tibble**, **stringr**, and **forcats** packages
-
-If needed, read Section \@ref(packages) for information on how to install and load R packages. 
 
 ```{r, eval=FALSE}
 library(tidyverse)
@@ -62,9 +49,7 @@ library(scales)
 
 ## Teaching evaluations revisited: one numerical and one categorical explanatory variable {#model4}
 
-<!-- EC: More chapter references need to be removed. -->
-
-Let's revisit the instructor evaluation data from UT Austin we introduced in Section \@ref(model1). We studied the relationship between teaching evaluation scores as given by students and "beauty" scores. The variable teaching `score` was the numerical outcome variable $y$, and the variable "beauty" score (`bty_avg`) was the numerical explanatory $x$ variable. 
+Let's revisit the instructor evaluation data from UT Austin we analyzed previously. We studied the relationship between teaching evaluation scores as given by students and "beauty" scores. The variable teaching `score` was the numerical outcome variable $y$, and the variable "beauty" score (`bty_avg`) was the numerical explanatory $x$ variable. 
 
 In this section, we are going to consider a different model. Our outcome variable will still be teaching score, but we'll now include two different explanatory variables: age and (binary) gender. Could it be that instructors who are older receive better teaching evaluations from students? Or could it instead be that younger instructors receive better evaluations? Are there differences in evaluations given by students for instructors of different genders? We'll answer these questions by modeling the relationship between these variables using *multiple regression*,\index{regression!multiple linear} where we have:
 
@@ -76,38 +61,38 @@ In this section, we are going to consider a different model. Our outcome variabl
 It is important to note that at the time of this study due to then commonly held beliefs about gender, this variable was often recorded as a binary variable. While the results of a model that oversimplifies gender this way may be imperfect, we still found the results to be pertinent and relevant today.
 
 
-
 ### Exploratory data analysis {#model4EDA}
 
-Recall that data on the 463 courses at UT Austin can be found in the `evals` data frame included in the **moderndive** package. However, to keep things simple, let's `select()` only the subset of the variables we'll consider in this chapter, and save this data in a new data frame called `evals_ch12`. Note that these are different from the variables chosen in Chapter \@ref(regression). 
+Recall that data on the 463 courses at UT Austin can be found in the `evals` data frame included in the **moderndive** package. However, to keep things simple, let's `select()` only the subset of the variables we'll consider in this chapter, and save this data in a new data frame called `evals_ch11`. Note that these are different from the variables previously chosen. 
 
 ```{r}
 library(moderndive)
 
-evals_ch12 <- evals %>%
+evals_ch11 <- evals %>%
   select(ID, score, age, gender)
 ```
 
-Recall the three common steps in an exploratory data analysis we saw in Subsection \@ref(model1EDA):
+Recall the three common steps in an exploratory data analysis:
 
 1. Looking at the raw data values.
 1. Computing summary statistics.
 1. Creating data visualizations.
 
-Let's first look at the raw data values by either looking at `evals_ch12` using RStudio's spreadsheet viewer or by using the `glimpse()` function from the **dplyr** package:
+Let's first look at the raw data values by using the `glimpse()` function from the **dplyr** package:
 
 ```{r}
-glimpse(evals_ch12)
+glimpse(evals_ch11)
 ```
 
-Let's also display a random sample of 5 rows of the 463 rows corresponding to different courses in Table \@ref(tab:model4-data-preview). Remember due to the random nature of the sampling, you will likely end up with a different subset of 5 rows.
+Let's also display a random sample of 5 rows of the 463 rows corresponding to different courses in Table \@ref(tab:model4-data-preview). Remember due to the random nature of the sampling, you will likely end up with a different subset of 5 rows. The `set.seed()` function allows you to "randomly" obtain the same 5 rows if you set the same number as the seed. In this case, we've set the seed to 1, arbitrarily. 
 
 ```{r, eval=FALSE}
-evals_ch12 %>% 
+set.seed(1)
+evals_ch11 %>% 
   sample_n(size = 5)
 ```
 ```{r model4-data-preview, echo=FALSE}
-evals_ch12 %>%
+evals_ch11 %>%
   sample_n(5) %>%
   knitr::kable(
     digits = 3,
@@ -119,29 +104,29 @@ evals_ch12 %>%
                 latex_options = c("hold_position"))
 ```
 
-Now that we've looked at the raw values in our `evals_ch12` data frame and got a sense of the data, let's compute summary statistics. As we did in our exploratory data analyses in Sections \@ref(model1EDA) and  \@ref(model2EDA) from the previous chapter, let's use the `skim()` function from the **skimr** package, being sure to only `select()` the variables of interest in our model:\index{R packages!skimr!skim()}
+Now that we've looked at the raw values in our `evals_ch11` data frame and got a sense of the data, let's compute summary statistics. As done before, let's use the `skim()` function from the **skimr** package, being sure to only `select()` the variables of interest in our model:\index{R packages!skimr!skim()}
 
 ```{r}
-evals_ch12 %>% 
+evals_ch11 %>% 
   select(score, age, gender) %>% 
   skim()
 ```
 
 Observe that we have no missing data, that there are 268 courses taught by male instructors and 195 courses taught by female instructors, and that the average instructor age is 48.37. Recall that each row represents a particular course and that the same instructor often teaches more than one course. Therefore, the average age of the unique instructors may differ. 
 
-Furthermore, let's compute the correlation coefficient between our two numerical variables: `score` and `age`. Recall from Subsection \@ref(model1EDA) that correlation coefficients only exist between numerical variables. We observe that they are "weakly negatively" correlated.
+Furthermore, let's compute the correlation coefficient between our two numerical variables: `score` and `age`. Recall that correlation coefficients only exist between numerical variables. We observe that they are "weakly negatively" correlated.
 
 ```{r}
-evals_ch12 %>% 
+evals_ch11 %>% 
   summarize(correlation = cor(score, age)) %>% 
   round(3) %>% 
   pull()
 ```
 
-Let's now perform the last of the three common steps in an exploratory data analysis: creating data visualizations. Given that the outcome variable `score` and explanatory variable `age` are both numerical, we'll use a scatterplot to display their relationship. How can we incorporate the categorical variable `gender`, however? By mapping the variable `gender` to the `color` aesthetic, thereby creating a *colored* scatterplot. The following code is similar to the code that created the scatterplot of teaching score over "beauty" score last chapter, but with `color = gender` added to the `aes()`thetic mapping.
+Let's now perform the last of the three common steps in an exploratory data analysis: creating data visualizations. Given that the outcome variable `score` and explanatory variable `age` are both numerical, we'll use a scatterplot to display their relationship. How can we incorporate the categorical variable `gender`, however? By mapping the variable `gender` to the `color` aesthetic, thereby creating a *colored* scatterplot. As such, the following code adds `color = gender` to the `aes()`thetic mapping.
 
 ```{r eval=FALSE}
-evals_ch12 %>%
+evals_ch11 %>%
   ggplot(aes(x = age, y = score, color = gender)) +
   geom_point() +
   labs(x = "Age", y = "Teaching Score", color = "Gender") +
@@ -151,12 +136,12 @@ evals_ch12 %>%
 
 ```{r numxcatxplot1, echo=FALSE, warning=FALSE, fig.cap="Colored scatterplot of relationship of teaching and beauty scores.", fig.height=3.2}
 if(knitr::is_html_output()){
-  ggplot(evals_ch12, aes(x = age, y = score, color = gender)) +
+  ggplot(evals_ch11, aes(x = age, y = score, color = gender)) +
     geom_point() +
     labs(x = "Age", y = "Teaching Score", color = "Gender") +
     geom_smooth(method = "lm", se = FALSE)
 } else {
-    ggplot(evals_ch12, aes(x = age, y = score, color = gender)) +
+    ggplot(evals_ch11, aes(x = age, y = score, color = gender)) +
     geom_point() +
     labs(x = "Age", y = "Teaching Score", color = "Gender") +
     geom_smooth(method = "lm", se = FALSE) +
@@ -209,7 +194,7 @@ Going back to our multiple regression model for teaching `score` using `age` and
 ```{r, eval=FALSE}
 # Fit regression model:
 
-score_model_interaction <- lm(score ~ age * gender, data = evals_ch12)
+score_model_interaction <- lm(score ~ age * gender, data = evals_ch11)
 
 # Get regression table:
 
@@ -218,7 +203,7 @@ score_model_interaction %>%
   select(term, estimate, conf.low, conf.high)
 ```
 ```{r regtable-interaction, echo=FALSE}
-score_model_interaction <- lm(score ~ age * gender, data = evals_ch12)
+score_model_interaction <- lm(score ~ age * gender, data = evals_ch11)
 tidy(score_model_interaction,
      conf.int = TRUE) %>% 
   select(term, estimate, conf.low, conf.high) %>%
@@ -269,8 +254,8 @@ The process is somewhat more involved because we have multiple coefficients arou
 ```{r}
 library(infer)
 
-evals_ch12 %>%
-  rep_sample_n(size = nrow(evals_ch12), reps = 1000, replace = TRUE) %>%
+evals_ch11 %>%
+  rep_sample_n(size = nrow(evals_ch11), reps = 1000, replace = TRUE) %>%
   group_by(replicate) %>%
   nest() %>%
   mutate(mod = map(data, ~ lm(score ~ age * gender, data = .)),
@@ -280,8 +265,8 @@ evals_ch12 %>%
 Now we could use `map_dbl()` within our `mutate()` in order to extract each of the estimates from our model.  However, as you add more predictors to a regression, that gets more and more unwieldy.  Instead, let's take advantage of `unnest()` to reshape our data so that the unit of analysis is a replicate-term:
 
 ```{r}
-evals_ch12 %>%
-  rep_sample_n(size = nrow(evals_ch12), reps = 1000, replace = TRUE) %>%
+evals_ch11 %>%
+  rep_sample_n(size = nrow(evals_ch11), reps = 1000, replace = TRUE) %>%
   group_by(replicate) %>%
   nest() %>%
   mutate(mod = map(data, ~ lm(score ~ age * gender, data = .)),
@@ -294,8 +279,8 @@ Now we have 4,000 rows, which are 1,000 replicates apiece for each of the `term`
 It is now a simple matter to `group_by(term)` and `summarize()` to create our confidence intervals:
 
 ```{r}
-evals_ch12 %>%
-  rep_sample_n(size = nrow(evals_ch12), reps = 1000, replace = TRUE) %>%
+evals_ch11 %>%
+  rep_sample_n(size = nrow(evals_ch11), reps = 1000, replace = TRUE) %>%
   group_by(replicate) %>%
   nest() %>%
   mutate(mod = map(data, ~ lm(score ~ age * gender, data = .)),
@@ -447,7 +432,7 @@ But that still does not give us an estimate of the uncertainty around that inter
 Thankfully, there is an easy way to get that using `lm()` and `tidy()`.  Recall that our coefficient on `gendermale` reflects the effect for instructors whose age is 0.  If we *recenter* age so 0 is equal to the age we are interested in, then we can use both the coefficient and confidence inteveral around `gendermale` to get the confidence interval for that age.  For example, here is how we would get the coefficient and confidence interval for instructors whose age is 30:
 
 ```{r}
-lm(score ~ I(age - 30) * gender, data = evals_ch12) %>%
+lm(score ~ I(age - 30) * gender, data = evals_ch11) %>%
   tidy(conf.int = TRUE) %>%
   filter(term == "gendermale") %>%
   select(term, estimate, conf.low, conf.high)
@@ -463,7 +448,7 @@ gendermale_coefs <- tibble(ages = 20:90) %>%
   
   # First, we get our regression results for each age:
   
-  mutate(mod = map(ages, ~ lm(score ~ I(age - .) * gender, data = evals_ch12)),
+  mutate(mod = map(ages, ~ lm(score ~ I(age - .) * gender, data = evals_ch11)),
          reg_results = map(mod, ~ tidy(., conf.int = TRUE)),
          
          # We only care about the term "gendermale":
@@ -533,19 +518,19 @@ Again, however, one should always think carefully about whether a causal interpr
 
 ### Parallel slopes model {#model4table}
 
-When creating regression models with one numerical and one categorical explanatory variable, we are not just limited to interaction models as we just saw. Another type of model we can use is known as a *parallel slopes* model.\index{parallel slopes model} Unlike interaction models where the regression lines can have different intercepts and different slopes, parallel slopes models still allow for different intercepts but *force* all lines to have the same slope. The resulting regression lines are thus parallel. Let's visualize the best-fitting parallel slopes model to `evals_ch12`.
+When creating regression models with one numerical and one categorical explanatory variable, we are not just limited to interaction models as we just saw. Another type of model we can use is known as a *parallel slopes* model.\index{parallel slopes model} Unlike interaction models where the regression lines can have different intercepts and different slopes, parallel slopes models still allow for different intercepts but *force* all lines to have the same slope. The resulting regression lines are thus parallel. Let's visualize the best-fitting parallel slopes model to `evals_ch11`.
 
 Unfortunately, the `geom_smooth()` function in the `ggplot2` package does not have a convenient way to plot parallel slopes models. Evgeni Chasnovski thus created a special purpose function called `geom_parallel_slopes()`\index{moderndive!geom\_parallel\_slopes()} that is included in the **moderndive** package. You won't find `geom_parallel_slopes()` in the **ggplot2** package, but rather the **moderndive** package. Thus, if you want to be able to use it, you will need to load both the **ggplot2** and **moderndive** packages. Using this function, let's now plot the parallel slopes model for teaching score. Notice how the code is identical to the code that produced the visualization of the interaction model in Figure \@ref(fig:numxcatxplot1), but now the `geom_smooth(method = "lm", se = FALSE)` layer is replaced with `geom_parallel_slopes(se = FALSE)`. 
 
 ```{r eval=FALSE}
-ggplot(evals_ch12, aes(x = age, y = score, color = gender)) +
+ggplot(evals_ch11, aes(x = age, y = score, color = gender)) +
   geom_point() +
   labs(x = "Age", y = "Teaching Score", color = "Gender") +
   geom_parallel_slopes(se = FALSE)
 ```
 
 ```{r numxcatx-parallel, echo=FALSE, warning=FALSE, fig.cap="Parallel slopes model of score with age and gender.", fig.height=3.5}
-par_slopes <- ggplot(evals_ch12, aes(x = age, y = score, color = gender)) +
+par_slopes <- ggplot(evals_ch11, aes(x = age, y = score, color = gender)) +
   geom_point() +
   labs(x = "Age", y = "Teaching Score", color = "Gender") +
   geom_parallel_slopes(se = FALSE)
@@ -567,7 +552,7 @@ In order to obtain the precise numerical values of the two intercepts and the si
 ```{r, eval=FALSE}
 # Fit regression model:
 
-score_model_parallel_slopes <- lm(score ~ age + gender, data = evals_ch12)
+score_model_parallel_slopes <- lm(score ~ age + gender, data = evals_ch11)
 
 # Get regression table:
 
@@ -576,7 +561,7 @@ score_model_parallel_slopes %>%
   select(term, estimate, conf.low, conf.high)
 ```
 ```{r regtable-parallel-slopes, echo=FALSE}
-score_model_parallel_slopes <- lm(score ~ age + gender, data = evals_ch12)
+score_model_parallel_slopes <- lm(score ~ age + gender, data = evals_ch11)
 tidy(score_model_parallel_slopes,
      conf.int = TRUE) %>%
   select(term, estimate, conf.low, conf.high) %>%
@@ -653,12 +638,12 @@ which is the equation of the `r if_else(knitr::is_latex_output(), "lighter-color
 Great! We've considered both an interaction model and a parallel slopes model for our data. Let's compare the visualizations for both models side-by-side in Figure \@ref(fig:numxcatx-comparison).
 
 ```{r numxcatx-comparison, fig.width=8, echo=FALSE, warning=FALSE, fig.cap="Comparison of interaction and parallel slopes models."}
-interaction_plot <- ggplot(evals_ch12, aes(x = age, y = score, color = gender), show.legend = FALSE) +
+interaction_plot <- ggplot(evals_ch11, aes(x = age, y = score, color = gender), show.legend = FALSE) +
   geom_point() +
   labs(x = "Age", y = "Teaching Score", title = "Interaction model") +
   geom_smooth(method = "lm", se = FALSE) +
   theme(legend.position = "none")
-parallel_slopes_plot <- ggplot(evals_ch12, aes(x = age, y = score, color = gender), show.legend = FALSE) +
+parallel_slopes_plot <- ggplot(evals_ch11, aes(x = age, y = score, color = gender), show.legend = FALSE) +
   geom_point() +
   labs(x = "Age", y = "Teaching Score", title = "Interaction model") +
   geom_parallel_slopes(se = FALSE) +
@@ -687,11 +672,11 @@ Say, you have an instructor who identifies as female and is 36 years old. What f
 We answer this question visually first for the female instructor by finding the intersection of the `r if_else(knitr::is_latex_output(), "darker-colored", "red")` regression line and the vertical line at $x$ = age = 36. We mark this value with a large `r if_else(knitr::is_latex_output(), "darker-colored", "red")` dot in Figure \@ref(fig:fitted-values). Similarly, we can identify the fitted value $\widehat{y}$ = $\widehat{\text{score}}$ for the male instructor by finding the intersection of the `r if_else(knitr::is_latex_output(), "lighter-colored", "blue")` regression line and the vertical line at $x$ = age = 59. We mark this value with a large `r if_else(knitr::is_latex_output(), "lighter-colored", "blue")` dot in Figure \@ref(fig:fitted-values).
 
 ```{r fitted-values, echo=FALSE, warning=FALSE, fig.cap="Fitted values for two new professors.", fig.height=4.7}
-newpoints <- evals_ch12 %>% 
+newpoints <- evals_ch11 %>% 
   slice(c(1, 5)) %>% 
   augment(score_model_interaction, newdata = .)
 
-fitted_plot <- ggplot(evals_ch12, aes(x = age, y = score, color = gender), show.legend = FALSE) +
+fitted_plot <- ggplot(evals_ch11, aes(x = age, y = score, color = gender), show.legend = FALSE) +
   geom_point() +
   labs(x = "Age", y = "Teaching Score", title = "Interaction model") +
   geom_smooth(method = "lm", se = FALSE) +
@@ -712,7 +697,7 @@ What are these two values of $\widehat{y}$ = $\widehat{\text{score}}$ precisely?
 
 So our fitted values would be: $4.883 - 0.018 \cdot 36 = 4.25$ and $4.437 - 0.004 \cdot 59 = 4.20$, respectively. 
 
-Now what if we want the fitted values not just for these two instructors, but for the instructors of all 463 courses included in the `evals_ch12` data frame? Doing this by hand would be long and tedious! This is where the `augment()` function from the **broom** package can help: it will quickly automate the above calculations for all 463 courses. We present a preview of just the first 10 rows out of 463 in Table \@ref(tab:model4-points-table).  Just like in the last chapter, we'll use the `.se.fit` column to construct confidence intervals around our predicted values.
+Now what if we want the fitted values not just for these two instructors, but for the instructors of all 463 courses included in the `evals_ch11` data frame? Doing this by hand would be long and tedious! This is where the `augment()` function from the **broom** package can help: it will quickly automate the above calculations for all 463 courses. We present a preview of just the first 10 rows out of 463 in Table \@ref(tab:model4-points-table).  Just like in the last chapter, we'll use the `.se.fit` column to construct confidence intervals around our predicted values.
 
 ```{r, eval=FALSE}
 regression_points <- score_model_interaction %>%
