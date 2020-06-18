@@ -1,20 +1,20 @@
+---
+output_yaml:
+  - ../_output.yml
+---
+
 # Discrete Response {#classification}
 
-$$
-\newcommand{\lik}{\operatorname{Lik}}
-\newcommand{\Lik}{\operatorname{Lik}}
-$$
 Many questions have binary (yes/no or success/failure) answers: 
-
-- a. Are students with below average grades more likely to binge drink?
-- b. Is exposure to a particular chemical associated with a cancer diagnosis?
+  a. Are students with below average grades more likely to binge drink?
+  b. Is exposure to a particular chemical associated with a cancer diagnosis?
  
-**Binary responses** take on only two values: success ($Y=1$) or failure ($Y=0$), Yes ($Y=1$) or No ($Y=0$), et cetera. Examples (a) and (b) above have binary responses (Does a student binge drink?  Was a patient diagnosed with cancer?). Binary responses are ubiquitous; they areb one of the most common types of data that statisticians encounter.  We are often interested in modeling the probability of success, $p$, based on a set of covariates. As with regression, there are two broad categories of problems: *modeling for explanation* and *modeling for prediction*. Although terminology varies across fields, "regression" is generally used for situations in which our *dependent variable* is continuous. "Classification" applies to cases in which the dependent variable is binary.
+**Binary responses** take on only two values: success ($Y=1$) or failure ($Y=0$), Yes ($Y=1$) or No ($Y=0$), et cetera. Examples (a) and (b) above have binary responses (Does a student binge drink?  Was a patient diagnosed with cancer?). Binary responses are ubiquitous; they are one of the most common types of data that statisticians encounter.  We are often interested in modeling the probability of success, $p$, based on a set of covariates. As with regression, there are two broad categories of problems: *modeling for explanation* and *modeling for prediction*. Although terminology varies across fields, "regression" is generally used for situations in which our *dependent variable* is continuous. "Classification" applies to cases in which the dependent variable is binary.
 
 In this chapter, we will look at three common techniques of **classification** of binary data.  First, we will consider logistic regression, which is similar conceptually to the linear regression models we considered in Chapters \@ref(regression) and \@ref(multiple-regression).  Second, we will consider classification and regression trees (CART).  Third, we will discuss random forests.
 
-
 <!-- DK: I don't think we need this Needed packages section each chapter. Or, if we have something here, we should use it as an occasion to educate readers about cool package facts. Need to improve their technical knowledge each chapter. -->
+<!-- MB: Do i delete this -->
 
 ### Needed packages {-}
 
@@ -28,12 +28,6 @@ Recall from our discussion in Section \@ref(tidyverse-package) that loading the 
 
 If needed, read Section \@ref(packages) for information on how to install and load R packages. 
 
-```{r, eval=FALSE}
-library(tidyverse)
-library(broom)
-library(skimr)
-library(fivethirtyeight)
-```
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 library(tidyverse)
 library(broom)
@@ -46,6 +40,7 @@ library(fivethirtyeight)
 library(knitr)
 library(kableExtra)
 library(gridExtra)
+library(gt)
 ```
    
 ## Logistic regression
@@ -56,11 +51,9 @@ Figure \@ref(fig:OLSlogistic) illustrates a data set with a binary (0 or 1) resp
 
 The red curve is the *logistic regression* curve.  Note that its characteristic "S" shape always produces predicted probabilities between 0 and 1.  Here is the formula for a logistic regression:
 
-\[
-\log\left(\frac{p}{1 - p}\right)=\beta_0+\beta_1X 
-\]
-
 where $p$ is the probability of a "yes" or "success" for a given set of predictors $X$.
+
+<!-- This chunk literally crashes my R session everytime I try to run it -->
 
 ```{r, OLSlogistic, fig.align="center", out.width="60%", fig.cap='Linear vs. logistic regression models for binary response data.', echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -133,17 +126,20 @@ Let's also display a random sample of 5 rows of the 9,557 rows corresponding to 
 house_ch13 %>% 
   sample_n(size = 5)
 ```
+
 ```{r, echo = FALSE}
+
 house_ch13 %>%
   sample_n(5) %>%
-  knitr::kable(
-    digits = 3,
-    caption = "A random sample of 5 out of the 4,201 district-years",
-    booktabs = TRUE,
-    linesep = ""
-  ) %>% 
-  kable_styling(font_size = ifelse(knitr:::is_latex_output(), 10, 16),
-                latex_options = c("hold_position"))
+  gt() %>%
+  cols_label(
+    region = md("Region"),
+    state = md("State"),
+    district = md("Distrct"),
+    year = md("Year"),
+    dem_win = md("Democrat Win?")) %>%
+  tab_source_note(md("A random sample of 5 out of the 4,201 district-years"))
+
 ```
 
 Now that we’ve looked at the raw values in our `house_ch13` data frame and got a sense of the data, let’s compute summary statistics. As we've done in our exploratory data analyses before, let’s use the `skim()` function from the `skimr` package, being sure to only select() the variables of interest in our model:
