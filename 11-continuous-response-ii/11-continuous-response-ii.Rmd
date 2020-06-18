@@ -40,14 +40,12 @@ library(scales)
 
 Let's revisit the instructor evaluation data from UT Austin we analyzed previously. We studied the relationship between teaching evaluation scores as given by students and "beauty" scores. The variable teaching `score` was the numerical outcome variable $y$, and the variable "beauty" score (`bty_avg`) was the numerical explanatory $x$ variable. 
 
-In this section, we are going to consider a different model. Our outcome variable will still be teaching score, but we'll now include two different explanatory variables: age and (binary) gender. Could it be that instructors who are older receive better teaching evaluations from students? Or could it instead be that younger instructors receive better evaluations? Are there differences in evaluations given by students for instructors of different genders? We'll answer these questions by modeling the relationship between these variables using *multiple regression*,\index{regression!multiple linear} where we have:
+In this section, we are going to consider a different model. Our outcome variable will still be teaching score, but we'll now include two different explanatory variables: age and gender. Could it be that instructors who are older receive better teaching evaluations from students? Or could it instead be that younger instructors receive better evaluations? Are there differences in evaluations given by students for instructors of different genders? We'll answer these questions by modeling the relationship between these variables using *multiple regression*,\index{regression!multiple linear} where we have:
 
 1. A numerical outcome variable $y$, the instructor's teaching score, and
 1. Two explanatory variables:
     1. A numerical explanatory variable $x_1$, the instructor's age.
-    1. A categorical explanatory variable $x_2$, the instructor's (binary) gender.
-
-It is important to note that at the time of this study due to then commonly held beliefs about gender, this variable was often recorded as a binary variable. While the results of a model that oversimplifies gender this way may be imperfect, we still found the results to be pertinent and relevant today.
+    1. A categorical explanatory variable $x_2$, the instructor's gender.
 
 
 ### Exploratory data analysis {#model4EDA}
@@ -61,19 +59,13 @@ evals_ch11 <- evals %>%
   select(ID, score, age, gender)
 ```
 
-Recall the three common steps in an exploratory data analysis:
-
-1. Looking at the raw data values.
-1. Computing summary statistics.
-1. Creating data visualizations.
-
 Let's first look at the raw data values by using the `glimpse()` function from the **dplyr** package:
 
 ```{r}
 glimpse(evals_ch11)
 ```
 
-Let's also display a random sample of 5 rows of the 463 rows corresponding to different courses in Table \@ref(tab:model4-data-preview). Remember due to the random nature of the sampling, you will likely end up with a different subset of 5 rows. The `set.seed()` function allows you to "randomly" obtain the same 5 rows if you set the same number as the seed. In this case, we've set the seed to 1, arbitrarily. 
+Let's also display a random sample of 5 rows of the 463 rows corresponding to different courses in Table \@ref(tab:model4-data-preview). Due to the random nature of the sampling, you will likely end up with a different subset of 5 rows. The `set.seed()` function allows you to "randomly" obtain the same 5 rows if you set the same number as the seed. In this case, we've set the seed to 1, arbitrarily. 
 
 ```{r, eval=FALSE}
 set.seed(1)
@@ -93,7 +85,7 @@ evals_ch11 %>%
                 latex_options = c("hold_position"))
 ```
 
-Now that we've looked at the raw values in our `evals_ch11` data frame and got a sense of the data, let's compute summary statistics. As done before, let's use the `skim()` function from the **skimr** package, being sure to only `select()` the variables of interest in our model:\index{R packages!skimr!skim()}
+Now that we've looked at the raw values in our `evals_ch11` data frame and got a sense of the data, let's compute summary statistics. As done before, let's use the `skim()` function from the **skimr** package, being sure to only `select()` the variables of interest in our model.
 
 ```{r}
 evals_ch11 %>% 
@@ -112,7 +104,7 @@ evals_ch11 %>%
   pull()
 ```
 
-Let's now perform the last of the three common steps in an exploratory data analysis: creating data visualizations. Given that the outcome variable `score` and explanatory variable `age` are both numerical, we'll use a scatterplot to display their relationship. How can we incorporate the categorical variable `gender`, however? By mapping the variable `gender` to the `color` aesthetic, thereby creating a *colored* scatterplot. As such, the following code adds `color = gender` to the `aes()`thetic mapping.
+Let's now create a visualization to display the relationship between the outcome variable `score` and the explanatory variable `age`. Since both variables are numerical, we'll use a scatterplot to display their relationship. We can incorporate the categorical variable `gender` by adding `color = gender` to the `aes()`thetic mapping.
 
 ```{r eval=FALSE}
 evals_ch11 %>%
@@ -123,7 +115,7 @@ evals_ch11 %>%
 ```
 
 
-```{r numxcatxplot1, echo=FALSE, warning=FALSE, fig.cap="Colored scatterplot of relationship of teaching and beauty scores.", fig.height=3.2}
+```{r numxcatxplot1, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Colored scatterplot of relationship of teaching and beauty scores.", fig.height=3.2}
 if(knitr::is_html_output()){
   ggplot(evals_ch11, aes(x = age, y = score, color = gender)) +
     geom_point() +
@@ -138,7 +130,7 @@ if(knitr::is_html_output()){
 }
 ```
 
-In the resulting Figure \@ref(fig:numxcatxplot1), observe that `ggplot()` assigns a default `r if_else(knitr::is_latex_output(), "", "in red/blue")` color scheme to the points and to the lines associated with the two levels of `gender`: `female` and `male`. Furthermore, the `geom_smooth(method = "lm", se = FALSE)` layer automatically fits a different regression line for each group. 
+In the resulting Figure \@ref(fig:numxcatxplot1), observe that the `geom_smooth(method = "lm", se = FALSE)` layer automatically fits a different regression line for each group. 
 
 We notice some interesting trends. First, there are almost no women faculty over the age of 60 as evidenced by lack of `r if_else(knitr::is_latex_output(), "darker-colored", "red")` dots above $x$ = 60. Second, while both regression lines are negatively sloped with age (i.e., older instructors tend to have lower scores), the slope for age for the female instructors is *more* negative. In other words, female instructors are paying a harsher penalty for advanced age than the male instructors. 
 
@@ -178,7 +170,7 @@ tidy(lifeExp_model,
 
 Recall our interpretation of the `estimate` column. Since `Africa` was the "baseline for comparison" group, the `intercept` term corresponds to the mean life expectancy for all countries in Africa of 54.8 years. The other four values of `estimate` correspond to "offsets" relative to the baseline group. So, for example, the "offset" corresponding to the Americas is +18.8 as compared to the baseline for comparison group Africa. In other words, the average life expectancy for countries in the Americas is 18.8 years *higher*. Thus the mean life expectancy for all countries in the Americas is 54.8 + 18.8 = 73.6. The same interpretation holds for Asia, Europe, and Oceania.
 
-Going back to our multiple regression model for teaching `score` using `age` and `gender` in Figure \@ref(fig:numxcatxplot1), we generate the regression table using the same two-step approach from Chapter \@ref(regression): we first "fit" the model using the `lm()` "linear model" function and then we apply the `tidy()` function. This time, however, our model formula won't be of the form `y ~ x`, but rather of the form `y ~ x1 * x2`. In other words, our two explanatory variables `x1` and `x2` are separated by a `*` sign:
+Going back to our multiple regression model for teaching `score` using `age` and `gender` in Figure \@ref(fig:numxcatxplot1), we generate the regression table using a two-step approach: we first "fit" the model using the `lm()` "linear model" function and then we apply the `tidy()` function. This time, however, our model formula won't be of the form `y ~ x`, but rather of the form `y ~ x1 * x2`. In other words, our two explanatory variables `x1` and `x2` are separated by a `*` sign:
 
 ```{r, eval=FALSE}
 # Fit regression model:
@@ -206,15 +198,15 @@ tidy(score_model_interaction,
                 latex_options = c("hold_position"))
 ```
 
-Looking at the regression table output in Table \@ref(tab:regtable-interaction), there are four rows of values in the `estimate` column. While it is not immediately apparent, using these four values we can write out the equations of both lines in Figure \@ref(fig:numxcatxplot1). First, since the word `female` comes alphabetically before `male`, female instructors are the "baseline for comparison" group. Thus, `intercept` is the intercept *for only the female instructors*. 
+There are four rows of values corresponding to a different predictor. Female instructors are the baseline group for comparison, as the other predictors display the additional "offset" amount for males. Thus, `intercept` is the intercept *for only the female instructors*. 
 
 This holds similarly for `age`. It is the slope for age *for only the female instructors*. Thus, the `r if_else(knitr::is_latex_output(), "darker-colored", "red")` regression line in Figure \@ref(fig:numxcatxplot1) has an intercept of 4.883 and slope for age of -0.018. Remember that for this data, while the intercept has a mathematical interpretation, it has no *practical* interpretation since instructors can't have zero age.
 
 What about the intercept and slope for age of the male instructors in the `r if_else(knitr::is_latex_output(), "lighter-colored", "blue")` line in Figure \@ref(fig:numxcatxplot1)? This is where our notion of "offsets" comes into play once again. 
 
-The value for `gendermale` of -0.446 is not the intercept for the male instructors, but rather the *offset*\index{offset} in intercept for male instructors relative to female instructors. The intercept for the male instructors is `intercept + gendermale` = 4.883 + (-0.446) = 4.883 - 0.446 = 4.437. 
+The value for `gendermale` is the *offset*\index{offset} in intercept for male instructors relative to female instructors. The intercept for the male instructors is `intercept + gendermale` = 4.883 + (-0.446) = 4.883 - 0.446 = 4.437. Similarly, `age:gendermale` = 0.014 is not the slope for age for the male instructors, but rather the *offset* in slope for the male instructors. Therefore, the slope for age for the male instructors is `age + age:gendermale` $=  -0.018 + 0.014 = -0.004$.
 
-Similarly, `age:gendermale` = 0.014 is not the slope for age for the male instructors, but rather the *offset* in slope for the male instructors. Therefore, the slope for age for the male instructors is `age + age:gendermale` $=  -0.018 + 0.014 = -0.004$. Thus, the `r if_else(knitr::is_latex_output(), "lighter-colored", "blue")` regression line in Figure \@ref(fig:numxcatxplot1) has intercept 4.437 and slope for age of -0.004. Let's summarize these values in Table \@ref(tab:interaction-summary) and focus on the two slopes for age:
+Let's summarize these values in Table \@ref(tab:interaction-summary) and focus on the two slopes for age:
 
 ```{r interaction-summary, echo=FALSE}
 options(digits = 4)
@@ -234,7 +226,7 @@ tibble(
 options(digits = 3)
 ```
 
-Since the slope for age for the female instructors was -0.018, it means that on average, a female instructor who is a year older would have a teaching score that is 0.018 units **lower**. For the male instructors, however, the corresponding associated decrease was on average only 0.004 units. While both slopes for age were negative, the slope for age for the female instructors is *more negative*. This is consistent with our observation from Figure \@ref(fig:numxcatxplot1), that this model is suggesting that age impacts teaching scores for female instructors more than for male instructors.
+Since the slope for age for the female instructors was -0.018, it means that on average, a female instructor who is a year older would have a teaching score that is 0.018 units **lower**, whereas the corresponding associated decrease for males was on average only 0.004 units. This is consistent with our observation from Figure \@ref(fig:numxcatxplot1), that this model is suggesting that age impacts teaching scores for female instructors more than for male instructors, as the slope for age for females is more negative than that of males.
 
 Note that our regression table included the confidence interval bounds generated from `tidy(conf.int = TRUE)`.  Let's reassure ourselves that they are similar to what we would get from the bootstrap samples.
 
@@ -298,16 +290,7 @@ tidy(score_model_interaction,
 
 They are very similar, so we will keep using `tidy(conf.int = TRUE)` to save time.
 
-Let's now write the equation for our regression lines, which we can use to compute our fitted values $\widehat{y} = \widehat{\text{score}}$.
-
-$$
-\begin{aligned}
-\widehat{y} = \widehat{\text{score}} &= b_0 + b_{\text{age}} \cdot \text{age} + b_{\text{male}} \cdot \mathbb{1}_{\text{is male}}(x) + b_{\text{age,male}} \cdot \text{age} \cdot \mathbb{1}_{\text{is male}}\\
-&= 4.883 -0.018	\cdot \text{age} - 0.446 \cdot \mathbb{1}_{\text{is male}}(x) + 0.014 \cdot \text{age} \cdot \mathbb{1}_{\text{is male}}
-\end{aligned}
-$$
-
-Whoa! That's even more daunting than the equation you saw for the life expectancy as a function of continent! However, if you recall what an "indicator function" does, the equation simplifies greatly. In the previous equation, we have one indicator function of interest:
+Let's now write the equation for our regression lines, which we can use to compute our fitted values $\widehat{y} = \widehat{\text{score}}$. First, let's use an indicator variable, $${1}_{\text{is male}}$$.
 
 $$
 \mathbb{1}_{\text{is male}}(x) = \left\{
