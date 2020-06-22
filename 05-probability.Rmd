@@ -1,1849 +1,1163 @@
-# Part II {-}
+---
+output_yaml:
+  - _output.yml
+---
 
-# Probability {#probability}
+# Probability
 
-<!-- Combine Bayes and Probability chapters. There is only enough material here form one chapter. I don't like the mash up of two chapters, from two different original sources. Two approaches: interweave the Bayesian stuff into the probability chapter or the reverse. I like the reverse. The Bayes chapter is nice. It just needs more probability placed into it. Indeed, on some dimensions the probability chapter is overkill, even after I deleted some stuff. Chapter is still called Probability but it becomes an appendix, I think. Should have all political sciency examples. -->
+<!-- TODOS
 
-<!-- Maybe this one chapter uses decision trees as its central organizing metaphor. *Bayes Theorem: A Visual Introduction for Beginners* does a nice job of teaching Bayesian inference with decision trees. Works really well! And easy (?) to simulate. Maybe we do that? Fits naturally (?) into list-columns and map functions. A natural (?) way to teach/show unconditional, conditional and marginal probability. Leafs on the tree are the possible outcomes. -->
+1) Add section on PDFs and their relationship with histograms for flipping die
+- Rolling a dice 1 time gives us a flat histogram
+- Rolling a dice 1000 times gives us a histogram with probability on the y axis, where all the values add up to 1
+- Show that adding up the area under gives us a sum of 1.
+- Introduce the notation P(coin) and P(1 dice) earlier
+- Continuity is a lie, height is not continuous. The die are discrete, but height is continuous. So height is a sum of discrete things here.
+- You technically can't measure continuous anything and even if you could, you can't put it on a computer
+- Talk about the relationship between the height of buckets and the number of buckets.
 
-<!-- Meld the material on functions and purrr into the concepts in the Probability/Bayes Chapters. We are not changing, I think, many of the words in these chapters, most of which are quite good. Instead, we are using these topics as an excuse to provide more lessons in functions/purrr. Also, edit Bayes chapter to make sense after probability chapter. Consider adding in intuition from Bayes for Beginner Book, especially decision trees, which map nicely to our simulation approach. Probabity/Bayes chapter should discuss null model, testing and p-values. This would allow us to add a (simple!) list-column, map function example at the end, very similar to the one we use in class.  -->
+2) Right before comparing two models, add a section showing that a tree diagram may look different depending on whether order matters. Are we looking for sum or do we care about the order of rolling H vs T as well? Flip 2 coins. Only 4 branches from one dot if we care about sum. But if order matters, we need a more extensive diagram with 6 branches.
 
+3) Wizardry section with across and rowwise.
 
-<!-- Central idea: Teach probability solely on the basis of branching trees which eventually lead to outcomes from your sample set. Advantages: Easy to understand. Easy to set up simulation experiments. Encourages programming. Connects directly to Bayesian view, see McRealth book/lectures. Bayesian counting. -->
+4) Rumsfield quote (photo!) - done
+- Workshop statistics quote + generally populate sidebar
+- Add Rossman quote to side.
+- More quotes and fun stuff.
 
-<!-- The notes below are often about class, but that should inform the chapter as well. Indeed, class should always look as much like the class as possible. -->
+5) PROBABILITY DOES NOT EXIST. de finetti (photo! Italian?)
 
-<!-- "grids," as used clearly in Chapter 1 of Thinking Bayes, are a good way of introducing Bayesian analysis. And a good programming exercise? -->
+6) probability-tutorial.Rmd (two question)
 
-<!-- The bayesian_scratch example of the Downey cookie problem works very well. Students need some hints, however, about how to set things up. Most of them wanted to actually build the bowls, as I guess we did in a problem set. They did not immediately see that a simple tibble with well-chosen variables does the job just as well. If we were cool, we would do a cookie theme, and have a student pick a cookie out of the bowl. -->
+7) probability-questions.Rmd (110? one question; copy/paste over)
 
-<!-- It can take time, however. Probably a full class, even if you only do the cookie example. Don't use tabyl. Ought to make them use pivot_wider, calculate column sums, and make into a percentage, before showing the janitor. Almost certainly a good idea to end with putting a prior on the two bowls, and thereby understanding the Bayesian workflow from prior, to data, to posterior. (Is that right? Is the prior the number of rows?) -->
+8) Add section on unknown unknowns
 
-<!-- This all sets you up for the use of a more complex example in problem set #5. -->
+9) Go into terms like parameter uncertainty, validity, unmodeled variation (either give them their own section headings or make them italicized terms.)
 
-<!-- The Albert article has a nice discussion of Bayes boxes and Bayes scatterplots. I think both make sense for in-class exercises this week. Perhaps pass out Bayes box handouts, with the boxes created but no numbers. Students fill them out together. (Need to tie this to Downey reading.) Then, show examples of Bayes scatterplots. Have students write code to create their own. Use purrr? -->
+10) Integrate Maria's animations
 
-<!-- In code, they do the Bayesian box thing with 3 possible values for p. Then, change the code so we have 11 values. Then 1001, then 100,001. Still ought to be fast. And, each time, ask some standard questions that frequentist can't answer. What is likelihood of p > 0.4. What about p between 0.45 and 0.55? What is the middle 50% confidence interval for p? Answers don't change much as we extend the model, but they get more precise. And then wave hands for the continuous case. -->
+11) gradethis and learnr
 
-<!-- The Rossman article has nice dice and coin examples. Perhaps use those in lecture? -->
+12) add section at the bottom noting the key themes from DK
 
-<!-- Do a dice example where students each have their own priors and then we update after rolling dice, some fake or real. Do it with counts, not proportions. -->
+-->
 
-<!-- Do contest where we start with a few poll responses, estimate some proportions, then get a few more responses, update our estimates, and so on. Each stage is, potentially, a new contest. See which approach wins the most contests. In the end, of course, they converge. -->
 
-<!-- Can't just be "Repub ahead" as H_1. Need to be "Repub = 0.6" Without this hack, can't calculate the likelihood easily. Right? -->
+<!-- DK: Things to discuss 
 
-<!-- Might Bayesian power discussion, as in Kruscke article be a useful problem set? Ties into the usage of fake data. Good way to introduce/teach type M and S errors? -->
+1) Need a Tests are Evil section. This will be the first one in the book, so it can go slowly and does not need to cover much. It occurs after we have done the basic set up, all the way through the posterior estimate of p, but perhaps before the posterior check. Might need to use a new example, or maybe we adjust our current example so that data works. -- done
 
-<!-- Chapters 15 and 16 of the Bayes workbook has some interesting stuff. See page 330 for the use of the frequency format. Don't think in terms of percentages. Think in terms of counts. -->
+2) Don't use grid.arrange. Use the functions in cowplot. Or is there a better package?
 
-<!--        1000 -->
-<!--       10   990 -->
-<!--      8  2  95 895 -->
-<!--      8/(8 + 95) -->
+DK: If we want to do rethinking: https://bookdown.org/content/3890/small-worlds-and-large-worlds.html#the-garden-of-forking-data
 
-<!-- First, look at competing models. Who is ahead, D or R? -->
-<!-- Second, add another model. D or R or tied? -->
-<!-- Third, what is D percentage of support? -->
+-->
 
 
-<!-- Show updating as each vote comes in. Then show that you get the same answer if you just include all the votes at once. -->
 
-<!-- Start pair programming on Tuesday of week 5. Forces weaker students to really participate. Forces stronger students to help their peers. Use a single repo shared by two students, including one inviting the other. Show a merge conflict. -->
+<!-- Central idea: No formulas. No likelihoods. No specific probability distributions. The most technical we get is explaining: p(A), p(B), p(A, B), p(A|B) and p(B|A). Teach probability using branching trees, which eventually lead to outcomes from your sample set. Conditional and marginal probability from those trees. Then go to Bayes Scatterplots. Data on the x-axis. Model on the y-axis. Everything flows from those scatterplots. First, with 0/1 models. The equivalent of a Bayesian box, but with the rows on the y-axis. Then a Bayesian Scatterplot with three models. Then, modeling p with 11 values. Then with 1,001. Then we wave our hands and report that the continuous case is just the extension of that idea, from a few discrete models to a continuum of millions of them. Simulations grow in complexity. The first one would be simple. No map functions or list columns. Later ones get more serious. Introducing testing and why it is evil. Finish with Bayesian posterior predictions. -->
 
-<!-- What fun examples can we do with Bayes? What prediction games? James-Stein estimators? -->
+<!-- Key references. Make sure to cite all three as separate side notes. But, at the same time, don't feel compelled to do things the way that they did them. -->
 
-<!-- Assuming this is correct, we get to bring in prediction and betting. Then, we have the motivating question: What is a good estimate for the percentage of Democrats in this bucket? How do we combine information from the overall population and from our sample to come up with a good estimate, and confidence interval, for the percentage Democratic in that bucket? Perhaps this multi-level model is one of the last things we do. Even Mr P?? -->
+<!-- 2) Teaching Bayes' Rule: A Data-Oriented Approach by Jim Albert. The key concept is Bayes Scatterplots. That is the central graphic of this chapter. We will show such a scatterplot four or five times, each time more complex, each time showing marginal distributions in both directions. -->
 
-<!-- Want to be able to do this with just counting. No math. Albert's boxes seems sensible. -->
+<!-- 3) Rethinking Chapter 2. Garden of forking data is just excellent stuff.  -->
 
-<!-- Are there physical set ups which would show bias? Make the red balls bigger? Make them fall to the bottom of the bowl? Maybe add the candy weighing estimate from Nolan/Gelman. -->
+<!-- Open Questions: -->
 
-<!-- Motivating problem: Two buckets, each with different pair of die in them: one normal, one weird. You pick a bucket, then roll the die. Q: What are the odds of bucket 1 versus bucket 2? Start with dice function. Then build tibble as in the cookie problem. That takes a day, especially if we build the result by-hand, meaning pivot_wider and summing columns, as we should. Then, day 2, place a prior on the two buckets. Then, what if we through the dice more than once? This will be a list column. Scary! But all the other arguments go through. (I think!) Then, discuss continuous example of a coin, setting the stage for problem set question. -->
+<!-- Should we connect to the Rubin Causal Model? Leafs on the tree are the potential outcomes. Never seen this done before. Because you followed the tree diagram in one direction, you can't go down two branches simultaneously. Is there a connection to game theory tree diagrams in microeconomics? Not sure how exactly to apply this . . . -->
 
-<!-- Change the ordering next year. First week will be Bayes. Perhaps we can do all the examples without list-columns. But we can get use to building things step-by-step, with the first step often being tibble(replication = 1:100). Or maybe, with Bayes, the first step is even simpler, building a Bayes box by hand. Then, we get a week of practice with this before we need to add purrr complications. Is there a way that Bayes boxes lead naturally to sampling and then to the bootstrap? -->
+<!-- Review problem set #5 from last year for ideas about simulations to use as examples. -->
 
+<!-- Use some STAT 110 midterm questions as example problems which simulation makes easy to solve. Maybe? At least in the first section? https://projects.iq.harvard.edu/files/stat110/files/midterm_exam.pdf -->
 
+<!-- Would it be helpful to introduce the rsample::bootstraps() function? Or wait till next chapter? Or maybe do a bootstraps the hard way here and then introduce the easy way later? -->
 
-Probability forms the foundation for statistics. You might already be
-familiar with many aspects of probability, however, formalization of the
-concepts is new for most. This chapter aims to introduce probability on
-familiar terms using processes most people have seen before.
+<!-- Should we discuss, or show an example, of multiple dimensions? We have two coins, each with their own p. Build the joint distribution for them, with one on the x-axis and one on the y-axis. You need a near graphic for each value of the H number of heads total that you get from flipping them each N times. Then, you run the experiment, and you select the correct graphic. That shows you the best guess joint distribution. This is confusing! Too hard for the chapter, but maybe not for a problem set. Or maybe we revisit exactly this example in the two parameter chapter? -->
 
-## Defining probability {#basicsOfProbability}
+<!-- Class Exercises -->
 
-### Intro Questions
+<!-- a) Workshop Statistics has nice dice and coin examples. Perhaps use those in lecture? -->
 
-**Q1**: A "die", the singular of dice, is a cube with six faces numbered *1*,
-*2*, *3*, *4*, *5*, and *6*. What is the chance of getting *1* when
-rolling a die
+<!-- b) Two buckets, each with different pair of die in them: one normal, one weird. You pick a bucket, then roll the die. Q: What are the odds of bucket 1 versus bucket 2? Start with dice function. Then build tibble as in the cookie problem. That takes a day, especially if we build the result by-hand, meaning pivot_wider and summing columns, as we should. Then, day 2, place a prior on the two buckets. Then, what if we through the dice more than once? This will be a list column. Scary! But all the other arguments go through. (I think!) Then, discuss continuous example of a coin, setting the stage for problem set question. -->
 
-> **S1**: If the die is
-> fair, then the chance of a *1* is as good as the chance of any other
-> number. Since there are six outcomes, the chance must be 1-in-6 or,
-> equivalently, $1/6$.
+<!-- c) Do a dice example where students each have their own priors and then we update after rolling dice, some fake or real. Do it with counts, not proportions.  -->
 
-**Q2**: What is the chance of getting a *1* or *2* in the next
-roll
- 
-> **S2**: *1* and *2*
-> constitute two of the six equally likely possible outcomes, so the
-> chance of getting one of these two outcomes must be $2/6 = 1/3$.
+<!-- d) Might a Bayesian power discussion, as in Kruscke article, be a useful problem set? Ties into the usage of fake data. Good way to introduce/teach type M and S errors? -->
 
-**Q3**: What is the chance of getting either *1*, *2*, *3*, *4*, *5*, or *6* on
-the next roll
- 
 
-> **S3**: 100%. The outcome must be one of these numbers.
+```{r include=FALSE}
+library(tufte)
 
-**Q4**: What is the chance of not rolling a *2*
- 
-> **S4**: Since the chance of rolling a *2* is $1/6$ or
-> $16.\bar{6}\%$, the chance of not rolling a *2* must be
-> $100\% - 16.\bar{6}\%=83.\bar{3}\%$ or $5/6$.
-> 
-> Alternatively, we could have noticed that not rolling a *2* is the same
-> as getting a *1*, *3*, *4*, *5*, or *6*, which makes up five of the six
-> equally likely outcomes and has probability $5/6$.
+# Need scales::comma for formatting. This is an example of a package which
+# should be included once, at the start of making the book. Same with tidyverse.
 
-**Q5**: Consider rolling two dice. If $1/6^{th}$ of the time the first die is a
-*1* and $1/6^{th}$ of those times the second die is a *1*, what is the
-chance of getting two *1*s
- 
-> **S**: If $16.\bar{6}$% of the time the first die is a *1*
-> and $1/6^{th}$ of *those* times the second die is also a *1*, then the
-> chance that both dice are *1* is $(1/6)\times (1/6)$ or $1/36$.
+# DK: Why ggtree and not one of the other tree packages?
 
-### Probability
-
-We use probability to build tools to describe and understand apparent randomness. We often frame probability in terms of a **random process** giving rise to an outcome.
-
-  ------------- --------------- ---------------------------------
-  Roll a die    $\rightarrow$   *1*, *2*, *3*, *4*, *5*, or *6*
-  Flip a coin   $\rightarrow$   *H* or *T*
-  ------------- --------------- ---------------------------------
-
-Rolling a die or flipping a coin is a seemingly random process and each
-gives rise to an outcome.
-
-
-
-**Definition of Probability**
-
-> The **probability** of an outcome is the proportion of times the outcome would occur if
-> we observed the random process an infinite number of times.
-
-
-Probability is defined as a proportion, and it always takes values
-between 0 and 1 (inclusively). It may also be displayed as a percentage
-between 0% and 100%.
-
-Probability can be illustrated by rolling a die many times. Let
-$\hat{p}_n$ be the proportion of outcomes that are *1* after the first
-$n$ rolls. As the number of rolls increases, $\hat{p}_n$ will converge
-to the probability of rolling a *1*, $p = 1/6$.
-Figure [1.1](#dieProp){reference-type="ref" reference="dieProp"} shows
-this convergence for 100,000 die rolls. The tendency of $\hat{p}_n$ to
-stabilize around $p$ is described by the **Law of Large Numbers**.
-
-![The fraction of die rolls that are 1 at each stage in a simulation.
-The proportion tends to get closer to the probability
-$1/6 \approx 0.167$ as the number of rolls
-increases.[]{label="dieProp"}](images/dieProp.png){#dieProp
-width="80%"}
-
-<!-- Replace the above with some R code. Should eventually by an interactive display which allows the reader to try different things. For example, don't some processes converse faster than others? Or is that too advanced for the first page? -->
-
-**Definition of Law of Large Numbers**
-
-> As more observations are collected, the proportion $\hat{p}_n$ of
-> occurrences with a particular outcome converges to the probability $p$
-> of that outcome.
-
-<!-- The references in this chapters are different from the references elsewhere. What are current best practices? -->
-
-Occasionally the proportion will veer off from the probability and
-appear to defy the Law of Large Numbers, as $\hat{p}_n$ does many times
-in Figure [1.1](#dieProp){reference-type="ref" reference="dieProp"}.
-However, these deviations become smaller as the number of rolls
-increases.
-
-Above we write $p$ as the probability of rolling a *1*. We can also
-write this probability as $$\begin{aligned}
-P(\text{rolling a 1})\end{aligned}$$ As we become more
-comfortable with this notation, we will abbreviate it further. For
-instance, if it is clear that the process is "rolling a die", we could
-abbreviate $P($rolling a *1*$)$ as $P($*1*$)$. It can be helpful to model a process as random even if it is not truly random.
-
-<!-- The above math notation seems to use way too many dollar signs. Are they really necessary? -->
-
-
-### Disjoint or mutually exclusive outcomes
-
-Two outcomes are called **disjoint** or **mutually exclusive** if they cannot both happen. For instance, if
-we roll a die, the outcomes *1* and *2* are disjoint since they cannot
-both occur. On the other hand, the outcomes *1* and "rolling an odd
-number" are not disjoint since both occur if the outcome of the roll is
-a *1*. The terms *disjoint* and *mutually exclusive* are equivalent and
-interchangeable.
-
-Calculating the probability of disjoint outcomes is easy. When rolling a
-die, the outcomes *1* and *2* are disjoint, and we compute the
-probability that one of these outcomes will occur by adding their
-separate probabilities: 
-
-$$\begin{aligned}
-P(\text{1 or 2}) = P(\text{1})+P(\text{2}) = 1/6 + 1/6 = 1/3
-\end{aligned}$$
-
-The **Addition Rule** guarantees the accuracy of this approach when the outcomes are disjoint.
-
-
-### Probabilities when events are not disjoint
-
-Let's consider calculations for two events that are not disjoint in the
-context of a deck of cards. 
-
-  ------------------- ------------------- ------------------- ------------------- ------------------- ------------------- ------------------- ------------------- -------------------- ------------------- ------------------- ------------------- -------------------
-  *2$\clubsuit$*      *3$\clubsuit$*      *4$\clubsuit$*      *5$\clubsuit$*      *6$\clubsuit$*      *7$\clubsuit$*      *8$\clubsuit$*      *9$\clubsuit$*      *10$\clubsuit$*      *J$\clubsuit$*      *Q$\clubsuit$*      *K$\clubsuit$*      *A$\clubsuit$*
-  *2$\diamondsuit$*   *3$\diamondsuit$*   *4$\diamondsuit$*   *5$\diamondsuit$*   *6$\diamondsuit$*   *7$\diamondsuit$*   *8$\diamondsuit$*   *9$\diamondsuit$*   *10$\diamondsuit$*   *J$\diamondsuit$*   *Q$\diamondsuit$*   *K$\diamondsuit$*   *A$\diamondsuit$*
-  *2$\heartsuit$*     *3$\heartsuit$*     *4$\heartsuit$*     *5$\heartsuit$*     *6$\heartsuit$*     *7$\heartsuit$*     *8$\heartsuit$*     *9$\heartsuit$*     *10$\heartsuit$*     *J$\heartsuit$*     *Q$\heartsuit$*     *K$\heartsuit$*     *A$\heartsuit$*
-  *2$\spadesuit$*     *3$\spadesuit$*     *4$\spadesuit$*     *5$\spadesuit$*     *6$\spadesuit$*     *7$\spadesuit$*     *8$\spadesuit$*     *9$\spadesuit$*     *10$\spadesuit$*     *J$\spadesuit$*     *Q$\spadesuit$*     *K$\spadesuit$*     *A$\spadesuit$*
-  ------------------- ------------------- ------------------- ------------------- ------------------- ------------------- ------------------- ------------------- -------------------- ------------------- ------------------- ------------------- -------------------
-
-  : Representations of the 52 unique cards in a
-  deck.[]{label="deckOfCards"}
-
-
-**Venn diagrams** are useful when outcomes can be categorized as "in" or "out" for two or
-three variables, attributes, or random processes. The Venn diagram in
-Figure [1.3](#venn){reference-type="ref" reference="venn"} uses a circle
-to represent diamonds and another to represent face cards. If a card is
-both a diamond and a face card, it falls into the intersection of the
-circles. If it is a diamond but not a face card, it will be in part of
-the left circle that is not in the right circle (and so on). The total
-number of cards that are diamonds is given by the total number of cards
-in the diamonds circle: $10+3=13$. The probabilities are also shown
-(e.g. $10/52 = 0.1923$).
-
-![A Venn diagram for diamonds and face
-cards.[]{label="venn"}](images/venn.png){#venn height="1.4in"}
-
-
-Let $A$ represent the event that a randomly selected card is a diamond
-and $B$ represent the event that it is a face card. How do we compute
-$P(A$ or $B)$
- 
- Events $A$ and $B$ are not disjoint -- the cards
-$J\diamondsuit$, $Q\diamondsuit$, and $K\diamondsuit$ fall into both
-categories -- so we cannot use the Addition Rule for disjoint events.
-Instead we use the Venn diagram. We start by adding the probabilities of
-the two events: $$\begin{aligned}
-P(A) + P(B) = P({\color{redcards}\diamondsuit}) + P(\text{face card}) = 12/52 + 13/52
-\label{overCountFaceDiamond}\end{aligned}$$ However, the three cards
-that are in both events were counted twice, once in each probability. We
-must correct this double counting: $$\begin{aligned}
-P(A\text{ or } B) &=&P(\text{face card or }{\color{redcards}\diamondsuit})  \notag \\
- &=& P(\text{face card}) + P({\color{redcards}\diamondsuit}) - P(\text{face card and }{\color{redcards}\diamondsuit}) \label{diamondFace} \\
- &=& 12/52 + 13/52 - 3/52 \notag \\
- &=& 22/52 = 11/26 \notag\end{aligned}$$
-The Equation above is an example of the **General Addition Rule**.
-
-**General Addition Rule**
-
-> If $A$ and $B$ are any two events, disjoint or not, then the probability
-> that at least one of them will occur is $$\begin{aligned}
-> P(A\text{ or }B) = P(A) + P(B) - P(A\text{ and }B)
-> \label{generalAdditionRule}\end{aligned}$$ where $P(A$ and $B)$ is the
-> probability that both events occur. When we write "or" in statistics, 
-> we mean "and/or" unless we explicitly
-> state otherwise. Thus, $A$ or $B$ occurs means $A$, $B$, or both $A$ and
-> $B$ occur.
-
-
-### Probability distributions
-
-A **Probability distribution** is a table of all disjoint outcomes and their associated
-probabilities. The table below shows the probability distribution for the sum of
-two dice.
-
-  ------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ----------------
-                                                                                                                                                                                          
-  Dice sum             2                3                4                5                6                7                8                9                10               11               12
-  Probability    $\frac{1}{36}$   $\frac{2}{36}$   $\frac{3}{36}$   $\frac{4}{36}$   $\frac{5}{36}$   $\frac{6}{36}$   $\frac{5}{36}$   $\frac{4}{36}$   $\frac{3}{36}$   $\frac{2}{36}$   $\frac{1}{36}$
-  ------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ----------------
-
-  : Probability distribution for the sum of two
-  dice.[]{label="diceProb"}
-
-**Rules for probability distributions**
-
-> A probability distribution is a list of the possible outcomes with
-corresponding probabilities that satisfies three rules:
-
-> 1.  The outcomes listed must be disjoint.
-> 2.  Each probability must be between 0 and 1.
-> 3.  The probabilities must total 1.
-
-
-Probability distributions can also be
-summarized in a bar plot. For instance, the distribution of US household
-incomes is shown in
-Figure [1.4](#usHouseholdIncomeDistBar){reference-type="ref"
-reference="usHouseholdIncomeDistBar"} as a bar plot.[^14] The
-probability distribution for the sum of two dice is shown in
-the table at the begining of the probability distributions section and plotted in
-Figure [1.5](#diceSumDist){reference-type="ref"
-reference="diceSumDist"}.
-
-<!-- These figures should be calculated live. Maybe we can make a theme for the book which makes all the figures look similar and nice. -->
-
-![The probability distribution of US household
-income.[]{label="usHouseholdIncomeDistBar"}](images/usHouseholdIncomeDistBar.png){#usHouseholdIncomeDistBar
-width="68%"}
-
-![The probability distribution of the sum of two
-dice.[]{label="diceSumDist"}](images/diceSumDist.png){#diceSumDist
-width="73%"}
-
-In these bar plots, the bar heights represent the probabilities of
-outcomes. If the outcomes are numerical and discrete, it is usually
-(visually) convenient to make a bar plot that resembles a histogram, as
-in the case of the sum of two dice. 
-
-### Complement of an event
-
-<!-- Cut this section? Do we ever need the complement? -->
-
-Rolling a die produces a value in the set $\{$*1*, *2*, *3*, *4*, *5*,
-*6*$\}$. This set of all possible outcomes is called the **sample space** ($S$) for
-rolling a die. We often use the sample space to examine the scenario
-where an event does not occur.
-
-Let $D=\{$*2*, *3*$\}$ represent the event that the outcome of a die
-roll is *2* or *3*. Then the **complement** of $D$ represents all outcomes in our
-sample space that are not in $D$, which is denoted by $D^c = \{$*1*,
-*4*, *5*, *6*$\}$. That is, $D^c$ is the set of all possible outcomes
-not already included in $D$.
-Figure [1.6](#complementOfD){reference-type="ref"
-reference="complementOfD"} shows the relationship between $D$, $D^c$,
-and the sample space $S$.
-
-![Event $D=\{$*2*, *3*$\}$ and its complement, $D^c = \{$*1*, *4*, *5*,
-*6*$\}$. $S$ represents the sample space, which is the set of all
-possible
-events.[]{label="complementOfD"}](images/complementOfD.png){#complementOfD
-width="40%"}
-
-A complement of an event $A$ is constructed to have two very important
-properties: (i) every possible outcome not in $A$ is in $A^c$, and (ii)
-$A$ and $A^c$ are disjoint. Property (i) implies $$\begin{aligned}
-P(A\text{ or }A^c) = 1
-\label{complementSumTo1}\end{aligned}$$ That is, if the outcome is not
-in $A$, it must be represented in $A^c$. 
-
-
-### Independence {#probabilityIndependence}
-
-Just as variables and observations can be independent, random processes
-can be independent, too. Two processes are **independent** if knowing the outcome of one
-provides no useful information about the outcome of the other. For
-instance, flipping a coin and rolling a die are two independent
-processes -- knowing the coin was heads does not help determine the
-outcome of a die roll. On the other hand, stock prices usually move up
-or down together, so they are not independent.
-
-Rolling two dice is a basic example of independence. We want to determine the probability that
-both will be *1*. Suppose one of the dice is red and the other white. If
-the outcome of the red die is a *1*, it provides no information about
-the outcome of the white die. We first encountered this same question in
-the beginning of the chapter, where we calculated the probability
-using the following reasoning: $1/6^{th}$ of the time the red die is a
-*1*, and $1/6^{th}$ of *those* times the white die will also be *1*.
-This is illustrated in
-Figure [1.7](#indepForRollingTwo1s){reference-type="ref"
-reference="indepForRollingTwo1s"}. Because the rolls are independent,
-the probabilities of the corresponding outcomes can be multiplied to get
-the final answer: $(1/6)\times(1/6)=1/36$. This can be generalized to
-many independent processes.
-
-![$1/6^{th}$ of the time, the first roll is a *1*. Then $1/6^{th}$ of
-*those* times, the second roll will also be a
-*1*.[]{label="indepForRollingTwo1s"}](images/indepForRollingTwo1s.png){#indepForRollingTwo1s
-width="65%"}
-
-**Example**
-What if there was also a blue die independent of the other two?
- 
- What is
-the probability of rolling the three dice and getting all
-*1*s?
- 
-If $1/36^{th}$ of the time the white and red
-dice are both *1*, then $1/6^{th}$ of *those* times the blue die will
-also be *1*, so multiply: $$\begin{aligned}
-P(white=\text{1 and } red=\text{1 and } blue=\text{1})
-    &= P(white=\text{1})\times P(red=\text{1})\times P(blue=\text{1}) \\
-    &= (1/6)\times (1/6)\times (1/6)
-    = 1/216\end{aligned}$$
-
-The example above illustrate what is called the Multiplication Rule
-for independent processes. Sometimes we wonder if one outcome provides 
-useful information about
-another outcome. The question we are asking is, are the occurrences of
-the two events independent
- 
- We say that two events $A$ and $B$ are
-independent if they satisfy
-$$P(A \text{ and }B) = P(A) \times  P(B)$$
-
-**Example**
-
-If we shuffle up a deck of cards and draw one, is the event that the
-card is a heart independent of the event that the card is an ace
- 
- The
-probability the card is a heart is $1/4$ and the probability that it is
-an ace is $1/13$. The probability the card is the ace of hearts is
-$1/52$. We check whether
-$P(A \text{ and }B) = P(A) \times  P(B)$ is satisfied: $$\begin{aligned}
-P({\color{redcards}\heartsuit})\times P(\text{ace}) = \frac{1}{4}\times \frac{1}{13} = \frac{1}{52} 
-                    = P({\color{redcards}\heartsuit}\text{ and ace})\end{aligned}$$
-Because the equation holds, the event that the card is a heart and the
-event that the card is an ace are independent events.
-
-### Conditional probability {#conditionalProbabilitySection}
-
-Are students more likely to use marijuana when their parents used drugs?
- 
-
-The data set contains a sample of 445 cases with two variables, students and parents,
-and is summarized in the table below.[^23] The variable is either *uses*
-or *not*, where a student is labeled as if she has recently used
-marijuana. The student variable takes the value *used* if at least one of the
-parents used drugs, including alcohol.
-
-               used      not       Total
-  ---------- ---------- --------- -------
-  uses         125        94      219
-  not           85       141      226
-  Total        210       235      445
-
-
-  : Contingency table summarizing the data
-  set.[]{label="contTableOfParStDrugUse"}
-
-![A Venn diagram using boxes for the data
-set.[]{label="drugUseVenn"}](images/drugUseVenn.png){#drugUseVenn
-width="65%"}
-
-**Example**
-
-If at least one parent used drugs, what is the chance their child
-uses drugs.
- 
- We will estimate this probability using the data. Of the 210 cases
-in this data set where = *used*, 125 represent cases where = *uses*:
-$$\begin{aligned}
-P(\text{student = uses given parents = used}) = \frac{125}{210} = 0.60\end{aligned}$$
-
-**Example**
-
-A student is randomly selected from the study and she does not use
-drugs. What is the probability that at least one of her parents
-used
- 
-If the student does not use
-drugs, then she is one of the 226 students in the second row. Of these
-226 students, 85 had at least one parent who used drugs:
-$$\begin{aligned}
-P(\text{parents = used given student = not}) = \frac{85}{226} = 0.376\end{aligned}$$
-
-### Marginal and joint probabilities {#marginalAndJointProbabilities}
-
-The Table below includes row and column totals for each
-variable separately in the data set. These totals represent **marginal probabilities** for the
-sample, which are the probabilities based on a single variable without
-conditioning on any other variables. For instance, a probability based
-solely on the variable is a marginal probability: $$\begin{aligned}
-P(\text{student = uses}) = \frac{219}{445} = 0.492\end{aligned}$$
-A probability of outcomes for two or more variables or processes is
-called a **joint probability**: $$\begin{aligned}
-P(\text{student = uses and parents = not}) = \frac{94}{445} = 0.21\end{aligned}$$
-It is common to substitute a comma for "and" in a joint probability,
-although either is acceptable.
-
-               used      not       Total
-  ---------- ---------- --------- -------
-  uses         0.28      0.21      0.49
-  not          0.19      0.32      0.51
-  Total        0.47      0.53      1.00
-
-  : Probability table summarizing parental and student drug
-  use.[]{label="drugUseProbTable"}
-
-**Marginal and joint Probabilities**
-
-> If a probability is based on a single variable, it is a *marginal
-> probability*. The probability of outcomes for two or more variables or
-> processes is called a *joint probability*.
-
-We use **table proportions** to summarize joint probabilities for the sample. These
-proportions are computed by dividing each count in the first table by 445 to obtain the proportions in
-the second table. The joint probability distribution of the
-and variables is shown in
-the table below.
-
-  Joint outcome         Probability
-  -------------------- -------------
-  = *used*, = *uses*       0.28
-  = *used*, = *not*        0.19
-  = *not*, = *uses*        0.21
-  = *not*, = *not*         0.32
-  Total                    1.00
-
-  : A joint probability distribution for the data
-  set.[]{label="drugUseDistribution"}
-
-
-We can compute marginal probabilities using joint probabilities in
-simple cases. For example, the probability a random student from the
-study uses drugs is found by summing the outcomes from
-the table above where = *uses*: $$\begin{aligned}
-&&P(\text{student = uses}) \\
-&& \quad =  P(\text{parents = used, student = uses}) + \\
-&& \quad \quad \quad \quad P(\text{parents = not, student = uses}) \\
-&& \quad = 0.28 + 0.21 = 0.49\end{aligned}$$
-
-### Defining conditional probability
-
-There is some connection between drug use of parents and of the student:
-drug use of one is associated with drug use of the other.[^25] In this
-section, we discuss how to use information about associations between
-two variables to improve probability estimation.
-
-The probability that a random student from the study uses drugs is 0.49.
-Could we update this probability if we knew that this student's parents
-used drugs
- 
- Absolutely. To do so, we limit our view to only those 210
-cases where parents used drugs and look at the fraction where the
-student uses drugs: $$\begin{aligned}
-P(\text{student = uses given parents = used}) = \frac{125}{210} = 0.60\end{aligned}$$
-We call this a **conditional probability** because we computed the probability under a condition: =
-*used*. There are two parts to a conditional probability, **the outcome of interest** and the **condition** . It
-is useful to think of the condition as information we know to be true,
-and this information usually can be described as a known outcome
-or event.
-
-We separate the text inside our probability notation into the outcome of
-interest and the condition: $$\begin{aligned}
-&& P(\text{student = uses given parents = used}) \notag \\
-&& = P(\text{student = uses } | \text{ parents = used}) = \frac{125}{210} = 0.60
-\label{probStudentUsedIfParentsUsedInFormalNotation}\end{aligned}$$ The
-vertical bar "$|$" is read as *given*.
-
-In
-the Equation above, we computed
-the probability a student uses based on the condition that at least one
-parent used as a fraction: $$\begin{aligned}
-&& P(\text{student = uses } | \text{ parents = used}) \notag \\
-&&\quad = \frac{\text{#times student = uses and parents = used}}{\text{#times parents = used}} \label{ratioOfBothToRatioOfConditionalForParentsAndStudent} \\
-&&\quad = \frac{125}{210} = 0.60 \notag\end{aligned}$$ We considered
-only those cases that met the condition, = *used*, and then we computed
-the ratio of those cases that satisfied our outcome of interest, the
-student uses.
-
-Counts are not always available for data, and instead only marginal and
-joint probabilities may be provided. For example, disease rates are
-commonly listed in percentages rather than in a count format. We would
-like to be able to compute conditional probabilities even when no counts
-are available, and we use
-the equation above as an
-example demonstrating this technique.
-
-We considered only those cases that satisfied the condition, = *used*.
-Of these cases, the conditional probability was the fraction who
-represented the outcome of interest, = *uses*. Suppose we were provided
-only the information in
-the second table of this section i.e. only probability data. Then if we
-took a sample of 1000 people, we would anticipate about 47% or
-$0.47\times 1000 = 470$ would meet our information criterion. Similarly,
-we would expect about 28% or $0.28\times 1000 = 280$ to meet both the
-information criterion and represent our outcome of interest. Thus, the
-conditional probability could be computed: $$\begin{aligned}
-P(\text{student = uses } | \text{ parents = used})
-    &= \frac{\text{#(student = uses and parents = used)}}{\text{#(parents = used)}} \notag \\
-    &= \frac{280}{470} = \frac{0.28}{0.47} = 0.60
-\label{stUserPUsedHypSampSize}\end{aligned}$$ In
-In the equation above, we examine exactly the fraction of
-two probabilities, 0.28 and 0.47, which we can write as
-$$\begin{aligned}
-P(student = uses\ \text{and}\ parents = used)
-    \quad\text{and}\quad
-    P(parents = used).\end{aligned}$$ The fraction of these
-probabilities represents our general formula for conditional
-probability.
-
-**Conditional Probability**
-
-> The conditional probability of the outcome of interest $A$ given
-condition $B$ is computed as the following: $$\begin{aligned}
-P(A | B) = \frac{P(A\text{ and }B)}{P(B)}
-\label{condProbEq}\end{aligned}$$
-
-
-### Smallpox in Boston, 1721
-
-<!-- Could delete this whole example. -->
-
-The data set provides a sample of 6,224 individuals from the year 1721
-who were exposed to smallpox in Boston.[^29] Doctors at the time
-believed that inoculation, which involves exposing a person to the
-disease in a controlled form, could reduce the likelihood of death.
-
-Each case represents one person with two variables: *inoculated* and *result*. The first variable
- takes two levels: *yes* or *no*, indicating whether the person was
-inoculated or not. The second variable has outcomes *lived* or *died*. These
-data are summarized in the tables below.
-
-  --------- ------- ----- ------ -------
-                      yes     no   Total
-            lived     238   5136    5374
-            died        6    844     850
-            Total     244   5980    6224
-  --------- ------- ----- ------ -------
-
-  : Contingency table for the data
-  set.[]{label="smallpoxContingencyTable"}
-
-  --------- ------- -------- -------- --------
-                         yes       no    Total
-            lived     0.0382   0.8252   0.8634
-            died      0.0010   0.1356   0.1366
-            Total     0.0392   0.9608   1.0000
-  --------- ------- -------- -------- --------
-
-  : Table proportions for the data, computed by dividing each count by
-  the table total, 6224.[]{label="smallpoxProbabilityTable"}
-
-
-  : Table proportions for the data, computed by dividing each count by
-  the table total, 6224.[]{label="smallpoxProbabilityTable"}
-
-
-
-### General multiplication rule
-
-Section [1.1.6](#probabilityIndependence){reference-type="ref"
-reference="probabilityIndependence"} introduced the Multiplication Rule
-for independent processes. Here we provide the **General Multiplication rule** for events that might not
-be independent.
-
-**General Multiplication Rule**
-
-> If $A$ and $B$ represent two outcomes or events, then $$\begin{aligned}
-P(A\text{ and }B) = P(A | B)\times P(B)\end{aligned}$$
-
-> It is useful to think of $A$ as the outcome of interest and $B$ as the
-condition.
-
-This General Multiplication Rule is simply a rearrangement of the
-definition for conditional probability.
-
-**Example**
-
-Consider the smallpox data set. Suppose we are given only two pieces of
-information: 96.08% of residents were not inoculated, and 85.88% of the
-residents who were not inoculated ended up surviving. How could we
-compute the probability that a resident was not inoculated and lived
- 
- We
-will compute our answer using the General Multiplication Rule and then
-verify it using
-the smallpox probability table. We want to determine
-$$\begin{aligned}
-P(\text{result = lived and inoculated = no})\end{aligned}$$
-and we are given that $$\begin{aligned}
-P(\text{result = lived }|\text{ inoculated = no})=0.8588 \\
-P(\text{inoculated = no})=0.9608\end{aligned}$$ Among the
-96.08% of people who were not inoculated, 85.88% survived:
-$$\begin{aligned}
-P(\text{result = lived and inoculated = no}) = 0.8588\times 0.9608 = 0.8251\end{aligned}$$
-This is equivalent to the General Multiplication Rule. We can confirm
-this probability in
-the smallpox probability table at the intersection of *no* and
-*lived* (with a small rounding error).
-
-
-
-### Tree diagrams
-
-<!-- I think tree diagrams are really, really interesting, not least because they lead so naturally into simulations and code. And they are so Bayesian. Instead of hard-coded image with absurdly too many digits, we ought to create this live. Indeed, might we reconfigure the entire chapter around trees as the basic building block? Everything is a tree. Independence means you get the same answer at each branch of the tree. Conditionality means you don't. -->
-
-**Tree diagrams** are a tool to organize outcomes and probabilities around the structure
-of the data. They are most useful when two or more processes occur in a
-sequence and each process is conditioned on its predecessors.
-
-The data fit this description. We see the population as split by : *yes*
-and *no*. Following this split, survival rates were observed for each
-group. This structure is reflected in the *tree diagram** shown in
-Figure [1.9](#smallpoxTreeDiagram){reference-type="ref"
-reference="smallpoxTreeDiagram"}. The first branch for is said to be the **primary**
-branch while the other branches are **secondary** .
-
-![A tree diagram of the data
-set.[]{label="smallpoxTreeDiagram"}](images/smallpoxTreeDiagram.png){#smallpoxTreeDiagram
-width="93%"}
-
-Tree diagrams are annotated with marginal and conditional probabilities,
-as shown in Figure [1.9](#smallpoxTreeDiagram){reference-type="ref"
-reference="smallpoxTreeDiagram"}. This tree diagram splits the smallpox
-data by innoculation into the *yes* and *no* groups with respective marginal
-probabilities 0.0392 and 0.9608. The secondary branches are conditioned
-on the first, so we assign conditional probabilities to these branches.
-For example, the top branch in
-Figure [1.9](#smallpoxTreeDiagram){reference-type="ref"
-reference="smallpoxTreeDiagram"} is the probability that result = *lived*
-conditioned on the information that innoculated = *yes*. We may (and usually do)
-construct joint probabilities at the end of each branch in our tree by
-multiplying the numbers we come across as we move from left to right.
-These joint probabilities are computed using the General Multiplication
-Rule: $$\begin{aligned}
-&& P(\text{inoculated = yes and result = lived}) \\
-    &&\quad = P(\text{inoculated = yes})\times P(\text{result = lived}|\text{inoculated = yes}) \\
-    &&\quad = 0.0392\times 0.9754=0.0382\end{aligned}$$
-
-**Example**
-
-Consider the midterm and final for a statistics class. Suppose 13% of
-students earned an *A* on the midterm. Of those students who earned an
-*A* on the midterm, 47% received an *A* on the final, and 11% of the
-students who earned lower than an *A* on the midterm received an *A* on
-the final. You randomly pick up a final exam and notice the student
-received an *A*. What is the probability that this student earned an *A*
-on the midterm
- 
-
-
-The end-goal is to find
-$P(\text{midterm = A} | \text{final = A})$. To
-calculate this conditional probability, we need the following
-probabilities: $$\begin{aligned}
-P(\text{midterm = A and final = A}) \qquad\text{and}\qquad
-P(\text{final = A})\end{aligned}$$ 
-
-
-However, this
-information is not provided, and it is not obvious how to calculate
-these probabilities. Since we aren't sure how to proceed, it is useful
-to organize the information into a tree diagram, as shown in
-Figure [1.10](#testTree){reference-type="ref" reference="testTree"}.
-When constructing a tree diagram, variables provided with marginal
-probabilities are often used to create the tree's primary branches; in
-this case, the marginal probabilities are provided for midterm grades.
-The final grades, which correspond to the conditional probabilities
-provided, will be shown on the secondary branches.
-
-![A tree diagram describing the and
-variables.[]{label="testTree"}](images/testTree.png){#testTree
-width="87%"}
-
-With the tree diagram constructed, we may compute the required
-probabilities: $$\begin{aligned}
-&&P(\text{midterm = A and final = A}) = 0.0611 \\
-&&P(\text{final = A})  \\
-&& \quad= P(\text{midterm = other and final = A}) + P(\text{midterm = A and final = A}) \\
-&& \quad= 0.0611 + 0.0957 = 0.1568\end{aligned}$$ The marginal
-probability, $P($ = *A*$)$, was calculated by adding up all the joint
-probabilities on the right side of the tree that correspond to = *A*. We
-may now finally take the ratio of the two probabilities:
-$$\begin{aligned}
-P(\text{midterm = A} | \text{final = A}) &=& \frac{P(\text{midterm = A and final = A})}{P(\text{final = A})} \\
-&=& \frac{0.0611}{0.1568} = 0.3897\end{aligned}$$ The probability the
-student also earned an A on the midterm is about 0.39.
-
-
-## Random variables {#randomVariablesSection}
-
-**Example**
-
-Two books are assigned for a statistics class: a textbook and its
-corresponding study guide. The university bookstore determined 20% of
-enrolled students do not buy either book, 55% buy the textbook only, and
-25% buy both books, and these percentages are relatively constant from
-one term to another. If there are 100 students enrolled, how many books
-should the bookstore expect to sell to this class
-
-**Example**
-
-Would you be surprised if the bookstore sold slightly more or less than
-105 books?[^39]
-
-The textbook costs \$137 and the study guide \$33. How much revenue
-should the bookstore expect from this class of 100 students?
- 
- About 55
-students will just buy a textbook, providing revenue of
-$$\begin{aligned}
-\$137 \times  55 = \$7,535\end{aligned}$$ The roughly 25 students who
-buy both the textbook and the study guide would pay a total of
-$$\begin{aligned}
-(\$137 + \$33) \times  25 = \$170 \times  25 = \$4,250\end{aligned}$$
-Thus, the bookstore should expect to generate about
-$\$7,535 + \$4,250 = \$11,785$ from these 100 students for this one
-class. However, there might be some *sampling variability* so the actual
-amount may differ by a little bit.
-
-![Probability distribution for the bookstore's revenue from a single
-student. The distribution balances on a triangle representing the
-average revenue per
-student.[]{label="bookCostDist"}](images/bookCostDist.png){#bookCostDist
-width="69%"}
-
-**Example**
-
-What is the average revenue per student for this
-course?
- 
-The expected total revenue is \$11,785, and there are 100 students.
-Therefore the expected revenue per student is
-$\$11,785/100 =  \$117.85$.
-
-### Expectation
-
-We call a variable or process with a numerical outcome a random variable, and we
-usually represent this random variable with a capital letter such as
-$X$, $Y$, or $Z$. The amount of money a single student will spend on her
-statistics books is a random variable, and we represent it by $X$.
-
-**Random Variable**
-> A random process or variable with a numerical outcome.
-
-The possible outcomes of $X$ are labeled with a corresponding lower case
-letter $x$ and subscripts. For example, we write $x_1=\$0$, $x_2=\$137$,
-and $x_3=\$170$, which occur with probabilities $0.20$, $0.55$, and
-$0.25$. The distribution of $X$ is summarized in
-Figure [1.11](#bookCostDist){reference-type="ref"
-reference="bookCostDist"} and
-the table below
-
-  $i$            1       2       3      Total
-  ------------ ------ ------- ------- -------
-  $x_i$         \$0    \$137   \$170       --
-  $P(X=x_i)$    0.20   0.55    0.25      1.00
-
-  : The probability distribution for the random variable $X$,
-  representing the bookstore's revenue from a single
-  student.[]{label="statSpendDist"}
-
-We computed the average outcome of $X$ as \$117.85 in
-dealing with the revenue per student. We call this average the **expected value** of $X$, denoted by
-$E(X)$. The expected value of a random variable is computed by adding
-each outcome weighted by its probability: $$\begin{aligned}
-E(X) &= 0 \times  P(X=0) + 137 \times  P(X=137) + 170 \times  P(X=170) \\
-    &= 0 \times  0.20 + 137 \times  0.55 + 170 \times  0.25 = 117.85\end{aligned}$$
-    
-**Expected value of a Discrete Random Variable**
-
-> If $X$ takes outcomes $x_1$, \..., $x_k$ with probabilities $P(X=x_1)$,
-\..., $P(X=x_k)$, the expected value of $X$ is the sum of each outcome
-multiplied by its corresponding probability: $$\begin{aligned}
-E(X)    &= x_1\times P(X=x_1) + \cdots + x_k\times P(X=x_k) \notag \\
-    &= \sum_{i=1}^{k}x_iP(X=x_i)\end{aligned}$$ The Greek letter $\mu$
-may be used in place of the notation $E(X)$.
-
-The expected value for a random variable represents the average outcome.
-For example, $E(X)=117.85$ represents the average amount the bookstore
-expects to make from a single student, which we could also write as
-$\mu=117.85$.
-
-It is also possible to compute the expected value of a continuous random
-variable using calculus. We are lazy (smart?), so we will just use our computer.
-
-
-### Variability in random variables
-
-Suppose you ran the university bookstore. Besides how much revenue you
-expect to generate, you might also want to know the volatility
-(variability) in your revenue.
-
-The variance and standard deviation can be used to describe the variability of a random variable. We first computed deviations from
-the mean ($x_i - \mu$), squared those deviations, and took an average to
-get the variance. In the case of a random variable, we again compute
-squared deviations. However, we take their sum weighted by their
-corresponding probabilities, just like we did for the expectation. This
-weighted sum of squared deviations equals the variance, and we calculate
-the standard deviation by taking the square root of the variance.
-
-**General variance formula**
-
-> If $X$ takes outcomes $x_1$, \..., $x_k$ with probabilities $P(X=x_1)$,
-\..., $P(X=x_k)$ and expected value $\mu=E(X)$, then the variance of
-$X$, denoted by $Var(X)$ or the symbol $\sigma^2$, is $$\begin{aligned}
-\sigma^2 &= (x_1-\mu)^2\times P(X=x_1) + \cdots \notag \\
-    & \qquad\quad\cdots+ (x_k-\mu)^2\times P(X=x_k) \notag \\
-    &= \sum_{j=1}^{k} (x_j - \mu)^2 P(X=x_j)\end{aligned}$$ The standard
-deviation of $X$, labeled $\sigma$, is the square root of the variance.
-
-**Example**
-
-Compute the expected value, variance, and standard deviation of $X$, the
-revenue of a single statistics student for the bookstore. It is useful
-to construct a table that holds computations for each outcome
-separately, then add up the results.
-
-  $i$                           1       2       3    Total
-  ------------------------ ------ ------- ------- --------
-  $x_i$                       \$0   \$137   \$170 
-  $P(X=x_i)$                 0.20    0.55    0.25 
-  $x_i \times  P(X=x_i)$        0   75.35   42.50   117.85
-
-Thus, the expected value is $\mu=117.85$, which we computed earlier. The
-variance can be constructed by extending this table:
-
-  $i$                                     1        2         3    Total
-  ------------------------------ ---------- -------- --------- --------
-  $x_i$                                 \$0    \$137     \$170 
-  $P(X=x_i)$                           0.20     0.55      0.25 
-  $x_i \times  P(X=x_i)$                  0    75.35     42.50   117.85
-  $x_i - \mu$                       -117.85    19.15     52.15 
-  $(x_i-\mu)^2$                    13888.62   366.72   2719.62 
-  $(x_i-\mu)^2\times P(X=x_i)$       2777.7    201.7     679.9   3659.3
-
-The variance of $X$ is $\sigma^2 = 3659.3$, which means the standard
-deviation is $\sigma = \sqrt{3659.3} = \$60.49$.
-
-
-### Linear combinations of random variables
-
-So far, we have thought of each variable as being a complete story in
-and of itself. Sometimes it is more appropriate to use a combination of
-variables. For instance, the amount of time a person spends commuting to
-work each week can be broken down into several daily commutes.
-Similarly, the total gain or loss in a stock portfolio is the sum of the
-gains and losses in its components.
-
-**Example**
-
-John travels to work five days a week. We will use $X_1$ to represent
-his travel time on Monday, $X_2$ to represent his travel time on
-Tuesday, and so on. Write an equation using $X_1$, \..., $X_5$ that
-represents his travel time for the week, denoted by $W$. His total
-weekly travel time is the sum of the five daily values:
-$$W = X_1 + X_2 + X_3 + X_4 + X_5$$ Breaking the weekly travel time $W$
-into pieces provides a framework for understanding each source of
-randomness and is useful for modeling $W$.
-
-**Example**
-
-It takes John an average of 18 minutes each day to commute to work. What
-would you expect his average commute time to be for the week
- 
- We were
-told that the average (i.e. expected value) of the commute time is 18
-minutes per day: $E(X_i) = 18$. To get the expected time for the sum of
-the five days, we can add up the expected time for each individual day:
-$$\begin{aligned}
-E(W) &= E(X_1 + X_2 + X_3 + X_4 + X_5) \\
-    &= E(X_1) + E(X_2) + E(X_3) + E(X_4) + E(X_5) \\
-    &= 18 + 18 + 18 + 18 + 18 = 90\text{ minutes}\end{aligned}$$ The
-expectation of the total time is equal to the sum of the expected
-individual times. More generally, the expectation of a sum of random
-variables is always the sum of the expectation for each random variable.
-
-
-Two important concepts concerning combinations of random variables have
-so far been introduced. First, a final value can sometimes be described
-as the sum of its parts in an equation. Second, intuition suggests that
-putting the individual average values into this equation gives the
-average value we would expect in total. This second point needs
-clarification -- it is guaranteed to be true in what are called *linear
-combinations of random variables*.
-
-A **Linear Combination** of two random variables $X$ and $Y$ is a fancy phrase to describe a
-combination $$aX + bY$$ where $a$ and $b$ are some fixed and known
-numbers. For John's commute time, there were five random variables --
-one for each work day -- and each random variable could be written as
-having a fixed coefficient of 1:
-$$1X_1 + 1 X_2 + 1 X_3 + 1 X_4 + 1 X_5$$ For Elena's net gain or loss,
-the $X$ random variable had a coefficient of +1 and the $Y$ random
-variable had a coefficient of -1.
-
-When considering the average of a linear combination of random
-variables, it is safe to plug in the mean of each random variable and
-then compute the final result. For a few examples of nonlinear
-combinations of random variables -- cases where we cannot simply plug in
-the means -- see the footnote.[^45]
-
-**Linear combinations of random variables and the average result**
-
-> If $X$ and $Y$ are random variables, then a linear combination of the
-random variables is given by $$\begin{aligned}
-\label{linComboOfRandomVariablesXAndY}
-aX + bY\end{aligned}$$ where $a$ and $b$ are some fixed numbers. To
-compute the average value of a linear combination of random variables,
-plug in the average of each individual random variable and compute the
-result: $$\begin{aligned}
-a\times E(X) + b\times E(Y)\end{aligned}$$ Recall that the expected
-value is the same as the mean, e.g. $E(X) = \mu_X$.
-
-**Example**
-
-Leonard has invested \$6000 in Google Inc. (stock ticker: GOOG) and
-\$2000 in Exxon Mobil Corp. (XOM). If $X$ represents the change in
-Google's stock next month and $Y$ represents the change in Exxon Mobil
-stock next month, write an equation that describes how much money will
-be made or lost in Leonard's stocks for the month. For simplicity, we
-will suppose $X$ and $Y$ are not in percents but are in decimal form
-(e.g. if Google's stock increases 1%, then $X=0.01$; or if it loses 1%,
-then $X=-0.01$). Then we can write an equation for Leonard's gain as
-$$\begin{aligned}
-\$6000\times X + \$2000\times Y\end{aligned}$$ If we plug in the change
-in the stock value for $X$ and $Y$, this equation gives the change in
-value of Leonard's stock portfolio for the month. A positive value
-represents a gain, and a negative value represents a loss.
-
-
-### Variability in linear combinations of random variables
-
-Quantifying the average outcome from a linear combination of random
-variables is helpful, but it is also important to have some sense of the
-uncertainty associated with the total outcome of that combination of
-random variables. We calculated the expected net gain or loss of Leonard's stock
-portfolio was considered in Guided
-Practice. However, there was
-no quantitative discussion of the volatility of this portfolio. For
-instance, while the average monthly gain might be about \$134 according
-to the data, that gain is not guaranteed.
-Figure [1.14](#changeInLeonardsStockPortfolioFor36Months){reference-type="ref"
-reference="changeInLeonardsStockPortfolioFor36Months"} shows the monthly
-changes in a portfolio like Leonard's during the 36 months from 2009 to
-2011. The gains and losses vary widely, and quantifying these
-fluctuations is important when investing in stocks.
-
-![The change in a portfolio like Leonard's for the 36 months from 2009
-to 2011, where \$6000 is in Google's stock and \$2000 is in Exxon
-Mobil's.[]{label="changeInLeonardsStockPortfolioFor36Months"}](images/changeInLeonardsStockPortfolioFor36Months.png){#changeInLeonardsStockPortfolioFor36Months
-width="65%"}
-
-Just as we have done in many previous cases, we use the variance and
-standard deviation to describe the uncertainty associated with Leonard's
-monthly returns. To do so, the variances of each stock's monthly return
-will be useful, and these are shown in
-the table below. The stocks' returns are nearly
-independent.
-
-           Mean ($\bar{x}$)   Standard deviation ($s$)   Variance ($s^2$)
-  ------ ------------------ -------------------------- ------------------
-  GOOG               0.0210                     0.0846             0.0072
-  XOM                0.0038                     0.0519             0.0027
-
-  : The mean, standard deviation, and variance of the GOOG and XOM
-  stocks. These statistics were estimated from historical stock data, so
-  notation used for sample statistics has been
-  used.[]{label="sumStatOfGOOGXOM"}
-
-Here we use an equation from probability theory to describe the
-uncertainty of Leonard's monthly returns; we leave the proof of this
-method to a dedicated probability course. The variance of a linear
-combination of random variables can be computed by plugging in the
-variances of the individual random variables and squaring the
-coefficients of the random variables: $$\begin{aligned}
-Var(aX + bY) = a^2\times Var(X) + b^2\times Var(Y)\end{aligned}$$ It is
-important to note that this equality assumes the random variables are
-independent; if independence doesn't hold, then more advanced methods
-are necessary. This equation can be used to compute the variance of
-Leonard's monthly return: $$\begin{aligned}
-Var(6000\times X + 2000\times Y)
-    &= 6000^2\times Var(X) + 2000^2\times Var(Y) \\
-    &= 36,000,000\times 0.0072 + 4,000,000\times 0.0027 \\
-    &= 270,000\end{aligned}$$ The standard deviation is computed as the
-square root of the variance: $\sqrt{270,000} = \$520$. While an average
-monthly return of \$134 on an \$8000 investment is nothing to scoff at,
-the monthly returns are so volatile that Leonard should not expect this
-income to be very stable.
-
-**Variability of linear combinations of random variables**
-
-The variance of a linear combination of random variables may be computed
-by squaring the constants, substituting in the variances for the random
-variables, and computing the result: $$\begin{aligned}
-Var(aX + bY) = a^2\times Var(X) + b^2\times Var(Y)\end{aligned}$$ This
-equation is valid as long as the random variables are independent of
-each other. The standard deviation of the linear combination may be
-found by taking the square root of the variance.
-
-**Example**
-
-Suppose John's daily commute has a standard deviation of 4 minutes. What
-is the uncertainty in his total commute time for the week
- 
-
-The expression for John's commute
-time was $$\begin{aligned}
-X_1 + X_2 + X_3 + X_4 + X_5\end{aligned}$$ Each coefficient is 1, and
-the variance of each day's time is $4^2=16$. Thus, the variance of the
-total weekly commute time is $$\begin{aligned}
-&\text{variance }= 1^2 \times  16 + 1^2 \times  16 + 1^2 \times  16 + 1^2 \times  16 + 1^2 \times  16 = 5\times 16 = 80 \\
-&\text{standard deviation } = \sqrt{\text{variance}} = \sqrt{80} = 8.94\end{aligned}$$
-The standard deviation for John's weekly work commute time is about 9
-minutes.
-
-
-The negative coefficient for $Y$ in the linear combination was
-eliminated when we squared the coefficients. This generally holds true:
-negatives in a linear combination will have no impact on the variability
-computed for a linear combination, but they do impact the expected value
-computations.
-
-## Statistical Background {#appendixA}
-
-```{r setup_appA, include=FALSE}
-chap <- "A"
-lc <- 0
-rq <- 0
-# **`r paste0("(LC", chap, ".", (lc <- lc + 1), ")")`**
-# **`r paste0("(RQ", chap, ".", (rq <- rq + 1), ")")`**
-
-knitr::opts_chunk$set(
-  tidy = FALSE, 
-  out.width = '\\textwidth', 
-  fig.height = 4,
-  warning = FALSE
-)
-
-options(scipen = 99, digits = 3)
-
-# Set random number generator see value for replicable pseudorandomness.
-set.seed(76)
-```
-
-```{r, message=FALSE, warning=FALSE, echo=FALSE}
-# Packages needed internally, but not in text.
 library(scales)
+library(Rgraphviz)
 library(tidyverse)
+library(infer)
+
+# ggthemes so we can use theme_tufte for our plots! - IB
+
+library(ggthemes)
+
+# invalidate cache when the tufte version changes
+
+knitr::opts_chunk$set(tidy = FALSE, cache.extra = packageVersion('tufte'))
 ```
 
 
-### Basic statistical terms {#appendix-stat-terms}
+## The Language of Inference
 
-Note that all the following statistical terms apply only to *numerical* variables, except the *distribution* which can exist for both numerical and categorical variables. 
-
-#### Mean
-
-The *mean* is the most commonly reported measure of center.  It is commonly called the *average* though this term can be a little ambiguous.  The mean is the sum of all of the data elements divided by how many elements there are. If we have $n$ data points, the mean is given by: 
-
-$$Mean = \frac{x_1 + x_2 + \cdots + x_n}{n}$$
-
-#### Median
-
-The median is calculated by first sorting a variable's data from smallest to largest.  After sorting the data, the middle element in the list is the *median*.  If the middle falls between two values, then the median is the mean of those two middle values.
-
-#### Standard deviation
-
-We will next discuss the *standard deviation* ($sd$) of a variable.  The formula can be a little intimidating at first but it is important to remember that it is essentially a measure of how far we expect a given data value will be from its mean:
-
-$$sd = \sqrt{\frac{(x_1 - Mean)^2 + (x_2 - Mean)^2 + \cdots + (x_n - Mean)^2}{n - 1}}$$
-
-#### Five-number summary
-
-The *five-number summary* consists of five summary statistics: the minimum, the first quantile AKA 25th percentile, the second quantile AKA median or 50th percentile, the third quantile AKA 75th, and the maximum. The five-number summary of a variable is used when constructing boxplots, as seen in Section \@ref(boxplots).
-
-The quantiles are calculated as
-
-- first quantile ($Q_1$): the median of the first half of the sorted data
-- third quantile ($Q_3$): the median of the second half of the sorted data
-
-The *interquartile range (IQR)*\index{interquartile range (IQR)} is defined as $Q_3 - Q_1$ and is a measure of how spread out the middle 50% of values are. The IQR corresponds to the length of the box in a boxplot.
-
-The median and the IQR are not influenced by the presence of outliers in the ways that the mean and standard deviation are. They are, thus, recommended for skewed datasets. We say in this case that the median and IQR are more *robust to outliers*.
-
-#### Distribution
-
-The *distribution* of a variable shows how frequently different values of a variable occur. Looking at the visualization of a distribution can show where the values are centered, show how the values vary, and give some information about where a typical value might fall.  It can also alert you to the presence of outliers. 
-
-Recall from Chapter \@ref(viz) that we can visualize the distribution of a numerical variable using binning in a histogram and that we can visualize the distribution of a categorical variable using a barplot.
+<!-- Read Topic 14 in Bayesian Workshop. Lots of interesting ideas and examples there for this first section of the chapter. Any coding examples should be simple, with  no list-columns and map_* functions. Basic tool we are introducing is doing simulation within a tibble. Consider doing some of the sample problems from STAT 110, many of which are hard to do analytically but easy to do with simulation. Mention what a PDF is, but no math. Show histogram of results from one die and two die. Explain how those histograms are, more or less, PDFs. Explain what p(A), p(B) and p(A, B) using dice/coin examples. PDF. Trump's electoral votes as a PDF. -->
 
 
-#### Outliers
+```{marginfigure}
 
-*Outliers* correspond to values in the dataset that fall far outside the range of "ordinary" values.  In the context of a boxplot, by default they correspond to values below $Q_1 - (1.5 \cdot IQR)$ or above $Q_3 + (1.5 \cdot IQR)$.
+Donald Rumsfeld, the former US Secretary of Defense, once said the following tongue-twisting quote:
+
+  "There are known knowns. There are things we know we know. We also know there are known unknowns. That is to say, we know there are some things we do not know. But there are also unknown unknowns, the ones we do not know we do not know."
+
+```
+
+```{r, echo-FALSE, fig.margin = TRUE}
+
+knitr::include_graphics("05-probability/images/donald_rumsfeld.jpg")
+
+```
 
 
-### Normal distribution {#appendix-normal-curve}
 
-Let's next discuss one particular kind of distribution: \index{distribution!normal} *normal distributions*. Such bell-shaped distributions are defined by two values: (1) the *mean* $\mu$ ("mu") which locates the center of the distribution and (2) the *standard deviation* $\sigma$ ("sigma") which determines the variation of the distribution. In Figure \@ref(fig:normal-curves), we plot three normal distributions where:
+The central tension, and opportunity, in data science is the interplay between the *data* and the *science*, between our empirical observations and the models which we use to understand them. Probability is the language we use to explore that interplay; it connects models to data, and data to models.
 
-1. The solid normal curve has mean $\mu = 5$ \& standard deviation $\sigma = 2$.
-1. The dotted normal curve has mean $\mu = 5$ \& standard deviation $\sigma = 5$.
-1. The dashed normal curve has mean $\mu = 15$ \& standard deviation $\sigma = 2$.
+What does it mean that Trump has a *30% chance* of winning re-election this fall? That there is a *90% probability* of rain today? That the die at the casino is *unfair*? If I roll that die 10 times and five of those times I get a three, how likely is it that the die is *unfair*?
 
-```{r normal-curves, echo=FALSE, fig.cap="Three normal distributions.", purl=FALSE, out.width="90%"}
-all_points <- tibble(
-  domain = seq(from = -10, to = 25, by = 0.01),
-  `mu = 5, sigma = 2` = dnorm(x = domain, mean = 5, sd = 2),
-  `mu = 5, sigma = 5` = dnorm(x = domain, mean = 5, sd = 5),
-  `mu = 15, sigma = 2` = dnorm(x = domain, mean = 15, sd = 2)
-)  %>% 
-  gather(key = "Distribution", value = "value", - domain) %>% 
-  mutate(
-    Distribution = factor(
-      Distribution, 
-      levels = c("mu = 5, sigma = 2", 
-                 "mu = 5, sigma = 5", 
-                 "mu = 15, sigma = 2")
-    )
+Probability is about quantifying uncertainty. We can think of probability as a proportion. The probability of an event occurring is a number from 0 to 1, where 1 means that the event is 100% certain.
+
+Let's begin with the simplest events: coin flips and dice rolls. If the die and 
+the coins are fair, we can operate under the assumption that all outcomes are 
+equally likely.
+
+```{marginfigure}
+
+The opening paragraph of *Workshop Statistics:  Discovery with Data, A Bayesian Approach by James H. Albert and Allan J. Rossman* does a wonderful job of explaining the concept of probability.
+
+  "In the activities to follow, we don’t know if we have a particular disease, if a die being used in the casino is fair, the exact number of fish in our backyard pond, or the number of defectives in a shipment of electronic components. A model is a possible description of this unknown phenomena. In each application, there will be a number of possible models. We assign prior probabilities to these models — these probabilities reflect our opinions about which models are more or less likely to be true. To learn about the correct model, data will be observed. In the activities, the data will consist of the results of a blood test, the results of a roll of the die, the results of a capture-recapture experiment, and the number of defectives observed in a sample. This data will change our opinions about the likelihoods of the different models. Bayes’ rule is the formula which tells us how to compute the new model probabilities."
+
+```
+
+This allows us to make the following statements:
+
+* The probability of rolling either a 1 or 2 is 2/6, or 1/3.  
+* The probability of rolling either 1, 2, 3, 4, 5, or 6 is 1.  
+* The probability of flipping a coin and getting a tail is 1/2.  
+
+We can also use subtraction to make opposite statements:
+
+* The probability of **not** getting a 1 or 2 is 2/3.  
+* The probability of **not** rolling 1, 2, 3, 4, 5, or 6 is 0.  
+* The probability of **not** flipping a coin and not getting a tail is 1/2.
+
+## Unknown Unknowns
+
+Donald Rumsfeld, the former US Secretary of Defense, once said the following tongue-twisting quote:
+
+  "There are known knowns. There are things we know we know. We also know there are known unknowns. That is to say, we know there are some things we do not know. But there are also unknown unknowns, the ones we do not know we do not know."
+
+What does this mean? Well imagine there are people playing games on the street corners of New York. The guy leading the game flips a coin 50 times and shows that there is approximately equal probability of landing heads or tails. Even if the guy can prove the odds of each result through simulations, that doesn't say anything about what will likely happen when someone in the crowd decides to bet on a certain result.
+
+## Probability and Simulations
+
+Now, let's take our understanding of probability and apply it to a data science context.
+
+```{r, echo = FALSE}
+
+# Flipping one coin
+
+coin <- c(0, 1)
+
+sims <- 1
+
+results <- sample(coin, sims, replace=TRUE)
+
+mydata <- tibble(results)
+
+ggplot(mydata, aes(x = results)) +
+  geom_histogram(aes(y=..count../sum(..count..)), binwidth = 1, 
+                 fill = "dark green", color = "white") +
+  labs(title = "Histogram Probability Distribution for Flipping One Coin",
+       x = "Results",
+       y = "Probability") +
+  scale_x_continuous(breaks = seq(0,1,1), labels = 0:1)
+
+```
+```{r, echo = FALSE}
+
+# Flipping one coin 1000 times
+
+coin <- c(0, 1)
+
+sims <- 1000
+
+results <- sample(coin, sims, replace=TRUE)
+
+mydata <- tibble(results)
+
+ggplot(mydata, aes(x = results)) +
+  geom_histogram(aes(y=..count../sum(..count..)), binwidth = 1, 
+                 fill = "dark green", color = "white") +
+  labs(title = "Histogram Probability Distribution for Flipping One Coin",
+       x = "Results",
+       y = "Probability") +
+  scale_x_continuous(breaks = seq(0,1,1), labels = 0:1)
+
+```
+
+```{r, echo=FALSE}
+
+# Flipping a dice 1000 times
+
+dice <- c(1:6)
+
+sims <- 1000
+
+mydata <- tibble(dice_1 = sample(dice, size = sims, replace = TRUE))
+
+ggplot(mydata, aes(x = dice_1)) +
+  geom_histogram(aes(y=..count../sum(..count..)), binwidth = 1, 
+                 fill = "dark green", color = "white") +
+  labs(title = "Histogram Probability Distribution",
+       x = "Value of dice roll",
+       y = "Probability") +
+  scale_x_continuous(breaks = seq(0,6,1), labels = 0:6) +
+  theme_classic()
+
+```
+
+```{r}
+
+# Two die rolled 1000 times
+
+dice <- c(1:6)
+
+sims <- 1000
+
+mydata <- tibble(dice_1 = sample(dice, size = sims, replace = TRUE),
+                 dice_2 = sample(dice, size = sims, replace = TRUE))
+
+mydata <- mydata %>%
+  mutate(sum = (dice_1 + dice_2))
+
+ggplot(mydata, aes(x = sum)) +
+  geom_histogram(aes(y=..count../sum(..count..)), binwidth = 1, 
+                 fill = "dark green", color = "white") +
+  labs(title = "Histogram Probability Distribution",
+       x = "Sum of two die",
+       y = "Probability") +
+  scale_x_continuous(breaks = seq(0,12,1), labels = 0:12) +
+  theme_classic()
+
+```
+
+```{r}
+
+
+
+```
+
+
+What are the odds of that the sum of two die will be seven? We could figure this out analytically, but a simulation in R is a easy way to predict and confirm our expected probability.
+
+```{marginfigure}
+Note that we could have hard-coded the `sims` value into the tibble call in step 3 by 
+setting size = 10000. However, it is good practice to create a separate variable.
+This way, if we want to change the number of simulations, we do not need to 
+manually change all of our code.
+```
+
+```{r, include=TRUE}
+
+# Step 1: Creating the dice.
+
+dice <- c(1:6)
+
+# Step 2: Selecting the number of simulations.
+
+sims <- 10000
+
+# Step 3: Creating a tibble with the data from each simulation.
+
+mydata <- tibble(dice_1 = sample(dice, size = sims, replace = TRUE),
+                 dice_2 = sample(dice, size = sims, replace = TRUE))
+
+# Step 4: Filtering out simulations where we don't have any 6's, then
+# counting our remaining observations.
+
+count <- mydata %>%
+  filter(((dice_1 + dice_2)/2) %in% 3) %>%
+  count() %>%
+  pull(n)
+
+# Step 5: Calculating probability, given by the number of observations with even
+# numbers divided by the number of total observations.
+
+probability <- count/sims
+
+```
+
+
+In this simulation, we calculated a final probability of `r probability`. 
+
+To visualize the probability of different outcomes, we can build a histogram using the tibble we just created.
+
+```{r}
+
+# Let's create a column for the sum of the two die.
+
+mydata <- mydata %>%
+  mutate(average = (dice_1 + dice_2)/2)
+
+# Now let's create a histogram with the y-axis re-scaled to have a maximum of 1.
+
+ggplot(mydata, aes(x = average)) +
+  geom_histogram(aes(y=..count../sum(..count..)), binwidth = 0.5, 
+                 fill = "dark green", color = "white") +
+  labs(title = "Histogram Probability Distribution",
+       x = "Sum of Two Die",
+       y = "Probability") +
+  scale_x_continuous(breaks = seq(0,6,1), labels = 0:6) +
+  theme_classic()
+
+# As we increase the number of die we roll, our probability distribution looks
+# more and more like a probability density function.
+
+dice <- as.data.frame(dice)
+
+# Creating an empty tibble to fill with sampling data in the next step.
+
+updated_data <- data.frame()
+
+# Creating samples of different numbers of die, from 1 die to 100 die. Sampling
+# at each number of die sims = 10000 times.
+
+for (i in 1:2) {
+  
+  new_data <- rep_sample_n(dice, size = i, replace = TRUE, 
+                         reps = sims) %>%
+    group_by(replicate) %>%
+    summarize(average = sum(dice)/i)
+  
+  updated_data <- rbind(new_data, updated_data)
+  
+}
+
+# ggplot(newdata, aes(x = average)) +
+#   geom_histogram(aes(y=..count../sum(..count..)), binwidth = (1-(0.5*1/i)), 
+#                  fill = "dark green", color = "white")
+# 
+# number_of_die <- 100
+# 
+# mydata <- rep_sample_n(dice, size = number_of_die, replace = TRUE, reps = sims)
+# 
+# newdata <- mydata %>%
+#   group_by(replicate) %>%
+#   summarize(average = sum(dice)/number_of_die)
+# 
+# ggplot(newdata, aes(x = average)) +
+#   geom_histogram(aes(y=..count../sum(..count..)), binwidth = 0.01, 
+#                  fill = "dark green", color = "white")
+
+```
+
+
+Similarly, we could create a more complicated simulation of the fall election
+and count the number of observations involving Trump's re-election. We could
+simulate different weather patterns and count the number of observations involving
+rain today.
+
+Takeaway: we want to simulate a scenario as many times as possible, then count the number of observations with the desired outcome.
+
+## Tree Diagrams
+
+### Independence
+
+So far, you have learned how to calculate P(A), which is the fancy, statistical way of saying the probability of an event. When flipping a coin, the probability of getting heads was 1/2. You have also learned how to compute the P(A or B). This means the probability of either A or B happening. When rolling a dice, P(1 or 2)--the probability of getting a 1 or a 2--was 1/3.
+
+What if you flipped 2 coins? You know that the probability of getting heads once is 1/2, but what are the odds of getting heads 2 times in a row? Let's take a look at this tree diagram. We read this diagram from left to right. On the left, the probability of getting heads is 0.5. Now the tree branches out.
+
+* *If* we got heads the first time, then we go up the top branch. The probability of getting heads again is 0.5.
+* *If* we got tails the first time, then we go down the bottom branch. The probability of getting heads is 0.5.
+
+Notice how regardless of what we get the first time we flip the coin, the probability of getting heads is 0.5 throughout. This suggests that the coin flips are **independent**. The result of one coin flip does not impact the likelihood of getting the same result next time. Take a look at the tree diagram. P(H given H) represents the probability of getting heads *given* that we got heads the first time. P(H given T) represents the probability of getting heads *given* that we got tails the first time. P(H given H) = P(H given T).
+
+```{r, echo=FALSE}
+
+# Probability of a
+
+a <- 0.5
+
+# Probability of (b | a)
+
+bGivena <- 0.5
+
+# Probability of (b | not a)
+
+bGivenNota <- 0.5
+
+# Calculate the rest of the values based upon the 3 variables above
+notbGivena<-1-bGivena
+notA<-1-a
+notbGivenNota<-1-bGivenNota
+ 
+#Joint Probabilities of a and B, a and notb, nota and b, nota and notb
+aANDb<-a*bGivena
+aANDnotb<-a*notbGivena
+notaANDb <- notA*bGivenNota
+notaANDnotb <- notA*notbGivenNota
+ 
+# Probability of B
+b <- aANDb + notaANDb
+notB <- 1-b
+ 
+# Bayes theorum - probability of A | B
+# (a | b) = Prob (a AND b) / prob (b)
+aGivenb <- aANDb / b
+ 
+# These are the labels of the nodes on the graph
+# To signify "Not A" - we use A' or A prime 
+ 
+node1<-"P"
+node2<-"P(H)"
+node3<-"P(T)"
+node4<-"P(H given H)"
+node5<-"P(T given H)"
+node6<-"P(H given T)"
+node7<-"P(T given T)"
+nodeNames<-c(node1,node2,node3,node4,node5,node6,node7)
+
+rEG <- new("graphNEL", nodes=nodeNames, edgemode="directed")
+ 
+# Draw the "lines" or "branches" of the probability Tree
+rEG <- addEdge(nodeNames[1], nodeNames[2], rEG, 1)
+rEG <- addEdge(nodeNames[1], nodeNames[3], rEG, 1)
+rEG <- addEdge(nodeNames[2], nodeNames[4], rEG, 1)
+rEG <- addEdge(nodeNames[2], nodeNames[5], rEG, 1)
+rEG <- addEdge(nodeNames[3], nodeNames[6], rEG, 1)
+rEG <- addEdge(nodeNames[3], nodeNames[7], rEG, 10)
+ 
+eAttrs <- list()
+ 
+q <- edgeNames(rEG)
+ 
+# Add the probability values to the the branch lines
+ 
+eAttrs$label <- c(toString(a),toString(notA),
+ toString(bGivena), toString(notbGivena),
+ toString(bGivenNota), toString(notbGivenNota))
+names(eAttrs$label) <- c(q[1],q[2], q[3], q[4], q[5], q[6])
+edgeAttrs<-eAttrs
+ 
+# Set the color, etc, of the tree
+
+attributes<-list(node=list(label="foo", fillcolor="light blue", fontsize="12"),
+ edge=list(color="blue"),graph=list(rankdir="LR"))
+ 
+#Plot the probability tree using Rgraphviz
+
+plot(rEG, edgeAttrs=eAttrs, attrs=attributes)
+
+```
+
+### Conditional probability
+
+Now imagine that 60% of people in a community have a disease. A doctor develops a test to determine if a random person has the disease. However, this test isn't 100% accurate. This test is 80% sure of correctly returning positive **if the person has the disease** and 90% sure of correctly returning negative **if the person does not have the disease**.
+
+This tree diagram illustrates exactly this. Starting from the left, we see that the probability of a random person having the disease is 0.6. Since they either have the disease or don't (those are the only two possibilities), the probability that they don't have the disease is 1 - 0.4.
+
+Now the tree branches out.
+
+* *If* the random person has the disease, then we go down the top branch. The probability of the person testing positive is 0.8 because the test is 80% sure of correctly returning positive when the person has the disease.
+* By the same logic, *if* the random person does not have the disease, we go down the bottom branch. The probability of the person incorrectly testing positive is 0.1.
+
+We decide to go down the top branch *if* our random person has the disease. We go down the bottom branch *if* they do not. This is called **conditional probability**. The probability of testing positive is **dependent** on whether the person has the disease.
+
+How would you express this in statistical notation? P(A|B) is the same thing as the probability of A *given* B. P(A|B) essentially means the probability of A *if* we know for sure that B is true.
+
+```{marginfigure}
+**Positive:** The test results suggest that the patient has the disease.
+
+**False Positive:** The patient does not have the disease but the test results incorrectly suggest that they do.
+
+**Negative:** The test results suggest that the patient does not have the disease.
+
+**False Negative:** The patient has the disease but the test results incorrectly suggest that they do not.
+
+```
+
+```{r, echo=FALSE}
+
+# Probability of a
+
+a <- 0.6
+
+# Probability of (b | a)
+
+bGivena <- 0.8
+
+# Probability of (b | not a)
+
+bGivenNota <- 0.1
+
+# Calculate the rest of the values based upon the 3 variables above
+notbGivena<-1-bGivena
+notA<-1-a
+notbGivenNota<-1-bGivenNota
+ 
+#Joint Probabilities of a and B, a and notb, nota and b, nota and notb
+aANDb<-a*bGivena
+aANDnotb<-a*notbGivena
+notaANDb <- notA*bGivenNota
+notaANDnotb <- notA*notbGivenNota
+ 
+# Probability of B
+b <- aANDb + notaANDb
+notB <- 1-b
+ 
+# Bayes theorum - probabiliyt of A | B
+# (a | b) = Prob (a AND b) / prob (b)
+aGivenb <- aANDb / b
+ 
+# These are the labels of the nodes on the graph
+# To signify "Not A" - we use A' or A prime 
+ 
+node1<-"P"
+node2<-"Disease"
+node3<-"No Disease"
+node4<-"Positive"
+node5<-"False Negative"
+node6<-"False Positive"
+node7<-"Negative"
+nodeNames<-c(node1,node2,node3,node4,node5,node6,node7)
+ 
+rEG <- new("graphNEL", nodes=nodeNames, edgemode="directed")
+ 
+# Draw the "lines" or "branches" of the probability Tree
+rEG <- addEdge(nodeNames[1], nodeNames[2], rEG, 1)
+rEG <- addEdge(nodeNames[1], nodeNames[3], rEG, 1)
+rEG <- addEdge(nodeNames[2], nodeNames[4], rEG, 1)
+rEG <- addEdge(nodeNames[2], nodeNames[5], rEG, 1)
+rEG <- addEdge(nodeNames[3], nodeNames[6], rEG, 1)
+rEG <- addEdge(nodeNames[3], nodeNames[7], rEG, 10)
+ 
+eAttrs <- list()
+ 
+q <- edgeNames(rEG)
+ 
+# Add the probability values to the the branch lines
+ 
+eAttrs$label <- c(toString(a),toString(notA),
+ toString(bGivena), toString(notbGivena),
+ toString(bGivenNota), toString(notbGivenNota))
+names(eAttrs$label) <- c(q[1],q[2], q[3], q[4], q[5], q[6])
+edgeAttrs<-eAttrs
+ 
+# Set the color, etc, of the tree
+
+attributes<-list(node=list(label="foo", fillcolor="light blue", fontsize="14"),
+ edge=list(color="blue"),graph=list(rankdir="LR"))
+ 
+#Plot the probability tree using Rgraphviz
+
+plot(rEG, edgeAttrs=eAttrs, attrs=attributes)
+
+text(150,230, "P(Disease)",cex=.5)
+
+text(150,140, "P(No Disease)",cex=.5)
+
+text(340,300,"P(Positive | Disease)",cex=.5)
+
+text(340,210,"P(Negative | Disease)",cex=.5)
+
+text(340,60,"P(Negative | No Disease)",cex=.5)
+
+text(340,150,"P(Positive | No Disease)",cex=.5)
+
+```
+
+This concept of conditional probability is relevant in our everyday lives. For example, the probability of Trump's re-election might be different than the probability of Trump's re-election *given* that we are in a recession. The probability of you reading a textbook might vary, *depending* on the likelihood of your instructor cold-calling you in class. Whenever you encounter a question involving conditional probability, drawing a tree diagram is a very useful approach to visualization.
+
+<!-- EC: This could be a good section to include a disclaimer about not mixing up P(B|A) and P(A|B). Alternatively, could add more examples to the section below that mentions they are different, since it is mentioned in passing -->
+
+### Two Diagrams for One Set of Coin Flips
+
+In our histogram probability distribution, we didn't care what combinations of numbers made each sum. We only cared about the outcome. There are two ways of thinking about a coin toss as well. Your tree diagram should look different depending on whether the order of the results matters.
+
+To understand tree diagrams a little better, imagine you're flipping 2 coins. Your tree diagram may look different depending what you're interested in measuring.
+
+```{marginfigure}
+
+In this figure, the order of your coin toss results does not matter. We can imagine
+that you are rolling two coins together, or that you only care about the sum of the two die values.
+
+```
+
+```{r, echo=FALSE}
+
+# These are the labels of the nodes on the graph
+ 
+node1<-"P"
+node2<-"P(0 Heads, 2 Tails)"
+node3<-"P(1 Head, 1 Tail)"
+node4<-"P(2 Heads, 0 Tails)"
+nodeNames<-c(node1,node2,node3,node4)
+ 
+rEG <- new("graphNEL", nodes=nodeNames, edgemode="directed")
+ 
+# Draw the "lines" or "branches" of the probability Tree
+
+rEG <- addEdge(nodeNames[1], nodeNames[2], rEG, 1)
+rEG <- addEdge(nodeNames[1], nodeNames[3], rEG, 1)
+rEG <- addEdge(nodeNames[1], nodeNames[4], rEG, 1)
+ 
+eAttrs <- list()
+ 
+q <- edgeNames(rEG)
+
+edgeAttrs<-eAttrs
+ 
+# Set the color, etc, of the tree
+
+eAttrs$label <- c(toString(0.25),toString(0.5),
+ toString(0.25))
+names(eAttrs$label) <- c(q[1],q[2], q[3])
+edgeAttrs<-eAttrs
+
+attributes<-list(node=list(label="foo", fillcolor="light blue", fontsize="14"),
+ edge=list(color="blue"),graph=list(rankdir="LR"))
+ 
+#Plot the probability tree using Rgraphviz
+
+plot(rEG, edgeAttrs=eAttrs, attrs=attributes)
+
+```
+
+```{marginfigure}
+
+In this figure, the order of your coin toss results does matter. Depending on your first result, you go down a different branch.
+
+```
+
+```{r, echo=FALSE}
+
+# Probability of a
+
+a <- 0.5
+
+# Probability of (b | a)
+
+bGivena <- 0.5
+
+# Probability of (b | not a)
+
+bGivenNota <- 0.5
+
+# Calculate the rest of the values based upon the 3 variables above
+notbGivena<-1-bGivena
+notA<-1-a
+notbGivenNota<-1-bGivenNota
+ 
+#Joint Probabilities of a and B, a and notb, nota and b, nota and notb
+aANDb<-a*bGivena
+aANDnotb<-a*notbGivena
+notaANDb <- notA*bGivenNota
+notaANDnotb <- notA*notbGivenNota
+ 
+# Probability of B
+b <- aANDb + notaANDb
+notB <- 1-b
+ 
+# Bayes theorum - probability of A | B
+# (a | b) = Prob (a AND b) / prob (b)
+aGivenb <- aANDb / b
+ 
+# These are the labels of the nodes on the graph
+# To signify "Not A" - we use A' or A prime 
+ 
+node1<-"P"
+node2<-"P(H)"
+node3<-"P(T)"
+node4<-"P(H given H)"
+node5<-"P(T given H)"
+node6<-"P(H given T)"
+node7<-"P(T given T)"
+nodeNames<-c(node1,node2,node3,node4,node5,node6,node7)
+
+rEG <- new("graphNEL", nodes=nodeNames, edgemode="directed")
+ 
+# Draw the "lines" or "branches" of the probability Tree
+rEG <- addEdge(nodeNames[1], nodeNames[2], rEG, 1)
+rEG <- addEdge(nodeNames[1], nodeNames[3], rEG, 1)
+rEG <- addEdge(nodeNames[2], nodeNames[4], rEG, 1)
+rEG <- addEdge(nodeNames[2], nodeNames[5], rEG, 1)
+rEG <- addEdge(nodeNames[3], nodeNames[6], rEG, 1)
+rEG <- addEdge(nodeNames[3], nodeNames[7], rEG, 10)
+ 
+eAttrs <- list()
+ 
+q <- edgeNames(rEG)
+ 
+# Add the probability values to the the branch lines
+ 
+eAttrs$label <- c(toString(a),toString(notA),
+ toString(bGivena), toString(notbGivena),
+ toString(bGivenNota), toString(notbGivenNota))
+names(eAttrs$label) <- c(q[1],q[2], q[3], q[4], q[5], q[6])
+edgeAttrs<-eAttrs
+ 
+# Set the color, etc, of the tree
+
+attributes<-list(node=list(label="foo", fillcolor="light blue", fontsize="12"),
+ edge=list(color="blue"),graph=list(rankdir="LR"))
+ 
+#Plot the probability tree using Rgraphviz
+
+plot(rEG, edgeAttrs=eAttrs, attrs=attributes)
+
+```
+
+<!-- # Section 2: Trees as a formal structure for probability -->
+
+<!-- 2 a) Describe trees. Show some diagrams. (Maybe save making these for later? Are their R packages for this?) This is the basic structure which we will use for everything in the chapter. We can make trees for the examples above. We can discuss important statistical concepts: like conditional probability, marginal probability in the context of a tree. We can highlight subtle cases: Like throw two dice together versus throw one dice and then a second dice. These make for different tree structures, but the same set of leaves. Show an unbalanced tree, in which one branch is a different length, like a craps game or maybe blackjack. Again, no mathematical formalism. Also, no Bayesian stuff. We are just taking the same examples from above and making them a little more structured.  -->
+
+<!--https://github.com/YuLab-SMU/treedata-book is useful for tree diagrams-->
+
+<!-- Discuss conditional probability and marginal probability using a simple tree with 0.6/0.4 first branch, and then next branches slightly different: 0.8/0.2 and 0.1/0.9. -->
+
+<!-- We a tree, we can explain total probability, conditional probability and marginal probabity. Explain the meaning of p(A, B), p(A), p(B) and p(B|A). But that is it. Nothing more mathematical than that. Focus on words, directly connected to the tree images. -->
+
+<!-- 2 b) Another coding session, but this time with list-columns and map_functions. These do not have to be long. We just want to re-iterate the points we made in words. Maybe we don't need list-columns. Maybe just show map functions here. Again, the point of this section is ONLY to understand the key probabity concepts: joint, total, conditional and marginal. -->
+
+
+## Comparing Two Models
+
+<!-- # Section 3: Two Models, Scatterplots and Bayes Theorem -->
+
+<!-- 3 a) Key point of this section is how we deal with the simplest possible situation. There are only two possibilities. Either you have the disease, or you don't. Walk through this problem with counts first. There are 100,000 people in the country. (Top of tree.) 0.1% have the disease, which is 100 people. 999,900 do not. (These are the two branches from the top.) We give the test to all 100,000 people. And so on. We have the four leaves, and then we just add the two branches which positive test results together, and then divide that into the total with the disease who tested positive. Presto! Your true odds.
+
+See page 330 of the Bayesian Workshop for the use of the frequency format. Don't think in terms of percentages. Think in terms of counts. Would this be useful to show students?
+
+       1000
+      10   990
+     8  2  95 895
+     8/(8 + 95)
+
+Should we start with counts and then go to probabilities, or just start with probabilities? Flip a coin 100 times, and get 53 heads and 47 tails. Or maybe explain with counts each time we learn a new thing, and then do with percentages. Note how all this ties into the below discussion. When we are playing with models, we just "know" what the percentages are. We use this knowledge to determine what a single data point means. But we also do the opposite! (Call this the inverse?) We collect a lot of data (counts?) and then use that data to estimate the probabilities in the tree. Hmmm. 
+
+Then do another example, but point out we don't need the counts. Numbers are abritrary because we divide at the end. Show that.
+
+Now that we understand trees, we can do some Bayes' Theorem examples by hand. We don't even show the formula! Just walk through the four leaves, and how we add two and then divide into one of them. -->
+
+<!-- Then, with those ideas fixed, we make a Bayes Scatterplot with just two rows on the y-axis: have the disease or don't have the disease. (Or maybe we use another exmaple each time.) Since these two models have no fixed numeric meaning, we can just place them at 0 and 1 on the y-axis, which sort of corresponds to FALSE and TRUE. Then, we can x-axis we have the actual data. Which, in this case, is also a TRUE/FAlSE value: Either you tested positive or you tested negative, so also 0 and 1. Then, we can simulate. Put a 100,000 people through, fill out the values. There are only 4 possibilities, so we will need to jittter. (See below for an example of how to do this. And then explore the marginal distributions. Show how this gives you the same answer, roughly, as the math we did before.) -->
+
+<!-- 3 b) Code up a full featured simulation exercise, like the cookie problem but with more complexity. See the old 1005 problem set. Connect this to how 538 does things. 99.99% of real world problems are solved with simulation, not analytically. -->
+
+<!-- This prediction by 538 is really interesting: (https://projects.fivethirtyeight.com/2020-march-madness-predictions/), especially
+pre-game. Is this what you mean by how 538 does things? Potentially link something
+like this into the textbook to illustrate how simulations are used?  webshot() -->
+
+<!-- Do we like all the words below? I am not sure. -->
+
+<!-- adding my own version of this - looking for feedback IB -->
+
+Imagine you wake up one morning and feel a little bit under the weather. Not sick, just not 100%.
+So, you go to your doctor and your doctor is confused. So, she runs a slew of tests and in a couple of days, one of them comes back positive. You've tested positive for a rare disease, called $X$. Only *.1%* of the population has this disease. And the test correctly identifies you as positive *99%* of the time!
+
+So, understandably worried, you ask yourself: what is the probability I have this disease?
+
+The immediate, but *wrong*, answer would be 99%. Why is this wrong? Isn't 99% the accuracy of the test? To understand, we're going to abandon probability as a *proportion* (ie 99%) and think of it in *counts*. 
+
+Imagine you're part of a population of 1000 people. Now, the frequency of the disease is .1%. In terms of a count, that means 1 person has this disease of the 1000 in the population. The test would probably correctly identify this individual. However, a test with an accuracy of 99% would also identify 10 other perfectly healthy people out of 1000 people as sick! That means that the number of people who would test positive for the disease is 11 but *only one of them has the disease*. So, in simple terms, the probability of you having the disease given a positive test is $1\div11$! 
+
+
+It becomes easier to understand when you increase this population size 10,000 and model this!  
+
+```{r disease, fig.align="center", echo = FALSE}
+
+# Define a population of 10000 where 10 people have the disease but
+# 100 people have tested positive.
+
+pop <- tibble(
+  patient_id = 1:10000,
+  tested_positive = c(rep(1, 110), rep(0, 9890))
+) %>%
+  mutate(have_disease = case_when(patient_id == 1:10 ~ 1)) %>%
+  mutate(have_disease = case_when(patient_id == 1:10 ~ 1,
+                                  is.na(have_disease) ~ 0))
+
+# Call a plot. Make the variables factors.
+
+ggplot(pop, aes(x = as.factor(have_disease), y = as.factor(tested_positive))) + 
+  geom_point() + 
+  geom_jitter(alpha = .4) +
+  theme_classic() +
+  labs(
+    title = "Distribution of Disease Results in a Population of 10000",
+    x = "Do you have the disease?",
+    y = "Did you test positive?"
   )
 
-for_labels <- all_points %>% 
-  filter(between(domain, 3.795, 3.805) & Distribution == "mu = 5, sigma = 2" |
-           between(domain, 0.005, 0.0105) & Distribution == "mu = 5, sigma = 5" |
-           between(domain, 16.005, 16.015) & Distribution == "mu = 15, sigma = 2")
+```
 
-all_points %>% 
-  ggplot(aes(x = domain, y = value, linetype = Distribution)) +
-  geom_line() +
-  ggrepel::geom_label_repel(data = for_labels, aes(label = Distribution),
-                            nudge_x = c(-1, -2.1, 1)) +
-  theme_light() +
-  scale_linetype_manual(values=c("solid", "dotted", "longdash")) + 
-  theme(
-    axis.title.y = element_blank(),
-    axis.title.x = element_blank(),
-    axis.text.y = element_blank(),
-    axis.ticks.y = element_blank(),
-    legend.position = "none"
+Remember, we're currently conceptualizing probability in counts. Therefore, a .1% chance of having the disease means 10 people have it and a 99% chance of testing correctly (a 1% chance of testing incorrectly) means 100 people were incorrectly identified as positive (in addition to the 10 people who tested positive correctly). So, to recap:
+
+* 10 people have the disease
+
+* They all tested positive
+
+* 9990 people don't have the disease
+
+* 100 of them still tested positive
+
+There's a population of 110 people who tested positive and only 10 of them have the disease. So, if you test positive, your chances of having the disease are $10\div110$, which is equal to 9%!
+
+Now, let's switch back to proportion-based probabilities and think about it. Just because the probability of having the disease is .1% and the test is 99% accurate, it doesn't mean that these are the exact numbers that always work out in the real world. That is, for a *sample* of 10,000, a disease frequency of .1% doesn't necessarily mean that 10 people have the disease. It could be 11. Or 9. Or 20! Given that uncertainty, we do what we did above. We model. We built and understanding of the world and expressed it in counts. We then used that to understand what the implications of an event (testing positive) are on our belief that we have the disease. In the next section, we'll follow the same principle but make this a little more complicated.
+
+
+## Comparing Three Models
+
+<!-- # Section 4: Three Models (use the the Two Marble Example) and Scatterplots -->
+
+<!-- 4 a)  Bayes Scatterplots show how both the data and the model can be viewed as probability distributions. If I tell the the model, the you look down one axis to see what the pdf of the data is. If I show you the data, then you look down the other axis to see the posterior pdf of the model. -->
+
+<!-- Having shown an example with two rows above, we now need an example with three. I like the two marble problem. (Cite Rethinking when you use it.) Bag of marbles contains either two white, two black or one of each. This can be formalized with a number p, which is the proportion of white marbles, which can only be 0, 0.5 or 1. Create a Bayes scatterplot for this case. Follow the coding style below. Show the marginal distributions after we observe some data. Big a useful number, like we did with 8 heads out of 20 above.-->
+
+<!-- 4 b) Show the code for doing this, both the simulation itself and how to make the graphic. Key is that we do no math anywhere. -->
+
+
+<!-- # Section 5: 11 and the 1001 models. Same as coin example with unknown p as used in Albert example. First, p is 0, 0.1, 0.2, ... 0.9, 1.0. Make Bayes Scatterplot. Show marginals. Then, extend it so p takes on 1,001 values. This is how we go from discrete to continuous. All the same tricks apply. -->
+
+
+## Comparing N Models
+
+<!-- 5 a) Now go on to Rethinking approach. I think that chapter 2 is just genius. Bayesian is really just counting. Maybe we do a very similar example to what he does? Maybe different? I am still pondering this myself. I think that there is a deep relationship here. In the simple Bayes rule decision trees, we know all the probabilities. But what if we don't? Instead, we get to observe lots of data (which are counts!) and then, from that data, figure out the probabilities. (Note that Rethinking does not talk like this --- after all, we know all the probabilities since each marble has a 20% chance of being drawn --- but I think it is implicit in his approach.) Key issue: Can we connect this in a sensible way to Bayesian scatterplot. There is always the data and the model and the relationship between the two. (And "the model" means, mainly, the parameter estimates thereof.) Tell me the data, and I will tell you the model. Tell me the model, and I will tell you the model. -->
+
+<!-- Note the connection between the marbles from Rethinking and the Bayesian scatterplot. In figure 2.2 in Rethinking represents the model where p = 0.25, where p is the proportion of blue marbles in the total collection. The y-axis models would be labeled with p = 0, 0.25, 0.5, 0.75, and 1. With the tree marble diagram in figure 2.2, we would be taking random samples with 3 marbles. The number of blue marbles we get each time would be plotted along p = 0.25. This is another example of model on the y-axis and data on the x-axis. -->
+
+Imagine there are 10 high schools in your district. Each high school has 1000 students. You are the statistics teacher at high school $A$ and the rest of the 
+high schools are $B$ through $J$. You're really into statistics and you have a 
+deep burning desire to know:
+
+* What portion of high school students at my lovely school of $A$ love statistics?
+
+The easy way to answer this question would be to ask all 1000 of the students at $A$  whether they love statistics. You count up the "Yes" answers and divide by 1000 and  boom! There's your answer. However, the statistics department at $A$ is extremely underfunded and you only have the power to ask 20 random students this question. So, you ask 20 random students and you get 8 "Yes" answers. Is the proportion of students that love statistics at high school $A$ equal to $8\div20 = .4$? 
+
+The correct answer is ... you don't know. Rather, this is information that may help you better understand the true (unknown) answer. So, where do you go from here? 
+
+The next question you ask is "well ... how likely is it to get a sample of 20 with a  sample proportion of .4 for various population proportions?" That is, if the population proportion is $500\div1000 = .5$, how likely is it I get a sample of 20 with 8 "Yes" answers. 
+
+Or, if the population proportion is .3, how likely is it I get a sample of 20 with 8 "Yes" answers?
+
+You contact all your other statistics teacher friends at high schools $B$ through $J$. Those statistics teacher are much more fortunate than you and have plenty of resources! They tell you that they were able to ask each one of the students the question and get a precise answer for the proportion of their students who love statistics! Great for them, but how does this help you.
+
+Well, incidentally, each of the other high schools has a distinct and exact proportion of students. At $B$, the teacher discovered that $100\div1000 = .1$ students love statistics. At $C$, the teacher discovered that $200\div1000 = .2$ students love statistics. This goes on and it turns out high school $J$ has $900\div1000 = .9$ students that love statistics.
+
+Well, each of these schools can serve as a *model* for sampling from a population with a given proportion. 
+
+You're pretty smart and so you ask each of your friends to repeatedly choose 20 random students at their schools and ask them if they love statistics. Your helpful teacher friends record the answers.
+
+* To clarify, the teacher at $B$ is asking random samples of 20 students whether they love statistics from a population in which 10% of the students love statistics. 
+
+So, at high school $B$, if the teacher asked 1000 groups of 20 random students, the distribution of the proportions of each group the teacher asked look like this: 
+
+
+```{r, echo = FALSE}
+
+# Create a school with 10% yes answers.
+
+school_b <- tibble(
+  students = c(rep("Yes", 100), rep("No", 900))) %>%
+  
+# Draw a bunch of samples of 20 from it and summarize the
+# percent that said yes. 
+
+  rep_sample_n(20, replace = TRUE, reps = 1000) %>%
+  filter(students == "Yes") %>%
+  group_by(replicate) %>%
+  count() %>%
+  mutate(prop_yes = n/20) %>%
+  mutate(school_prop = .1)
+
+
+# Display your findings!
+
+ggplot(school_b, aes(x = prop_yes)) + 
+  geom_histogram(binwidth = .01) + 
+  theme_tufte() + 
+  labs(
+    title = "Sampling Distribution from High School B", 
+    subtitle = "1000 samples of 20 students taken",
+    x = "Proportion of Yes Answers",
+    y = "Number of Samples"
   )
+
+
 ```
 
-Notice how the solid and dotted line normal curves have the same center due to their common mean $\mu$ = 5. However, the dotted line normal curve is wider due to its larger standard deviation of $\sigma$ = 5. On the other hand, the solid and dashed line normal curves have the same variation due to their common standard deviation $\sigma$ = 2. However, they are centered at different locations. 
+This means that with a population proportion of .1, the teacher is likely to get answers that range from [.05, .5]. You, at your high school, with a sample proportion of .4, could easily fall into this. It could be the case that your population proportion is actually .1.
 
-When the mean $\mu$ = 0 and the standard deviation $\sigma$ = 1, the normal distribution has a special name. It's called the *standard normal distribution* or the *$z$-curve*\index{distribution!standard normal}.
+Suppose the teacher at high school $J$ did this? Remember, $J$ has a 90% proportion of yes answers.
 
-Furthermore, if a variable follows a normal curve, there are *three rules of thumb* we can use:
 
-1. 68% of values will lie within $\pm$ 1 standard deviation of the mean.
-1. 95% of values will lie within $\pm$ 1.96 $\approx$ 2 standard deviations of the mean.
-1. 99.7% of values will lie within $\pm$ 3 standard deviations of the mean.
+```{r, echo = FALSE}
 
-Let's illustrate this on a standard normal curve in Figure \@ref(fig:normal-rule-of-thumb). The dashed lines are at -3, -1.96, -1, 0, 1, 1.96, and 3. These 7 lines cut up the x-axis into 8 segments. The areas under the normal curve for each of the 8 segments are marked and add up to 100%. For example:
+# Create a school with 20% yes answers.
 
-1. The middle two segments represent the interval -1 to 1. The shaded area above this interval represents 34% + 34% = 68% of the area under the curve. In other words, 68% of values. 
-1. The middle four segments represent the interval -1.96 to 1.96. The shaded area above this interval represents 13.5% + 34% + 34% + 13.5%= 95% of the area under the curve. In other words, 95% of values. 
-1. The middle six segments represent the interval -3 to 3. The shaded area above this interval represents 2.35% + 13.5% + 34% + 34% + 13.5% + 2.35% = 99.7% of the area under the curve. In other words, 99.7% of values. 
+school_j <- tibble(
+  school = "j",
+  school_prop = .9, 
+  students = c(rep("Yes", 900), rep("No", 100))) %>%
 
-```{r normal-rule-of-thumb, echo=FALSE, fig.cap="Rules of thumb about areas under normal curves.", purl=FALSE, out.width = "80%"}
-shade_3_sd <- function(x) {
-  y <- dnorm(x, mean = 0, sd = 1)
-  y[x <= -3 | x >= 3] <- NA
-  return(y)
-}
-shade_2_sd <- function(x) {
-  y <- dnorm(x, mean = 0, sd = 1)
-  y[x <= -1.96 | x >= 1.96] <- NA
-  return(y)
-}
-shade_1_sd <- function(x) {
-  y <- dnorm(x, mean = 0, sd = 1)
-  y[x <= -1 | x >= 1] <- NA
-  return(y)
-}
+# Draw a bunch of samples of 20 from it and summarize the
+# percent that said yes. 
 
-labels <- tibble(
-  x = c(-3.5, -2.5, -1.5, -0.5, 0.5, 1.5, 2.5, 3.5),
-  label = c("0.15%", "2.35%", "13.5%", "34%", "34%", "13.5%", "2.35%", "0.15%")
-) %>% 
-  mutate(y = rep(0.3, times = n()))
+  rep_sample_n(20, replace = TRUE, reps = 1000) %>%
+  filter(students == "Yes") %>%
+  group_by(replicate) %>%
+  count() %>%
+  mutate(prop_yes = n/20) %>%
+  mutate(school_prop = .9)
 
-ggplot(data = tibble(x = c(-4, 4)), aes(x)) +
-  geom_text(data = labels, aes(y=y, label = label)) + 
-  # Trace normal curve
-  stat_function(fun = dnorm, args = list(mean = 0, sd = 1), n = 1000) + 
-  # Shade and delineate +/- 3 SD
-  stat_function(fun = shade_3_sd, geom = "area", fill = "black", alpha = 0.25, n = 1000) +
-  # annotate(geom = "segment", x = c(3, -3), xend = c(3, -3), y = 0, yend = dnorm(3, mean = 0, sd = 1)) +
-  # Shade and delineate +/- 2 SD
-  stat_function(fun = shade_2_sd, geom = "area", fill = "black", alpha = 0.25, n = 1000) +
-  # annotate(geom = "segment", x = c(1.96, -1.96), xend = c(1.96, -1.96), y = 0, yend = dnorm(1.96, mean = 0, sd = 1)) +
-  # Shade and delineate +/- 1 SD
-  stat_function(fun = shade_1_sd, geom = "area", fill = "black", alpha = 0.25, n = 1000) +
-  # annotate(geom = "segment", x = c(1, -1), xend = c(1, -1), y = 0, yend = dnorm(1, mean = 0, sd = 1)) + 
-  geom_vline(xintercept = c(-3, -1.96, -1, 0, 1, 1.96, 3), linetype = "dashed", alpha = 0.5) +
-  # Axes
-  scale_x_continuous(breaks = seq(from = -3, to = 3, by = 1)) +
-  labs(x = "z", y = "") +
-  theme(axis.title.y = element_blank(), axis.text.y = element_blank(), axis.ticks.y = element_blank())
+
+# Display your findings!
+
+ggplot(school_j, aes(x = prop_yes)) + 
+  geom_histogram(binwidth = .01) + 
+  theme_tufte() + 
+  labs(
+    title = "Sampling Distribution from High School J", 
+    subtitle = "1000 samples of 20 students taken",
+    x = "Proportion of Yes Answers",
+    y = "Number of Samples"
+  )
+
+
 ```
 
+Then, your answers range from [.65, 1]! 
+
+So at your high school (where you got a sample proportion of .4), you can probabaly conclude your population percentage is not .9. That is, it's very unlikely 900 out of 1000 students at your high school $A$ love statistics. Why? Because your sample from $A$ gave you a proportion of .4 and when we sampled from high school $J$ (where we're sure the actual population proportion is .9), we got zero samples that had a proportion of .4. 
+
+This is how each of these other high schools is a model you can use to update your understanding of where your high school is. That's because you can use them to determine what samples look like if the population you are sampling from had various proportions.
+
+What if we did this for every high school $B$ through $J$?
+
+
+```{r, echo = FALSE}
+
+# Create every school with the right proportions.
+
+school_c <- tibble(
+  students = c(rep("Yes", 200), rep("No", 800))
+) %>%
+  rep_sample_n(20, replace = TRUE, reps = 1000) %>%
+  filter(students == "Yes") %>%
+  group_by(replicate) %>%
+  count() %>%
+  mutate(prop_yes = n/20) %>%
+  mutate(school_prop = .2)
+
+school_d <- tibble(
+  students = c(rep("Yes", 300), rep("No", 700))
+) %>%
+  rep_sample_n(20, replace = TRUE, reps = 1000) %>%
+  filter(students == "Yes") %>%
+  group_by(replicate) %>%
+  count() %>%
+  mutate(prop_yes = n/20) %>%
+  mutate(school_prop = .3)
+ 
+school_e <- tibble(
+  students = c(rep("Yes", 400), rep("No", 600))
+) %>%
+  rep_sample_n(20, replace = TRUE, reps = 1000) %>%
+  filter(students == "Yes") %>%
+  group_by(replicate) %>%
+  count() %>%
+  mutate(prop_yes = n/20) %>%
+  mutate(school_prop = .4)
+
+school_f <- tibble(
+  students = c(rep("Yes", 500), rep("No", 500))
+) %>%
+  rep_sample_n(20, replace = TRUE, reps = 1000) %>%
+  filter(students == "Yes") %>%
+  group_by(replicate) %>%
+  count() %>%
+  mutate(prop_yes = n/20) %>%
+  mutate(school_prop = .5)
+
+school_g <- tibble(
+  students = c(rep("Yes", 600), rep("No", 400))
+) %>%
+  rep_sample_n(20, replace = TRUE, reps = 1000) %>%
+  filter(students == "Yes") %>%
+  group_by(replicate) %>%
+  count() %>%
+  mutate(prop_yes = n/20) %>%
+  mutate(school_prop = .6)
+ 
+school_h <- tibble(
+  students = c(rep("Yes", 700), rep("No", 300))
+) %>%
+  rep_sample_n(20, replace = TRUE, reps = 1000) %>%
+  filter(students == "Yes") %>%
+  group_by(replicate) %>%
+  count() %>%
+  mutate(prop_yes = n/20) %>%
+  mutate(school_prop = .7)
 
-## Bayes's Theorem 
+school_i <- tibble(
+  students = c(rep("Yes", 800), rep("No", 200))
+) %>%
+  rep_sample_n(20, replace = TRUE, reps = 1000) %>%
+  filter(students == "Yes") %>%
+  group_by(replicate) %>%
+  count() %>%
+  mutate(prop_yes = n/20) %>%
+  mutate(school_prop = .8)
 
-<!-- Add material from: Chapter 2 in *Doing Bayesian Data Analysis* ([pdf](https://sites.google.com/site/doingbayesiandataanalysis/sample-chapter/DoingBayesianDataAnalysisChapter2.pdf?attredirects=0&d=1)) by John Kruschke. -->
+# Combine them all.
 
-## Conditional probability
+all_school <- merge(school_b, school_c, all.x = TRUE, all.y = TRUE) %>%
+  merge(school_d, all.x = TRUE, all.y = TRUE) %>%
+  merge(school_e, all.x = TRUE, all.y = TRUE) %>%
+  merge(school_f, all.x = TRUE, all.y = TRUE) %>%
+  merge(school_g, all.x = TRUE, all.y = TRUE) %>%
+  merge(school_h, all.x = TRUE, all.y = TRUE) %>%
+  merge(school_i, all.x = TRUE, all.y = TRUE) %>%
+  merge(school_j, all.x = TRUE, all.y = TRUE) %>%
+  arrange(school_prop)
 
-  The fundamental idea behind all Bayesian statistics is Bayes’s theorem, which is surprisingly easy to derive, provided that you understand conditional probability. So we’ll start with probability, then conditional probability, then Bayes’s theorem, and on to Bayesian statistics.
+ggplot(all_school, aes(x = prop_yes, y = school_prop)) + 
+  geom_point() +
+  geom_jitter(alpha = .2) +
+  theme_tufte() + 
+  labs(
+    title = "Sampling Distributions of Different Proportion High Schools",
+    subtitle = "1000 Samples Taken per High School (Population Proportion Level)",
+    x = "Proportion of Sample who Said Yes",
+    y = "Proportion of Population who Say Yes"
+  ) + 
+  scale_y_continuous(breaks = c(.1, .2, .3, .4, .5, .6, .7, .8, .9)) + 
+  scale_x_continuous(breaks = c(.1, .2, .3, .4, .5, .6, .7, .8, .9))
 
-  A probability is a number between $0$ and $1$ (including both) that represents a degree of belief in a fact or prediction. The value 1 represents certainty that a fact is true, or that a prediction will come true. The value $0$ represents certainty that the fact is false.
+```
 
-  Intermediate values represent degrees of certainty. The value $0.5$, often written as $50\%$, means that a predicted outcome is as likely to happen as not. For example, the probability that a tossed coin lands face up is very close to $50\%$.
+Clarifying notes:
 
-  A conditional probability is a probability based on some background information. What is the probability that you will have a heart attack in the next year? According to the CDC, “Every year about $785,000$ Americans have a first coronary attack. (http://www.cdc.gov/heartdisease/facts.htm)”
+* Each row is a population (or "high school") and at each high school, we've surveyed 1000 random groups of 20 and recorded the proportions. The darkness of each cluster represents how many individual samples are in that area. The clusters with few, lighter points are less likely to occur in the sampling distribution. So, for example, if I wanted to know the sampling distribution of one particular high school, I'd look at that row. The animation below illustrates this concept:
 
-The U.S. population is about $311$ million, so the probability that a randomly chosen American will have a heart attack in the next year is roughly $0.3\%$.
+![](Maria_Drafts/color_red_combo.gif)
 
-But you are not a randomly chosen American. Epidemiologists have identified many factors that affect the risk of heart attacks; depending on those factors, your risk might be higher or lower than average.
+* Read the graph vertically (find a point along the x-axis and look up) if you're trying to figure out in which population proportion(s) your sample statistic appears.
 
-Plug your information into the online calculator at http://cvdrisk.nhlbi.nih.gov/calculator.asp. Your risk is unlikely to be $0.3\%$. Whatever the number is, that value is a conditional probability, because it is based on a number of factors that make up your “condition.”
+```{marginfigure}
 
-The usual notation for conditional probability is $p(A|B)$, which is the probability of $A$ given that $B$ is true. In this example, A represents the prediction that you will have a heart attack in the next year, and B is the set of conditions which you entered in the calculator.
+Jim Albert goes through a very similar example and as he points out: "The histogram of the simulated values of the proportion p reflects the prior distribution that we
+placed on this parameter. The histogram of the simulated values of the data y is also meaningful. This is the distribution of data that is plausible assuming our prior on p and the binomial sampling model."
 
-## Conjoint probability
 
-Conjoint probability is a fancy way to say the probability that two things are true. Write $p(A \cap B)$ to mean the probability that $A$ and $B$ are both
-true.
+*Read more: Jim Albert (1997) Teaching Bayes Rule: A Data-Oriented Approach, The
+American Statistician, 51:3, 247-253*
 
-If you learned about probability in the context of coin tosses and dice, you might have learned the following formula:
+```
 
-$$p(A \cap B) = p(A) p(B) \text{    WARNING: Only true when A and B are independent}$$
-For example, if you toss two coins, and A means the first coin lands face up, and $B$ means the second coin lands face up, then $p(A) = p(B) = 0.5$, and sure enough, $p(A \cap B) = p(A) p(B) = 0.25$.
+* Read the graph horizontally (find a point on the y-axis and look to the side) if you're trying to figure out the distribution of sample statistics given a population proportion.
 
-But this formula only works because in this case $A$ and $B$ are independent; that is, knowing the outcome of the first event does not change the probability of the second. Or, more formally, $p(B|A) = p(B)$.
+So, from this scatterplot you can observe some interesting things about your own initial sample of 20 at high school $A$. 
 
-Here is a different example where the events are not independent. Suppose that $A$ means that it rains today and $B$ means that it rains tomorrow. If you know that it rained today, it is more likely that it will rain tomorrow, so $p(B|A) > p(B)$.
+* You got a sample proportion of .2. If you find that place on the x-axis, you can see all of the population proportions for which that sample proportion occurs. That would be from .1 to .5! You're pretty confident your high school has a proportion somewhere in there!
 
-In general, the probability of a conjunction is
-$$p(A \cap B) = p(A) p(B|A)$$
+* In fact, you even know the how likely a sample proportion tends to appear in a population proportion. While a .6 proportion population sometimes gives a sample with a proportion of .2, it doesn't do so as often as a population with the proportion of .2. If you took 10 more samples of 20 at your high school and got values close to .2, you're increasing your confidence the population of your high school is closer to .2 
 
-for any $A$ and $B$. So if the chance of rain on any given day is $0.5$, the chance
-of rain on two consecutive days is not $0.25$, but probably a bit higher.
+* The above means you can use this scatterplot to estimate a confidence interval for your sample of 20. If you want a 90% confidence interval, find population proportions which have a sampling distribution in which this sample result is in the middle 90% of the data!
 
-## The cookie problem
+There are a few key takeaways we want to note in this situation.
 
-We’ll get to Bayes’s theorem soon, but first consider the cookie problem. Suppose there are two bowls of cookies. $\text{Bowl 1}$ contains $30$ vanilla cookies and $10$ chocolate cookies. $\text{Bowl 2}$ contains $20$ of each.
+First, we are uncertain about the actual proportion of the population that loves statistics. This is likely to always be the case - that we are uncertain about the parameter. We won't really know what the true probability is. We can however, become better informed about what it could be. For that, we use models. That is the principle expressed in this in this example. We created a bunch of models for each potential probability and used the results of those models to understand which model is more or less likely to explain our specific results.
 
-Now suppose you choose one of the bowls at random and, without looking,
-select a cookie at random. The cookie is vanilla. What is the probability that
-it came from $\text{Bowl 1}$?
+Second, 
 
-This is a conditional probability; we want $p(\text{Bowl 1 | vanilla})$, but it is not
-obvious how to compute it. If you asked a different question --- the probability
-of a vanilla cookie given $\text{Bowl 1}$ --- it would be easy:
 
-$$p(\text{vanilla | Bowl 1}) = \frac{3}{4}$$
 
-Sadly, $p(A|B)$ is not the same as $p(B|A)$, but there is a way to get from one
-to the other: Bayes’s theorem.
+## Testing is Evil
 
-## Bayes's Theorem
+<!-- Introduce concepts like the null model, testing, and p-values. Connect to permutation tests from chapter 3.  Side note quotation: "Amatuers test. Professionals summarize." Maybe we should pick an example in which the number of heads is low enough to provide some reasonable evidence against p = 0.5. -->
 
-At this point we have everything we need to derive Bayes’s theorem. We’ll start with the observation that conjunction is commutative; that is
-$$p(A \cap B) = p(B \cap A)$$
-for any events A and B.
+In some fields, it is common to want to test a specific hypothesis. Consider the hypothesis that the coin is fair, i.e., that $p = 0.5$. Does the data we have support or reject that hypothesis? (Be wary that $p$ is both used for the probability of a head and the $p$-value of a hypothesis test.)
 
-Next, we write the probability of a conjunction:
-$$p(A \cap B) = p(A) p(B|A)$$
+Not really interested in that exact test except in toy scenarios.
 
-Since we have not said anything about what A and B mean, they are interchangeable. Interchanging them yields
+Difference between 0.04 and 0.06 is rarely significant. And is hardly ever a good reason to decide X over Y.
 
-$$p(B \cap A) = p(B) p(A|B)$$
-That’s all we need. Pulling those pieces together, we get
 
-$$p(B) p(A|B) = p(A) p(B|A)$$
 
-Which means there are two ways to compute the conjunction. If you have
-$p(A)$, you multiply by the conditional probability $p(B|A)$. Or you can do
-it the other way around; if you know $p(B)$, you multiply by $p(A|B)$. Either
-way you should get the same thing.
 
-Finally we can divide through by $p(B)$:
 
-$$p(A|B) = \frac{p(A) p(B|A)}{p(B)}$$
+## Posterior Predictions (Advanced)
 
-And that’s Bayes’s theorem! It might not look like much, but it turns out to
-be surprisingly powerful.
+Looking at the marginal distributions from the Bayes scatterplots shows us the posterior distribution of the data, conditioning on the model, and of the model, conditioning on the data. In other words, if the model us true, this is what we believe about the distribution of the data, both the data that we have already seen and about the data we will see in the future, assuming that that the model is true.
 
-For example, we can use it to solve the cookie problem. I’ll write $\text{Bowl 1}$ for the
-hypothesis that the cookie came from $\text{Bowl 1}$ and $V$ for the vanilla cookie.
-Plugging in Bayes’s theorem we get
+But such a forecast is, in the real world, not the best forecast possible because it is assuming that the model is 100% true --- in this case, that $p = 0.4$ --- even though we don't know, for certain, that the model is true. Indeed, the whole point of the Bayesian scatter plot is to show that, if we see 8 heads in 20 tosses, that, although $p = 0.4$ is the most likely model, it could be that $p = 0.3$ or $p = 0.5$. *We are uncertain about what $p$ is.* The best possible forecast will incorporate that uncertainty, will not pretend that we know, for certain, that $p = 0.4$. Forecasts which incorporate our uncertainty about parameter values are called "posterior predictions."
 
-$$p(B_1|V) = \frac{p(B_1) p(V|B1)}{p(V)}$$
+To construct posterior predictions, we do the same sampling proceedure as with the Bayes scatterplots, while averaging over the rest of possible values for $p$, weighted by their relative likelihood. Recall the analysis above:
 
-The term on the left is what we want: the probability of $\text{Bowl 1}$, given that
-we chose a vanilla cookie. The terms on the right are:
+  
+```{r}
+# Same code to get set up as before. But 10,000 this time for more stability,
+# and to really see some extreme values for p. Don't need to show this code
+# again. Maybe just show the plot.
 
-+ $p(B_1)$: This is the probability that we chose $\text{Bowl 1}$, unconditioned by what kind of cookie we got. Since the problem says we chose a bowl
-at random, we can assume $p(B_1) = 1/2$.
-+ $p(V|B_1)$: This is the probability of getting a vanilla cookie from $\text{Bowl 1}$, which is $3/4$.
-+ $p(V)$: This is the probability of drawing a vanilla cookie from either bowl. Since we had an equal chance of choosing either bowl and the bowls contain the same number of cookies, we had the same chance of choosing any cookie. Between the two bowls there are $50$ vanilla and $30$ chocolate cookies, so $p(V) = 5/8$.
+set.seed(10)
 
-Putting it together, we have
+mod <- seq(0, 1, 0.1)
+rep <- 1:10000
+toss <- 1:20
 
-$$p(B_1|V) = \frac{(1/2) (3/4)}
-{5/8}$$
+x <- crossing(mod, rep, toss) %>% 
+  mutate(result = ifelse(runif(n = nrow(.)) < mod, 1, 0)) %>% 
+  group_by(mod, rep)  %>% 
+  summarize(total = sum(result)) %>% 
+  filter(total == 8)
 
-which reduces to $3/5$. So the vanilla cookie is evidence in favor of the hypothesis that we chose $\text{Bowl 1}$, because vanilla cookies are more likely to come from $\text{Bowl 1}$.
+# Show that the plot is the same, but highlight that there is a chance, however
+# miniscule, that p is 0.8 or 0.1. 
 
-This example demonstrates one use of Bayes’s theorem: it provides a strategy to get from $p(B|A)$ to $p(A|B)$. This strategy is useful in cases, like the cookie problem, where it is easier to compute the terms on the right side of Bayes’s theorem than the term on the left
+x %>% 
+  ggplot(aes(x = mod)) +
+    geom_bar(aes(y = (..count..)/sum(..count..))) + 
+    scale_y_continuous(labels=percent) +
+    labs(title = "Posterior Estimate of p Given 8 Heads in 20 Flips",
+         subtitle = "p is more likely to be something other than 0.4",
+         x = "Probability of Heads",
+         y = "Posterior")
 
-## The diachronic interpretation
+```
+  
+Although the most likely value for $p$ is 0.4, it is actually more likely that $p$ is a different value than 0.4, either lower or higher and, potentially, much lower or higher. To get the correct uncertainty in our forecasts for the number of heads in the next 20 tosses, we need to incorporate that uncertainty directly.
 
-There is another way to think of Bayes’s theorem: it gives us a way to update the probability of a hypothesis, $H$, in light of some body of data, $D$.
+```{r}
+# Did not get around to finishing this.
 
-This way of thinking about Bayes’s theorem is called the **diachronic interpretation**. “Diachronic” means that something is happening over time; in this case the probability of the hypotheses changes, over time, as we see new data.
+x %>% 
+  select(-rep, -total) 
 
-Rewriting Bayes’s theorem with $H$ and $D$ yields:
 
-$$p(H|D) = \frac{p(H) p(D|H)}{p(D)}$$
-In this interpretation, each term has a name:
+```
 
-+ $p(H)$ is the probability of the hypothesis before we see the data, called the prior probability, or just **prior**.
-+ $p(H|D)$ is what we want to compute, the probability of the hypothesis after we see the data, called the **posterior**.
-+ $p(D|H)$ is the probability of the data under the hypothesis, called the **likelihood**.
-+ $p(D)$ is the probability of the data under any hypothesis, called the **normalizing constant**.
-
-Sometimes we can compute the prior based on background information.
-For example, the cookie problem specifies that we choose a bowl at random
-with equal probability.
-
-In other cases the prior is subjective; that is, reasonable people might disagree, either because they use different background information or because they interpret the same information differently.
-
-The likelihood is usually the easiest part to compute. In the cookie problem, if we know which bowl the cookie came from, we find the probability of a vanilla cookie by counting.
-
-The normalizing constant can be tricky. It is supposed to be the probability of seeing the data under any hypothesis at all, but in the most general case it is hard to nail down what that means.
-
-Most often we simplify things by specifying a set of hypotheses that are 
-
-**Mutually exclusive**: At most one hypothesis in the set can be true, and 
-
-**Collectively exhaustive**: There are no other possibilities; at least one of the hypotheses has to be true.
-
-Use the word **suite** for a set of hypotheses that has these properties.
-
-In the cookie problem, there are only two hypotheses—the cookie came
-from $\text{Bowl 1}$ or $\text{Bowl 2}$—and they are mutually exclusive and collectively
-exhaustive.
-
-In that case we can compute $p(D)$ using the law of total probability, which says that if there are two exclusive ways that something might happen, you can add up the probabilities like this:
-
-$$p(D) = p(B_1) p(D|B_1) + p(B_2) p(D|B_2)$$
-Plugging in the values from the cookie problem, we have
-
-$$p(D) = (1/2) (3/4) + (1/2) (1/2) = 5/8$$
-
-which is what we computed earlier by mentally combining the two bowls.
-
-## The M&M problem
-
-M&M’s are small candy-coated chocolates that come in a variety of colors.
-Mars, Inc., which makes M&M’s, changes the mixture of colors from time
-to time.
-
-In 1995, they introduced blue M&M’s. Before then, the color mix in a bag
-of plain M&M’s was $30\%$ Brown, $20\%$ Yellow, $20\%$ Red, $10\%$ Green, $10\%$ Orange, $10\%$ Tan. Afterward it was $24\%$ Blue , $20\%$ Green, $16\%$ Orange, $14\%$ Yellow, $13\%$ Red, $13\%$ Brown.
-
-Suppose a friend of mine has two bags of M&M’s, and he tells me that one
-is from 1994 and one from 1996. He won’t tell me which is which, but he
-gives me one M&M from each bag. One is yellow and one is green. What is
-the probability that the yellow one came from the 1994 bag?
-
-This problem is similar to the cookie problem, with the twist that we draw
-one sample from each bowl/bag. This problem also gives me a chance to
-demonstrate the table method, which is useful for solving problems like this on paper. In the next chapter we will solve them computationally.
-
-The first step is to enumerate the hypotheses. The bag the yellow
-M&M came from I’ll call Bag 1; I’ll call the other Bag 2. So the hypotheses are:
-
-+ A: Bag 1 is from 1994, which implies that Bag 2 is from 1996.
-+ B: Bag 1 is from 1996 and Bag 2 from 1994
-
-Let $H$ be the hypothesis, and let $D$ be the event of the outcome. Note that $p(D) = 1$ since there is a 100 percent chance that we have this outcome since it has already happened
-
-|   | Prior $p(H)$ | Likelihood $P(D|H)$ | $p(H)p(D|H)$ | Posterior $p(H|D)$ |
-|---|--------------|---------------------|--------------|--------------------|
-| A | 1/2          | (20)(20)            | 200          | 20/27              |
-| B | 1/2          | (14)(10)            | 70           | 7/27               |
-
-The first column has the priors. Based on the statement of the problem, it is reasonable to choose $p(A) = p(B) = 1/2$.
-
-The second column has the likelihoods, which follow from the information in the problem. For example, if A is true, the yellow M&M came from the 1994 bag with probability $20\%$, and the green came from the 1996 bag with probability $20\%$. If $B$ is true, the yellow M&M came from the 1996 bag with probability $14\%$, and the green came from the 1994 bag with probability $10\%$. Because the selections are independent, we get the conjoint probability by multiplying.
-
-The third column is just the product of the previous two. The sum of this column, $270$, is the normalizing constant. To get the last column, which
-
-contains the posteriors, we divide the third column by the normalizing constant.
-
-That’s it. Simple, right?
-
-Well, you might be bothered by one detail. We write $p(D|H)$ in terms of percentages, not probabilities, which means it is off by a factor of $10,000$. But that cancels out when we divide through by the normalizing constant, so it doesn’t affect the result.
-
-When the set of hypotheses is mutually exclusive and collectively exhaustive, you can multiply the likelihoods by any factor, if it is convenient, as long as you apply the same factor to the entire column
-
-## The Monty Hall problem
-
-The Monty Hall problem might be the most contentious question in the history of probability. The scenario is simple, but the correct answer is so counterintuitive that many people just can’t accept it, and many smart people have embarrassed themselves not just by getting it wrong but by arguing the wrong side, aggressively, in public.
-
-Monty Hall was the original host of the game show Let’s Make a Deal. The Monty Hall problem is based on one of the regular games on the show. If you are on the show, here’s what happens:
-
-+ Monty shows you three closed doors and tells you that there is a prize behind each door: one prize is a car, the other two are less valuable prizes like peanut butter and fake finger nails. The prizes are arranged at random.
-+ The object of the game is to guess which door has the car. If you guess right, you get to keep the car.
-+ You pick a door, which we will call Door $A$. We’ll call the other doors $B$ and $C$.
-+ Before opening the door you chose, Monty increases the suspense by opening either Door $B$ or $C$, whichever does not have the car. (If the car is actually behind Door $A$, Monty can safely open $B$ or $C$, so he chooses one at random.)
-+ Then Monty offers you the option to stick with your original choice or switch to the one remaining unopened door.
-
-Now the hard part is over; the rest is just arithmetic. The sum of the third column is $1/2$. Dividing through yields $p(A|D) = 1/3$ and $p(C|D) = 2/3$. So you are better off switching
-
-The question is, should you “stick” or “switch” or does it make no difference?
-
-Most people have the strong intuition that it makes no difference. There are two doors left, they reason, so the chance that the car is behind Door $A$ is $50\%$.
-
-But that is wrong. In fact, the chance of winning if you stick with Door $A$ is only $1/3$; if you switch, your chances are $2/3$.
-
-By applying Bayes’s theorem, we can break this problem into simple pieces, and maybe convince ourselves that the correct answer is, in fact, correct.
-
-To start, we should make a careful statement of the data. In this case $D$ consists of two parts: Monty chooses Door $B$ and there is no car there.
-
-Next we define three hypotheses: $A$, $B$, and $C$ represent the hypothesis that the car is behind Door $A$, Door $B$, or Door $C$. Again, let’s apply the table method:
-
-
-Filling in the priors is easy because we are told that the prizes are arranged at random, which suggests that the car is equally likely to be behind any door.
-
-Figuring out the likelihoods takes some thought, but with reasonable care we can be confident that we have it right:
-
-+ If the car is actually behind $A$, Monty could safely open Doors $B$ or $C$. So the probability that he chooses $B$ is $1/2$. And since the car is actually behind $A$, the probability that the car is not behind $B$ is $1$.
-
-+ If the car is actually behind $B$, Monty has to open door $C$, so the probability that he opens door $B$ is $0$.
-
-+ Finally, if the car is behind Door $C$, Monty opens $B$ with probability $1$ and finds no car there with probability $1$.
-
-Now the hard part is over; the rest is just arithmetic. The sum of the third column is $1/2$. Dividing through yields $p(A|D) = 1/3$ and $p(C|D) = 2/3$. So you are better off switching.
-
-|   | Prior $p(H)$ | Likelihood $P(D|H)$ | $p(H)p(D|H)$ | Posterior $p(H|D)$ |
-|---|--------------|---------------------|--------------|--------------------|
-| A | 1/3          | 1/2                 | 1/6          | 1/3                |
-| B | 1/3          | 0                   | 0            | 0                  |
-| C | 1/3          | 1                   | 1/3          | 2/3                |
-
-Filling in the priors is easy because we are told that the prizes are arranged at random, which suggests that the car is equally likely to be behind any door.
-
-Figuring out the likelihoods takes some thought, but with reasonable care we can be confident that we have it right:
-
-+ If the car is actually behind $A$, Monty could safely open Doors $B$ or $C$. So the probability that he chooses $B$ is $1/2$. And since the car is actually behind $A$, the probability that the car is not behind $B$ is $1$.
-+ If the car is actually behind $B$, Monty has to open door $C$, so the probability that he opens door $B$ is $0$.
-+ Finally, if the car is behind Door $C$, Monty opens $B$ with probability $1$ and finds no car there with probability $1$. 
-
-Now the hard part is over; the rest is just arithmetic. The sum of the third column is $1/2$. Dividing through yields $p(A|D) = 1/3$ and $p(C|D) = 2/3$.
-So you are better off switching.
-
-There are many variations of the Monty Hall problem. One of the strengths of the Bayesian approach is that it generalizes to handle these variations.
-
-For example, suppose that Monty always chooses $B$ if he can, and onlychooses $C$ if he has to (because the car is behind $B$). In that case the revised table is:
-
-|   | Prior $p(H)$ | Likelihood $P(D|H)$ | $p(H)p(D|H)$ | Posterior $p(H|D)$ |
-|---|--------------|---------------------|--------------|--------------------|
-| A | 1/3          | 1                   | 1/3          | 1/2                |
-| B | 1/3          | 0                   | 0            | 0                  |
-| C | 1/3          | 1                   | 1/3          | 1/2                |
-
-The only change is $p(D|A)$. If the car is behind $A$, Monty can choose to open $B$ or $C$. But in this variation he always chooses $B$, so $p(D|A) = 1$.
-
-As a result, the likelihoods are the same for $A$ and $C$, and the posteriors are the same: $p(A|D) = p(C|D) = 1/2$. In this case, the fact that Monty chose $B$ reveals no information about the location of the car, so it doesn’t matter whether the contestant sticks or switches.
-
-On the other hand, if he had opened $C$, we would know $p(B|D) = 1$.
-
-
-
-For many problems involving conditional probability, Bayes’s theorem provides a divide-and-conquer strategy. If $p(A|B)$ is hard to compute, or hard to measure experimentally, check whether it might be easier to compute the other terms in Bayes’s theorem, $p(B|A)$, $p(A)$ and $p(B)$.
-
-
-
-[^1]: Here are four examples. (i) Whether someone gets sick in the next
-    month or not is an apparently random process with outcomes *sick*
-    and *not*. (ii) We can *generate* a random process by randomly
-    picking a person and measuring that person's height. The outcome of
-    this process will be a positive number. (iii) Whether the stock
-    market goes up or down next week is a seemingly random process with
-    possible outcomes *up*, *down*, and *no\_change*. Alternatively, we
-    could have used the percent change in the stock market as a
-    numerical outcome. (iv) Whether your roommate cleans her dishes
-    tonight probably seems like a random process with possible outcomes
-    *cleans\_dishes* and *leaves\_dishes*.
-
-[^2]: () The random process is a die roll, and at most one of these
-    outcomes can come up. This means they are disjoint outcomes.
-    (b) $P($*1* or *4* or
-    *5*$) = P($*1*$)+P($*4*$)+P($*5*$) = \frac{1}{6} + \frac{1}{6} + \frac{1}{6} = \frac{3}{6} = \frac{1}{2}$
-
-[^3]: (a) Yes. Each email is categorized in only one level of . (b)
-    Small: $\frac{2827}{3921} = 0.721$. Big: $\frac{545}{3921} = 0.139$.
-    (c) $P($*small* or
-    *big*$) = P($*small*$) + P($*big*$) = 0.721 + 0.139 = 0.860$.
-
-[^4]: (a) $P(A) = P($*1* or
-    *2*$) = P($*1*$) + P($*2*$) = \frac{1}{6} + \frac{1}{6} = \frac{2}{6} = \frac{1}{3}$.
-    (b) Similarly, $P(B) = 1/3$.
-
-[^5]: (a) Outcomes *2* and *3*. (b) Yes, events $B$ and $D$ are disjoint
-    because they share no outcomes. (c) The events $A$ and $D$ share an
-    outcome in common, *2*, and so are not disjoint.
-
-[^6]: Since $B$ and $D$ are disjoint events, use the Addition Rule:
-    $P(B$ or
-    $D) = P(B) + P(D) = \frac{1}{3} + \frac{1}{3} = \frac{2}{3}$.
-
-[^7]: The 52 cards are split into four : $\clubsuit$ (club),
-    $\diamondsuit$ (diamond), $\heartsuit$ (heart), $\spadesuit$
-    (spade). Each suit has its 13 cards labeled: *2*, *3*, \..., *10*,
-    *J* (jack), *Q* (queen), *K* (king), and *A* (ace). Thus, each card
-    is a unique combination of a suit and a label, e.g. *4$\heartsuit$*
-    and *J$\clubsuit$*. The 12 cards represented by the jacks, queens,
-    and kings are called . The cards that are $\diamondsuit$ or
-    $\heartsuit$ are typically colored red while the other two suits are
-    typically colored black.
-
-[^8]: (a) There are 52 cards and 13 diamonds. If the cards are
-    thoroughly shuffled, each card has an equal chance of being drawn,
-    so the probability that a randomly selected card is a diamond is
-    $P({\color{redcards}\diamondsuit}) = \frac{13}{52} = 0.250$.
-    (b) Likewise, there are 12 face cards, so $P($face
-    card$) = \frac{12}{52} = \frac{3}{13} = 0.231$.
-
-[^9]: The Venn diagram shows face cards split up into "face card but not
-    $\diamondsuit$" and "face card and $\diamondsuit$". Since these
-    correspond to disjoint events, $P($face card$)$ is found by adding
-    the two corresponding probabilities:
-    $\frac{3}{52} + \frac{9}{52} = \frac{12}{52} = \frac{3}{13}$.
-
-[^10]: (a) If $A$ and $B$ are disjoint, $A$ and $B$ can never occur
-    simultaneously. (b) If $A$ and $B$ are disjoint, then the last term
-    of
-    Equation ({reference-type="ref"
-    reference="generalAdditionRule"}) is 0 (see part (a)) and we are
-    left with the Addition Rule for disjoint events.
-
-[^11]: Both the counts and corresponding probabilities (e.g.
-    $2659/3921 = 0.678$) are shown. Notice that the number of emails
-    represented in the left circle corresponds to $2659 + 168 = 2827$,
-    and the number represented in the right circle is $168 + 199 = 367$.
-
-     
-
-    ![image](images/emailSpamNumberVenn.png){height="13mm"}
-
-[^12]: (a) The solution is represented by the intersection of the two
-    circles: 0.043. (b) This is the sum of the three disjoint
-    probabilities shown in the circles: $0.678 + 0.043 + 0.051 = 0.772$.
-
-[^13]: The probabilities of (a) do not sum to 1. The second probability
-    in (b) is negative. This leaves (c), which sure enough satisfies the
-    requirements of a distribution. One of the three was said to be the
-    actual distribution of US household incomes, so it must be (c).
-
-[^14]: It is also possible to construct a distribution plot when income
-    is not artificially binned into four groups.
-
-[^15]: (a) The outcomes are disjoint and each has probability $1/6$, so
-    the total probability is $4/6=2/3$. (b) We can also see that
-    $P(D)=\frac{1}{6} + \frac{1}{6} = 1/3$. Since $D$ and $D^c$ are
-    disjoint, $P(D) + P(D^c) = 1$.
-
-[^16]: Brief solutions: (a) $A^c=\{$*3*, *4*, *5*, *6*$\}$ and
-    $B^c=\{$*1*, *2*, *3*, *5*$\}$. (b) Noting that each outcome is
-    disjoint, add the individual outcome probabilities to get
-    $P(A^c)=2/3$ and $P(B^c)=2/3$. (c) $A$ and $A^c$ are disjoint, and
-    the same is true of $B$ and $B^c$. Therefore, $P(A) + P(A^c) = 1$
-    and $P(B) + P(B^c) = 1$.
-
-[^17]: (a) The complement of $A$: when the total is equal to *12*.
-    (b) $P(A^c) = 1/36$. (c) Use the probability of the complement from
-    part (b), $P(A^c) = 1/36$, and
-    Equation ({reference-type="ref"
-    reference="complement"}): $P($less than
-    *12*$) = 1 - P($*12*$) = 1 - 1/36 = 35/36$.
-
-[^18]: (a) First find $P($*6*$)=5/36$, then use the complement: $P($not
-    *6*$) = 1 - P($*6*$) = 31/36$. (b) First find the complement, which
-    requires much less effort: $P($*2* or *3*$)=1/36+2/36=1/12$. Then
-    calculate $P(B) = 1-P(B^c) = 1-1/12 = 11/12$. (c) As before, finding
-    the complement is the clever way to determine $P(D)$. First find
-    $P(D^c) = P($*11* or *12*$)=2/36 + 1/36=1/12$. Then calculate
-    $P(D) = 1 - P(D^c) = 11/12$.
-
-[^19]: (a) The probability the first person is left-handed is $0.09$,
-    which is the same for the second person. We apply the Multiplication
-    Rule for independent processes to determine the probability that
-    both will be left-handed: $0.09\times 0.09 = 0.0081$.
-
-    (b) It is reasonable to assume the proportion of people who are
-    ambidextrous (both right and left handed) is nearly 0, which results
-    in $P($right-handed$)=1-0.09=0.91$. Using the same reasoning as in
-    part (a), the probability that both will be right-handed is
-    $0.91\times 0.91 = 0.8281$.
-
-[^20]: (a) The abbreviations *RH* and *LH* are used for right-handed and
-    left-handed, respectively. Since each are independent, we apply the
-    Multiplication Rule for independent processes: $$\begin{aligned}
-    P(\text{all five are RH})
-    &= P(\text{first = RH, second = RH, ..., fifth = RH}) \\
-    &= P(\text{first = RH})\times P(\text{second = RH})\times  \dots \times P(\text{fifth = RH}) \\
-    &= 0.91\times 0.91\times 0.91\times 0.91\times 0.91 = 0.624\end{aligned}$$
-
-    (b) Using the same reasoning as in (a),
-    $0.09\times 0.09\times 0.09\times 0.09\times 0.09 = 0.0000059$
-
-    (c) Use the complement, $P($all five are *RH*$)$, to answer this
-    question: $$\begin{aligned}
-    P(\text{not all RH})
-        = 1 - P(\text{all RH})
-        = 1 - 0.624 = 0.376\end{aligned}$$
-
-[^21]: The actual proportion of the U.S. population that is *female* is
-    about 50%, and so we use 0.5 for the probability of sampling a
-    woman. However, this probability does differ in other countries.
-
-[^22]: Brief answers are provided. (a) This can be written in
-    probability notation as $P($a randomly selected person is male and
-    right-handed$)=0.455$. (b) 0.207. (c) 0.045. (d) 0.0093.
-
-[^23]: Ellis GJ and Stone LH. 1979. Marijuana Use in College: An
-    Evaluation of a Modeling Explanation. Youth and Society 10:323-334.
-
-[^24]: Each of the four outcome combination are disjoint, all
-    probabilities are indeed non-negative, and the sum of the
-    probabilities is $0.28 + 0.19 + 0.21 + 0.32 = 1.00$.
-
-[^25]: This is an observational study and no causal conclusions may be
-    reached.
-
-[^26]: (a)
-    $P(\text{parent = not} | \text{student = not})$.
-    (b) Equation ({reference-type="ref"
-    reference="condProbEq"}) for conditional probability indicates we
-    should first find
-    $P(\text{parents = not and student = not})=0.32$
-    and $P(\text{student = not})=0.51$. Then the ratio
-    represents the conditional probability: $0.32/0.51 = 0.63$.
-
-[^27]: (a) This probability is
-    $\frac{P(\text{parents = used and student = not})}{P(\text{student = not})} = \frac{0.19}{0.51} = 0.37$.
-    (b) The total equals 1. (c) Under the condition the student does not
-    use drugs, the parents must either use drugs or not. The complement
-    still appears to work *when conditioning on the same information*.
-
-[^28]: No. This was an observational study. Two potential confounding
-    variables include and . Can you think of others
  
 
 
-[^29]: Fenner F. 1988. *Smallpox and Its Eradication (History of
-    International Public Health, No. 6)*. Geneva: World Health
-    Organization. ISBN 92-4-156110-6.
-
-[^30]: $P($ = *died* $|$ =
-    *no*$) = \frac{P(\text{result = died and inoculated = no})}{P(\text{inoculated = no})} = \frac{0.1356}{0.9608} = 0.1411$.
-
-[^31]: $P($ = *died* $|$ =
-    *yes*$) = \frac{P(\text{result = died and inoculated = yes})}{P(\text{inoculated = yes})} = \frac{0.0010}{0.0392} = 0.0255$.
-    The death rate for individuals who were inoculated is only about
-    1 in 40 while the death rate is about 1 in 7 for those who were not
-    inoculated.
-
-[^32]: Brief answers: (a) Observational. (b) No, we cannot infer
-    causation from this observational study. (c) Accessibility to the
-    latest and best medical care. There are other valid answers for
-    part (c).
-
-[^33]: The answer is 0.0382.
-
-[^34]: There were only two possible outcomes: *lived* or *died*. This
-    means that 100% - 97.45% = 2.55% of the people who were inoculated
-    died.
-
-[^35]: The samples are large relative to the difference in death rates
-    for the "inoculated" and "not inoculated" groups, so it seems there
-    is an association between and . However, as noted in the solution to
-    Guided
-    Practice, this is an
-    observational study and we cannot be sure if there is a causal
-    connection. (Further research has shown that inoculation is
-    effective at reducing death rates.)
-
-[^36]: Brief solutions: (a) $1/6$. (b) $1/36$.
-    (c) $\frac{P(Y = \text{ 1 and }X=\text{ 1})}{P(X=\text{ 1})} = \frac{1/36}{1/6} = 1/6$.
-    (d) The probability is the same as in part (c): $P(Y=1)=1/6$. The
-    probability that $Y=1$ was unchanged by knowledge about $X$, which
-    makes sense as $X$ and $Y$ are independent.
-
-[^37]: He has forgotten that the next roulette spin is independent of
-    the previous spins. Casinos do employ this practice; they post the
-    last several outcomes of many betting games to trick unsuspecting
-    gamblers into believing the odds are in their favor. This is called
-    the .
-
-[^38]: (a) The tree diagram is shown to the right. (b) Identify which
-    two joint probabilities represent students who passed, and add them:
-    $P($passed$) = 0.7566+0.1254= 0.8820$. (c) $P($construct tree
-    diagram $|$ passed$) = \frac{0.7566}{0.8820} = 0.8578$.\
-     
-
-    ![image](images/treeDiagramAndPass.png){width="\\textwidth"}
-
-[^39]: If they sell a little more or a little less, this should not be a
-    surprise. For example, if we would flip
-    a coin 100 times, it will not usually come up heads exactly half the
-    time, but it will probably be close.
-
-[^40]: $\mu = \int xf(x)dx$ where $f(x)$ represents a function for the
-    density curve.
-
-[^41]: (a) 100% - 25% - 60% = 15% of students do not buy any books for
-    the class. Part (b) is represented by the first two lines in the
-    table below. The expectation for part (c) is given as the total on
-    the line $y_i\times P(Y=y_i)$. The result of part (d) is the
-    square-root of the variance listed on in the total on the last line:
-    $\sigma = \sqrt{Var(Y)} = \$69.28$.
-
-                   $i$ (scenario)   1 (*noBook*)   2 (*textbook*)   3 (*both*)                   Total
-      --------------------------- -------------- ---------------- ------------ -----------------------
-                            $y_i$           0.00           159.00       200.00 
-                       $P(Y=y_i)$           0.15             0.25         0.60 
-             $y_i\times P(Y=y_i)$           0.00            39.75       120.00         $E(Y) = 159.75$
-                       $y_i-E(Y)$        -159.75            -0.75        40.25 
-                   $(y_i-E(Y))^2$       25520.06             0.56      1620.06 
-        $(y_i-E(Y))^2\times P(Y)$         3828.0              0.1        972.0   $Var(Y) \approx 4800$
-
-[^42]: She will make $X$ dollars on the TV but spend $Y$ dollars on the
-    toaster oven: $X-Y$.
-
-[^43]: $E(X-Y) = E(X) - E(Y) = 175 - 23 = \$152$. She should expect to
-    make about \$152.
-
-[^44]: No, since there is probably some variability. For example, the
-    traffic will vary from one day to next, and auction prices will vary
-    depending on the quality of the merchandise and the interest of the
-    attendees.
-
-[^45]: If $X$ and $Y$ are random variables, consider the following
-    combinations: $X^{1+Y}$, $X\times Y$, $X/Y$. In such cases, plugging
-    in the average value for each random variable and computing the
-    result will not generally lead to an accurate average value for the
-    end result.
-
-[^46]: $E(\$6000\times X + \$2000\times Y) = \$6000\times 0.021 + \$2000\times 0.004 = \$134$.
-
-[^47]: No. While stocks tend to rise over time, they are often volatile
-    in the short term.
-
-[^48]: One concern is whether traffic patterns tend to have a weekly
-    cycle (e.g. Fridays may be worse than other days). If that is the
-    case, and John drives, then the assumption is probably not
-    reasonable. However, if John walks to work, then his commute is
-    probably not affected by any weekly traffic cycle.
-
-[^49]: The equation for Elena can be written as $$\begin{aligned}
-    (1)\times X + (-1)\times Y\end{aligned}$$ The variances of $X$ and
-    $Y$ are 625 and 64. We square the coefficients and plug in the
-    variances: $$\begin{aligned}
-    (1)^2\times Var(X) + (-1)^2\times Var(Y) = 1\times 625 + 1\times 64 = 689\end{aligned}$$
-    The variance of the linear combination is 689, and the standard
-    deviation is the square root of 689: about \$26.25.

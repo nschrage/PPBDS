@@ -1,240 +1,78 @@
+---
+output_yaml:
+  - _output.yml
+---
+
+
 # Tidyverse {#wrangling}
+
+```{r include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, tidy = FALSE, cache.extra = packageVersion('tufte'))
+
+library(gt)
+library(tidyverse)
+library(tufte)
+library(remotes)
+library(PPBDS.data)
+library(webshot)
+```
+
+<!-- DK: Let's review the below and cut out what we don't care about. -->
+
+<!-- DK: Make sure to use dplyr 1.0 stuff, especially the new `summarise()`, rowwise() and `across()` --- or perhaps the latter goes in Wizardry section in a later chapter. https://www.tidyverse.org/blog/2020/06/dplyr-1-0-0/  Other interesting tidyverse commands include:
+
+tidyr::separate_rows()
+dplyr::coalesce()
+expand(data, ...)
+crossing(...)
+nesting(...)
+-->
+
 
 <!-- ifelse (and other similar commands?) belongs earlier in the book, like when we first use mutate(). What else might be introduced with the initial usages of mutate? -->
 
-<!-- cover everything that comes later -->
+<!-- Maybe make a big set of FEC data from the 2016 election for use as the practice data? Ought to use something different from airlines . . . which are boring. -->
 
 <!-- Lists show up in Chapter 4 without any previous discussion. We need a short intro to the major variable types before this. Also put characters ahead of factors.  -->
 
 <!-- Add discussion of allowed variable names, the use of ``, and janitor::clean_names() early in the book. skimr() also. This is needed as background before we use tidy::broom() and similar functions. -->
 
-<!-- Add 545 and DS data download code to chapter 5? -->
+<!-- Add 545 and DS data download code to a different chapter? -->
 
 <!-- Need to update regexp to mention new string constant in R 4.0 -->
 
-<!-- tidyr::separate_rows() -->
-<!-- dplyr::coalesce() -->
-<!-- expand(data, ...) -->
-<!-- crossing(...) -->
-<!-- nesting(...) -->
-
-
-So far in our journey, we've seen how to look at data saved in data frames using the `glimpse()` and `View()` functions in Chapter \@ref(getting-started), and how to create data visualizations using the `ggplot2` package in Chapter \@ref(viz). In particular we studied what we term the "five named graphs" (5NG):
-
-1. scatterplots via `geom_point()`
-1. linegraphs via `geom_line()`
-1. boxplots via `geom_boxplot()`
-1. histograms via `geom_histogram()`
-1. barplots via `geom_bar()` or `geom_col()`
-
-We created these visualizations using the grammar of graphics, which maps variables in a data frame to the aesthetic attributes of one of the 5 `geom`etric objects. We can also control other aesthetic attributes of the geometric objects such as the size and color as seen in the Gapminder data example in Figure \@ref(fig:gapminder). 
-
-Recall however that for two of our visualizations, we first needed to transform/modify existing data frames a little. For example, recall the scatterplot in Figure \@ref(fig:noalpha) of departure and arrival delays *only* for Alaska Airlines flights. In order to create this visualization, we first needed to pare down the `flights` data frame to an `alaska_flights` data frame consisting of only `carrier == "AS"` flights. Thus, `alaska_flights` will have fewer rows than `flights`. We did this using the `filter()` function:
-
-```{r, eval=FALSE}
-alaska_flights <- flights %>% 
-  filter(carrier == "AS")
-```
-
-In this chapter, we'll extend this example and we'll introduce a series of functions from the `dplyr` package for data wrangling that will allow you to take a data frame and "wrangle" it (transform it) to suit your needs. Such functions include:
-
-1. `filter()` a data frame's existing rows to only pick out a subset of them. For example, the `alaska_flights` data frame.
-1. `summarize()` one or more of its columns/variables with a *summary statistic*. Examples of summary statistics include the median and interquartile range of temperatures as we saw in Section \@ref(boxplots) on boxplots. 
-1. `group_by()` its rows. In other words, assign different rows to be part of the same *group*. We can then combine `group_by()` with `summarize()` to report summary statistics for each group *separately*. For example, say you don't want a single overall average departure delay `dep_delay` for all three `origin` airports combined, but rather three separate average departure delays, one computed for each of the three `origin` airports.
-1. `mutate()` its existing columns/variables to create new ones. For example, convert hourly temperature recordings from degrees Fahrenheit to degrees Celsius.
-1. `arrange()` its rows. For example, sort the rows of `weather` in ascending or descending order of `temp`.
-1. `join()` it with another data frame by matching along a "key" variable. In other words, merge these two data frames together.
-
-Notice how we used `computer_code` font to describe the actions we want to take on our data frames. This is because the `dplyr` package for data wrangling has intuitively verb-named functions that are easy to remember. 
-
-There is a further benefit to learning to use the `dplyr` package for data wrangling: its similarity to the database querying language [SQL](https://en.wikipedia.org/wiki/SQL) (pronounced "sequel" or spelled out as "S", "Q", "L"). SQL (which stands for "Structured Query Language") is used to manage large databases quickly and efficiently and is widely used by many institutions with a lot of data. While SQL is a topic left for a book or a course on database management, keep in mind that once you learn `dplyr`, you can learn SQL easily. We'll talk more about their similarities in Subsection \@ref(normal-forms).
-
-Let's load all the packages needed for this chapter (this assumes you've already installed them). If needed, read Section \@ref(packages) for information on how to install and load R packages.
-
-```{r, message=FALSE}
-library(dplyr)
-library(ggplot2)
+Recall from the previous chapter the `dem_score` dataset. Let's load it again
+```{r}
 library(nycflights13)
-```
-
-```{r message=FALSE, warning=FALSE, echo=FALSE, purl=FALSE}
-# Packages needed internally, but not in text.
-library(knitr)
-library(kableExtra)
 library(readr)
-library(stringr)
+dem_score <- read_csv("https://moderndive.com/data/dem_score.csv")
 ```
 
+Again recall the `View()` and `glimpse()` functions  and the `$` from the previous chapter. These were useful tools to explore a new dataset. Let's use these functions to explore the demo_score dataset. 
 
-
-## The pipe operator: `%>%` {#piping}
-
-Before we start data wrangling, let's first introduce a nifty tool that gets loaded with the `dplyr` package: the \index{operators!pipe} pipe operator `%>%`. The pipe operator allows us to combine multiple operations in R into a single sequential *chain* of actions.
-
-Let's start with a hypothetical example. Say you would like to perform a hypothetical sequence of operations on a hypothetical data frame `x` using hypothetical functions `f()`, `g()`, and `h()`:
-
-1. Take `x` *then*
-1. Use `x` as an input to a function `f()` *then*
-1. Use the output of `f(x)` as an input to a function `g()` *then*
-1. Use the output of `g(f(x))` as an input to a function `h()`
-
-One way to achieve this sequence of operations is by using nesting parentheses as follows:
-
-```{r, eval=FALSE}
-h(g(f(x)))
+```{r eval=FALSE}
+View(dem_score)
 ```
 
-This code isn't so hard to read since we are applying only three functions: `f()`, then `g()`, then `h()` and each of the functions is short in its name. Further, each of these functions also only has one argument. However, you can imagine that this will get progressively harder to read as the number of functions applied in your sequence increases and the arguments in each function increase as well. This is where the pipe operator `%>%` comes in handy. `%>%` takes the output of one function and then "pipes" it to be the input of the next function. Furthermore, a helpful trick is to read `%>%` as "then" or "and then." For example, you can obtain the same output as the hypothetical sequence of functions as follows:
+```{r}
+glimpse(dem_score)
 
-```{r, eval=FALSE}
-x %>% 
-  f() %>% 
-  g() %>% 
-  h()
+dem_score$country
 ```
-
-You would read this sequence as:
-
-1. Take `x` *then*
-1. Use this output as the input to the next function `f()` *then*
-1. Use this output as the input to the next function `g()` *then*
-1. Use this output as the input to the next function `h()`
-
-So while both approaches achieve the same goal, the latter is much more human-readable because you can clearly read the sequence of operations line-by-line. But what are the hypothetical `x`, `f()`, `g()`, and `h()`?  Throughout this chapter on data wrangling:
-
-1. The starting value `x` will be a data frame. For example, the \index{R packages!nycflights13} `flights` data frame we explored in Section \@ref(nycflights13).
-1. The sequence of functions, here `f()`, `g()`, and `h()`, will mostly be a sequence of any number of the six data wrangling verb-named functions we listed in the introduction to this chapter. For example, the `filter(carrier == "AS")` function and argument specified we previewed earlier.
-1. The result will be the transformed/modified data frame that you want. In our example, we'll save the result in a new data frame by using the `<-` assignment operator with the name `alaska_flights` via `alaska_flights <-`.
-
-```{r, eval=FALSE}
-alaska_flights <- flights %>% 
-  filter(carrier == "AS")
-```
-
-Much like when adding layers to a `ggplot()` using the `+` sign, you form a single *chain* of data wrangling operations by combining verb-named functions into a single sequence using the pipe operator `%>%`. Furthermore, much like how the `+` sign has to come at the end of lines when constructing plots, the pipe operator `%>%` has to come at the end of lines as well. 
-
-It is worth noting that most dplyr verbs, as well as most functions in the larger tidyverse, achieve this effect by always having their first argument be an input tibble. For example, look at `?filter` to see that, for example, the first argument of `filter()` is a tibble named `.data`. So, we can rewrite the above code snippet as:
-
-```{r, eval=FALSE}
-alaska_flights <- flights %>% 
-  filter(.data = ., carrier == "AS")
-```
-
-The "." serves as special role when using pipes. It represents the tibble which was "passed down" from the previous step in the pipe. Here, we are telling R that "." --- which is `flights` in this case --- is the first argument to `filter()`. Since argument names do not have to be used, we can rewrite this as:
-
-```{r, eval=FALSE}
-alaska_flights <- flights %>% 
-  filter(., carrier == "AS")
-```
-
-You will almost never write code that looks like this, at least with simple dplyr verbs like `filter()`. But, behind the scenes, this is what is going on. And, in more advanced cases, we will need to use "." to refer to the passed-in tibble.
-
-Keep in mind, there are many more advanced data wrangling functions than just the six listed in the introduction to this chapter; you'll see some examples of these in Section \@ref(other-verbs). However, just with these six verb-named functions you'll be able to perform a broad array of data wrangling tasks for the rest of this book.
-
-
-
-## `filter` rows {#filter}
-
-```{r filter, echo=FALSE, fig.cap="Diagram of filter() rows operation.", purl=FALSE}
-knitr::include_graphics("images/cheatsheets/filter.png")
-```
-
-The \index{dplyr!filter} `filter()` function here works much like the "Filter" option in Microsoft Excel; it allows you to specify criteria about the values of a variable in your dataset and then filters out only the rows that match that criteria.
-
-We begin by focusing only on flights from New York City to Portland, Oregon.  The `dest` destination code (or airport code) for Portland, Oregon is `"PDX"`. Run the following and look at the results in RStudio's spreadsheet viewer to ensure that only flights heading to Portland are chosen here:
-
-```{r, eval=FALSE}
-portland_flights <- flights %>% 
-  filter(dest == "PDX")
-View(portland_flights)
-```
-
-Note the order of the code. First, take the `flights` data frame `flights` *then* `filter()` the data frame so that only those where the `dest` equals `"PDX"` are included. We test for equality using the double equal sign \index{operators!==} `==` and not a single equal sign `=`. In other words `filter(dest = "PDX")` will yield an error. This is a convention across many programming languages. If you are new to coding, you'll probably forget to use the double equal sign `==` a few times before you get the hang of it.
-
-You can use other operators \index{operators} beyond just the `==` operator that tests for equality:
-
-- `>` corresponds to "greater than"
-- `<` corresponds to "less than"
-- `>=` corresponds to "greater than or equal to"
-- `<=` corresponds to "less than or equal to"
-- `!=` corresponds to "not equal to." The `!` is used in many programming languages to indicate "not."
-
-Furthermore, you can combine multiple criteria using operators that make comparisons:
-
-- `|` corresponds to "or"
-- `&` corresponds to "and"
-
-To see many of these in action, let's filter `flights` for all rows that departed from JFK *and* were heading to Burlington, Vermont (`"BTV"`) or Seattle, Washington (`"SEA"`) *and* departed in the months of October, November, or December. Run the following:
-
-```{r, eval=FALSE}
-btv_sea_flights_fall <- flights %>% 
-  filter(origin == "JFK" & (dest == "BTV" | dest == "SEA") & month >= 10)
-View(btv_sea_flights_fall)
-```
-
-Note that even though colloquially speaking one might say "all flights leaving Burlington, Vermont *and* Seattle, Washington," in terms of computer operations, we really mean "all flights leaving Burlington, Vermont *or* leaving Seattle, Washington." For a given row in the data, `dest` can be `"BTV"`, or `"SEA"`, or something else, but not both `"BTV"` and `"SEA"` at the same time. Furthermore, note the careful use of parentheses around `dest == "BTV" | dest == "SEA"`.
-
-We can often skip the use of `&` and just separate our conditions with a comma. The previous code will return the identical output `btv_sea_flights_fall` as the following code:
-
-```{r, eval=FALSE}
-btv_sea_flights_fall <- flights %>% 
-  filter(origin == "JFK", (dest == "BTV" | dest == "SEA"), month >= 10)
-View(btv_sea_flights_fall)
-```
-
-Let's present another example that uses the \index{operators!not} `!` "not" operator to pick rows that *don't* match a criteria. As mentioned earlier, the `!` can be read as "not." Here we are filtering rows corresponding to flights that didn't go to Burlington, VT or Seattle, WA.
-
-```{r, eval=FALSE}
-not_BTV_SEA <- flights %>% 
-  filter(!(dest == "BTV" | dest == "SEA"))
-View(not_BTV_SEA)
-```
-
-Again, note the careful use of parentheses around the `(dest == "BTV" | dest == "SEA")`. If we didn't use parentheses as follows:
-
-```{r, eval=FALSE}
-flights %>% filter(!dest == "BTV" | dest == "SEA")
-```
-
-We would be returning all flights not headed to `"BTV"` *or* those headed to `"SEA"`, which is an entirely different resulting data frame. 
-
-Now say we have a larger number of airports we want to filter for, say `"SEA"`, `"SFO"`, `"PDX"`, `"BTV"`, and `"BDL"`. We could continue to use the `|` (*or*) \index{operators!or} operator:
-
-```{r, eval=FALSE}
-many_airports <- flights %>% 
-  filter(dest == "SEA" | dest == "SFO" | dest == "PDX" | 
-         dest == "BTV" | dest == "BDL")
-```
-
-but as we progressively include more airports, this will get unwieldy to write. A slightly shorter approach uses the `%in%` \index{operators!in} operator along with the `c()` function. Recall from Subsection \@ref(programming-concepts) that the `c()` function "combines" or "concatenates" values into a single *vector* of values. \index{vectors}
-
-```{r, eval=FALSE}
-many_airports <- flights %>% 
-  filter(dest %in% c("SEA", "SFO", "PDX", "BTV", "BDL"))
-View(many_airports)
-```
-
-What this code is doing is filtering `flights` for all flights where `dest` is in the vector of airports `c("BTV", "SEA", "PDX", "SFO", "BDL")`. Both outputs of `many_airports` are the same, but as you can see the latter takes much less energy to code. The `%in%` operator is useful for looking for matches commonly in one vector/variable compared to another.
-
-As a final note, we recommend that `filter()` should often be among the first verbs you consider applying to your data. This cleans your dataset to only those rows you care about, or put differently, it narrows down the scope of your data frame to just the observations you care about. 
-
 
 ## `summarize` variables {#summarize}
 
 The next common task when working with data frames is to compute *summary statistics*. \index{summary statistics}Summary statistics are single numerical values that summarize a large number of values. Commonly known examples of summary statistics include the mean (also called the average) and the median (the middle value). Other examples of summary statistics that might not immediately come to mind include the *sum*, the smallest value also called the *minimum*, the largest value also called the *maximum*, and the *standard deviation*. See Appendix \@ref(appendix-stat-terms) for a glossary of such summary statistics.
 
-Let's calculate two summary statistics of the `temp` temperature variable in the `weather` data frame: the mean and standard deviation (recall from Section \@ref(nycflights13) that the `weather` data frame is included in the `nycflights13` package). To compute these summary statistics, we need the `mean()` and `sd()` *summary functions* in R. Summary functions in R take in many values and return a single value, as illustrated in Figure \@ref(fig:summary-function). 
-
-```{r summary-function, echo=FALSE, fig.cap="Diagram illustrating a summary function in R.", purl=FALSE, fig.height=1.5}
-knitr::include_graphics("images/cheatsheets/summary.png")
-options(knitr.kable.NA = 'NA')
+```{r, echo=FALSE, fig.cap="Diagram of summarize() rows."}
+knitr::include_graphics("02-tidyverse/images/summarize1.png")
 ```
 
-More precisely, we'll use the `mean()` and `sd()` summary functions within the `summarize()` \index{dplyr!summarize()} function from the `dplyr` package. Note you can also use the British English spelling of `summarise()`. As shown in Figure \@ref(fig:sum1), the `summarize()` function takes in a data frame and returns a data frame with only one row corresponding to the summary statistics. 
+Let's calculate two summary statistics of the `temp` temperature variable in the `weather` data frame: the mean and standard deviation (recall from Section \@ref(nycflights13) that the `weather` data frame is included in the `nycflights13` package). To compute these summary statistics, we need the `mean()` and `sd()` *summary functions* in R. Summary functions in R take in many values and return a single value.
 
-```{r sum1, echo=FALSE, fig.cap="Diagram of summarize() rows.", out.height="80%", out.width = "80%", purl=FALSE}
-knitr::include_graphics("images/cheatsheets/summarize1.png")
-```
+More precisely, we'll use the `mean()` and `sd()` summary functions within the `summarize()` \index{dplyr!summarize()} function from the **dplyr** package. Note you can also use the British English spelling of `summarise()`. As shown in Figure \@ref(fig:sum1), the `summarize()` function takes in a data frame and returns a data frame with only one row corresponding to the summary statistics. 
+
+<!-- EF: In my opinion, we really do not need two graphics that show the same thing here --> 
 
 We'll save the results in a new data frame called `summary_temp` that will have two columns/variables: the `mean` and the `std_dev`:
 
@@ -261,6 +99,9 @@ Notice how the `na.rm = TRUE` \index{functions!na.rm argument} are used as argum
 
 However, one needs to be cautious whenever ignoring missing values as we've just done. There are possible ramifications of blindly sweeping rows with missing values "under the rug." This is in fact why the `na.rm` argument to any summary statistic function in R is set to `FALSE` by default. In other words, R does not ignore rows with missing values by default. R is alerting you to the presence of missing data and you should be mindful of this missingness and any potential causes of this missingness throughout your analysis.
 
+<!-- EF: I think here might be a good moment to take a slightly longer detour and discuss a few other 
+items like is.na() while thinking about NA values in this section --> 
+
 What are other summary functions we can use inside the `summarize()` verb to compute summary statistics? As seen in the diagram in Figure \@ref(fig:summary-function), you can use any function in R that takes many values and returns just one. Here are just a few:
 
 * `mean()`: the average
@@ -270,454 +111,24 @@ What are other summary functions we can use inside the `summarize()` verb to com
 * `sum()`: the total amount when adding multiple numbers
 * `n()`: a count of the number of rows in each group. This particular summary function will make more sense when `group_by()` is covered in Section \@ref(groupby).
 
-
-
-## `group_by` rows {#groupby}
-
-<!-- To get `_` to work in caption title. Found at https://github.com/rstudio/bookdown/issues/209 -->
-(ref:groupby) Diagram of group_by() and summarize().
-
-```{r groupsummarize, echo=FALSE, fig.cap="(ref:groupby)", purl=FALSE, fig.height=2.5}
-knitr::include_graphics("images/cheatsheets/group_summary.png")
-```
-
-Say instead of a single mean temperature for the whole year, you would like 12 mean temperatures, one for each of the 12 months separately. In other words, we would like to compute the mean temperature split by month. We can do this by "grouping" temperature observations by the values of another variable, in this case by the 12 values of the variable `month`. Run the following code:
-
-```{r}
-summary_monthly_temp <- weather %>% 
-  group_by(month) %>% 
-  summarize(mean = mean(temp, na.rm = TRUE), 
-            std_dev = sd(temp, na.rm = TRUE))
-summary_monthly_temp
-```
-
-This code is identical to the previous code that created `summary_temp`, but with an extra `group_by(month)` added before the `summarize()`. Grouping the `weather` dataset by `month` and then applying the `summarize()` functions yields a data frame that displays the mean and standard deviation temperature split by the 12 months of the year.
-
-It is important to note that the \index{dplyr!group\_by()} `group_by()` function doesn't change data frames by itself. Rather it changes the *meta-data*\index{meta-data}, or data about the data, specifically the grouping structure. It is only after we apply the `summarize()` function that the data frame changes. 
-
-For example, let's consider the \index{ggplot2!diamonds} `diamonds` data frame included in the `ggplot2` package. Run this code:
-
-```{r, eval=TRUE}
-diamonds
-```
-
-Observe that the first line of the output reads `# A tibble: 53,940 x 10`. This is an example of meta-data, in this case the number of observations/rows and variables/columns in `diamonds`. The actual data itself are the subsequent table of values. Now let's pipe the `diamonds` data frame into `group_by(cut)`:
-
-```{r, eval=TRUE}
-diamonds %>% 
-  group_by(cut)
-```
-
-Observe that now there is additional meta-data: `# Groups: cut [5]` indicating that the grouping structure meta-data has been set based on the 5 possible levels of the categorical variable `cut`: `"Fair"`, `"Good"`, `"Very Good"`, `"Premium"`, and `"Ideal"`. On the other hand, observe that the data has not changed: it is still a table of 53,940 $\times$ 10 values.
-
-Only by combining a `group_by()` with another data wrangling operation, in this case `summarize()`, will the data actually be transformed. 
-
-```{r, eval=TRUE}
-diamonds %>% 
-  group_by(cut) %>% 
-  summarize(avg_price = mean(price))
-```
-
-If you would like to remove this grouping structure meta-data, we can pipe the resulting data frame into the \index{dplyr!ungroup()} `ungroup()` function:
-
-```{r, eval=TRUE}
-diamonds %>% 
-  group_by(cut) %>% 
-  ungroup()
-```
-
-Observe how the `# Groups: cut [5]` meta-data is no longer present. 
-
-Let's now revisit the `n()` \index{dplyr!n()} counting summary function we briefly introduced previously. Recall that the `n()` function counts rows. This is opposed to the `sum()` summary function that returns the sum of a numerical variable. For example, suppose we'd like to count how many flights departed each of the three airports in New York City:
-
-```{r, eval=TRUE}
-by_origin <- flights %>% 
-  group_by(origin) %>% 
-  summarize(count = n())
-by_origin
-```
-
-We see that Newark (`"EWR"`) had the most flights departing in 2013 followed by `"JFK"` and lastly by LaGuardia (`"LGA"`). Note there is a subtle but important difference between `sum()` and `n()`; while `sum()` returns the sum of a numerical variable, `n()` returns a count of the number of rows/observations. 
-
-
-### Grouping by more than one variable
-
-You are not limited to grouping by one variable. Say you want to know the number of flights leaving each of the three New York City airports *for each month*. We can also group by a second variable `month` using `group_by(origin, month)`:
-
-```{r}
-by_origin_monthly <- flights %>% 
-  group_by(origin, month) %>% 
-  summarize(count = n())
-by_origin_monthly
-```
-
-Observe that there are 36 rows to `by_origin_monthly` because there are 12 months for 3 airports (`EWR`, `JFK`, and `LGA`). 
-
-Why do we `group_by(origin, month)` and not `group_by(origin)` and then `group_by(month)`? Let's investigate:
-
-```{r}
-by_origin_monthly_incorrect <- flights %>% 
-  group_by(origin) %>% 
-  group_by(month) %>% 
-  summarize(count = n())
-by_origin_monthly_incorrect
-```
-
-What happened here is that the second `group_by(month)` overwrote the grouping structure meta-data of the earlier `group_by(origin)`, so that in the end we are only grouping by `month`. The lesson here is if you want to `group_by()` two or more variables, you should include all the variables at the same time in the same `group_by()` adding a comma between the variable names.
-
-
-
-
-## `mutate` existing variables {#mutate}
-
-```{r select, echo=FALSE, fig.cap="Diagram of mutate() columns.", out.height='80%', out.width='80%', purl=FALSE}
-knitr::include_graphics("images/cheatsheets/mutate.png")
-```
-
-Another common transformation of data is to create/compute new variables based on existing ones. For example, say you are more comfortable thinking of temperature in degrees Celsius (&deg;C) instead of degrees Fahrenheit (&deg;F). The formula to convert temperatures from &deg;F to &deg;C is
-
-$$
-\text{temp in C} = \frac{\text{temp in F} - 32}{1.8}
-$$
-
-We can apply this formula to the `temp` variable using the `mutate()` \index{dplyr!mutate()} function from the `dplyr` package, which takes existing variables and mutates them to create new ones. 
-
-```{r, eval=TRUE}
-weather <- weather %>% 
-  mutate(temp_in_C = (temp - 32) / 1.8)
-```
-
-In this code, we `mutate()` the `weather` data frame by creating a new variable `temp_in_C = (temp - 32) / 1.8` and then *overwrite* the original `weather` data frame. Why did we overwrite the data frame `weather`, instead of assigning the result to a new data frame like `weather_new`? As a rough rule of thumb, as long as you are not losing original information that you might need later, it's acceptable practice to overwrite existing data frames with updated ones, as we did here. On the other hand, why did we not overwrite the variable `temp`, but instead created a new variable called `temp_in_C`?  Because if we did this, we would have erased the original information contained in `temp` of temperatures in Fahrenheit that may still be valuable to us.
-
-Let's now compute monthly average temperatures in both &deg;F and &deg;C using the `group_by()` and `summarize()` code we saw in Section \@ref(groupby):
-
-```{r}
-summary_monthly_temp <- weather %>% 
-  group_by(month) %>% 
-  summarize(mean_temp_in_F = mean(temp, na.rm = TRUE), 
-            mean_temp_in_C = mean(temp_in_C, na.rm = TRUE))
-summary_monthly_temp
-```
-
-Let's consider another example. Passengers are often frustrated when their flight departs late, but aren't as annoyed if, in the end, pilots can make up some time during the flight.  This is known in the airline industry as _gain_, and we will create this variable using the `mutate()` function:
-
-```{r}
-flights <- flights %>% 
-  mutate(gain = dep_delay - arr_delay)
-```
-
-Let's take a look at only the `dep_delay`, `arr_delay`, and the resulting `gain` variables for the first 5 rows in our updated `flights` data frame in Table \@ref(tab:first-five-flights).
-
-```{r first-five-flights, echo=FALSE}
-flights %>% 
-  select(dep_delay, arr_delay, gain) %>% 
-  slice(1:5) %>% 
-  kable(
-    caption = "First five rows of departure/arrival delay and gain variables"
-    ) %>% 
-  kable_styling(position = "center", latex_options = "hold_position")
-```
-
-The flight in the first row departed 2 minutes late but arrived 11 minutes late, so its "gained time in the air" is a loss of 9 minutes, hence its `gain` is 2 - 11 = -9. On the other hand, the flight in the fourth row departed a minute early (`dep_delay` of -1) but arrived 18 minutes early (`arr_delay` of -18), so its "gained time in the air" is $-1 - (-18) = -1 + 18 = 17$ minutes, hence its `gain` is +17.
-
 Let's look at some summary statistics of the `gain` variable by considering multiple summary functions at once in the same `summarize()` code:
 
 ```{r}
-gain_summary <- flights %>% 
-  summarize(
-    min = min(gain, na.rm = TRUE),
-    q1 = quantile(gain, 0.25, na.rm = TRUE),
-    median = quantile(gain, 0.5, na.rm = TRUE),
-    q3 = quantile(gain, 0.75, na.rm = TRUE),
-    max = max(gain, na.rm = TRUE),
-    mean = mean(gain, na.rm = TRUE),
-    sd = sd(gain, na.rm = TRUE),
-    missing = sum(is.na(gain))
-  )
-gain_summary
+# gain_summary <- flights %>% 
+#   summarize(
+#     min = min(gain, na.rm = TRUE),
+#     q1 = quantile(gain, 0.25, na.rm = TRUE),
+#     median = quantile(gain, 0.5, na.rm = TRUE),
+#     q3 = quantile(gain, 0.75, na.rm = TRUE),
+#     max = max(gain, na.rm = TRUE),
+#     mean = mean(gain, na.rm = TRUE),
+#     sd = sd(gain, na.rm = TRUE),
+#     missing = sum(is.na(gain))
+#   )
+# gain_summary
 ```
 
 We see for example that the average gain is +5 minutes, while the largest is +109 minutes! However, this code would take some time to type out in practice. We'll see later on in Subsection \@ref(model1EDA) that there is a much more succinct way to compute a variety of common summary statistics: using the `skim()` function from the `skimr` package.
-
-Recall from Section \@ref(histograms) that since `gain` is a numerical variable, we can visualize its distribution using a histogram.  
-
-```{r gain-hist, message=FALSE, fig.cap="Histogram of gain variable.", fig.height=3}
-ggplot(data = flights, mapping = aes(x = gain)) +
-  geom_histogram(color = "white", bins = 20)
-```
-
-The resulting histogram in Figure \@ref(fig:gain-hist) provides a different perspective on the `gain` variable than the summary statistics we computed earlier. For example, note that most values of `gain` are right around 0. 
-
-To close out our discussion on the `mutate()` function to create new variables, note that we can create multiple new variables at once in the same `mutate()` code. Furthermore, within the same `mutate()` code we can refer to new variables we just created. As an example, consider the `mutate()` code Hadley Wickham \index{Wickham, Hadley} and Garrett Grolemund \index{Grolemund, Garrett} show in Chapter 5 of *R for Data Science* [@rds2016]:
-
-```{r}
-flights <- flights %>% 
-  mutate(
-    gain = dep_delay - arr_delay,
-    hours = air_time / 60,
-    gain_per_hour = gain / hours
-  )
-```
-
-## `arrange` and sort rows {#arrange}
-
-One of the most commonly performed data wrangling tasks is to sort a data frame's rows in the alphanumeric order of one of the variables. The `dplyr` package's `arrange()` function \index{dplyr!arrange()} allows us to sort/reorder a data frame's rows according to the values of the specified variable.
-
-Suppose we are interested in determining the most frequent destination airports for all domestic flights departing from New York City in 2013:
-
-```{r, eval}
-freq_dest <- flights %>% 
-  group_by(dest) %>% 
-  summarize(num_flights = n())
-freq_dest
-```
-
-Observe that by default the rows of the resulting `freq_dest` data frame are sorted in alphabetical order of `dest`ination. Say instead we would like to see the same data, but sorted from the most to the least number of flights (`num_flights`) instead:
-
-```{r}
-freq_dest %>% 
-  arrange(num_flights)
-```
-
-This is, however, the opposite of what we want. The rows are sorted with the least frequent destination airports displayed first. This is because `arrange()` always returns rows sorted in ascending order by default. To switch the ordering to be in "descending" order instead, we use the `desc()` \index{dplyr!desc()} function as so:
-
-```{r}
-freq_dest %>% 
-  arrange(desc(num_flights))
-```
-
-
-## Factors
-
-We've spent a lot of time working with big, beautiful data frames, like the Gapminder data. But we also need to manage the individual variables housed within.
-
-Factors are the variable type that useRs love to hate. It is how we store truly categorical information in R. The values a factor can take on are called the **levels**. For example, the levels of the factor `continent` in Gapminder are are "Africa", "Americas", etc. and this is what's usually presented to your eyeballs by R. In general, the levels are friendly human-readable character strings, like "male/female" and "control/treated". But *never ever ever* forget that, under the hood, R is really storing integer codes 1, 2, 3, etc.
-
-This [Janus][wiki-janus]-like nature of factors means they are rich with booby traps for the unsuspecting but they are a necessary evil. I recommend you learn how to be the boss of your factors. The pros far outweigh the cons. Specifically in modelling and figure-making, factors are anticipated and accommodated by the functions and packages you will want to exploit.
-
-**The worst kind of factor is the stealth factor.** The variable that you think of as character, but that is actually a factor (numeric!!). This is a classic R gotcha. Check your variable types explicitly when things seem weird. It happens to the best of us.
-
-Where do stealth factors come from? Base R has a burning desire to turn character information into factor. The happens most commonly at data import via `read.table()` and friends. But `data.frame()` and other functions are also eager to convert character to factor. To shut this down, use `stringsAsFactors = FALSE` in `read.table()` and `data.frame()` or -- even better -- **use the tidyverse**! For data import, use `readr::read_csv()`, `readr::read_tsv()`, etc. For data frame creation, use `tibble::tibble()`. And so on.
-
-Good articles about how the factor fiasco came to be:
-
-* [stringsAsFactors: An unauthorized biography][bio-strings-as-factors] by Roger Peng
-* [stringsAsFactors = \<sigh\>][blog-strings-as-factors] by Thomas Lumley
-
-### The **forcats** package
-
-[forcats][forcats-web] is a core package in the tidyverse. It is installed via `install.packages("tidyverse")`, and loaded with `library(tidyverse)`. You can also install via `install.packages("forcats")`and load it yourself separately as needed via `library(forcats)`. Main functions start with `fct_`. There really is no coherent family of base functions that forcats replaces -- that's why it's such a welcome addition.
-
-Load tidyverse (which include forcats) and gapminder.
-
-```{r message = FALSE, warning = FALSE}
-library(tidyverse)
-library(gapminder)
-```
-
-Get to know your factor before you start touching it! It's polite. Let's use `gapminder$continent` as our example.
-
-```{r}
-str(gapminder$continent)
-levels(gapminder$continent)
-nlevels(gapminder$continent)
-class(gapminder$continent)
-```
-
-To get a frequency table as a tibble, from a tibble, use `dplyr::count()`. To get similar from a free-range factor, use `forcats::fct_count()`.
-
-```{r}
-gapminder %>% 
-  count(continent)
-fct_count(gapminder$continent)
-```
-
-### Dropping unused levels
-
-Just because you drop all the rows corresponding to a specific factor level, the levels of the factor itself do not change. Sometimes all these unused levels can come back to haunt you later, e.g., in figure legends.
-
-Watch what happens to the levels of `country` (= nothing) when we filter Gapminder to a handful of countries.
-
-```{r}
-nlevels(gapminder$country)
-h_countries <- c("Egypt", "Haiti", "Romania", "Thailand", "Venezuela")
-h_gap <- gapminder %>%
-  filter(country %in% h_countries)
-nlevels(h_gap$country)
-```
-
-Even though `h_gap` only has data for a handful of countries, we are still schlepping around all `r nlevels(gapminder$country)` levels from the original `gapminder` tibble.
-
-How can you get rid of them? The base function `droplevels()` operates on all the factors in a data frame or on a single factor. The function `forcats::fct_drop()` operates on a factor.
-
-```{r}
-h_gap_dropped <- h_gap %>% 
-  droplevels()
-nlevels(h_gap_dropped$country)
-
-# Use forcats::fct_drop() on a free-range factor
-
-h_gap$country %>%
-  fct_drop() %>%
-  levels()
-```
-
-
-
-### Change order of the levels, principled {#reorder-factors}
-
-By default, factor levels are ordered alphabetically. Which might as well be random, when you think about it! It is preferable to order the levels according to some principle:
-
-* Frequency. Make the most common level the first and so on.
-* Another variable. Order factor levels according to a summary statistic for another variable. __Example:__ order Gapminder countries by life expectancy.
-
-First, let's order continent by frequency, forwards and backwards. This is often a great idea for tables and figures, esp. frequency barplots.
-
-```{r}
-# Default order is alphabetical
-
-gapminder$continent %>%
-  levels()
-
-# Order by frequency
-
-gapminder$continent %>% 
-  fct_infreq() %>%
-  levels()
-
-# Backwards!
-
-gapminder$continent %>% 
-  fct_infreq() %>%
-  fct_rev() %>% 
-  levels()
-```
-
-These two barcharts of frequency by continent differ only in the order of the continents. Which do you prefer?
-
-```{r, fig.show = 'hold', out.width = '49%', echo = FALSE}
-p <- ggplot(gapminder, aes(x = continent)) +
-  geom_bar() +
-  coord_flip()
-p
-
-gap_tmp <- gapminder %>% 
-  mutate(continent = continent %>% fct_infreq() %>% fct_rev())
-
-p <- ggplot(gap_tmp, aes(x = continent)) +
-  geom_bar() +
-  coord_flip()
-p
-```
-
-Now we order `country` by another variable, forwards and backwards. This other variable is usually quantitative and you will order the factor according to a grouped summary. The factor is the grouping variable and the default summarizing function is `median()` but you can specify something else.
-
-```{r}
-# Order countries by median life expectancy
-
-fct_reorder(gapminder$country, gapminder$lifeExp) %>% 
-  levels() %>% head()
-
-# Order accoring to minimum life exp instead of median
-
-fct_reorder(gapminder$country, gapminder$lifeExp, min) %>% 
-  levels() %>% head()
-
-# Backwards!
-
-fct_reorder(gapminder$country, gapminder$lifeExp, .desc = TRUE) %>% 
-  levels() %>% head()
-```
-
-Example of why we reorder factor levels: often makes plots much better! When a factor is mapped to x or y, it should almost always be reordered by the quantitative variable you are mapping to the other one.
-
-```{r include = FALSE, eval = FALSE}
-boxplot(Sepal.Width ~ Species, data = iris)
-boxplot(Sepal.Width ~ fct_reorder(Species, Sepal.Width), data = iris)
-boxplot(Sepal.Width ~ fct_reorder(Species, Sepal.Width, .desc = TRUE), data = iris)
-```
-
-Compare the interpretability of these two plots of life expectancy in Asian countries in 2007. The *only difference* is the order of the `country` factor. Which one do you find easier to learn from?
-
-```{r alpha-order-silly, fig.show = 'hold', out.width = '49%'}
-gap_asia_2007 <- gapminder %>% filter(year == 2007, continent == "Asia")
-ggplot(gap_asia_2007, aes(x = lifeExp, y = country)) + geom_point()
-ggplot(gap_asia_2007, aes(x = lifeExp, y = fct_reorder(country, lifeExp))) +
-  geom_point()
-```
-
-Use `fct_reorder2()` when you have a line chart of a quantitative x against another quantitative y and your factor provides the color. This way the legend appears in some order as the data! Contrast the legend on the left with the one on the right.
-
-```{r legends-made-for-humans, fig.show = 'hold', out.width = '49%'}
-h_countries <- c("Egypt", "Haiti", "Romania", "Thailand", "Venezuela")
-h_gap <- gapminder %>%
-  filter(country %in% h_countries) %>% 
-  droplevels()
-ggplot(h_gap, aes(x = year, y = lifeExp, color = country)) +
-  geom_line()
-ggplot(h_gap, aes(x = year, y = lifeExp,
-                  color = fct_reorder2(country, year, lifeExp))) +
-  geom_line() +
-  labs(color = "country")
-```
-
-### Change order of the levels, "because I said so"
-
-Sometimes you just want to hoist one or more levels to the front. Why? Because I said so. This resembles what we do when we move variables to the front with `dplyr::select(special_var, everything())`.
-
-```{r}
-h_gap$country %>% levels()
-h_gap$country %>% fct_relevel("Romania", "Haiti") %>% levels()
-```
-
-This might be useful if you are preparing a report for, say, the Romanian government. The reason for always putting Romania first has nothing to do with the *data*, it is important for external reasons and you need a way to express this.
-
-### Recode the levels
-
-Sometimes you have better ideas about what certain levels should be. This is called recoding.
-
-```{r}
-i_gap <- gapminder %>% 
-  filter(country %in% c("United States", "Sweden", "Australia")) %>% 
-  droplevels()
-i_gap$country %>% levels()
-i_gap$country %>%
-  fct_recode("USA" = "United States", "Oz" = "Australia") %>% levels()
-```
-
-
-### Grow a factor
-
-Let's create two data frames, each with data from two countries, dropping unused factor levels.
-
-```{r}
-df1 <- gapminder %>%
-  filter(country %in% c("United States", "Mexico"), year > 2000) %>%
-  droplevels()
-df2 <- gapminder %>%
-  filter(country %in% c("France", "Germany"), year > 2000) %>%
-  droplevels()
-```
-
-The `country` factors in `df1` and `df2` have different levels.
-
-```{r}
-levels(df1$country)
-levels(df2$country)
-```
-
-Can you just combine them?
-
-```{r}
-c(df1$country, df2$country)
-```
-
-Umm, no. That is wrong on many levels! Use `fct_c()` to do this.
-
-```{r}
-fct_c(df1$country, df2$country)
-```
-
 
 ## Character Vectors
 
@@ -728,6 +139,9 @@ But real life will be much nastier. You will bring data into R from the outside 
 * [Stack Exchange outage][stackexchange-outage]
 * [Regexes to validate/match email addresses][email-regex]
 * [Fixing an Atom bug][fix-atom-bug]
+
+<!-- EF: Here I might make the distinction between strings and characters a little bit
+clearer because that is a pretty important basic CS principle -->
 
 Here we discuss common remedial tasks for cleaning and transforming character data, also known as "strings". A data frame or tibble will consist of one or more *atomic vectors* of a certain class. This lesson deals with things you can do with vectors of class `character`.
 
@@ -746,7 +160,7 @@ Here are some resources:
 
 ### Regular expressions resources
 
-A God-awful and powerful language for expressing patterns to match in text or for search-and-replace. Frequently described as "write only", because regular expressions are easier to write than to read/understand. And they are not particularly easy to write.
+A God-awful and powerful language for expressing patterns to match in text or for search-and-replace. Frequently described as "write only", because regular expressions (or regex) are easier to write than to read/understand. And they are not particularly easy to write.
 
 * We again prefer the [stringr package][stringr-cran] over base functions. Why?
   - Wraps [stringi][stringi-cran], which is a great place to look if stringr isn't powerful enough.
@@ -805,6 +219,8 @@ str_detect(fruit, pattern = "fruit")
 ```
 
 What's the easiest way to get the actual fruits that match? Use `str_subset()` to keep only the matching elements. Note we are storing this new vector `my_fruit` to use in later examples!
+
+<!-- EF: A little bit confused here. Why are there two layers of parentheses here? -->
 
 ```{r}
 (my_fruit <- str_subset(fruit, pattern = "fruit"))
@@ -927,181 +343,6 @@ tibble(melons) %>%
 
 And that concludes our treatment of regex-free manipulations of character data!
 
-### Regular expressions with stringr
-
-```{r echo = FALSE, fig.cap = "From [\\@ThePracticalDev](https://twitter.com/ThePracticalDev/status/774309983467016193)", out.width = "50%"}
-knitr::include_graphics("images/regexp.jpg")
-```
-
-The country names in the `gapminder` dataset are convenient for examples. Load it now and store the `r nlevels(gapminder::gapminder$country)` unique country names in the object `countries`.
-
-```{r}
-library(gapminder)
-countries <- levels(gapminder$country)
-```
-
-### Characters with special meaning
-
-Frequently your string tasks cannot be expressed in terms of a fixed string, but can be described in terms of a **pattern**. Regular expressions, aka "regexes", are the standard way to specify these patterns. In regexes, specific characters and constructs take on special meaning in order to match multiple strings.
-
-The first metacharacter is the period `.`, which stands for any single character, except a newline (which by the way, is represented by `\n`). The regex `a.b` will match all countries that have an `a`, followed by any single character, followed by `b`. Yes, regexes are case sensitive, i.e. "Italy" does not match.
-
-```{r}
-str_subset(countries, pattern = "i.a")
-```
-
-Notice that `i.a` matches "ina", "ica", "ita", and more.
-
-**Anchors** can be included to express where the expression must occur within the string. The `^` indicates the beginning of string and `$` indicates the end.
-
-Note how the regex `i.a$` matches many fewer countries than `i.a` alone. Likewise, more elements of `my_fruit` match `d` than `^d`, which requires "d" at string start.
-
-```{r}
-str_subset(countries, pattern = "i.a$")
-str_subset(my_fruit, pattern = "d")
-str_subset(my_fruit, pattern = "^d")
-```
-
-The metacharacter `\b` indicates a **word boundary** and `\B` indicates NOT a word boundary. This is our first encounter with something called "escaping" and right now I just want you at accept that we need to prepend a second backslash to use these sequences in regexes in R. We'll come back to this tedious point later.
-
-```{r}
-str_subset(fruit, pattern = "melon")
-str_subset(fruit, pattern = "\\bmelon")
-str_subset(fruit, pattern = "\\Bmelon")
-```
-
-### Character classes
-
-Characters can be specified via classes. You can make them explicitly "by hand" or use some pre-existing ones.  Character classes are usually given inside square brackets, `[]` but a few come up so often that we have a metacharacter for them, such as `\d` for a single digit.
-
-Here we match `ia` at the end of the country name, preceded by one of the characters in the class. Or, in the negated class, preceded by anything but one of those characters.
-
-```{r}
-# Make a class "by hand"
-
-str_subset(countries, pattern = "[nls]ia$")
-
-# Use ^ to negate the class
-
-str_subset(countries, pattern = "[^nls]ia$")
-```
-
-Here we revisit splitting `my_fruit` with two more general ways to match whitespace: the `\s` metacharacter and the POSIX class `[:space:]`. Notice that we must prepend an extra backslash `\` to escape `\s` and the POSIX class has to be surrounded by two sets of square brackets.
-
-```{r}
-# Remember this?
-# str_split_fixed(fruit, pattern = " ", n = 2)
-# Alternatives:
-
-str_split_fixed(my_fruit, pattern = "\\s", n = 2)
-str_split_fixed(my_fruit, pattern = "[[:space:]]", n = 2)
-```
-
-Let's see the country names that contain punctuation.
-
-```{r}
-str_subset(countries, "[[:punct:]]")
-```
-
-### Quantifiers
-
-You can decorate characters (and other constructs, like metacharacters and classes) with information about how many characters they are allowed to match.
-
-| quantifier | meaning   | quantifier | meaning                    |
-|------------|-----------|------------|----------------------------|
-| *          | 0 or more | {n}        | exactly n                  |
-| +          | 1 or more | {n,}       | at least n                 |
-| ?          | 0 or 1    | {,m}       | at most m                  |
-|            |           | {n,m}      | between n and m, inclusive |
-
-Explore these by inspecting matches for `l` followed by `e`, allowing for various numbers of characters in between.
-
-`l.*e` will match strings with 0 or more characters in between, i.e. any string with an `l` eventually followed by an `e`. This is the most inclusive regex for this example, so we store the result as `matches` to use as a baseline for comparison.
-
-```{r}
-(matches <- str_subset(fruit, pattern = "l.*e"))
-```
-
-Change the quantifier from `*` to `+` to require at least one intervening character. The strings that no longer match: all have a literal `le` with no preceding `l` and no following `e`.
-
-```{r}
-list(match = intersect(matches, str_subset(fruit, pattern = "l.+e")),
-     no_match = setdiff(matches, str_subset(fruit, pattern = "l.+e")))
-```
-
-Change the quantifier from `*` to `?` to require at most one intervening character. In the strings that no longer match, the shortest gap between `l` and following `e` is at least two characters.
-
-```{r}
-list(match = intersect(matches, str_subset(fruit, pattern = "l.?e")),
-     no_match = setdiff(matches, str_subset(fruit, pattern = "l.?e")))
-```
-
-Finally, we remove the quantifier and allow for no intervening characters. The strings that no longer match lack a literal `le`.
-
-```{r}
-list(match = intersect(matches, str_subset(fruit, pattern = "le")),
-     no_match = setdiff(matches, str_subset(fruit, pattern = "le")))
-```
-
-### Escaping
-
-You've probably caught on by now that there are certain characters with special meaning in regexes, including `$ * + . ? [ ] ^ { } | ( ) \`.
-
-What if you really need the plus sign to be a literal plus sign and not a regex quantifier? You will need to *escape* it by prepending a backslash. But wait ... there's more! Before a regex is interpreted as a regular expression, it is also interpreted by R as a string. And backslash is used to escape there as well. So, in the end, you need to preprend two backslashes in order to match a literal plus sign in a regex.
-
-This will be more clear with examples!
-
-#### Escapes in plain old strings
-
-Here is routine, non-regex use of backslash `\` escapes in plain vanilla R strings. We intentionally use `cat()` instead of `print()` here.
-
-* To escape quotes inside quotes:
-    ```{r}
-    cat("Do you use \"airquotes\" much?")
-    ```
-    Sidebar: eliminating the need for these escapes is exactly why people use double quotes inside single quotes and *vice versa*.    
-    
-* To insert newline (`\n`) or tab (`\t`):
-    ```{r}
-    cat("before the newline\nafter the newline")
-    cat("before the tab\tafter the tab")
-    ```
-
-#### Escapes in regular expressions
-
-Examples of using escapes in regexes to match characters that would otherwise have a special interpretation.
-
-We know several `gapminder` country names contain a period. How do we isolate them? Although it's tempting, this command `str_subset(countries, pattern = ".")` won't work!
-
-```{r}
-# Cheating using a POSIX class ;)
-
-str_subset(countries, pattern = "[[:punct:]]")
-
-# Using two backslashes to escape the period
-
-str_subset(countries, pattern = "\\.")
-```
-
-A last example that matches an actual square bracket.
-
-```{r end_char_vectors}
-(x <- c("whatever", "X is distributed U[0,1]"))
-str_subset(x, pattern = "\\[")
-```
-
-### Groups and backreferences
-
-Your first use of regex is likely to be simple matching: detecting or isolating strings that match a pattern.
-
-But soon you will want to use regexes to transform the strings in character vectors. That means you need a way to address specific parts of the matching strings and to operate on them.
-
-You can use parentheses inside regexes to define *groups* and you can refer to those groups later with *backreferences*.
-
-For now, this lesson will refer you to other place to read up on this:
-
-* STAT 545 [2014 Intro to regular expressions](#oldies) by TA Gloria Li (Appendix \@ref(oldies)).
-* The [Strings chapter][r4ds-strings] of [R for Data Science][r4ds] [@wickham2016].
 
 ## Combining Data
 
@@ -1119,9 +360,9 @@ A variety of row- and column-wise operations fit into this framework, which impl
 
 Let's explore each type of operation with a few examples.
 
-### Bind
+## Bind
 
-#### Row binding
+### Row binding
 
 We used word count data from the Lord of the Rings trilogy to explore the concept of tidy data. That kicked off with a quiet, successful row bind. Let's revisit that.
 
@@ -1437,6 +678,10 @@ make_three_gt(pub_gt, super_gt, ijps_gt, super_first = FALSE)
 ```
 
 
+<!-- EF: Maybe instead of reiterating the types of joins each time, a section for 
+both directions of each join would be a little less disjoint. Here, the definition
+of each join is repeated twice, which seems unnecessary and could lead to confusion -->
+
 #### `semi_join(publishers, superheroes)`
 
 > `semi_join(x, y)`: Return all rows from `x` where there are matching values in `y`, keeping just columns from `x`. A semi join differs from an inner join because an inner join will return one row of `x` for each matching row of `y`, where a semi join will never duplicate rows of `x`. This is a filtering join.
@@ -1525,8 +770,8 @@ Note that the values in the variable `carrier` in the `flights` data frame match
 
 (ref:relationships-nycflights13) Data relationships in nycflights13 from *R for Data Science*.
 
-```{r reldiagram, echo=FALSE, fig.cap="(ref:relationships-nycflights13)", purl=FALSE, out.height="120%"}
-knitr::include_graphics("images/r4ds/relational-nycflights.png")
+```{r, echo=FALSE, fig.cap="Relationships among nycflights tables"}
+knitr::include_graphics("02-tidyverse/images/relational-nycflights.png")
 ```
 
 ### Matching "key" variable names
@@ -1542,12 +787,16 @@ View(flights_joined)
 
 Observe that the `flights` and `flights_joined` data frames are identical except that `flights_joined` has an additional variable `name`. The values of `name` correspond to the airline companies' names as indicated in the `airlines` data frame. 
 
+<!-- EF: This seems somewhat out of place (just these few lines below) since the
+joins are described in the section above with the superhero examples. Additionally,
+within the superhero examples there was no mention of right_join() or outer_join. -->
+
 A visual representation of the `inner_join()` is shown in Figure \@ref(fig:ijdiagram) [@rds2016]. There are other types of joins available (such as `left_join()`, `right_join()`, `outer_join()`, and `anti_join()`), but the `inner_join()` will solve nearly all of the problems you'll encounter in this book.
 
 (ref:inner-join-r4ds) Diagram of inner join from *R for Data Science*.
 
-```{r ijdiagram, echo=FALSE, fig.cap="(ref:inner-join-r4ds)", purl=FALSE, out.height="120%"}
-knitr::include_graphics("images/r4ds/join-inner.png")
+```{r, echo=FALSE, fig.cap="Inner join."}
+knitr::include_graphics("02-tidyverse/images/join-inner.png")
 ```
 
 
@@ -1598,6 +847,8 @@ flights_weather_joined <- flights %>%
 View(flights_weather_joined)
 ```
 
+<!-- EF: it would probably be useful here to show what happens when you miss one
+of there variables (or when you have variables in each dataset with the same name) --> 
 
 
 ### Normal forms {#normal-forms}
@@ -1616,132 +867,7 @@ We are capable of performing this join because each of the data frames have _key
 
 This is an important property of what's known as *normal forms* of data.  The process of decomposing data frames into less redundant tables without losing information is called *normalization*.  More information is available on [Wikipedia](https://en.wikipedia.org/wiki/Database_normalization).
 
-Both `dplyr` and [SQL](https://en.wikipedia.org/wiki/SQL) we mentioned in the introduction of this chapter use such *normal forms*. Given that they share such commonalities, once you learn either of these two tools, you can learn the other very easily. 
-
-
-
-## Other Verbs {#other-verbs}
-
-<!-- DDK: Could add stuff here. -->
-
-Here are some other useful data wrangling verbs:
-
-* `select()` only a subset of variables/columns.  
-* `rename()` variables/columns to have new names.  
-* Return only the `top_n()` values of a variable.  
-* `slice()` and `pull()` specific rows and columns.  
-
-### `select` variables {#select}
-
-```{r selectfig, echo=FALSE, fig.cap="Diagram of select() columns.", purl=FALSE}
-knitr::include_graphics("images/cheatsheets/select.png")
-```
-
-We've seen that the `flights` data frame in the `nycflights13` package contains 19 different variables. You can identify the names of these 19 variables by running the `glimpse()` function from the `dplyr` package:
-
-```{r, eval=FALSE}
-glimpse(flights)
-```
-
-However, say you only need two of these 19 variables, say `carrier` and `flight`. You can `select()` \index{dplyr!select()} these two variables:
-
-```{r, eval=FALSE}
-flights %>% 
-  select(carrier, flight)
-```
-
-This function makes it easier to explore large datasets since it allows us to limit the scope to only those variables we care most about. For example, if we `select()` only a smaller number of variables as is shown in Figure \@ref(fig:selectfig), it will make viewing the dataset in RStudio's spreadsheet viewer more digestible.
-
-Let's say instead you want to drop, or de-select, certain variables. For example, consider the variable `year` in the `flights` data frame. This variable isn't quite a "variable" because it is always `2013` and hence doesn't change. Say you want to remove this variable from the data frame. We can deselect `year` by using the `-` sign:
-
-```{r, eval=FALSE}
-flights_no_year <- flights %>% select(-year)
-```
-
-Another way of selecting columns/variables is by specifying a range of columns:
-
-```{r, eval=FALSE}
-flight_arr_times <- flights %>% select(month:day, arr_time:sched_arr_time)
-flight_arr_times
-```
-
-This will `select()` all columns between `month` and `day`, as well as between `arr_time` and `sched_arr_time`, and drop the rest. 
-
-The `select()` function can also be used to reorder columns when used with the `everything()` helper function.  For example, suppose we want the `hour`, `minute`, and `time_hour` variables to appear immediately after the `year`, `month`, and `day` variables, while not discarding the rest of the variables. In the following code, `everything()` will pick up all remaining variables: 
-
-```{r, eval=FALSE}
-flights_reorder <- flights %>% 
-  select(year, month, day, hour, minute, time_hour, everything())
-glimpse(flights_reorder)
-```
-
-Lastly, the helper functions `starts_with()`, `ends_with()`, and `contains()` can be used to select variables/columns that match those conditions. As examples,
-
-```{r, eval=FALSE}
-flights %>% select(starts_with("a"))
-flights %>% select(ends_with("delay"))
-flights %>% select(contains("time"))
-```
-
-### `rename` variables {#rename}
-
-Another useful function is \index{dplyr!rename()} `rename()`, which as you may have guessed changes the name of variables. Suppose we want to only focus on `dep_time` and `arr_time` and change `dep_time` and `arr_time` to be `departure_time` and `arrival_time` instead in the `flights_time` data frame:
-
-```{r, eval=FALSE}
-flights_time_new <- flights %>% 
-  select(dep_time, arr_time) %>% 
-  rename(departure_time = dep_time, arrival_time = arr_time)
-glimpse(flights_time_new)
-```
-
-Note that in this case we used a single `=` sign within the `rename()`. For example, `departure_time = dep_time` renames the `dep_time` variable to have the new name `departure_time`. This is because we are not testing for equality like we would using `==`. Instead we want to assign a new variable `departure_time` to have the same values as `dep_time` and then delete the variable `dep_time`. Note that new `dplyr` users often forget that the new variable name comes before the equal sign. <!-- We usually remember this as "New Before, Old After" or NBOA. -->
-
-### `top_n` values of a variable
-
-We can also return the top `n` values of a variable using the `top_n()` \index{dplyr!top\_n()} function. For example, we can return a data frame of the top 10 destination airports using the example from Subsection \@ref(diff-key). Observe that we set the number of values to return to `n = 10` and `wt = num_flights` to indicate that we want the rows corresponding to the top 10 values of `num_flights`. See the help file for `top_n()` by running `?top_n` for more information. 
-
-```{r, eval=FALSE}
-named_dests %>% top_n(n = 10, wt = num_flights)
-```
-
-Let's further `arrange()` these results in descending order of `num_flights`:
-
-```{r, eval=FALSE}
-named_dests  %>% 
-  top_n(n = 10, wt = num_flights) %>% 
-  arrange(desc(num_flights))
-```
-
-### `slice` and `pull` and `[]`
-
-Using `slice()` gives us specific rows from the `flights` tibble:
-
-```{r}
-slice(flights, 2:5)
-```
-
-`pull()` grabs out a variable as a vector, rather than leaving it within a tibble, as `select()` does:
-
-```{r}
-slice(flights, 2:5) %>% 
-  pull(dep_time)
-```
-
-This is often handy when you want to feed the data into a function, like `mean()` which requires a vector as input:
-
-```{r}
-slice(flights, 2:5) %>% 
-  pull(dep_time) %>% 
-  mean()
-```
-
-The most common way to subset vectors is to use the "bracket" operator `[]`. Example:
-
-```{r}
-flights$dep_time[2:5]
-```
-
-
+Both **dplyr** and [SQL](https://en.wikipedia.org/wiki/SQL) we mentioned in the introduction of this chapter use such *normal forms*. Given that they share such commonalities, once you learn either of these two tools, you can learn the other very easily. 
 
 ## Conclusion
 
@@ -1749,59 +875,36 @@ flights$dep_time[2:5]
 
 Let's recap our data wrangling verbs in Table \@ref(tab:wrangle-summary-table). Using these verbs and the pipe `%>%` operator from Section \@ref(piping), you'll be able to write easily legible code to perform almost all the data wrangling and data transformation necessary for the rest of this book. 
 
-```{r wrangle-summary-table, echo=FALSE, message=FALSE}
+<!--EF: Variables in this section needs to be renamed --> 
+
+```{r, echo=FALSE, message=FALSE}
 # The following Google Doc is published to CSV and loaded using read_csv():
 # https://docs.google.com/spreadsheets/d/1nRkXfYMQiTj79c08xQPY0zkoJSpde3NC1w6DRhsWCss/edit#gid=0
 
-if(!file.exists("data/ch4_scenarios.rds")){
-  ch4_scenarios <- "https://docs.google.com/spreadsheets/d/e/2PACX-1vRgwl1lugQA6zxzfB6_0hM5vBjXkU7cbUVYYXLcWeaRJ9HmvNXyCjzJCgiGW8HCe1kvjLCGYHf-BvYL/pub?gid=0&single=true&output=csv" %>% 
-    read_csv(na = "") %>% 
-    select(-X1)
-  write_rds(ch4_scenarios, "data/ch4_scenarios.rds")
-} else {
-  ch4_scenarios <- read_rds("data/ch4_scenarios.rds")
-}
+# Lots of hacky stuff deleted from here. Get rid of this and the data/ directory?
 
-if(knitr:::is_latex_output()){
-  ch4_scenarios %>% 
-    # Weird tick marks show up in PDF:
-    mutate(
-      Verb = str_replace_all(Verb, "`", ""),
-      `Data wrangling operation` = str_replace_all(`Data wrangling operation`, "`", ""),
-    ) %>% 
-    kable(
-      caption = "Summary of data wrangling verbs", 
-      booktabs = TRUE,
-      linesep = "",
-      format = "latex"
-    ) %>% 
-    kable_styling(font_size = ifelse(knitr:::is_latex_output(), 10, 16),
-                  latex_options = c("hold_position")) %>%
-    column_spec(1, width = "0.9in") %>% 
-    column_spec(2, width = "4in")
-} else {
-  ch4_scenarios %>% 
-    kable(
-      caption = "Summary of data wrangling verbs", 
-      booktabs = TRUE,
-      format = "html"
-    )
-}
+ch4_scenarios <- read_rds("02-tidyverse/data/ch4_scenarios.rds")
+
+# ch4_scenarios %>% 
+#     kable(
+#       caption = "Summary of data wrangling verbs", 
+#       booktabs = TRUE,
+#       format = "html")
 ```
 
+<!-- EWF: Useful for Jessica? --> 
 
 ### Additional resources
 
-If you want to further unlock the power of the `dplyr` package for data wrangling, we suggest that you check out RStudio's "Data Transformation with dplyr" cheatsheet. This cheatsheet summarizes much more than what we've discussed in this chapter, in particular more intermediate level and advanced data wrangling functions, while providing quick and easy-to-read visual descriptions. In fact, many of the diagrams illustrating data wrangling operations in this chapter, such as Figure \@ref(fig:filter) on `filter()`, originate from this cheatsheet.
+If you want to further unlock the power of the **dplyr** package for data wrangling, we suggest that you check out RStudio's "Data Transformation with dplyr" cheatsheet. This cheatsheet summarizes much more than what we've discussed in this chapter, in particular more intermediate level and advanced data wrangling functions, while providing quick and easy-to-read visual descriptions. In fact, many of the diagrams illustrating data wrangling operations in this chapter, such as Figure \@ref(fig:filter) on `filter()`, originate from this cheatsheet.
 
 In the current version of RStudio in late 2019, you can access this cheatsheet by going to the RStudio Menu Bar -> Help -> Cheatsheets -> "Data Transformation with dplyr." `r if(knitr::is_html_output()) "You can see a preview in the figure below."`
 
-```{r dplyr-cheatsheet, echo=FALSE, fig.cap="Data Transformation with dplyr cheatsheet."}
-if(knitr::is_html_output())
-  include_graphics("images/cheatsheets/dplyr_cheatsheet-1.png")
+```{r, echo=FALSE, fig.cap="Data Transformation with dplyr cheatsheet."}
+knitr::include_graphics("02-tidyverse/images/dplyr_cheatsheet-1.png")
 ```
 
-On top of the data wrangling verbs and examples we presented in this section, if you'd like to see more examples of using the `dplyr` package for data wrangling, check out [Chapter 5](http://r4ds.had.co.nz/transform.html) of *R for Data Science* [@rds2016].
+On top of the data wrangling verbs and examples we presented in this section, if you'd like to see more examples of using the **dplyr** package for data wrangling, check out [Chapter 5](http://r4ds.had.co.nz/transform.html) of *R for Data Science* [@rds2016].
 
 ## Tidy {#tidy}
 
@@ -1830,45 +933,202 @@ library(stringr)
 library(scales)
 ```
 
+## "Tidy" data {#tidy-data-ex}
 
-## Importing data {#csv}
+Let's now switch gears and learn about the concept of "tidy" data format with a motivating example from the `fivethirtyeight` package. The `fivethirtyeight` package [@R-fivethirtyeight] provides access to the datasets used in many articles published by the data journalism website, [FiveThirtyEight.com](https://fivethirtyeight.com/). For a complete list of all `r nrow(data(package = "fivethirtyeight")[[3]])` datasets included in the `fivethirtyeight` package, check out the package webpage by going to: <https://fivethirtyeight-r.netlify.com/articles/fivethirtyeight.html>.\index{R packages!fivethirtyeight}
 
-Up to this point, we've almost entirely used data stored inside of an R package. Say instead you have your own data saved on your computer or somewhere online. How can you analyze this data in R? Spreadsheet data is often saved in one of the following three formats:
+Let's focus our attention on the `drinks` data frame and look at its first 5 rows:
 
-First, a *Comma Separated Values* `.csv` \index{CSV file} file.  You can think of a `.csv` file as a bare-bones spreadsheet where:
+```{r, echo=FALSE}
+drinks %>% 
+  head(5)
+```
 
-* Each line in the file corresponds to one row of data/one observation.
-* Values for each line are separated with commas. In other words, the values of different variables are separated by commas in each row.
-* The first line is often, but not always, a *header* row indicating the names of the columns/variables.
+After reading the help file by running `?drinks`, you'll see that `drinks` is a data frame containing results from a survey of the average number of servings of beer, spirits, and wine consumed in 193 countries. This data was originally reported on FiveThirtyEight.com in Mona Chalabi's article: ["Dear Mona Followup: Where Do People Drink The Most Beer, Wine And Spirits?"](https://fivethirtyeight.com/features/dear-mona-followup-where-do-people-drink-the-most-beer-wine-and-spirits/).
 
-Second, an Excel `.xlsx` spreadsheet file. This format is based on Microsoft's proprietary Excel software. As opposed to bare-bones `.csv` files, `.xlsx` Excel files contain a lot of meta-data\index{meta-data} (data about data). Recall we saw a previous example of meta-data in Section \@ref(groupby) when adding "group structure" meta-data to a data frame by using the `group_by()` verb. Some examples of Excel spreadsheet meta-data include the use of bold and italic fonts, colored cells, different column widths, and formula macros.
+Let's apply some of the data wrangling verbs we learned in Chapter \@ref(wrangling) on the `drinks` data frame:
 
-Third, a [Google Sheets](https://www.google.com/sheets/about/) file, which is a "cloud" or online-based way to work with a spreadsheet. Google Sheets allows you to download your data in both comma separated values `.csv` and Excel `.xlsx` formats. To import Google Sheets data in R use the [`googlesheets4`](https://googlesheets4.tidyverse.org/) package.
+1. `filter()` the `drinks` data frame to only consider 4 countries: the United States, China, Italy, and Saudi Arabia, *then*
+1. `select()` all columns except `total_litres_of_pure_alcohol` by using the `-` sign, *then*
+1. `rename()` the variables `beer_servings`, `spirit_servings`, and `wine_servings` to `beer`, `spirit`, and `wine`, respectively.
 
-Let's import a Comma Separated Values `.csv` file that exists on the internet. The `.csv` file `dem_score.csv` contains ratings of the level of democracy in different countries spanning 1952 to 1992 and is accessible at <https://moderndive.com/data/dem_score.csv>. Let's use the `read_csv()` function from the `readr` \index{R packages!readr!read\_csv()} [@R-readr] package to read it off the web, import it into R, and save it in a data frame called `dem_score`.
+and save the resulting data frame in `drinks_smaller`:
 
-```{r message=FALSE, eval=FALSE}
+```{r}
+drinks_smaller <- drinks %>% 
+  filter(country %in% c("USA", "China", "Italy", "Saudi Arabia")) %>% 
+  select(-total_litres_of_pure_alcohol) %>% 
+  rename(beer = beer_servings, spirit = spirit_servings, wine = wine_servings)
+drinks_smaller
+```
+
+Let's now ask ourselves a question: "Using the `drinks_smaller` data frame, how would we create the side-by-side barplot in Figure \@ref(fig:drinks-smaller)?". Recall we saw barplots displaying two categorical variables in Subsection \@ref(two-categ-barplot).
+
+```{r drinks-smaller, fig.cap="Comparing alcohol consumption in 4 countries.", fig.height=3.9, echo=FALSE}
+drinks_smaller_tidy <- drinks_smaller %>% 
+  pivot_longer(cols = -country, names_to = "type", values_to = "servings")
+drinks_smaller_tidy_plot <- ggplot(
+    drinks_smaller_tidy, 
+    aes(x = country, y = servings, fill = type)
+    ) +
+  geom_col(position = "dodge") +
+  labs(x = "country", y = "servings")
+if(knitr::is_html_output()){
+  drinks_smaller_tidy_plot
+} else {
+  drinks_smaller_tidy_plot + scale_fill_grey()
+}
+```
+
+<!-- EF: Is Jessica keeping grammar of graphics here -->
+Let's break down the grammar of graphics we introduced in Section \@ref(grammarofgraphics):
+
+1. The categorical variable `country` with four levels (China, Italy, Saudi Arabia, USA) would have to be mapped to the `x`-position of the bars.
+1. The numerical variable `servings` would have to be mapped to the `y`-position of the bars (the height of the bars).
+1. The categorical variable `type` with three levels (beer, spirit, wine) would have to be mapped to the `fill` color of the bars.
+
+Observe, however, that `drinks_smaller` has three separate variables `beer`, `spirit`, and `wine`. In order to use the `ggplot()` function to recreate the barplot in Figure \@ref(fig:drinks-smaller). However, we need a *single variable* `type` with three possible values: `beer`, `spirit`, and `wine`.  We could then map this `type` variable to the `fill` aesthetic of our plot.  In other words, to recreate the barplot in Figure \@ref(fig:drinks-smaller), our data frame would have to look like this:
+
+```{r}
+drinks_smaller_tidy
+```
+
+Observe that while `drinks_smaller` and `drinks_smaller_tidy` are both rectangular in shape and contain the same 12 numerical values (3 alcohol types by 4 countries), they are formatted differently. `drinks_smaller` is formatted in what's known as \index{wide data format} ["wide"](https://en.wikipedia.org/wiki/Wide_and_narrow_data) format, whereas `drinks_smaller_tidy` is formatted in what's known as ["long/narrow"](https://en.wikipedia.org/wiki/Wide_and_narrow_data#Narrow) format.
+
+In the context of doing data science in R, long/narrow format \index{long data format} is also known as "tidy" format. In order to use the **ggplot2** and **dplyr** packages for data visualization and data wrangling, your input data frames *must* be in "tidy" format. Thus, all non-"tidy" data must be converted to "tidy" format first. Before we convert non-"tidy" data frames like `drinks_smaller` to "tidy" data frames like `drinks_smaller_tidy`, let's define "tidy" data.
+
+### Definition of "tidy" data {#tidy-definition}
+
+You have surely heard the word "tidy" in your life:
+
+* "Tidy up your room!"
+* "Write your homework in a tidy way so it is easier to provide feedback."
+* Marie Kondo's best-selling book, [_The Life-Changing Magic of Tidying Up: The Japanese Art of Decluttering and Organizing_](https://www.powells.com/book/-9781607747307), and Netflix TV series [_Tidying Up with Marie Kondo_](https://www.netflix.com/title/80209379).
+* "I am not by any stretch of the imagination a tidy person, and the piles of unread books on the coffee table and by my bed have a plaintive, pleading quality to me - 'Read me, please!'" - Linda Grant
+
+What does it mean for your data to be "tidy"? While "tidy" has a clear English meaning of "organized," the word "tidy" in data science using R means that your data follows a standardized format. We will follow Hadley Wickham's \index{Wickham, Hadley} definition of *"tidy" data* \index{tidy data} [@tidy] shown also in Figure \@ref(fig:tidyfig):
+
+> A *dataset* is a collection of values, usually either numbers (if quantitative) or strings AKA text data (if qualitative/categorical). Values are organised in two ways. Every value belongs to a variable and an observation. A variable contains all values that measure the same underlying attribute (like height, temperature, duration) across units. An observation contains all values measured on the same unit (like a person, or a day, or a city) across attributes.
+> 
+> "Tidy" data is a standard way of mapping the meaning of a dataset to its structure. A dataset is messy or tidy depending on how rows, columns and tables are matched up with observations, variables and types. In *tidy data*:
+>
+> 1. Each variable forms a column.
+> 2. Each observation forms a row.
+> 3. Each type of observational unit forms a table.
+
+(ref:tidy-r4ds) Tidy data graphic from *R for Data Science*.
+
+```{r, echo=FALSE}
+knitr::include_graphics("02-tidyverse/images/tidy-1.png")
+```
+
+
+### Converting to "tidy" data
+
+In this book so far, you've only seen data frames that were already in "tidy" format. Furthermore, for the rest of this book, you'll mostly only see data frames that are already in "tidy" format as well. This is not always the case however with all datasets in the world. If your original data frame is in wide (non-"tidy") format and you would like to use the **ggplot2** or **dplyr** packages, you will first have to convert it to "tidy" format. To do so, we recommend using the \index{tidyr!pivot\_longer()} `pivot_longer()` function in the **tidyr** \index{R packages!tidyr} package [@R-tidyr]. 
+
+Going back to our `drinks_smaller` data frame from earlier:
+
+```{r}
+drinks_smaller
+```
+
+We convert it to "tidy" format by using the `pivot_longer()` function from the **tidyr** package as follows:
+
+```{r}
+drinks_smaller_tidy <- drinks_smaller %>% 
+  pivot_longer(names_to = "type", 
+               values_to = "servings", 
+               cols = -country)
+drinks_smaller_tidy
+```
+
+We set the arguments to `pivot_longer()` as follows:
+
+1. `names_to` here corresponds to the name of the variable in the new "tidy"/long data frame that will contain the *column names* of the original data. Observe how we set `names_to = "type"`. In the resulting `drinks_smaller_tidy`, the column `type` contains the three types of alcohol `beer`, `spirit`, and `wine`. Since `type` is a variable name that doesn't appear in `drinks_smaller`, we use quotation marks around it. You'll receive an error if you just use `names_to = type` here.
+1. `values_to` here is the name of the variable in the new "tidy" data frame that will contain the *values* of the original data. Observe how we set `values_to = "servings"` since each of the numeric values in each of the `beer`, `wine`, and `spirit` columns of the `drinks_smaller` data corresponds to a value of `servings`. In the resulting `drinks_smaller_tidy`, the column `servings` contains the 4 $\times$ 3 = 12 numerical values. Note again that `servings` doesn't appear as a variable in `drinks_smaller` so it again needs quotation marks around it for the `values_to` argument.
+1. The third argument `cols` is the columns in the `drinks_smaller` data frame you either want to or don't want to "tidy." Observe how we set this to `-country` indicating that we don't want to "tidy" the `country` variable in `drinks_smaller` and rather only `beer`, `spirit`, and `wine`. Since `country` is a column that appears in `drinks_smaller` we don't put quotation marks around it.
+
+The third argument here of `cols` is a little nuanced, so let's consider code that's written slightly differently but that produces the same output: 
+
+```{r, eval=FALSE}
+drinks_smaller %>% 
+  pivot_longer(names_to = "type", 
+               values_to = "servings", 
+               cols = c(beer, spirit, wine))
+```
+
+Note that the third argument now specifies which columns we want to "tidy" with `c(beer, spirit, wine)`, instead of the columns we don't want to "tidy" using `-country`. We use the `c()` function to create a vector of the columns in `drinks_smaller` that we'd like to "tidy." Note that since these three columns appear one after another in the `drinks_smaller` data frame, we could also do the following for the `cols` argument:
+
+```{r, eval=FALSE}
+drinks_smaller %>% 
+  pivot_longer(names_to = "type", 
+               values_to = "servings", 
+               cols = beer:wine)
+```
+
+With our `drinks_smaller_tidy` "tidy" formatted data frame, we can now produce the barplot you saw in Figure  \@ref(fig:drinks-smaller) using `geom_col()`. This is done in Figure \@ref(fig:drinks-smaller-tidy-barplot). Recall from Section \@ref(geombar) on barplots that we use `geom_col()` and not `geom_bar()`, since we would like to map the "pre-counted" `servings` variable to the `y`-aesthetic of the bars.
+
+```{r eval=FALSE}
+ggplot(drinks_smaller_tidy, aes(x = country, y = servings, fill = type)) +
+  geom_col(position = "dodge")
+```
+
+(ref:drinks-col) Comparing alcohol consumption in 4 countries using geom_col().
+
+```{r drinks-smaller-tidy-barplot, echo=FALSE, fig.cap='(ref:drinks-col)', fig.height=2.5}
+if(knitr::is_html_output()){
+  drinks_smaller_tidy_plot
+} else {
+  drinks_smaller_tidy_plot + scale_fill_grey()
+}
+```
+
+Converting "wide" format data to "tidy" format often confuses new R users. The only way to learn to get comfortable with the `pivot_longer()` function is with practice, practice, and more practice using different datasets. For example, run `?pivot_longer` and look at the examples in the bottom of the help file. We'll show another example of using `pivot_longer()` to convert a "wide" formatted data frame to "tidy" format in Section \@ref(case-study-tidy). 
+
+If however you want to convert a "tidy" data frame to "wide" format, you will need to use the `pivot_wider()`\index{tidyr!pivot\_wider()} function instead. Run `?pivot_wider` and look at the examples in the bottom of the help file for examples.
+
+You can also view examples of both `pivot_longer()` and `pivot_wider()` on the [tidyverse.org](https://tidyr.tidyverse.org/dev/articles/pivot.html#pew) webpage. There's a nice example to check out the different functions available for data tidying and a case study using data from the World Health Organization on that webpage. Furthermore, each week the R4DS Online Learning Community posts a dataset in the weekly [`#`TidyTuesday event](https://github.com/rfordatascience/tidytuesday) that might serve as a nice place for you to find other data to explore and transform. 
+
+## `tidyverse` package {#tidyverse-package}
+
+Notice at the beginning of the chapter we loaded the following four packages, which are among four of the most frequently used R packages for data science:
+
+```{r, eval=FALSE}
+library(ggplot2)
+library(dplyr)
 library(readr)
-dem_score <- read_csv("https://moderndive.com/data/dem_score.csv")
-dem_score
-```
-```{r message=FALSE, echo=FALSE}
-dem_score <- read_csv("data/dem_score.csv")
-dem_score
+library(tidyr)
 ```
 
-In this `dem_score` data frame, the minimum value of `-10` corresponds to a highly autocratic nation, whereas a value of `10` corresponds to a highly democratic nation. Note also that backticks surround the different variable names.  Variable names in R by default are not allowed to start with a number nor include spaces, but we can get around this fact by surrounding the column name with backticks. We'll revisit the `dem_score` data frame in a case study in the upcoming Section \@ref(case-study-tidy).
+Recall that **ggplot2** is for data visualization, **dplyr** is for data wrangling, **readr** is for importing spreadsheet data into R, and **tidyr** is for converting data to "tidy" format. There is a much quicker way to load these packages than by individually loading them: by installing and loading the `tidyverse` package. The `tidyverse` package acts as an "umbrella" package whereby installing/loading it will install/load multiple packages at once for you. 
 
-Note that the `read_csv()` function included in the `readr` package is different than the `read.csv()` function that comes installed with R. While the difference in the names might seem trivial (an `_` instead of a `.`), the `read_csv()` function is, in our opinion, easier to use since it can more easily read data off the web and generally imports data at a much faster speed. Furthermore, the `read_csv()` function included in the `readr` saves data frames as `tibbles` by default. 
+After installing the `tidyverse` package as you would a normal package as seen in Section \@ref(packages), running:
 
-<!-- DDK: Add examples of using googlesheets4. Add some examples of dirty data and all the tricky arguments in read_csv.  -->
+```{r, eval=FALSE}
+library(tidyverse)
+```
 
+would be the same as running:
+
+```{r, eval=FALSE}
+library(ggplot2)
+library(dplyr)
+library(readr)
+library(tidyr)
+library(purrr)
+library(tibble)
+library(stringr)
+library(forcats)
+```
+
+The `purrr`, `tibble`, `stringr`, and `forcats` are left for a more advanced book; check out [*R for Data Science*](http://r4ds.had.co.nz/) to learn about these packages.
+
+For the remainder of this book, we'll start every chapter by running `library(tidyverse)`, instead of loading the various component packages individually. The `tidyverse` "umbrella" package gets its name from the fact that all the functions in all its packages are designed to have common inputs and outputs: data frames are in "tidy" format. This standardization of input and output data frames makes transitions between different functions in the different packages as seamless as possible. For more information, check out the [tidyverse.org](https://www.tidyverse.org/) webpage for the package.
 
 ## Web scraping 
 
-```{r, echo=FALSE}
-img_path <- "images"
-```
+<!-- https://github.com/mdogucu/web-scrape -->
 
 The data we need to answer a question is not always in a spreadsheet ready for us to read. For example, the US murders dataset we used in the R Basics chapter originally comes from [this Wikipedia page](https://en.wikipedia.org/w/index.php?title=Gun_violence_in_the_United_States_by_state): 
 
@@ -1881,7 +1141,7 @@ url <- paste0("https://en.wikipedia.org/w/index.php?title=",
 You can see the data table when you visit the webpage:
 
 ```{r, echo=FALSE}
-knitr::include_graphics(file.path(img_path,"murders-data-wiki-page.png"))
+knitr::include_graphics("02-tidyverse/images/murders-data-wiki-page.png")
 ```
 
 
@@ -1890,7 +1150,7 @@ To get this data, we need to do some _web scraping_.
 _Web scraping_, or _web harvesting_, is the term we use to describe the process of extracting data from a website. The reason we can do this is because the information used by a browser to render webpages is received as a text file from a server. The text is code written in hyper text markup language (HTML). Every browser has a way to show the html source code for a page, each one different. On Chrome, you can use Control-U on a PC and command+alt+U on a Mac. You will see something like this:
 
 ```{r, echo=FALSE}
-knitr::include_graphics(file.path(img_path,"html-code.png"))
+knitr::include_graphics("02-tidyverse/images/html-code.png")
 ```
 
 ### HTML
@@ -1969,7 +1229,6 @@ html_text(h)
 ```
 
 We don't show the output here because it includes thousands of characters, but if we look at it, we can see the data we are after are stored in an HTML table: you can see this in this line of the HTML code above `<table class="wikitable sortable">`. The different parts of an HTML document, often defined with a message in between  `<` and `>`  are referred to as _nodes_. The __rvest__ package includes functions to extract nodes of an HTML document: `html_nodes` extracts all nodes of different types and `html_node` extracts the first one. To extract the tables from the html code we use:
- 
 
 ```{r} 
 tab <- h %>% html_nodes("table")
@@ -2001,7 +1260,10 @@ We are now much closer to having a usable data table:
 ```{r}
 tab <- tab %>% setNames(c("state", "population", "total", "murder_rate")) 
 head(tab)
-  ```
+```
+
+<!-- EF: I think taking this detour below might not actually be the best move. 
+The sections on CSS Selectors and JSON might work better more as an afterthought --> 
 
 We still have some wrangling to do. For example, we need to remove the commas and turn characters into numbers. Before continuing with this, we will learn a more general approach to extracting information from web sites.
 
@@ -2050,345 +1312,18 @@ citi_bike$stationBeanList %>% as_tibble()
 You can learn much more by examining tutorials and help files from the __jsonlite__ package. This package is intended for relatively simple tasks such as converging data into tables. For more flexibility, we recommend `rjson`.
 
 
-## "Tidy" data {#tidy-data-ex}
-
-Let's now switch gears and learn about the concept of "tidy" data format with a motivating example from the `fivethirtyeight` package. The `fivethirtyeight` package [@R-fivethirtyeight] provides access to the datasets used in many articles published by the data journalism website, [FiveThirtyEight.com](https://fivethirtyeight.com/). For a complete list of all `r nrow(data(package = "fivethirtyeight")[[3]])` datasets included in the `fivethirtyeight` package, check out the package webpage by going to: <https://fivethirtyeight-r.netlify.com/articles/fivethirtyeight.html>.\index{R packages!fivethirtyeight}
-
-Let's focus our attention on the `drinks` data frame and look at its first 5 rows:
-
-```{r, echo=FALSE}
-drinks %>% 
-  head(5)
-```
-
-After reading the help file by running `?drinks`, you'll see that `drinks` is a data frame containing results from a survey of the average number of servings of beer, spirits, and wine consumed in 193 countries. This data was originally reported on FiveThirtyEight.com in Mona Chalabi's article: ["Dear Mona Followup: Where Do People Drink The Most Beer, Wine And Spirits?"](https://fivethirtyeight.com/features/dear-mona-followup-where-do-people-drink-the-most-beer-wine-and-spirits/).
-
-Let's apply some of the data wrangling verbs we learned in Chapter \@ref(wrangling) on the `drinks` data frame:
-
-1. `filter()` the `drinks` data frame to only consider 4 countries: the United States, China, Italy, and Saudi Arabia, *then*
-1. `select()` all columns except `total_litres_of_pure_alcohol` by using the `-` sign, *then*
-1. `rename()` the variables `beer_servings`, `spirit_servings`, and `wine_servings` to `beer`, `spirit`, and `wine`, respectively.
-
-and save the resulting data frame in `drinks_smaller`:
-
-```{r}
-drinks_smaller <- drinks %>% 
-  filter(country %in% c("USA", "China", "Italy", "Saudi Arabia")) %>% 
-  select(-total_litres_of_pure_alcohol) %>% 
-  rename(beer = beer_servings, spirit = spirit_servings, wine = wine_servings)
-drinks_smaller
-```
-
-Let's now ask ourselves a question: "Using the `drinks_smaller` data frame, how would we create the side-by-side barplot in Figure \@ref(fig:drinks-smaller)?". Recall we saw barplots displaying two categorical variables in Subsection \@ref(two-categ-barplot).
-
-```{r drinks-smaller, fig.cap="Comparing alcohol consumption in 4 countries.", fig.height=3.9, echo=FALSE}
-drinks_smaller_tidy <- drinks_smaller %>% 
-  gather(type, servings, -country)
-drinks_smaller_tidy_plot <- ggplot(
-    drinks_smaller_tidy, 
-    aes(x = country, y = servings, fill = type)
-    ) +
-  geom_col(position = "dodge") +
-  labs(x = "country", y = "servings")
-if(knitr::is_html_output()){
-  drinks_smaller_tidy_plot
-} else {
-  drinks_smaller_tidy_plot + scale_fill_grey()
-}
-```
-
-Let's break down the grammar of graphics we introduced in Section \@ref(grammarofgraphics):
-
-1. The categorical variable `country` with four levels (China, Italy, Saudi Arabia, USA) would have to be mapped to the `x`-position of the bars.
-1. The numerical variable `servings` would have to be mapped to the `y`-position of the bars (the height of the bars).
-1. The categorical variable `type` with three levels (beer, spirit, wine) would have to be mapped to the `fill` color of the bars.
-
-Observe, however, that `drinks_smaller` has three separate variables `beer`, `spirit`, and `wine`. In order to use the `ggplot()` function to recreate the barplot in Figure \@ref(fig:drinks-smaller). However, we need a *single variable* `type` with three possible values: `beer`, `spirit`, and `wine`.  We could then map this `type` variable to the `fill` aesthetic of our plot.  In other words, to recreate the barplot in Figure \@ref(fig:drinks-smaller), our data frame would have to look like this:
-
-```{r}
-drinks_smaller_tidy
-```
-
-Observe that while `drinks_smaller` and `drinks_smaller_tidy` are both rectangular in shape and contain the same 12 numerical values (3 alcohol types by 4 countries), they are formatted differently. `drinks_smaller` is formatted in what's known as \index{wide data format} ["wide"](https://en.wikipedia.org/wiki/Wide_and_narrow_data) format, whereas `drinks_smaller_tidy` is formatted in what's known as ["long/narrow"](https://en.wikipedia.org/wiki/Wide_and_narrow_data#Narrow) format.
-
-In the context of doing data science in R, long/narrow format \index{long data format} is also known as "tidy" format. In order to use the `ggplot2` and `dplyr` packages for data visualization and data wrangling, your input data frames *must* be in "tidy" format. Thus, all non-"tidy" data must be converted to "tidy" format first. Before we convert non-"tidy" data frames like `drinks_smaller` to "tidy" data frames like `drinks_smaller_tidy`, let's define "tidy" data.
-
-### Definition of "tidy" data {#tidy-definition}
-
-You have surely heard the word "tidy" in your life:
-
-* "Tidy up your room!"
-* "Write your homework in a tidy way so it is easier to provide feedback."
-* Marie Kondo's best-selling book, [_The Life-Changing Magic of Tidying Up: The Japanese Art of Decluttering and Organizing_](https://www.powells.com/book/-9781607747307), and Netflix TV series [_Tidying Up with Marie Kondo_](https://www.netflix.com/title/80209379).
-* "I am not by any stretch of the imagination a tidy person, and the piles of unread books on the coffee table and by my bed have a plaintive, pleading quality to me - 'Read me, please!'" - Linda Grant
-
-What does it mean for your data to be "tidy"? While "tidy" has a clear English meaning of "organized," the word "tidy" in data science using R means that your data follows a standardized format. We will follow Hadley Wickham's \index{Wickham, Hadley} definition of *"tidy" data* \index{tidy data} [@tidy] shown also in Figure \@ref(fig:tidyfig):
-
-> A *dataset* is a collection of values, usually either numbers (if quantitative) or strings AKA text data (if qualitative/categorical). Values are organised in two ways. Every value belongs to a variable and an observation. A variable contains all values that measure the same underlying attribute (like height, temperature, duration) across units. An observation contains all values measured on the same unit (like a person, or a day, or a city) across attributes.
-> 
-> "Tidy" data is a standard way of mapping the meaning of a dataset to its structure. A dataset is messy or tidy depending on how rows, columns and tables are matched up with observations, variables and types. In *tidy data*:
->
-> 1. Each variable forms a column.
-> 2. Each observation forms a row.
-> 3. Each type of observational unit forms a table.
-
-(ref:tidy-r4ds) Tidy data graphic from *R for Data Science*.
-
-```{r tidyfig, echo=FALSE, fig.cap="(ref:tidy-r4ds)", out.height="80%", out.width="80%", purl=FALSE}
-knitr::include_graphics("images/r4ds/tidy-1.png")
-```
-
-For example, say you have the following table of stock prices in Table \@ref(tab:non-tidy-stocks):
-
-```{r non-tidy-stocks, echo=FALSE, purl=FALSE}
-stocks <- tibble(
-  Date = as.Date('2009-01-01') + 0:4,
-  `Boeing stock price` = paste("$", c("173.55", "172.61", "173.86", "170.77", "174.29"), sep = ""),
-  `Amazon stock price` = paste("$", c("174.90", "171.42", "171.58", "173.89", "170.16"), sep = ""),
-  `Google stock price` = paste("$", c("174.34", "170.04", "173.65", "174.87", "172.19") ,sep = "")
-) %>% 
-  slice(1:2)
-stocks %>% 
-  kable(
-    digits = 2,
-    caption = "Stock prices (non-tidy format)", 
-    booktabs = TRUE,
-    linesep = ""
-  ) %>% 
-  kable_styling(font_size = ifelse(knitr:::is_latex_output(), 10, 16),
-                latex_options = c("hold_position"))
-```
-
-Although the data are neatly organized in a rectangular spreadsheet-type format, they do not follow the definition of data in "tidy" format. While there are three variables corresponding to three unique pieces of information (date, stock name, and stock price), there are not three columns. In "tidy" data format, each variable should be its own column, as shown in Table \@ref(tab:tidy-stocks). Notice that both tables present the same information, but in different formats. 
-
-```{r tidy-stocks, echo=FALSE}
-stocks_tidy <- stocks %>% 
-  rename(
-    Boeing = `Boeing stock price`,
-    Amazon = `Amazon stock price`,
-    Google = `Google stock price`
-  ) %>% 
-#  gather(`Stock name`, `Stock price`, -Date)
-  pivot_longer(cols = -Date, 
-               names_to = "Stock Name", 
-               values_to = "Stock Price")
-stocks_tidy %>% 
-  kable(
-    digits = 2,
-    caption = "Stock prices (tidy format)", 
-    booktabs = TRUE,
-    linesep = ""
-  ) %>% 
-  kable_styling(font_size = ifelse(knitr:::is_latex_output(), 10, 16),
-                latex_options = c("hold_position"))
-```
-
-Now we have the requisite three columns Date, Stock Name, and Stock Price. On the other hand, consider the data in Table \@ref(tab:tidy-stocks-2).
-
-```{r tidy-stocks-2, echo=FALSE}
-stocks <- tibble(
-  Date = as.Date('2009-01-01') + 0:4,
-  `Boeing Price` = paste("$", c("173.55", "172.61", "173.86", "170.77", "174.29"), sep = ""),
-  `Weather` = c("Sunny", "Overcast", "Rain", "Rain", "Sunny")
-) %>% 
-  slice(1:2)
-stocks %>% 
-  kable(
-    digits = 2,
-    caption = "Example of tidy data"#, 
-#    booktabs = TRUE
-  ) %>% 
-  kable_styling(font_size = ifelse(knitr:::is_latex_output(), 10, 16), 
-                latex_options = c("hold_position"))
-```
-
-In this case, even though the variable "Boeing Price" occurs just like in our non-"tidy" data in Table \@ref(tab:non-tidy-stocks), the data *is* "tidy" since there are three variables corresponding to three unique pieces of information: Date, Boeing price, and the Weather that particular day.
-
-### Converting to "tidy" data
-
-In this book so far, you've only seen data frames that were already in "tidy" format. Furthermore, for the rest of this book, you'll mostly only see data frames that are already in "tidy" format as well. This is not always the case however with all datasets in the world. If your original data frame is in wide (non-"tidy") format and you would like to use the `ggplot2` or `dplyr` packages, you will first have to convert it to "tidy" format. To do so, we recommend using the \index{tidyr!pivot\_longer()} `pivot_longer()` function in the `tidyr` \index{R packages!tidyr} package [@R-tidyr]. 
-
-Going back to our `drinks_smaller` data frame from earlier:
-
-```{r}
-drinks_smaller
-```
-
-We convert it to "tidy" format by using the `pivot_longer()` function from the `tidyr` package as follows:
-
-```{r}
-drinks_smaller_tidy <- drinks_smaller %>% 
-  pivot_longer(names_to = "type", 
-               values_to = "servings", 
-               cols = -country)
-drinks_smaller_tidy
-```
-
-We set the arguments to `pivot_longer()` as follows:
-
-1. `names_to` here corresponds to the name of the variable in the new "tidy"/long data frame that will contain the *column names* of the original data. Observe how we set `names_to = "type"`. In the resulting `drinks_smaller_tidy`, the column `type` contains the three types of alcohol `beer`, `spirit`, and `wine`. Since `type` is a variable name that doesn't appear in `drinks_smaller`, we use quotation marks around it. You'll receive an error if you just use `names_to = type` here.
-1. `values_to` here is the name of the variable in the new "tidy" data frame that will contain the *values* of the original data. Observe how we set `values_to = "servings"` since each of the numeric values in each of the `beer`, `wine`, and `spirit` columns of the `drinks_smaller` data corresponds to a value of `servings`. In the resulting `drinks_smaller_tidy`, the column `servings` contains the 4 $\times$ 3 = 12 numerical values. Note again that `servings` doesn't appear as a variable in `drinks_smaller` so it again needs quotation marks around it for the `values_to` argument.
-1. The third argument `cols` is the columns in the `drinks_smaller` data frame you either want to or don't want to "tidy." Observe how we set this to `-country` indicating that we don't want to "tidy" the `country` variable in `drinks_smaller` and rather only `beer`, `spirit`, and `wine`. Since `country` is a column that appears in `drinks_smaller` we don't put quotation marks around it.
-
-The third argument here of `cols` is a little nuanced, so let's consider code that's written slightly differently but that produces the same output: 
-
-```{r, eval=FALSE}
-drinks_smaller %>% 
-  pivot_longer(names_to = "type", 
-               values_to = "servings", 
-               cols = c(beer, spirit, wine))
-```
-
-Note that the third argument now specifies which columns we want to "tidy" with `c(beer, spirit, wine)`, instead of the columns we don't want to "tidy" using `-country`. We use the `c()` function to create a vector of the columns in `drinks_smaller` that we'd like to "tidy." Note that since these three columns appear one after another in the `drinks_smaller` data frame, we could also do the following for the `cols` argument:
-
-```{r, eval=FALSE}
-drinks_smaller %>% 
-  pivot_longer(names_to = "type", 
-               values_to = "servings", 
-               cols = beer:wine)
-```
-
-With our `drinks_smaller_tidy` "tidy" formatted data frame, we can now produce the barplot you saw in Figure  \@ref(fig:drinks-smaller) using `geom_col()`. This is done in Figure \@ref(fig:drinks-smaller-tidy-barplot). Recall from Section \@ref(geombar) on barplots that we use `geom_col()` and not `geom_bar()`, since we would like to map the "pre-counted" `servings` variable to the `y`-aesthetic of the bars.
-
-```{r eval=FALSE}
-ggplot(drinks_smaller_tidy, aes(x = country, y = servings, fill = type)) +
-  geom_col(position = "dodge")
-```
-
-(ref:drinks-col) Comparing alcohol consumption in 4 countries using geom_col().
-
-```{r drinks-smaller-tidy-barplot, echo=FALSE, fig.cap='(ref:drinks-col)', fig.height=2.5}
-if(knitr::is_html_output()){
-  drinks_smaller_tidy_plot
-} else {
-  drinks_smaller_tidy_plot + scale_fill_grey()
-}
-```
-
-Converting "wide" format data to "tidy" format often confuses new R users. The only way to learn to get comfortable with the `pivot_longer()` function is with practice, practice, and more practice using different datasets. For example, run `?pivot_longer` and look at the examples in the bottom of the help file. We'll show another example of using `pivot_longer()` to convert a "wide" formatted data frame to "tidy" format in Section \@ref(case-study-tidy). 
-
-If however you want to convert a "tidy" data frame to "wide" format, you will need to use the `pivot_wider()`\index{tidyr!pivot\_wider()} function instead. Run `?pivot_wider` and look at the examples in the bottom of the help file for examples.
-
-You can also view examples of both `pivot_longer()` and `pivot_wider()` on the [tidyverse.org](https://tidyr.tidyverse.org/dev/articles/pivot.html#pew) webpage. There's a nice example to check out the different functions available for data tidying and a case study using data from the World Health Organization on that webpage. Furthermore, each week the R4DS Online Learning Community posts a dataset in the weekly [`#`TidyTuesday event](https://github.com/rfordatascience/tidytuesday) that might serve as a nice place for you to find other data to explore and transform. 
-
-
-### `nycflights13` package
-
-Recall the `nycflights13` package  we introduced in Section \@ref(nycflights13) with data about all domestic flights departing from New York City in 2013. Let's revisit the `flights` data frame by running `View(flights)`. We saw that `flights` has a rectangular shape, with each of its `r comma(nrow(flights))` rows corresponding to a flight and each of its `r ncol(flights)` columns corresponding to different characteristics/measurements of each flight. This satisfied the first two criteria of the definition of "tidy" data from Subsection \@ref(tidy-definition): that "Each variable forms a column" and "Each observation forms a row." But what about the third property of "tidy" data that "Each type of observational unit forms a table"?
-
-Recall that we saw in Subsection \@ref(exploredataframes) that the observational unit for the `flights` data frame is an individual flight. In other words, the rows of the `flights` data frame refer to characteristics/measurements of individual flights. Also included in the `nycflights13` package are other data frames with their rows representing different observational units [@R-nycflights13]:
-
-* `airlines`: translation between two letter IATA carrier codes and airline company names (`r nrow(nycflights13::airlines)` in total). The observational unit is an airline company.
-* `planes`: aircraft information about each of `r comma(nrow(nycflights13::planes))` planes used, i.e., the observational unit is an aircraft.
-* `weather`: hourly meteorological data (about `r nycflights13::weather %>% count(origin) %>% .[["n"]] %>% mean() %>% round() %>% comma()` observations) for each of the three NYC airports, i.e., the observational unit is an hourly measurement of weather at one of the three airports.
-* `airports`: airport names and locations. The observational unit is an airport.
-
-The organization of the information into these five data frames follows the third "tidy" data property: observations corresponding to the same observational unit should be saved in the same table, i.e., data frame. You could think of this property as the old English expression: "birds of a feather flock together." 
-
-
-
-## Case study: Democracy in Guatemala {#case-study-tidy}
-
-In this section, we'll show you another example of how to convert a data frame that isn't in "tidy" format ("wide" format) to a data frame that is in "tidy" format ("long/narrow" format). We'll do this using the `pivot_longer()` function from the `tidyr` package again. 
-
-Furthermore, we'll make use of functions from the `ggplot2` and `dplyr` packages to produce a *time-series plot* showing how the democracy scores have changed over the 40 years from 1952 to 1992 for Guatemala. Recall that we saw time-series plots in Section \@ref(linegraphs) on creating linegraphs using `geom_line()`. 
-
-Let's use the `dem_score` data frame we imported in Section \@ref(csv), but focus on only data corresponding to Guatemala.
-
-```{r}
-guat_dem <- dem_score %>% 
-  filter(country == "Guatemala")
-guat_dem
-```
-
-Let's lay out the grammar of graphics we saw in Section \@ref(grammarofgraphics). 
-
-First we know we need to set `data = guat_dem` and use a `geom_line()` layer, but what is the aesthetic mapping of variables? We'd like to see how the democracy score has changed over the years, so we need to map:
-
-* `year` to the x-position aesthetic and
-* `democracy_score` to the y-position aesthetic
-
-Now we are stuck in a predicament, much like with our `drinks_smaller` example in Section \@ref(tidy-data-ex). We see that we have a variable named `country`, but its only value is `"Guatemala"`.  We have other variables denoted by different year values.  Unfortunately, the `guat_dem` data frame is not "tidy" and hence is not in the appropriate format to apply the grammar of graphics, and thus we cannot use the `ggplot2` package just yet.  
-
-We need to take the values of the columns corresponding to years in `guat_dem` and convert them into a new "names" variable called `year`. Furthermore, we need to take the democracy score values in the inside of the data frame and turn them into a new "values" variable called `democracy_score`. Our resulting data frame will have three columns:  `country`, `year`, and `democracy_score`. Recall that the `pivot_longer()` function in the `tidyr` package does this for us:
-
-```{r}
-guat_dem_tidy <- guat_dem %>% 
-  pivot_longer(names_to = "year", 
-               values_to = "democracy_score", 
-               cols = -country) 
-guat_dem_tidy
-```
-
-We set the arguments to `pivot_longer()` as follows:
-
-1. `names_to` is the name of the variable in the new "tidy" data frame that will contain the *column names* of the original data. Observe how we set `names_to = "year"`.  In the resulting `guat_dem_tidy`, the column `year` contains the years where Guatemala's democracy scores were measured.
-1. `values_to` is the name of the variable in the new "tidy" data frame that will contain the *values* of the original data. Observe how we set `values_to = "democracy_score"`. In the resulting `guat_dem_tidy` the column `democracy_score` contains the 1 $\times$ 9 = 9 democracy scores as numeric values.
-1. The third argument is the columns you either want to or don't want to "tidy." Observe how we set this to `cols = -country` indicating that we don't want to "tidy" the `country` variable in `guat_dem` and rather only variables `1952` through `1992`. 
-1. The last argument of `names_ptypes` tells R what type of variable `year` should be set to. Without specifying that it is an `integer` as we've done here, `pivot_longer()` will set it to be a character value by default.
-
-We can now create the time-series plot in Figure \@ref(fig:guat-dem-tidy) to visualize how democracy scores in Guatemala have changed from 1952 to 1992 using a \index{ggplot2!geom\_line()} `geom_line()`. Furthermore, we'll use the `labs()` function in the `ggplot2` package to add informative labels to all the `aes()`thetic attributes of our plot, in this case the `x` and `y` positions.
-
-```{r guat-dem-tidy, fig.cap="Democracy scores in Guatemala 1952-1992.", fig.height=3}
-ggplot(guat_dem_tidy, aes(x = year, y = democracy_score)) +
-  geom_line() +
-  labs(x = "Year", y = "Democracy Score")
-```
-
-Note that if we forgot to include the `names_ptypes` argument specifying that `year` was not of character format, we would have gotten an error here since `geom_line()` wouldn't have known how to sort the character values in `year` in the right order. 
-
-
-## `tidyverse` package {#tidyverse-package}
-
-Notice at the beginning of the chapter we loaded the following four packages, which are among four of the most frequently used R packages for data science:
-
-```{r, eval=FALSE}
-library(ggplot2)
-library(dplyr)
-library(readr)
-library(tidyr)
-```
-
-Recall that `ggplot2` is for data visualization, `dplyr` is for data wrangling, `readr` is for importing spreadsheet data into R, and `tidyr` is for converting data to "tidy" format. There is a much quicker way to load these packages than by individually loading them: by installing and loading the `tidyverse` package. The `tidyverse` package acts as an "umbrella" package whereby installing/loading it will install/load multiple packages at once for you. 
-
-After installing the `tidyverse` package as you would a normal package as seen in Section \@ref(packages), running:
-
-```{r, eval=FALSE}
-library(tidyverse)
-```
-
-would be the same as running:
-
-```{r, eval=FALSE}
-library(ggplot2)
-library(dplyr)
-library(readr)
-library(tidyr)
-library(purrr)
-library(tibble)
-library(stringr)
-library(forcats)
-```
-
-The `purrr`, `tibble`, `stringr`, and `forcats` are left for a more advanced book; check out [*R for Data Science*](http://r4ds.had.co.nz/) to learn about these packages.
-
-For the remainder of this book, we'll start every chapter by running `library(tidyverse)`, instead of loading the various component packages individually. The `tidyverse` "umbrella" package gets its name from the fact that all the functions in all its packages are designed to have common inputs and outputs: data frames are in "tidy" format. This standardization of input and output data frames makes transitions between different functions in the different packages as seamless as possible. For more information, check out the [tidyverse.org](https://www.tidyverse.org/) webpage for the package.
-
 ## Conclusion
 
 ### Additional resources
 
-If you want to learn more about using the `readr` and `tidyr` package, we suggest that you check out RStudio's "Data Import Cheat Sheet." In the current version of RStudio in late 2019, you can access this cheatsheet by going to the RStudio Menu Bar -> Help -> Cheatsheets -> "Browse Cheatsheets" -> Scroll down the page to the "Data Import Cheat Sheet." The first page of this cheatsheet has information on using the `readr` package to import data, while the second page has information on using the `tidyr` package to "tidy" data. `r if(knitr::is_html_output()) "You can see a preview of both cheatsheets in the figures below."`
+If you want to learn more about using the **readr** and **tidyr** package, we suggest that you check out RStudio's "Data Import Cheat Sheet." In the current version of RStudio in late 2019, you can access this cheatsheet by going to the RStudio Menu Bar -> Help -> Cheatsheets -> "Browse Cheatsheets" -> Scroll down the page to the "Data Import Cheat Sheet." The first page of this cheatsheet has information on using the **readr** package to import data, while the second page has information on using the **tidyr** package to "tidy" data. `r if(knitr::is_html_output()) "You can see a preview of both cheatsheets in the figures below."`
 
-```{r import-cheatsheet, echo=FALSE, fig.cap="Data Import cheatsheet (first page): readr package.", out.width="66%"}
-if(knitr::is_html_output())
-  include_graphics("images/cheatsheets/data-import-1.png")
+```{r, echo=FALSE, fig.cap="Data Import cheatsheet (first page): readr package."}
+knitr::include_graphics("02-tidyverse/images/data-import-1.png")
 ```
 
-```{r tidyr-cheatsheet, echo=FALSE, fig.cap="Data Import cheatsheet (second page): tidyr package.", out.width="66%"}
-if(knitr::is_html_output())
-  include_graphics("images/cheatsheets/data-import-2.png")
+```{r, echo=FALSE, fig.cap="Data Import cheatsheet (second page): tidyr package."}
+knitr::include_graphics("02-tidyverse/images/data-import-2.png")
 ```
 
-<!-- DDK: Chapter is short. What should be added? More download stuff? -->
 

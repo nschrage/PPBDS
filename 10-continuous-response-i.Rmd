@@ -1,5 +1,25 @@
+---
+output_yaml:
+  - _output.yml
+---
+
 # Continuous Response I {#regression}
 
+```{r include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, tidy = FALSE, cache.extra = packageVersion('tufte'))
+
+library(gt)
+library(tidyverse)
+library(tufte)
+library(remotes)
+library(PPBDS.data)
+library(webshot)
+```
+
+
+<!-- Packages: tidyverse, broom -->
+
+<!-- Commands:  -->
 
 <!-- How do we solve the problems which were identified in chapter 9? -->
 
@@ -42,6 +62,8 @@ Let's now begin with basic regression, \index{regression!basic} which refers to 
 
 <!-- DK: Do we really need to do this each time? I think not! -->
 
+<!-- EG: After reading through a couple of other chapters, I definitely don't think this is necessary -->
+
 Let's now load all the packages needed for this chapter (this assumes you've already installed them). In this chapter, we introduce some new packages:
 
 1. The **tidyverse** "umbrella" [@R-tidyverse] package. Recall from our discussion in Section \@ref(tidyverse-package) that loading the `tidyverse` package by running `library(tidyverse)` loads the following commonly used data science packages all at once:
@@ -53,6 +75,11 @@ Let's now load all the packages needed for this chapter (this assumes you've alr
 1. The **broom** [@R-broom] package, which provides an easy way to deal with model objects.
 1. The **skimr** [@R-skimr] package, which provides a simple-to-use function to quickly compute a wide array of commonly used summary statistics. \index{summary statistics}
 
+Additional Packages For Advanced Section: 
+
+1. The **rstanarm** package, which provides an interface to the statistical inference engine, Stan, for Bayesian Regression Modeling. 
+1. The **tidybayes** package, which aids in formating Bayesian modeling outputs in a tidy manner and provides ggplot geoms for plotting. 
+
 If needed, read Section \@ref(packages) for information on how to install and load R packages.
 
 ```{r, eval=FALSE}
@@ -60,12 +87,16 @@ library(tidyverse)
 library(broom)
 library(skimr)
 library(gapminder)
+library(rstanarm)
+library(tidybayes)
 ```
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 library(tidyverse)
 library(broom)
 library(skimr)
 library(gapminder)
+library(rstanarm)
+library(tidybayes)
 ```
 
 
@@ -81,8 +112,11 @@ library(patchwork)
 
 <!-- DK: I think this is good. I like walking through EDA. Should do that each chapter, maybe showing more tricks each time. But in what order? skim() here then calculate your own simply in 12 and then calculate using new dplyr 1.0.0 tricks like across() in 13. Also, stop replying on moderndive. Just include this data in our package or on line. Indeed, do we need our own package? Or just our own dedicated set of Google sheets? We need our own package, since we will be using a bunch of datasets, some created/cleaned by us. -->
 
+<!-- EG: I really like this section- I think that the in-depth explanations of not only how to find correlation coefficients but also interpret them accurately and effectively is great. -->
 
 <!-- DK: Next version, can't use these examples. Need political ones. Let's use an updated version of US congress campaigns. This connects to the new introduction. Can use latest data. Can include variables like last election results, allowing us to follow Gelman's version. Can also include spending data, so that we can discuss a causal model. Perhaps in this chapter, we do one model with each, the second going faster. Then, next chapter, put both variables in the regression. This example would also be nice because we could use list columns for the secret trick, estimating models by year and by country region. -->
+
+<!-- EG: I think that using US Congress campaigns data sounds like a good plan. And using list cols would work very well with these models! -->
 
 <!-- DK: I have skimmed the next section, since I plan on cutting it all. -->
 
@@ -140,17 +174,9 @@ An alternative way to look at the raw data values is by choosing a random sample
 evals_ch11 %>%
   sample_n(size = 5)
 ```
-```{r, echo=FALSE}
+```{r, echo=FALSE, fig.cap="A random sample of 5 out of the 463 courses at UT Austin"}
 evals_ch11 %>%
-  sample_n(5) %>%
-  knitr::kable(
-    digits = 3,
-    caption = "A random sample of 5 out of the 463 courses at UT Austin",
-    booktabs = TRUE,
-    linesep = ""
-  ) %>%
-  kable_styling(font_size = ifelse(knitr:::is_latex_output(), 10, 16),
-                latex_options = c("hold_position"))
+  sample_n(5) 
 ```
 
 Now that we've looked at the raw values in our `evals_ch11` data frame and got a preliminary sense of the data, let's move on to the next common step in an exploratory data analysis: computing summary statistics. Let's start by computing the mean and median of our numerical outcome variable `score` and our numerical explanatory variable "beauty" score denoted as `bty_avg`. We'll do this by using the `summarize()` function from `dplyr` along with the `mean()` and `median()` summary functions we saw in Section \@ref(summarize).
@@ -200,13 +226,14 @@ The `skim()` function only returns what are known as *univariate* \index{univari
 
 The following figure gives examples of 9 different correlation coefficient values for hypothetical numerical variables $x$ and $y$. For example, observe in the top right plot that for a correlation coefficient of -0.75 there is a negative linear relationship between $x$ and $y$, but it is not as strong as the negative linear relationship between $x$ and $y$ when the correlation coefficient is -0.9 or -1.
 
-```{r, echo=FALSE, fig.cap="Nine different correlation coefficients.", fig.height=2.6}
+```{r, echo=FALSE, fig.cap="Nine different correlation coefficients."}
 correlation <- c(-0.9999, -0.9, -0.75, -0.3, 0, 0.3, 0.75, 0.9, 0.9999)
 n_sim <- 100
 values <- NULL
 for(i in seq_along(correlation)){
   rho <- correlation[i]
   sigma <- matrix(c(5, rho * sqrt(50), rho * sqrt(50), 10), 2, 2)
+  # EG- should we consider explaining more about what is happening within "sim"? I personally haven't used rmvnorm before and am unsure whether it's been discussed in a previous chapter, or whether some explanation/clarification could be helpful.
   sim <- rmvnorm(
     n = n_sim,
     mean = c(20,40),
@@ -325,7 +352,10 @@ Furthermore, a regression line is "best-fitting" in that it minimizes some mathe
 
 ### Simple linear regression {#model1table}
 
-<!-- DK: Make this with just one decimal. Indeed, can we make that consistent everywhere? Also, bty_avg should be renamed beauty. We don't really care if it is an average. -->
+<!-- DK: Make this with just one decimal. Indeed, can we make that consistent everywhere? Also, bty_avg should be renamed beauty. We don't really care if it is an average. 
+
+The train example? With att_start and att_end? Or some other data set? Which one? Or qscores?
+-->
 
 You may recall from secondary/high school algebra that the equation of a line is $y = a + b\cdot x$. (Note that the $\cdot$ symbol is equivalent to the $\times$ "multiply by" mathematical symbol. We'll use the $\cdot$ symbol in the rest of this book as it is more succinct.) It is defined by two coefficients $a$ and $b$. The intercept coefficient $a$ is the value of $y$ when $x = 0$. The slope coefficient $b$ for $x$ is the increase in $y$ for every increase of one in $x$. This is also called the "rise over run."
 
@@ -333,12 +363,16 @@ However, when defining a regression line, we use slightly different notation: th
 
 <!-- DK: Is this a good introduction to hat notation? This stikes me as a subtle point that should be wesved throughout the book.  -->
 
+<!-- EG: Honestly don't think that this introduction is bad, but certainly think that it could happen much earlier in the book. Many students may already be familiar with hat notation and it is key to regression language. -->
+
 We know that the regression line we plotted has a positive slope $b_1$ corresponding to our explanatory $x$ variable `bty_avg`. Why? Because instructors with higher `bty_avg` scores tend to have higher teaching evaluation `scores`. However, what is the numerical value of the slope $b_1$? What about the intercept $b_0$?  Let's not compute these two values by hand, but rather let's use a computer!
 
 We can obtain the values of the intercept $b_0$ and the slope for `btg_avg` $b_1$ in two steps:
 
 1. "Fit" the linear regression model using the `lm()` function and save it in `score_model`. We put the name of the outcome variable on the left-hand side of the `~` "tilde" sign, while putting the name of the explanatory variable on the right-hand side. This is known as R's \index{R!formula notation} *formula notation*.
 1. Apply the `tidy()` \index{broom!tidy()} function from the **broom** package to `score_model`.
+
+<!-- EG: Should we take a sentence to explain why tidy is being used? Something as simple as "This will create the regression table." -->
 
 ```{r, eval=FALSE}
 # Fit regression model:
@@ -356,17 +390,9 @@ evals_line <- score_model %>%
   tidy() %>%
   pull(estimate)
 ```
-```{r, echo=FALSE}
+```{r, echo=FALSE, fig.cap="Linear regression table"}
 tidy(score_model,
-     conf.int = TRUE) %>%
-  knitr::kable(
-    digits = 3,
-    caption = "Linear regression table",
-    booktabs = TRUE,
-    linesep = ""
-  ) %>%
-  kable_styling(font_size = ifelse(knitr:::is_latex_output(), 10, 16),
-                latex_options = c("hold_position"))
+     conf.int = TRUE) 
 ```
 
 Note that we used the argument `conf.int = TRUE` in the `tidy()` function; that will be important for later.
@@ -400,6 +426,8 @@ evals_ch11 %>%
 
 <!-- DK: How can we show the error which happens when this code runs? -->
 
+<!-- EG: Not totally sure what is meant by "show the error," but I think the explanation below the code is sufficient for people to understand why lm does not work with piped in data. -->
+
 With most of the functions we have seen, we don't need the "hack" of referring to the passed-down tibble with a ".". Things "just work." Functions like `filter()` and `arrange()` just know to work on the tibble which is coming there way. Why doesn't `lm()` do that?
 
 The answer is that `lm()` is, like many parts of R, an old function, created before the Tidyverse came into style. Look at the help page with `?lm`. As you can see, the first argument is `formula`. The automatic pass-down trick only works with functions in which the first argument is the data to be used. This is (almost) always the case in Tidyverse functions.
@@ -418,6 +446,8 @@ $$
 
 <!-- DK: "beauty" rather than "bty_avg" would be a better variable name. Don't need to recall that the beauty score is an average. After all, the score is an average also! Also: Need a discussion of potential outcomes and RCM here. Can we manipulate beauty? On one hand, no. On the other hand, yes. Makeup, lighting and so on. Could provide an interesting complex case to discuss. -->
 
+<!-- EG: I agree that RCM and potential outcomes would fit well within this discussion. -->
+
 The intercept $b_0$ = `r evals_line[1]` is the average teaching score $\widehat{y}$ = $\widehat{\text{score}}$ for those courses where the instructor had a "beauty" score `bty_avg` of 0. Or in graphical terms, it's where the line intersects the $y$ axis when $x$ = 0. Note, however, that while the \index{regression!equation of a line!intercept} intercept of the regression line has a mathematical interpretation, it has no *practical* interpretation here, since observing a `bty_avg` of 0 is impossible; it is the average of six panelists' "beauty" scores ranging from 1 to 10. Furthermore, looking at the scatterplot with the regression line, no instructors had a "beauty" score anywhere near 0.
 
 <!-- DK: Add discussion of "hat". Recall the p hat which we estimated last time. y hat is like that! It is not a variable that we can observe. It is an estimate. (Indeed, it is an estimate of a potential outcome!) This is different form x, which has no hat, because it is real data, something we can see. Side note: not sure if the hat versus no hat distinction works well with b_0/b_1 being things we can't see and need to estimate, but for which we do not use hat notation. -->
@@ -434,8 +464,8 @@ Furthermore, we only state that there is an *associated* increase and not necess
 
 Consider an example: a not-so-great medical doctor goes through medical records and finds that patients who slept with their shoes on tended to wake up more with headaches. So this doctor declares, "Sleeping with shoes on causes headaches!"
 
-```{r, echo=FALSE, fig.align='center', fig.cap="Does sleeping with shoes on cause headaches?", out.width="60%", out.height="60%"}
-knitr::include_graphics("images/shutterstock/shoes_headache.png")
+```{r, echo=FALSE, fig.cap="Does sleeping with shoes on cause headaches?"}
+knitr::include_graphics("10-continuous-response-i/images/shoes_headache.png")
 ```
 
 However, there is a good chance that if someone is sleeping with their shoes on, it's potentially because they are intoxicated from alcohol. Furthermore, higher levels of drinking leads to more hangovers, and hence more headaches. The amount of alcohol consumption here is what's known as a *confounding* variable\index{confounding variable}. It lurks behind the scenes, confounding the causal relationship (if any) of "sleeping with shoes on" with "waking up with a headache." We can summarize this with a *causal graph* where:
@@ -443,8 +473,8 @@ However, there is a good chance that if someone is sleeping with their shoes on,
 * Y is a *response* variable; here it is "waking up with a headache." \index{variables!response / outcome / dependent}
 * X is a *treatment* variable whose causal effect we are interested in; here it is "sleeping with shoes on."\index{variables!treatment}
 
-```{r, echo=FALSE, fig.align='center', out.width="50%", fig.cap="Causal graph."}
-knitr::include_graphics("images/flowchart.009-cropped.png")
+```{r, echo=FALSE, fig.cap="Causal graph."}
+knitr::include_graphics("10-continuous-response-i/images/flowchart.009-cropped.png")
 ```
 
 To study the relationship between Y and X, we could use a regression model where the outcome variable is set to Y and the explanatory variable is set to be X, as you've been doing throughout this chapter. However, the causal graph also includes a third variable with arrows pointing at both X and Y:
@@ -467,6 +497,8 @@ Let's say, however, that we were confident that there is no confounding: that is
 Keeping with the causal interpretation, let's say that a teacher named Joe had a "beauty" score of 7 and a teaching score of 4. We are curious about how much moving from a "beauty" score of 7 versus "beauty" score of 8 would have affected Joe's teaching score.  Thus, we are comparing the *potential outcome* for Joe when `bty_avg` is 7 versus the *potential outcome* when `bty_avg` is 8.  Only one of these potential outcomes was observed.
 
 <!-- DK: This is good stuff. Belongs in every chapter. -->
+
+<!-- EG: Should we be using kable here? Or are we trying to make the switch to gt? -->
 
 ```{r, echo = FALSE}
 # First, we create a tibble with the values we want for the table
@@ -541,6 +573,8 @@ x
 
 <!-- DK: This transition goes a bit fast. We need to take a tour of the tibbles in data. Look at one. Look at another. See that they are different. Explain how this is a more industrial strength way of using rep_sample(). But maybe that means that rep_sample_n(), used alone, is a bad hack. Maybe we should have done it this way, with nest(), in chapters 9 and 10. In fact, maybe we could get rid of rep_sample_n and use something in **rsample** to accomplish these two steps. -->
 
+<!-- EG: I agree with the comment above. Nest() is a tricky function that takes a while to understand (and also to figure out how to use properly and when it is necessary!) I think comparison is a great idea here. Slowly going through the differences in using nest() and rep_sample_n(). I'm not sure about cutting the mention of r_sample_n() entirely (it is indeed a useful hack to know), but I think it is important to go over in detail when nest() ought to be used in the place of rep_sample_n(). -->
+
 Now, we can use `map()` to run our linear regression for each dataset:
 
 <!-- DK: Whoah! Note that this use of "." is different than the "." that we saw before. Or, rather, a "." within a map function refers to the next item in the list which is driving the map. -->
@@ -559,6 +593,8 @@ In this case, `map()` is iterating over `data`, which is a column in the tibble 
 Now we have a new list column, `mod`, that contains the model objects created by `lm()`.  We will now want to `tidy()` the object created by `lm()`:
 
 <!-- DK: Again, too fast! Need to look at mod. Show us the first model. Show us the second. They are different. Why? Is this what you expected? -->
+
+<!-- EG: Agreed. This is too fast. Nest() and map() should both be discussed in more length- it is challenging to explain them effectively in few explanations/examples. -->
 
 ```{r}
 x <- x %>% 
@@ -588,7 +624,7 @@ x %>%
 
 Now let's return to our example for Joe.  Since our slope coefficient is measured with some uncertainty, our estimate of his potential outcome under the "treatment" of having a "beauty" score of 8 is also measured with some uncertainty, and that should be reflected in our table:
 
-```{r, echo = FALSE}
+```{r, echo=FALSE}
 # First, we create a tibble with the values we want for the table
 
 tibble(`Subject` = "Joe",
@@ -663,7 +699,7 @@ $$\widehat{y} = b_0 + b_1 \cdot x = `r evals_line[1]` + `r evals_line[2]` \cdot 
 
 * Arrow: The length of this arrow is the *residual* \index{regression!residual} and is computed by subtracting the fitted value $\widehat{y}$ from the observed value $y$. The residual can be thought of as a model's error or "lack of fit" for a particular observation.  In the case of this course's instructor, it is $y - \widehat{y}$ = `r y` - `r y_hat` = `r resid`.
 
-```{r, echo=FALSE, warning=FALSE, fig.cap="Example of observed value, fitted value, and residual.", fig.height=2.8}
+```{r, echo=FALSE, warning=FALSE, fig.cap="Example of observed value, fitted value, and residual."}
 best_fit_plot <- ggplot(evals_ch11, aes(x = bty_avg, y = score)) +
   geom_point(color = "grey") +
   labs(x = "Beauty Score", y = "Teaching Score",
@@ -673,6 +709,7 @@ best_fit_plot <- ggplot(evals_ch11, aes(x = bty_avg, y = score)) +
   annotate("segment", x = x, xend = x, y = y, yend = y_hat, color = "blue",
            arrow = arrow(type = "closed", length = unit(0.04, "npc"))) +
   annotate("point", x = x, y = y, col = "red", size = 4)
+
 best_fit_plot
 ```
 
@@ -831,7 +868,7 @@ Turning our attention to the summary statistics of the numerical variable `lifeE
 
 We can answer this question by performing the last of the three common steps in an exploratory data analysis: creating data visualizations. Let's visualize the distribution of our outcome variable $y$ = `lifeExp`.
 
-```{r, echo=TRUE, warning=FALSE, fig.cap="Histogram of life expectancy in 2007.", fig.height=5.2}
+```{r, echo=TRUE, warning=FALSE, fig.cap="Histogram of life expectancy in 2007."}
 gapminder2007 %>%
   ggplot(aes(x = lifeExp)) +
   geom_histogram(binwidth = 5, color = "white") +
@@ -853,22 +890,14 @@ gapminder2007 %>%
   facet_wrap(~ continent, nrow = 2)
 ```
 
-```{r, echo=FALSE, warning=FALSE, fig.cap="Life expectancy in 2007.", fig.height=4.3}
+```{r, echo=FALSE, warning=FALSE, fig.cap="Life expectancy in 2007."}
 faceted_life_exp <- ggplot(gapminder2007, aes(x = lifeExp)) +
   geom_histogram(binwidth = 5, color = "white") +
   labs(x = "Life expectancy", y = "Number of countries",
        title = "Histogram of distribution of worldwide life expectancies") +
   facet_wrap(~ continent, nrow = 2)
 
-# Make the text black and reduce darkness of the grey in the facet labels
-if(knitr::is_latex_output()) {
-  faceted_life_exp + 
-    theme(strip.text = element_text(colour = 'black'),
-          strip.background = element_rect(fill = "grey93")
-    )
-} else {
-  faceted_life_exp
-}
+faceted_life_exp
 ```
 
 
@@ -877,7 +906,7 @@ Observe that unfortunately the distribution of African life expectancies is much
 
 Recall that an alternative method to visualize the distribution of a numerical variable split by a categorical variable is by using a side-by-side boxplot. We shall map the categorical variable `continent` to the $x$-axis and the different life expectancies within each continent on the $y$-axis.
 
-```{r, warning=FALSE, fig.cap="Life expectancy in 2007.", fig.height=3.4}
+```{r, warning=FALSE, fig.cap="Life expectancy in 2007."}
 gapminder2007 %>%
   ggplot(aes(x = continent, y = lifeExp)) +
   geom_boxplot() +
@@ -1078,7 +1107,7 @@ regression_points <- lifeExp_model %>%
   augment(ID = "country")
 regression_points
 ```
-```{r model2-residuals, echo=FALSE}
+```{r, echo=FALSE}
 regression_points <- augment(lifeExp_model, ID = "country")
 regression_points %>%
   slice(1:10) %>%
@@ -1196,12 +1225,13 @@ gov %>%
 ```
 
 
-## Appendix: Best-fitting line {#leastsquares}
+## Best-fitting line {#leastsquares}
 
 Regression lines are also known as "best-fitting" lines. But what do we mean by "best"? Let's unpack the criteria that is used in regression to determine "best." Recall the plot where for an instructor with a beauty score of $x = 7.333$ we mark the *observed value* $y$ with a circle, the *fitted value* $\widehat{y}$ with a square, and the *residual* $y - \widehat{y}$ with an arrow. We re-display that plot in the top-left plot of the next figure in addition to three more arbitrarily chosen course instructors:
 
-```{r, fig.height=5.5, echo=FALSE, warning=FALSE, fig.cap="Example of observed value, fitted value, and residual."}
+```{r, echo=FALSE, warning=FALSE, fig.cap="Example of observed value, fitted value, and residual."}
 # First residual
+
 best_fit_plot <- ggplot(evals_ch11, aes(x = bty_avg, y = score)) +
   geom_point(size = 0.8, color = "grey") +
   labs(x = "Beauty Score", y = "Teaching Score") +
@@ -1210,9 +1240,11 @@ best_fit_plot <- ggplot(evals_ch11, aes(x = bty_avg, y = score)) +
   annotate("point", x = x, y = y_hat, col = "red", shape = 15, size = 2) +
   annotate("segment", x = x, xend = x, y = y, yend = y_hat, color = "blue",
            arrow = arrow(type = "closed", length = unit(0.02, "npc")))
+
 p1 <- best_fit_plot + labs(title = "First instructor's residual")
 
 # Second residual
+
 index <- which(evals_ch11$bty_avg == 2.333 & evals_ch11$score == 2.7)
 target_point <- augment(score_model) %>%
   slice(index)
@@ -1226,9 +1258,11 @@ best_fit_plot <- best_fit_plot +
   annotate("point", x = x, y = y_hat, col = "red", shape = 15, size = 2) +
   annotate("segment", x = x, xend = x, y = y, yend = y_hat, color = "blue",
            arrow = arrow(type = "closed", length = unit(0.02, "npc")))
+
 p2 <- best_fit_plot + labs(title = "Adding second instructor's residual")
 
 # Third residual
+
 index <- which(evals_ch11$bty_avg == 3.667 & evals_ch11$score == 4.4)
 score_model <- lm(score ~ bty_avg, data = evals_ch11)
 target_point <- augment(score_model) %>%
@@ -1260,6 +1294,7 @@ best_fit_plot <- best_fit_plot +
   annotate("point", x = x, y = y_hat, col = "red", shape = 15, size = 2) +
   annotate("segment", x = x, xend = x, y = y, yend = y_hat, color = "blue",
            arrow = arrow(type = "closed", length = unit(0.02, "npc")))
+
 p4 <- best_fit_plot + labs(title = "Adding fourth instructor's residual")
 
 p1 + p2 + p3 + p4 + plot_layout(nrow = 2)
@@ -1304,6 +1339,547 @@ regression_points %>%
 ```
 
 Any other straight line drawn in the figure would yield a sum of squared residuals greater than 132. This is a mathematically guaranteed fact that you can prove using calculus and linear algebra. That's why alternative names for the linear regression line are the *best-fitting line* and the *least-squares line*. Why do we square the residuals (i.e., the arrow lengths)? So that both positive and negative deviations of the same amount are treated equally.
+
+<!-- not sure yet how to best order these sections  -->
+# Advanced: Bayesian Regression 
+## Introduction to rstanarm
+
+In this chapter, you have learned how to use `lm()` to model the relationship between outcome and explanatory variables using *simple linear regression*. Furthermore, you learned how to interpret regresssion in a bayesian manner. Recall that instead of bootstrapping, we used `lm()` and `tidy()` to produce similar confidence intervals.
+
+<!-- fit model in lm() intepret in bayesian way as refresher  -->
+
+```{r}
+lm_score_model <- lm(score ~ bty_avg, data = evals_ch11)
+
+lm_score_model %>% 
+  tidy(conf.int = TRUE) %>%
+  filter(term == "bty_avg") %>%
+  select(estimate, conf.low, conf.high)
+```
+
+From what we learned in Chapter 7, we intepreted this confidence intervals as a 95% chance that the true value of the coefficient of `bty_avg` is between, roughly, 0.03 and 0.1. Thus, we have taken our simple `lm()` model and interpreted it in a Bayesian way. However, is this a full fledge bayesian analysis? No! For example, `lm()` does not allow the user to incorporate priors. As mentioned before, `lm()` is an old function and to perform bayesian analysis we must use a bayesian analysis tool. 
+
+The tool we need to perform Bayesian Regression is the `rstanarm` package. `rstanarm` is an interface to connect with the Stan probabilistic programming language. You will see the `rstanarm` package is created to mirror functions like `lm()` and it simply requires adding a `stan_` prefix before common functions like `lm()`. We will focus on `stan_glm()` for the remainder of this section. 
+
+
+##Bayesian Regression with a Continuous Variable
+
+Let us take another look at the the data on the 463 courses at UT Austin, which can be found in the `evals` data frame included in the **moderndive** package.  We will once again model the relationship between teaching scores and “beauty” to help us highlight the similarities and differences between `lm()` and `stan_glm()`. 
+
+We can obtain the values of the intercept $b_0$ and the slope for `btg_avg` $b_1$ in two steps:
+
+1. "Fit" the Bayesian regression model using `stan_glm()` function and save it in `bayes_score`. 
+1. Applying the `print()` function and indicating how many siginificant digits to include.
+
+
+```{r}
+
+library(rstanarm)
+
+bayes_score <- stan_glm(score ~ bty_avg, data = evals_ch11, refresh = 0)
+
+print(bayes_score, digits = 2)
+
+
+
+```
+
+First, we "fit" the bayesian regression model to the `data` using the `stan_glm()` \index{lm()} function and saved this as `bayes_score`. Notice `stan_glm()` is used just as `lm()` was: `stan_glm(y ~ x, data = data_frame_name)` where:
+
+* `y` is the outcome variable, followed by a tilde `~`.
+* `x` is the explanatory variable.
+* The model formula is `score ~ bty_avg`.
+* `data_frame_name` is the name of the data frame that contains the variables `y` and `x`. In our case, `data_frame_name` is the `evals_ch11` data frame.
+* `refresh = 0` is optional. Setting refresh equal to 0 suppresses the priting of the sampling algorithm from the model. We will touch more on this later. 
+
+### Interpreting Regression Coefficients 
+
+Notice, in the `print()` output, the estimates are referred to as the `Median` and the uncertainty as the `MAD_SD`. This is due to the fact that Bayesian Regression does not provide just a point estimate, but a distribution. The `Median` is the chosen summary statistic for the distribution because median-based-summaries are more stable over simulations. However, even though the estimates and uncertainty of the parameters are calculated differently, the coefficients of the `stan_glm()` model can be intepretted in the same manner as they were previously when using `lm()`. 
+
+The intercept $b_0$ = `r bayes_score$coefficient[1]` is the average teaching score $\widehat{y}$ = $\widehat{\text{score}}$ for those courses where the instructor had a "beauty" score `bty_avg` of 0. Again, while the \index{regression!equation of a line!intercept} intercept of the regression line has a mathematical interpretation, it has no *practical* interpretation here, since observing a `bty_avg` of 0 is impossible.
+
+<!-- DK: Add discussion of "hat". Recall the p hat which we estimated last time. y hat is like that! It is not a variable that we can observe. It is an estimate. (Indeed, it is an estimate of a potential outcome!) This is different form x, which has no hat, because it is real data, something we can see. Side note: not sure if the hat versus no hat distinction works well with b_0/b_1 being things we can't see and need to estimate, but for which we do not use hat notation. -->
+
+The slope $b_1$ = $b_{\text{bty_avg}}$ of `r bayes_score$coefficient[2]`. The "bty_avg" subscript indicates that this number summarizes the relationship between the teaching and average beauty score variables. The slope's interpretation is different:
+
+<!-- DK: Let's make sure that these interpretations are highly consistent with Gelman and across the book. -->
+
+<!-- EG: To make sure these interpretations are consistent, who should I talk to/what sections should I look at? -->
+
+> For every increase of 1 unit in `bty_avg`, there is an *associated* increase of, *on average*, `r bayes_score$coefficient[2]` units of `score`.
+
+What the slope of `r bayes_score$coefficient[2]` is saying is that across all possible courses, the *average* difference in teaching score between two instructors whose "beauty" scores differ by one is `r bayes_score$coefficient[2]` when holding all other things equal.
+
+In the output, we are also given another parameter, $sigma$ =  `r round(sigma(bayes_score),2)`. $sigma$ represents the residual standard error, the deviation between the predicted value and the observed value. Thus, it shows us the uncertainity when our model predicts the `score` using `bty_avg`. Our $sigma$ 
+tells us that a teacher's score will be between plus or minus `r round(sigma(bayes_score),2)` the prediction for 68% of the data and between plus or minus two sigma, `r 2*round(sigma(bayes_score),2)`, of the prediction for about 95% of the data. Here is a visual representation:
+
+```{r, echo=FALSE}
+
+
+evals_ch11 %>%
+  add_predicted_draws(bayes_score) %>%
+  ggplot(aes(x = bty_avg, y = score)) +
+  stat_lineribbon(aes(y = .prediction), .width = c(.99, .95, .68), color = "#08519C") +
+  geom_point(data = evals_ch11, size = 2) +
+  scale_fill_brewer() + 
+  labs(title = "68% of Data Between +-1 Sigma from Line of Best Fit\n 95% of Data Between +-2 Sigma from Line of Best Fit")
+```
+
+
+```{r, echo=FALSE}
+intervals<-posterior_interval(bayes_score, prob = 0.95)
+
+```
+
+Finally, for all of the coefficients, we are provided a `MAD_SD`. The `MAD SD`, which equals $1.483 * (\mathbf{median}^n_{i=1} |z_i - M|)$, summarizes the uncertainty in the model parameters. Since we are used to using the standard deviations to measure variation, the MAD SD is rescaled to mirror the standard error of the normal distribution. The `MAD_SD` can be used to retrieve our coefficient's credible intervals for each parameter. Thus, for `bty_avg`, the 95% credible interval is (`r intervals[2,]`). This tells us that there is a 95% probability that the true value of the parameter for `bty_avg` falls within the interval. 
+
+Instead of trying to calcualate these by hand, the easiest way to retrieve our model's credible intervals is using the function `posterior_interval()` on our model object `bayes_score`.
+
+```{r}
+posterior_interval(bayes_score)
+
+```
+
+The default for the function is a 90% interval, but that can be changed by adding the `prob` input. Thus, we can replicate the 95% intervals that we have worked with in the past:
+
+```{r}
+posterior_interval(bayes_score, prob = 0.95)
+
+```
+
+Now, let us call `summary()` on our `bayes_score` model. Using the `summary()` is an alternative to `print` and it provides more information about our `stan_glm()` model. 
+
+```{r}
+summary(bayes_score)
+```
+
+In the Estimates section, we get the same information as we did from `print()`. However, there is a lot of new information that we have not seen before under Fit Diagnostics and MCMC Diagnostics. We can use this information provided to further assess the model. 
+
+In the Fit Diagnostics section, we are provided information about the `mean_ppd`, the sample mean of the posterior predictive distribution of the outcome variable. A quick check of our model is that we hope the `mean_ppd` is close to the mean of our depedent variable. The mean of the `score` variable is `r mean(evals_ch11$score)`. Thus, the `mean_ppd` is definitely on par with the mean of the `bayes_score` dependent variable. 
+
+In MCMC diagnostics, we are provided with:
+
+* `log-posterior`, which is the log of the combined posterior distributions. 
+* `mcse`, which stands for the Monte Carlo standard error. Markov Chain Monte Carlo is the algorithm used to draw from the posterior distribution.
+* `Rhat`, which indicates whether or not the model converges. 
+* `n_eff`, a measure of the effective sample size.
+
+The only thing that you need to be concerned about is the `Rhat`. When we know whether or not the model converges, we know whether or not the results are reliable. We hope to get values for `Rhat` as close to 1 as possible. Rhat values less than 1.1 indicate model convergence and that the model is reliable. Thus, since all the `Rhat` for our model are 1.0, `bayes_score` is reliable.
+
+### Uncertainty in Bayesian Inference
+You may be wondering, what exactly is `stan_glm()` doing? Let us take a look under the hood of `stan_glm()`. This will enable us to further understand the usefulness of Bayesian Regression. Remember that we included `refresh = 0` in the `bayes_score` model. Let us run the same model, but leave out the `refresh` input.
+
+```{r}
+stan_glm(score ~ bty_avg, data = evals_ch11)
+```
+
+Without `refresh`, the output displays everything `stan_glm()` is doing in the background, which is a sampling algorithm known as Markov Chain Monte Carlo (MCMC). In fact, `stan_glm()` is producing thousands of simulations after sampling from the posterior distribution using this MCMC algorithm. We can conveniently access all of the simulations of the the model parameters (intercept, slope, and sigma) from the posterior distribution as a matrix. Let's take a look at some of these simulations.
+
+```{r}
+
+sims <- as.matrix(bayes_score)
+
+
+head(sims)
+nrow(sims)
+``` 
+
+As you can see, each row or iteration has a slightly different value for our `bayes_score` model's three parameters. Each combination of possible values of the parameters was used to try to fit the data. Also, looking at the dimensions of the matrix, there are 4000 rows. Thus, `stan_glm()` tried `4000` different combinations of possible values of the parameters to try to model the data. 
+
+Now, you may be wondering what is going on because there are `4000` simulations, but when we print the model, we get a single value for each parameter. Recall that what `lm()` refers to as the estimate, when we printed our `bayes_score` model, the column was headed as `Median`. Let's calculate the median value for each column of our `sims` matrix. We can do this using the `apply()` function, which takes form: `apply(Object, Margin, Function)`. We will be applying the `median` function to the `sims` matrix and the `Margin` will be 2, which indicates columns instead of rows.
+
+```{r}
+apply(sims, 2, median)
+```
+
+These are the exact values of the coefficients of the printed `bayes_score` model. Thus, `stan_glm()` tried 4000 iterations to model the data. All `4000` were summarized using the `Median` to produce point estimates of the parameters.
+
+Now, we understand where the point-estimate comes from when we call `print()` on a `stan_glm()` model; however, a simple linear regression using `lm()` provides us with a point-estimate, or in other words,  a single line of best fit. The power of Bayesian Regression comes from the ability to analyze uncertainty using the entire posterior distribution, all 4000 simulations cumulatively. Again, the posterior distribution is a set of plausible values for each parameter and each observation or row is referred to as a posterior draw. Let us take a look at the posterior distrubtion for the `bty_avg` variable, the slope, by graphing it. Once again we can use the `sims` matrix, but we must convert it into a tibble using `as_tibble()` to graph. 
+
+
+```{r, message= FALSE, echo=FALSE}
+library(bayesplot)
+library(tidybayes)
+library(cowplot)
+```
+
+```{r}
+
+
+
+posterior_draws<-sims%>%as_tibble()
+
+
+posterior_draws%>%
+  ggplot(aes(x = bty_avg)) +
+  geom_histogram()+
+   geom_vline(xintercept=median(posterior_draws$bty_avg), color="red", size=1) + labs(y = "Frequency", title = "Posterior Distribution of bty_avg Parameter", subtitle = "The Red Line Represents the Median")
+```
+
+If you noticed, `stan_glm()` does not have any p-values, t-values or degrees of freedom like `lm()`. The crux of Bayesian Modeling is that everything we need to know can be found within the posterior distribution. We can get a point estimate using the `Median` and we saw in the previous section that we can get a 95% credible interval for `bty_avg` using the `posterior_interval` function. We can also graph the posterior distribution of all the other parameters from the model, the intercept and sigma. 
+
+```{r echo=FALSE}
+
+bty_avg<-posterior_draws%>%
+  ggplot(aes(x = bty_avg)) +
+  geom_histogram()+
+   geom_vline(xintercept=median(posterior_draws$bty_avg), color="red", size=1) + labs(y = "Frequency", title = "Posterior Distribution of bty_avg Parameter", subtitle = "The Red Line Represents the Median")
+
+sigma<-posterior_draws%>%
+  ggplot(aes(x = sigma)) +
+  geom_histogram()+
+   geom_vline(xintercept=median(posterior_draws$sigma), color="red", size=1)
+
+intercept<-posterior_draws%>%
+  ggplot(aes(x = `(Intercept)`)) +
+  geom_histogram()+
+   geom_vline(xintercept=median(posterior_draws$`(Intercept)`), color="red", size=1)
+
+
+cowplot::plot_grid(intercept, bty_avg, sigma, nrow = 1)
+
+
+
+    
+
+```
+
+Another way to think of each posterior draw, each row of the `sims` matrix, is that each creates a regression line. This is something that may get lost in translation with the posterior distrubution and the 4000 simulations; however, the goal of `stan_glm()` is still to fit lines to data. 
+
+```{r}
+
+medians<-tibble(`(Intercept)` = median(posterior_draws$`(Intercept)`), bty_avg = median(posterior_draws$bty_avg))
+
+posterior_draws%>%
+  ggplot(aes(x = `(Intercept)`, y = bty_avg)) +
+  geom_point() + geom_point(data = medians, color = "red", size = 5)+ 
+  labs(title = "Every Combination of Intercept and bty_avg From Posterior Distribution", x = "Intercept", subtitle = "Red Dot Represents the Median for Each Parameter")
+
+```
+Each intercept and slope (bty_avg) combination will create a different line. Furthermore, we can view all of these various lines. In doing so, we can again express and understand uncertainty.
+
+We will take our first look at the **tidybayes** package. The purpose of the **tidybayes** package is to aid in formating Bayesian modeling outputs in a tidy manner. It also provides **ggplot** geoms to easily plot Bayesian Models.
+
+Now back to the matter at hand of the various posterior draws and the lines they create. If you recall the `augment()` function we used for `lm()`, we were able to retrieve the fitted values yˆ. The `add_fitted_draws()` function from the **tidybayes** package is very similar, but for `stan_glm()`. The `add_fitted_draws()` takes a `stan_glm()` object, such as `bayes_score`, and a `n` parameter, which stands for the number of posterior draws to calculate the fitted values for. Let us try `n=5`.
+
+```{r}
+five_draws<-evals_ch11%>%
+  add_fitted_draws(bayes_score, n = 5)
+
+nrow(five_draws)
+
+```
+If you recall, the `evals_ch11` dataset has 463 rows. `2315/5 = 463`. Thus, we can see that `add_fitted_draws()` calculated the fitted values 5 times. Let us see what `five_draws` looks like.
+
+```{r}
+head(five_draws, n = 10)
+```
+
+`add_fitted_draws`reports:
+
+* `ID` and `.row` which correspond to the row or specific teacher from the `evals_ch11` dataset.
+* `score`, `bty_avg` and `age` are the observed values for a given teacher. 
+* `.draw` is the randomly selected posterior draw used to fit the data. The number corresponds to the row from the `sims` matrix used. 
+* `.value` is the fitted value. In this case, it represents the prediction for the `score` based on a teacher's `bty_avg` for the specific parameters from the `.draw`. 
+
+We are able to plot these different draws.
+
+```{r}
+
+five_draws%>%
+  ggplot(aes(x = bty_avg, y = score)) +
+  geom_line(aes(y = .value, group = .draw), color = "blue") +
+  geom_point()
+
+
+```
+
+Now, you can see how each posterior draw creates a different line. With just these 5 draws, there is a lot of variability. Let us see what `n=100` looks like.
+
+```{r}
+evals_ch11%>%
+  add_fitted_draws(bayes_score, n = 100)%>%
+  ggplot(aes(x = bty_avg, y = score)) +
+  geom_line(aes(y = .value, group = .draw), alpha = 0.6, color = "blue") +
+  geom_point()
+  #transition_states(.draw, 0, 1)+
+  #shadow_mark(past = TRUE, future = TRUE, alpha = 1/20, color = "gray50")
+```
+We see a the lines become more concentrated. The power of Bayesian Modeling comes from the shear number of draws. Now remember, `stan_glm()` by default produces 4000 simulations and we have only plotted 100 of them. The more draws there are, the better your estimation of the posterior distribution and the better we are able to assess the uncertainty in our parameters. 
+
+
+###Predictions
+
+Finally, the last step of Bayesian Inference is being able to make prediction about new data using our `stan_glm()` model. Let us create a new dataset of teacher's beauty scores that mirrors the range of values in the `eval_ch11` dataset. To do this, we will create a tibble of `bty_avg` and use `seq` to generate a row for each `bty_avg` from 1.5 to 8.5 by 0.5. 
+
+```{r}
+
+new <- tibble(bty_avg = seq(1.5, 8.5, 0.5))
+
+new
+```
+
+Now, we will start with the simplest prediction, the point prediction. These are based on the fitted model or as we have come to know, the median value for each parameter (intercept, bty_avg, sigma). We will use the `predict` function to find predicted scores for each beauty rating from our `new` dataset. 
+```{r}
+
+new%>%
+  mutate(y_hat = predict(bayes_score, newdata = .))%>%
+  ggplot(aes(x = bty_avg, y = y_hat)) + geom_point() + geom_line()
+
+
+```
+
+Great! We have predicted values for each  `bty_avg` from the `new` dataset and they follow line created by the fitted model. However, this is nothing special to `stan_glm()`. We can do the exact same thing with an `lm()` model. Recall the `score_model` we created at the beginning of Chapter 10. It is the same as the `bayes_score` model, but it uses `lm()` instead of `stan_glm()`. Here are the point predictions for the `score_model` at each value of `bty_avg`in the `new` dataset.
+
+```{r}
+new%>%
+  mutate(y_hat = predict(score_model, newdata = .))%>%
+  ggplot(aes(x = bty_avg, y = y_hat)) + geom_point() + geom_line()
+```
+
+We get the exact same thing. This is because a point prediction ignores uncertainty. As we have been exploring in this section, where Bayesian Regression differs from Simple Linear Regression is in it's ability to express uncertainty in not only the model, but also it's parameters. Remember we had a `sims` matrix of 4000 rows of parameters. The posterior distributions serves us better and gives us a lot more information than a single point estimate ever could. 
+
+Thus, our predicitions should also take uncertainty into account. The first type is linear predictors. We perform this type of prediction using the `posterior_linepred` function. `posterior_linepred` takes a stan model like our `bayes_score` and a dataset of new points, `new`. With the function, we will be able to represent the distribution of uncertainty in regards to the parameters at each `bty_avg` from the `new` dataset. Let us take a look.
+
+```{r}
+linepred<-posterior_linpred(bayes_score, newdata = new)
+
+
+
+head(linepred)
+```
+
+`posterior_linepred` returns a matrix of posterior simulations wher each column of the `linepred` corresponds to each row of the `new` dataset. If we were to take the `mean` of each column, we would get the point prediction corresponding to that `bty_avg`. Also, if we were to take the `sd`, you would get the uncertainty in the fitted model. Thus `posterior_linepred` mimics what we were doing the previous section with the matrix of simulated parameters. In fact, we plot `posterior_linepred` using the same `add_fitted_draws` function without specifying n to factor in all 4000 posterior draws. `added_fitted_draws` from the **tidybayes** package puts the data in a much easier format than the matrix `posterior_linepred` outputs. First, we will recreate the point prediction plot using `add_fitted_draws` and use `mutate` to get the mean prediction for each `bty_avg`. 
+
+```{r}
+
+new %>%
+  add_fitted_draws(model = bayes_score, .)%>%
+  group_by(bty_avg)%>%
+  mutate(point_estimate = mean(.value))%>%
+  ggplot(aes(x = bty_avg, y = point_estimate)) +
+  geom_point() +
+  geom_line() +
+  scale_x_continuous(breaks = seq(1.5,8.5,0.5)) +
+  labs(y = "Predicted Scores", color = "Uncertainty Level", title = "Posterior Linear Prediction Without Uncertainty")
+
+
+    
+
+
+```
+
+Now, we will add to this plot using the `stat_interval` geom from the **tidybayes** package to add uncertainty to the visualization.
+
+```{r}
+new %>%
+  add_fitted_draws(model = bayes_score, .)%>%
+  group_by(bty_avg)%>%
+  mutate(point_estimate = mean(.value))%>%
+  ggplot(aes(x = bty_avg, y = point_estimate)) +
+  stat_interval(aes(x = bty_avg, y = .value), .width = c(0.68, 0.95)) +
+  geom_point(aes(x = bty_avg, y = point_estimate)) +
+  geom_line() +
+  scale_x_continuous(breaks = seq(1.5,8.5,0.5))+
+  labs(y = "Predicted Scores", color = "Uncertainty Level", title = "Posterior Linear Prediction With Uncertainty")
+```
+
+Linear Predictions can provide us the point estimate predictions while also telling us about the uncertainty in the parameters. As you can see, the intervals get a lot smaller towards the center of the `bty_avg` variable. This is because more data is concentrated towards the center. Furthermore, the predictions are more accurate/less varied because the posterior distribution has more data to draw from. Towards the extremes, we see the bands are a lot wider. Thus, the point predictions are a lot less reliable because the posterior distribution does not have a lot of data from the original `evals_ch11` to be built off of. 
+
+Finally, the last type of prediction we will cover is the predictive distribution. Whereas linear predictions focused on the uncertainty in the parameters coefficients, the predictive distribution represents uncertainty surrounding the predicted value. In other words, it "is the distribution of the outcome implied by the model after using the observed data to update our beliefs about the unknown parameters in the model." To perform this, we will use the `posterior_predict()` function. It works in the same way as `posterior_linpred`. 
+
+```{r}
+
+pred<-posterior_predict(bayes_score, newdata = new)
+  
+head(pred)
+
+```
+
+Again, in the matrix that is returned, each column corresponds to one new value of  `bty_avg` from the `new` dataset. We can take a quick look at the predictive distribution for one of the `bty_avg` using the `hist()` function. 
+```{r}
+hist(pred[,1])
+```
+
+However, **tidybayes** also has a function to make our lives easier for graphing the predictive distributions where we can compare all the distributions cumulatively in one plot. First, we have the `add_predicted_draws()` function which does the same thing as `posterior_predict()`, but `add_predicted_draws()` puts the data in a tidy format. 
+
+
+```{r}
+
+new %>%
+  add_predicted_draws(., model = bayes_score)%>%
+  ggplot(aes(x = .prediction, y = bty_avg)) +
+  stat_halfeyeh() + 
+  scale_y_continuous(breaks = seq(1.5,8.5,0.5)) +
+  labs(x = "Predicted Score", title = "Predictive Distribution for Score at Each Value of bty_avg")
+```
+
+With `stat_halfh()` we are able to view density plots for all the predictions from the `new` dataset together. Thus, we can compare all the predictive distributions. As you can see, there is a lot of overlap. This signifies there is a lot of uncertainty. Even though the  `bty_avg` has a slightly postive slope, `bty_avg` does not seem to be very predictive when it comes to the teacher's `score`.
+
+
+## Bayesian Regression with Categorical Variable 
+
+In the previous section we focused on Bayesian Regression with one continuous variable. We will now take a look at a model wtih one categorical variable. We will follow many of the same steps as we did in the previous section, thus we will go through the steps of Bayesian Inference quicker in the section while highlighting the differences when regressing on a categorical variable. We will use the same data from the `gaminder` package on the 142 countries from 2007. 
+
+```{r}
+library(gapminder)
+
+gapminder2007 <- gapminder %>%
+  filter(year == 2007) %>%
+  select(country, lifeExp, continent, gdpPercap)
+
+head(gapminder2007)
+```
+
+As we did before, we will study the relationship between continents and life expectancy. We will “fit” the bayesian regression using the `stan_glm(y ~ x, data)` function and save it in `bayes_lifeExp`.
+
+```{r}
+
+
+bayes_lifeExp<-stan_glm(lifeExp ~ continent, data = gapminder2007, refresh = 0)
+
+print(bayes_lifeExp, digits = 2, detail = FALSE)
+```
+
+#### Interpreting Coefficients 
+
+Remember, now that we are using a categorical explanatory variable `continent`, our model will not yield a “best-fitting” regression line, but rather offsets relative to a baseline for comparison. Remeber, also that each of these coefficients is the median of the posterior distribution for each parameter.
+
+For example, we can take a look at the posterior distribution for the `continentAmericas` parameter. Calling `as.matrix` on the model, we can access all the posterior draws to then plot in a histogram:
+
+```{r}
+sims <- as.matrix(bayes_lifeExp)
+
+
+
+posterior_draws<-sims%>%as_tibble()
+
+
+Americas<-posterior_draws%>%
+  ggplot(aes(x = continentAmericas)) +
+  geom_histogram()+
+   geom_vline(xintercept=median(posterior_draws$continentAmericas), color="red", size=1) + labs(y = "Frequency", title = "Posterior Distribution", subtitle = "The Red Line Represents the Median")
+
+Americas
+
+```
+
+```{r, echo=FALSE, eval=FALSE}
+
+# code for all the parameters posterior distributions
+
+# posterior_draws%>%
+#   pivot_longer(cols = c("(Intercept)", "sigma", starts_with("continent")), 
+#                names_to = "Parameter", 
+#                values_to = "draws")%>%
+#   ggplot(aes(x = draws)) + 
+#   geom_histogram() +
+#   facet_wrap(~Parameter)
+
+```
+
+Now, let us break down the coefficients from the `print()` function:
+
+```{r}
+print(bayes_lifeExp, digits = 2, detail = FALSE)
+```
+
+```{r, echo=FALSE}
+# fitting the model 
+
+bayes_lifeExp%>%
+tidy(conf.int = TRUE) 
+
+
+estimates_2 <- bayes_lifeExp %>%
+  tidy() %>%
+  pull(estimate)
+```
+The coefficients can be interpreted as follows:
+
+1. `intercept` corresponds to the mean life expectancy of countries in Africa of `r round(estimates_2[1],2)`.
+1. `continentAmericas` corresponds to countries in the Americas and the value +`r round(estimates_2[2],2)` is the same as the difference in mean life expectancy relative to Africa. In other words, the mean life expectancy of countries in the Americas is `r round(estimates_2[1],2)` + `r round(estimates_2[2],2)`= `r round(estimates_2[1],2) + round(estimates_2[2],2)`.
+1. `continentAsia` corresponds to countries in Asia and the value + `r round(estimates_2[3],2)` is the same as the difference in mean life expectancy relative to Africa. The mean life expectancy of countries in Asia is `r round(estimates_2[1],2) + round(estimates_2[3],2)`. 
+1. `continentEurope` corresponds to countries in Europe and the value +`r round(estimates_2[4],2)` is the same as the difference in mean life expectancy relative to Africa. The mean life expectancy of countries in Europe is `r round(estimates_2[1],2) + round(estimates_2[4],2)`.
+1. `continentOceania` corresponds to countries in Oceania and the value +`r round(estimates_2[5],2)` is the same as the difference in mean life expectancy relative to Africa. The mean life expectancy of countries in Oceania is `r round(estimates_2[1],2) + round(estimates_2[5],2)`.
+
+
+The model also has a sigma, or residual standard error, of `r round(sigma(bayes_lifeExp),2)`. Thus, sigma tells us that a country's life expectancy will be between plus or minus `r round(sigma(bayes_lifeExp),2)` the prediction based on what continent the country is in for 68% of the data. Aslo, a country's life expectancy will be between plus or minus two sigma, `r 2*round(sigma(bayes_lifeExp),2)`, of the prediction for about 95% of the data given which continent the country is in.
+
+Finally, for all of the coefficients, we are provided a MAD_SD. We can use it to create each coefficient's credible interval. 
+
+```{r}
+posterior_interval(bayes_lifeExp, prob = 0.95)
+```
+
+
+Each of these tell us there is a 95% probability that the true value of each parameter will fall within the respective interval.
+
+Now, we can call `summary()` on our `bayes_lifeExp` model:
+```{r}
+summary(bayes_lifeExp)
+```
+Again, the few things to check from summary other than tht estimates are that the `mean_ppd` is in accords with the mean of the outcome variable, in our case `life_Exp`, and that all the `Rhat`s are close to 1. The mean of the outcome variable is `r mean(gapminder2007$lifeExp)`, thus the `mean_ppd` is very close. Also all of the `Rhat`s are 1.0, signifying that our model converged and that it is reliable. 
+
+###Prediction
+
+Finally, we will make prediction about new data using our `stan_glm()` model. Let us create a new dataset of continents. To do this, we will create a tibble containing the five various continents from the `gaminder2007` dataset. 
+
+```{r}
+
+new <- tibble(continent = c("Asia", "Africa", "Americas", "Europe", "Oceania"))
+
+new
+```
+
+We know a regression with categorical variable does not yield a line, but rather offsets relative to a baseline for comparison. Thus, `posterior_linepred()` will help us quantify uncertainty in the paramets, but it cannot be interpreted using lines. Remember, we can apply `add_fitted_draws()` instead of `posterior_linepred` because it provides the data in a tidy manner. Also, remember that the `mean` for each group of predictions, `continent`, corresponds to the point estimate. 
+
+```{r}
+new %>%
+  add_fitted_draws(model = bayes_lifeExp, .)%>%
+  group_by(continent)%>%
+  mutate(point_estimate = mean(.value))%>%
+  ggplot(aes(x = continent, y = point_estimate)) +
+  stat_interval(aes(x = continent, y = .value), .width = c(0.68, 0.95)) +
+  geom_point(aes(x = continent, y = point_estimate)) +
+  geom_line() +
+  labs(y = "Predicted Life Expectancy", color = "Uncertainty Level", title = "Posterior Linear Prediction With Uncertainty") + coord_flip()
+```
+
+From the graph, we can see variation in the point estimates for each `continent` with Africa having a signicantly lower life expectancy. From the printed output, we continentOceania had the highest coefficient, meaning the greatest difference in mean life expectancy relative to Africa. Thus, we would expect Oceania to have highest life expectancy in comparison to the other continents; however, we see their is a very wide interval. This suggests their is a lot of uncertainty in the Oceania parameter. This is perhaps due to there not being as many countries on the continent of Oceania and there are vast differences in life expectancy between the countries in the dataset. Remember that the more data their is, the more accurate our posterior predictions will be and as we can see from above, the effect of the absence of data is shown in the uncertainty in the Oceania linear predictions. 
+
+
+Alternatively, we can use `posterior_predict()` to understand the posterior predicitive distribution for each continent. Remember we can perform `add_predicted_draws()` instead of `posterior_predict` because it provides the data in a tidy manner. 
+```{r}
+
+
+new %>%
+  add_predicted_draws(., model = bayes_lifeExp)%>%
+  ggplot(aes(x = .prediction, y = continent)) +
+  stat_halfeyeh() + 
+  labs(x = "Predicted Life Expectancy", title = "Posterior Predictive Distribution For Each Continent's Life Expectancy")
+
+```
+
+Unlike our predictive distribution from `bayes_score` model in the previous section, we see a lot more differentiation between the categories. Although there is overlap at the tail, African Life Expectancy appears to be significantly lower than Life Expectancy on other continents. This plot shows the predictions are more stable. We can be more assured that there are actaul differences in predicted life expectancy between continents, which is something we would not be privy to using only point predictions.
+
+Finally, one other way to display the posterior predictive distribution is using `stat_intervalh()`. 
+
+```{r}
+
+
+
+new %>%
+  add_predicted_draws(., model = bayes_lifeExp)%>%
+  group_by(continent) %>%
+  mutate(median_prediction = median(.prediction)) %>%
+  ggplot(aes(x = .prediction, y = continent)) +
+  stat_intervalh() + 
+  geom_point(aes(x = median_prediction, y = continent)) + 
+  labs(x = "Predicted Life Expectancy", title = "Posterior Predictive Distribution For Each Continent's Life Expectancy")
+```
+By default the uncertainty levels are `0.5,0.8, 0.95` but those can be altered with the `.width` input to your specification such as `.width = c(0.68, 0.95)`.
+
 
 ## Conclusion
 

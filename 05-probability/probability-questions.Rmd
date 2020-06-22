@@ -1,0 +1,122 @@
+---
+title: "Probability Questions"
+author: "Vivian Zhang"
+date: "6/12/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+<!-- e) Need to make some/all of these question such that they can not be solved analytically. Or, at least, have a second part of the question like that. -->
+
+
+<!-- e) In our main examples, we treat n as fixed and show the joint distribution of p and the number of heads H. All good. But we could also treat H as fixed and show the joint distribution between n and p. Two ways to do that. First, hard programming way is to flip the count until you get H heads. Second, easy simulation way, flip H * 1000 times for each replication and then, from that tibble, throw away all the rows which don't have exactly H heads. Either way leaves you with a tibble which is the joint pdf. -->
+
+<!-- f) Another problem set question would take calculate the posterior for ranges, not just for point estimates. What is the marginal distribution for p if we see, say, an even number of heads, rather than just for 8 heads? Easier, perhaps, is to think of the compact interval equivalent. What is p if we see at least 8 heads? Or, if we calculate 1,001 ps, what does the data look like if 0.52 < p < 0.55?  -->
+
+<!-- g) Problem set question might be: You have two coins, A and B. You know that p, the probability of heads, can only be 0, 0.1, 0.2, ..., 1 --- nothing in between. You flip both counts 20 times. A shows 8 heads, B shows 7. What are the odds that B will have at least as many heads as A if you flip the coins another 30 times? Extra credit: Same question, but you may assume that the value of p for A and B is different. Also, show a cool histogram of the posterior results, perhaps based on an example we present. -->
+
+<!-- f) The pancake problem from chapter 14 from rethinking is interesting, perhaps as a class exercise. There are three pancakes: one burned on both sides (BB); one unburnt on both sides (UU); one burned on one side and unburnt on the other (BU). If I serve you a pancake which is burnt on the top (which is the only side you can see), what are the odds that it is burnt on the other side? Intuition says: 1/2. You don't have UU pancake, so it is 50/50 which other pancake you have. But the truth is 2/3s, because you need to think in terms of sides of a pancake, not the whole pancake. There are 3 sides which could be hidden (the UU is still impossible), but 2 of them are B, so the odds of 2/3s. Intuition does not work well here, but simulation does. (I think? Does the Bayes Scatterplot have three rows and two columns?)  -->
+
+```{r Question 1 of the 2011 Midterm}
+
+# A new treatment for a disease is being tested, to see whether it is better
+# than the standard treatment. The existing treatment is e↵ective on 50%
+# of patients. It is believed initially that there is a 2/3 chance that the new
+# treatment is effective on 60% of patients, and a 1/3 chance that the new
+# treatment is effective on 50% of patients. In a pilot study, the new treatment
+# is given to 20 random patients, and is e↵ective for 15 of them.
+# Given this information, what is the probability that the new treatment
+# is better than the standard treatment (as an unsimplified number)?
+
+sims <- 10000000
+
+# 60%
+
+asims <- ceiling(2/3 * sims)
+
+# 50%
+
+bsims <- floor(1/3 * sims)
+
+# Assignment 
+
+atest <- matrix(rbinom(n = 20 * asims, size = 1, prob = 0.6), nrow = asims, ncol = 20)
+
+btest <- matrix(rbinom(n = 20 * bsims, size = 1, prob = 0.5), nrow = bsims, ncol = 20)
+
+# Analysis 
+
+aresult <- data.frame(successes = rowSums(atest))
+
+bresult <- data.frame(successes = rowSums(btest))
+
+anum <- aresult %>% 
+  filter(successes == 15) %>% 
+  summarize(total = n())
+
+bnum <- bresult %>% 
+  filter(successes == 15) %>% 
+  summarize(total = n())
+
+print(anum / (anum + bnum))
+
+```
+
+```{r widgets}
+
+# A widget inspector inspects 12 widgets and finds that exactly 3 are defective.
+# Unfortunately, the  widgets  then  get  all  mixed  up  and  the  inspector
+# has to find the 3 defective widgets again by testing widgets one by one.(a) 
+# Find the probability that the inspector will now have to test at least 9 
+# widgets.(b) Find the probability that the inspector will now have to test at 
+# least 10 widgets.
+
+sims <- 100
+
+widgets <- tibble(
+  quality = c(
+    rep(0, 3), # 0 for defective
+    rep(1, 9) # 1 for good
+))
+
+# Needs to be fixed
+
+mysample <- map(widgets, ~rep_sample_n(widgets, sims, replace=TRUE))
+
+test <- matrix(mysample$quality, nrow = sims, ncol = 12)
+
+get_widgets <- function(n) {
+  sample(widgets, n, replace=TRUE)
+}
+
+get_widgets(12)
+
+x <- tibble(results = map(1:100, ~ roll_alpha_dice(sims)))
+
+roll_alpha_dice <- function(N){
+  map_chr(1:sim, ~ get_letters(12))
+}
+
+
+x <- tibble(results = map(1:100, ~ roll_alpha_dice(sims)))
+
+mydata <- map_lgl(widgets, ~rep_sample_n(widgets, size = 12,
+                                         replace = FALSE, reps = sims))
+
+mydata <- map_df(sizes, ~ rep_sample_n(all_students, size =., replace = FALSE, reps = 5000), .id = "size")
+
+test <- matrix(rbinom(n = 12 * sims, size = 1, prob = 1/4), 
+               nrow = sims, ncol = 12)
+
+# 1 means defective, 0 means good
+
+aresult <- data.frame(successes = rowSums(test))
+
+
+
+?rbinom
+
+```
