@@ -421,8 +421,8 @@ We can then interpret the effect of moving from one category to another.  For ex
 We have previously defined the following three concepts for a linear regression:
 
 1. Observed values $y$, or the observed value of the outcome variable
-1. Fitted values $\widehat{y}$, or the value on the regression line for a given $x$ value
-1. Residuals $y - \widehat{y}$, or the error between the observed value and the fitted value
+2. Fitted values $\widehat{y}$, or the value on the regression line for a given $x$ value
+3. Residuals $y - \widehat{y}$, or the error between the observed value and the fitted value
 
 We obtained these values and other values using the `augment()` function from the **broom** package. Recall too that we used the `.se.fit` column to construct confidence intervals.  We'll see here how we can apply these same concepts to logistic regression.
 
@@ -455,6 +455,7 @@ regression_points <- house_region_model %>%
   select(dem_win, region, .fitted, conf.low, conf.high, .resid)
 regression_points
 ```
+
 ```{r, echo=FALSE}
 regression_points <- augment(house_region_model,
                              type.predict = "response") %>%
@@ -475,6 +476,8 @@ You may be wondering how to interpret the residuals.  The residuals reported by 
 \textrm{d}_i = 
 \textrm{sign}(Y_i-\hat{p_i})\sqrt{-2 [ Y_i \text{log} \hat{p_i} + (1 - Y_i) \text{log} (1 - \hat{p_i}) ]}
 \]
+
+<!-- Is this math necessary -->
 
 where $Y_i$ is the actual outcome and $p_i$ is the predicted probability from the logistic regression model.
 
@@ -511,7 +514,7 @@ Now, the `.resid` value is the difference between the actual outcome (`dem_win`)
 We'll now predict `dem_win` with a single numerical explanatory variable, `year`. 
 
 1. We first "fit" the logistic regression model using the `glm(y ~ x, family, data)` function and save it in `house_year_model`.
-1. We get the regression table by applying the `tidy()` function from the **broom** package to `house_year_model`.  We'll print the `term`, `estimate`, `conf.low`, and `conf.high` columns.
+2. We get the regression table by applying the `tidy()` function from the **broom** package to `house_year_model`.  We'll print the `term`, `estimate`, `conf.low`, and `conf.high` columns.
 
 ```{r, eval=FALSE}
 house_year_model <- glm(dem_win ~ year, family = binomial, data = house_ch12)
@@ -569,10 +572,10 @@ While `house_region_model` and `house_year_model` both tell us something interes
 We'll now predict `dem_win` with a two variable, `region` and `year`, as well as the interaction between the two 
 
 1. We first "fit" the logistic regression model using the `glm(y ~ x1 * x2, family, data)` function and save it in `house_interact_model`.
-1. We get the regression table by applying the `tidy()` function from the **broom** package to `house_interact_model`.  We'll print the `term`, `estimate`, `conf.low`, and `conf.high` columns.
+2. We get the regression table by applying the `tidy()` function from the **broom** package to `house_interact_model`.  We'll print the `term`, `estimate`, `conf.low`, and `conf.high` columns.
 
 ```{r, eval=FALSE}
-house_interact_model <- glm(dem_win ~ region * year, family = binomial data = house_ch12)
+house_interact_model <- glm(dem_win ~ region * year, family = binomial, data = house_ch12)
 house_interact_model %>%
   tidy(conf.int = TRUE) %>%
   select(term, estimate, conf.low, conf.high)
@@ -600,6 +603,7 @@ regression_points <- house_interact_model %>%
   select(dem_win, region, .fitted, conf.low, conf.high, .resid)
 regression_points
 ```
+
 ```{r, echo=FALSE}
 regression_points <- augment(house_interact_model,
                              type.predict = "response",
@@ -609,14 +613,8 @@ regression_points <- augment(house_interact_model,
   select(dem_win, region, .fitted, conf.low, conf.high, .resid)
 regression_points %>%
   slice(1:10) %>%
-  knitr::kable(
-    digits = 3,
-    caption = "Regression points (First 10 out of 4,201 district-years)",
-    booktabs = TRUE,
-    linesep = ""
-  ) %>%
-  kable_styling(font_size = ifelse(knitr:::is_latex_output(), 10, 16),
-                latex_options = c("hold_position"))
+  gt() %>%
+  tab_source_note(md("First 10 out of 4,201 district-years"))
 ```
 
 We can also use `augment` to make predictions for years that aren't in our data.  What would our model predict for the 2020 elections?  We use the `newdata` argument in `augment()` to make these predictions.
@@ -757,6 +755,8 @@ Decision trees like this are often used in practice. For example, to decide on a
 # source https://www.researchgate.net/profile/Douglas_Walton/publication/228297479/figure/fig1/AS:301828123185152@1448972840090/Decision-Tree-for-Heart-Attack-Victim-adapted-from-Gigerenzer-et-al-1999-4.png
 knitr::include_graphics(file.path(img_path,"Decision-Tree-for-Heart-Attack-Victim-adapted-from-Gigerenzer-et-al-1999-4.png"))
 ```
+
+<!-- MB: These image links don't work, need to fix--> 
 
 (Source: Walton 2010 Informal Logic, Vol. 30, No. 2, pp. 159-184^[https://papers.ssrn.com/sol3/Delivery.cfm/SSRN_ID1759289_code1486039.pdf?abstractid=1759289&mirid=1&type=2].)
 
@@ -1246,7 +1246,3 @@ tibble(logistic = mean(house_2018_preds$logistic == house_2018_preds$dem_win),
 
 Here we see that when fitting the models on pre-2018 data and testing them on 2018 data, the random forest specification performs the best and the classification tree the worse, with the logistic regression in-between.
 
-# Testing comments
-
-
-# Tester comments
