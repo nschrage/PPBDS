@@ -1,0 +1,1163 @@
+---
+output_yaml:
+  - ../_output.yml
+---
+
+# Probability
+
+<!-- TODOS
+
+1) Add section on PDFs and their relationship with histograms for flipping die
+- Rolling a dice 1 time gives us a flat histogram
+- Rolling a dice 1000 times gives us a histogram with probability on the y axis, where all the values add up to 1
+- Show that adding up the area under gives us a sum of 1.
+- Introduce the notation P(coin) and P(1 dice) earlier
+- Continuity is a lie, height is not continuous. The die are discrete, but height is continuous. So height is a sum of discrete things here.
+- You technically can't measure continuous anything and even if you could, you can't put it on a computer
+- Talk about the relationship between the height of buckets and the number of buckets.
+
+2) Right before comparing two models, add a section showing that a tree diagram may look different depending on whether order matters. Are we looking for sum or do we care about the order of rolling H vs T as well? Flip 2 coins. Only 4 branches from one dot if we care about sum. But if order matters, we need a more extensive diagram with 6 branches.
+
+3) Wizardry section with across and rowwise.
+
+4) Rumsfield quote (photo!) - done
+- Workshop statistics quote + generally populate sidebar
+- Add Rossman quote to side.
+- More quotes and fun stuff.
+
+5) PROBABILITY DOES NOT EXIST. de finetti (photo! Italian?)
+
+6) probability-tutorial.Rmd (two question)
+
+7) probability-questions.Rmd (110? one question; copy/paste over)
+
+8) Add section on unknown unknowns
+
+9) Go into terms like parameter uncertainty, validity, unmodeled variation (either give them their own section headings or make them italicized terms.)
+
+10) Integrate Maria's animations
+
+11) gradethis and learnr
+
+12) add section at the bottom noting the key themes from DK
+
+-->
+
+
+<!-- DK: Things to discuss 
+
+1) Need a Tests are Evil section. This will be the first one in the book, so it can go slowly and does not need to cover much. It occurs after we have done the basic set up, all the way through the posterior estimate of p, but perhaps before the posterior check. Might need to use a new example, or maybe we adjust our current example so that data works. -- done
+
+2) Don't use grid.arrange. Use the functions in cowplot. Or is there a better package?
+
+DK: If we want to do rethinking: https://bookdown.org/content/3890/small-worlds-and-large-worlds.html#the-garden-of-forking-data
+
+-->
+
+
+
+<!-- Central idea: No formulas. No likelihoods. No specific probability distributions. The most technical we get is explaining: p(A), p(B), p(A, B), p(A|B) and p(B|A). Teach probability using branching trees, which eventually lead to outcomes from your sample set. Conditional and marginal probability from those trees. Then go to Bayes Scatterplots. Data on the x-axis. Model on the y-axis. Everything flows from those scatterplots. First, with 0/1 models. The equivalent of a Bayesian box, but with the rows on the y-axis. Then a Bayesian Scatterplot with three models. Then, modeling p with 11 values. Then with 1,001. Then we wave our hands and report that the continuous case is just the extension of that idea, from a few discrete models to a continuum of millions of them. Simulations grow in complexity. The first one would be simple. No map functions or list columns. Later ones get more serious. Introducing testing and why it is evil. Finish with Bayesian posterior predictions. -->
+
+<!-- Key references. Make sure to cite all three as separate side notes. But, at the same time, don't feel compelled to do things the way that they did them. -->
+
+<!-- 2) Teaching Bayes' Rule: A Data-Oriented Approach by Jim Albert. The key concept is Bayes Scatterplots. That is the central graphic of this chapter. We will show such a scatterplot four or five times, each time more complex, each time showing marginal distributions in both directions. -->
+
+<!-- 3) Rethinking Chapter 2. Garden of forking data is just excellent stuff.  -->
+
+<!-- Open Questions: -->
+
+<!-- Should we connect to the Rubin Causal Model? Leafs on the tree are the potential outcomes. Never seen this done before. Because you followed the tree diagram in one direction, you can't go down two branches simultaneously. Is there a connection to game theory tree diagrams in microeconomics? Not sure how exactly to apply this . . . -->
+
+<!-- Review problem set #5 from last year for ideas about simulations to use as examples. -->
+
+<!-- Use some STAT 110 midterm questions as example problems which simulation makes easy to solve. Maybe? At least in the first section? https://projects.iq.harvard.edu/files/stat110/files/midterm_exam.pdf -->
+
+<!-- Would it be helpful to introduce the rsample::bootstraps() function? Or wait till next chapter? Or maybe do a bootstraps the hard way here and then introduce the easy way later? -->
+
+<!-- Should we discuss, or show an example, of multiple dimensions? We have two coins, each with their own p. Build the joint distribution for them, with one on the x-axis and one on the y-axis. You need a near graphic for each value of the H number of heads total that you get from flipping them each N times. Then, you run the experiment, and you select the correct graphic. That shows you the best guess joint distribution. This is confusing! Too hard for the chapter, but maybe not for a problem set. Or maybe we revisit exactly this example in the two parameter chapter? -->
+
+<!-- Class Exercises -->
+
+<!-- a) Workshop Statistics has nice dice and coin examples. Perhaps use those in lecture? -->
+
+<!-- b) Two buckets, each with different pair of die in them: one normal, one weird. You pick a bucket, then roll the die. Q: What are the odds of bucket 1 versus bucket 2? Start with dice function. Then build tibble as in the cookie problem. That takes a day, especially if we build the result by-hand, meaning pivot_wider and summing columns, as we should. Then, day 2, place a prior on the two buckets. Then, what if we through the dice more than once? This will be a list column. Scary! But all the other arguments go through. (I think!) Then, discuss continuous example of a coin, setting the stage for problem set question. -->
+
+<!-- c) Do a dice example where students each have their own priors and then we update after rolling dice, some fake or real. Do it with counts, not proportions.  -->
+
+<!-- d) Might a Bayesian power discussion, as in Kruscke article, be a useful problem set? Ties into the usage of fake data. Good way to introduce/teach type M and S errors? -->
+
+
+```{r setup, include=FALSE}
+library(tufte)
+
+# Need scales::comma for formatting. This is an example of a package which
+# should be included once, at the start of making the book. Same with tidyverse.
+
+# DK: Why ggtree and not one of the other tree packages?
+
+library(scales)
+library(Rgraphviz)
+library(tidyverse)
+library(infer)
+
+# ggthemes so we can use theme_tufte for our plots! - IB
+
+library(ggthemes)
+
+# invalidate cache when the tufte version changes
+
+knitr::opts_chunk$set(tidy = FALSE, cache.extra = packageVersion('tufte'))
+```
+
+
+## The Language of Inference
+
+<!-- Read Topic 14 in Bayesian Workshop. Lots of interesting ideas and examples there for this first section of the chapter. Any coding examples should be simple, with  no list-columns and map_* functions. Basic tool we are introducing is doing simulation within a tibble. Consider doing some of the sample problems from STAT 110, many of which are hard to do analytically but easy to do with simulation. Mention what a PDF is, but no math. Show histogram of results from one die and two die. Explain how those histograms are, more or less, PDFs. Explain what p(A), p(B) and p(A, B) using dice/coin examples. PDF. Trump's electoral votes as a PDF. -->
+
+
+```{marginfigure}
+
+Donald Rumsfeld, the former US Secretary of Defense, once said the following tongue-twisting quote:
+
+  "There are known knowns. There are things we know we know. We also know there are known unknowns. That is to say, we know there are some things we do not know. But there are also unknown unknowns, the ones we do not know we do not know."
+
+```
+
+```{r, echo-FALSE, fig.margin = TRUE}
+
+knitr::include_graphics("images/donald_rumsfeld.jpg")
+
+```
+
+
+
+The central tension, and opportunity, in data science is the interplay between the *data* and the *science*, between our empirical observations and the models which we use to understand them. Probability is the language we use to explore that interplay; it connects models to data, and data to models.
+
+What does it mean that Trump has a *30% chance* of winning re-election this fall? That there is a *90% probability* of rain today? That the die at the casino is *unfair*? If I roll that die 10 times and five of those times I get a three, how likely is it that the die is *unfair*?
+
+Probability is about quantifying uncertainty. We can think of probability as a proportion. The probability of an event occurring is a number from 0 to 1, where 1 means that the event is 100% certain.
+
+Let's begin with the simplest events: coin flips and dice rolls. If the die and 
+the coins are fair, we can operate under the assumption that all outcomes are 
+equally likely.
+
+```{marginfigure}
+
+The opening paragraph of *Workshop Statistics:  Discovery with Data, A Bayesian Approach by James H. Albert and Allan J. Rossman* does a wonderful job of explaining the concept of probability.
+
+  "In the activities to follow, we don’t know if we have a particular disease, if a die being used in the casino is fair, the exact number of fish in our backyard pond, or the number of defectives in a shipment of electronic components. A model is a possible description of this unknown phenomena. In each application, there will be a number of possible models. We assign prior probabilities to these models — these probabilities reflect our opinions about which models are more or less likely to be true. To learn about the correct model, data will be observed. In the activities, the data will consist of the results of a blood test, the results of a roll of the die, the results of a capture-recapture experiment, and the number of defectives observed in a sample. This data will change our opinions about the likelihoods of the different models. Bayes’ rule is the formula which tells us how to compute the new model probabilities."
+
+```
+
+This allows us to make the following statements:
+
+* The probability of rolling either a 1 or 2 is 2/6, or 1/3.  
+* The probability of rolling either 1, 2, 3, 4, 5, or 6 is 1.  
+* The probability of flipping a coin and getting a tail is 1/2.  
+
+We can also use subtraction to make opposite statements:
+
+* The probability of **not** getting a 1 or 2 is 2/3.  
+* The probability of **not** rolling 1, 2, 3, 4, 5, or 6 is 0.  
+* The probability of **not** flipping a coin and not getting a tail is 1/2.
+
+## Unknown Unknowns
+
+Donald Rumsfeld, the former US Secretary of Defense, once said the following tongue-twisting quote:
+
+  "There are known knowns. There are things we know we know. We also know there are known unknowns. That is to say, we know there are some things we do not know. But there are also unknown unknowns, the ones we do not know we do not know."
+
+What does this mean? Well imagine there are people playing games on the street corners of New York. The guy leading the game flips a coin 50 times and shows that there is approximately equal probability of landing heads or tails. Even if the guy can prove the odds of each result through simulations, that doesn't say anything about what will likely happen when someone in the crowd decides to bet on a certain result.
+
+## Probability and Simulations
+
+Now, let's take our understanding of probability and apply it to a data science context.
+
+```{r, echo = FALSE}
+
+# Flipping one coin
+
+coin <- c(0, 1)
+
+sims <- 1
+
+results <- sample(coin, sims, replace=TRUE)
+
+mydata <- tibble(results)
+
+ggplot(mydata, aes(x = results)) +
+  geom_histogram(aes(y=..count../sum(..count..)), binwidth = 1, 
+                 fill = "dark green", color = "white") +
+  labs(title = "Histogram Probability Distribution for Flipping One Coin",
+       x = "Results",
+       y = "Probability") +
+  scale_x_continuous(breaks = seq(0,1,1), labels = 0:1)
+
+```
+```{r, echo = FALSE}
+
+# Flipping one coin 1000 times
+
+coin <- c(0, 1)
+
+sims <- 1000
+
+results <- sample(coin, sims, replace=TRUE)
+
+mydata <- tibble(results)
+
+ggplot(mydata, aes(x = results)) +
+  geom_histogram(aes(y=..count../sum(..count..)), binwidth = 1, 
+                 fill = "dark green", color = "white") +
+  labs(title = "Histogram Probability Distribution for Flipping One Coin",
+       x = "Results",
+       y = "Probability") +
+  scale_x_continuous(breaks = seq(0,1,1), labels = 0:1)
+
+```
+
+```{r, echo=FALSE}
+
+# Flipping a dice 1000 times
+
+dice <- c(1:6)
+
+sims <- 1000
+
+mydata <- tibble(dice_1 = sample(dice, size = sims, replace = TRUE))
+
+ggplot(mydata, aes(x = dice_1)) +
+  geom_histogram(aes(y=..count../sum(..count..)), binwidth = 1, 
+                 fill = "dark green", color = "white") +
+  labs(title = "Histogram Probability Distribution",
+       x = "Value of dice roll",
+       y = "Probability") +
+  scale_x_continuous(breaks = seq(0,6,1), labels = 0:6) +
+  theme_classic()
+
+```
+
+```{r}
+
+# Two die rolled 1000 times
+
+dice <- c(1:6)
+
+sims <- 1000
+
+mydata <- tibble(dice_1 = sample(dice, size = sims, replace = TRUE),
+                 dice_2 = sample(dice, size = sims, replace = TRUE))
+
+mydata <- mydata %>%
+  mutate(sum = (dice_1 + dice_2))
+
+ggplot(mydata, aes(x = sum)) +
+  geom_histogram(aes(y=..count../sum(..count..)), binwidth = 1, 
+                 fill = "dark green", color = "white") +
+  labs(title = "Histogram Probability Distribution",
+       x = "Sum of two die",
+       y = "Probability") +
+  scale_x_continuous(breaks = seq(0,12,1), labels = 0:12) +
+  theme_classic()
+
+```
+
+```{r}
+
+
+
+```
+
+
+What are the odds of that the sum of two die will be seven? We could figure this out analytically, but a simulation in R is a easy way to predict and confirm our expected probability.
+
+```{marginfigure}
+Note that we could have hard-coded the `sims` value into the tibble call in step 3 by 
+setting size = 10000. However, it is good practice to create a separate variable.
+This way, if we want to change the number of simulations, we do not need to 
+manually change all of our code.
+```
+
+```{r, include=TRUE}
+
+# Step 1: Creating the dice.
+
+dice <- c(1:6)
+
+# Step 2: Selecting the number of simulations.
+
+sims <- 10000
+
+# Step 3: Creating a tibble with the data from each simulation.
+
+mydata <- tibble(dice_1 = sample(dice, size = sims, replace = TRUE),
+                 dice_2 = sample(dice, size = sims, replace = TRUE))
+
+# Step 4: Filtering out simulations where we don't have any 6's, then
+# counting our remaining observations.
+
+count <- mydata %>%
+  filter(((dice_1 + dice_2)/2) %in% 3) %>%
+  count() %>%
+  pull(n)
+
+# Step 5: Calculating probability, given by the number of observations with even
+# numbers divided by the number of total observations.
+
+probability <- count/sims
+
+```
+
+
+In this simulation, we calculated a final probability of `r probability`. 
+
+To visualize the probability of different outcomes, we can build a histogram using the tibble we just created.
+
+```{r}
+
+# Let's create a column for the sum of the two die.
+
+mydata <- mydata %>%
+  mutate(average = (dice_1 + dice_2)/2)
+
+# Now let's create a histogram with the y-axis re-scaled to have a maximum of 1.
+
+ggplot(mydata, aes(x = average)) +
+  geom_histogram(aes(y=..count../sum(..count..)), binwidth = 0.5, 
+                 fill = "dark green", color = "white") +
+  labs(title = "Histogram Probability Distribution",
+       x = "Sum of Two Die",
+       y = "Probability") +
+  scale_x_continuous(breaks = seq(0,6,1), labels = 0:6) +
+  theme_classic()
+
+# As we increase the number of die we roll, our probability distribution looks
+# more and more like a probability density function.
+
+dice <- as.data.frame(dice)
+
+# Creating an empty tibble to fill with sampling data in the next step.
+
+updated_data <- data.frame()
+
+# Creating samples of different numbers of die, from 1 die to 100 die. Sampling
+# at each number of die sims = 10000 times.
+
+for (i in 1:2) {
+  
+  new_data <- rep_sample_n(dice, size = i, replace = TRUE, 
+                         reps = sims) %>%
+    group_by(replicate) %>%
+    summarize(average = sum(dice)/i)
+  
+  updated_data <- rbind(new_data, updated_data)
+  
+}
+
+# ggplot(newdata, aes(x = average)) +
+#   geom_histogram(aes(y=..count../sum(..count..)), binwidth = (1-(0.5*1/i)), 
+#                  fill = "dark green", color = "white")
+# 
+# number_of_die <- 100
+# 
+# mydata <- rep_sample_n(dice, size = number_of_die, replace = TRUE, reps = sims)
+# 
+# newdata <- mydata %>%
+#   group_by(replicate) %>%
+#   summarize(average = sum(dice)/number_of_die)
+# 
+# ggplot(newdata, aes(x = average)) +
+#   geom_histogram(aes(y=..count../sum(..count..)), binwidth = 0.01, 
+#                  fill = "dark green", color = "white")
+
+```
+
+
+Similarly, we could create a more complicated simulation of the fall election
+and count the number of observations involving Trump's re-election. We could
+simulate different weather patterns and count the number of observations involving
+rain today.
+
+Takeaway: we want to simulate a scenario as many times as possible, then count the number of observations with the desired outcome.
+
+## Tree Diagrams
+
+### Independence
+
+So far, you have learned how to calculate P(A), which is the fancy, statistical way of saying the probability of an event. When flipping a coin, the probability of getting heads was 1/2. You have also learned how to compute the P(A or B). This means the probability of either A or B happening. When rolling a dice, P(1 or 2)--the probability of getting a 1 or a 2--was 1/3.
+
+What if you flipped 2 coins? You know that the probability of getting heads once is 1/2, but what are the odds of getting heads 2 times in a row? Let's take a look at this tree diagram. We read this diagram from left to right. On the left, the probability of getting heads is 0.5. Now the tree branches out.
+
+* *If* we got heads the first time, then we go up the top branch. The probability of getting heads again is 0.5.
+* *If* we got tails the first time, then we go down the bottom branch. The probability of getting heads is 0.5.
+
+Notice how regardless of what we get the first time we flip the coin, the probability of getting heads is 0.5 throughout. This suggests that the coin flips are **independent**. The result of one coin flip does not impact the likelihood of getting the same result next time. Take a look at the tree diagram. P(H given H) represents the probability of getting heads *given* that we got heads the first time. P(H given T) represents the probability of getting heads *given* that we got tails the first time. P(H given H) = P(H given T).
+
+```{r, echo=FALSE}
+
+# Probability of a
+
+a <- 0.5
+
+# Probability of (b | a)
+
+bGivena <- 0.5
+
+# Probability of (b | not a)
+
+bGivenNota <- 0.5
+
+# Calculate the rest of the values based upon the 3 variables above
+notbGivena<-1-bGivena
+notA<-1-a
+notbGivenNota<-1-bGivenNota
+ 
+#Joint Probabilities of a and B, a and notb, nota and b, nota and notb
+aANDb<-a*bGivena
+aANDnotb<-a*notbGivena
+notaANDb <- notA*bGivenNota
+notaANDnotb <- notA*notbGivenNota
+ 
+# Probability of B
+b <- aANDb + notaANDb
+notB <- 1-b
+ 
+# Bayes theorum - probability of A | B
+# (a | b) = Prob (a AND b) / prob (b)
+aGivenb <- aANDb / b
+ 
+# These are the labels of the nodes on the graph
+# To signify "Not A" - we use A' or A prime 
+ 
+node1<-"P"
+node2<-"P(H)"
+node3<-"P(T)"
+node4<-"P(H given H)"
+node5<-"P(T given H)"
+node6<-"P(H given T)"
+node7<-"P(T given T)"
+nodeNames<-c(node1,node2,node3,node4,node5,node6,node7)
+
+rEG <- new("graphNEL", nodes=nodeNames, edgemode="directed")
+ 
+# Draw the "lines" or "branches" of the probability Tree
+rEG <- addEdge(nodeNames[1], nodeNames[2], rEG, 1)
+rEG <- addEdge(nodeNames[1], nodeNames[3], rEG, 1)
+rEG <- addEdge(nodeNames[2], nodeNames[4], rEG, 1)
+rEG <- addEdge(nodeNames[2], nodeNames[5], rEG, 1)
+rEG <- addEdge(nodeNames[3], nodeNames[6], rEG, 1)
+rEG <- addEdge(nodeNames[3], nodeNames[7], rEG, 10)
+ 
+eAttrs <- list()
+ 
+q <- edgeNames(rEG)
+ 
+# Add the probability values to the the branch lines
+ 
+eAttrs$label <- c(toString(a),toString(notA),
+ toString(bGivena), toString(notbGivena),
+ toString(bGivenNota), toString(notbGivenNota))
+names(eAttrs$label) <- c(q[1],q[2], q[3], q[4], q[5], q[6])
+edgeAttrs<-eAttrs
+ 
+# Set the color, etc, of the tree
+
+attributes<-list(node=list(label="foo", fillcolor="light blue", fontsize="12"),
+ edge=list(color="blue"),graph=list(rankdir="LR"))
+ 
+#Plot the probability tree using Rgraphviz
+
+plot(rEG, edgeAttrs=eAttrs, attrs=attributes)
+
+```
+
+### Conditional probability
+
+Now imagine that 60% of people in a community have a disease. A doctor develops a test to determine if a random person has the disease. However, this test isn't 100% accurate. This test is 80% sure of correctly returning positive **if the person has the disease** and 90% sure of correctly returning negative **if the person does not have the disease**.
+
+This tree diagram illustrates exactly this. Starting from the left, we see that the probability of a random person having the disease is 0.6. Since they either have the disease or don't (those are the only two possibilities), the probability that they don't have the disease is 1 - 0.4.
+
+Now the tree branches out.
+
+* *If* the random person has the disease, then we go down the top branch. The probability of the person testing positive is 0.8 because the test is 80% sure of correctly returning positive when the person has the disease.
+* By the same logic, *if* the random person does not have the disease, we go down the bottom branch. The probability of the person incorrectly testing positive is 0.1.
+
+We decide to go down the top branch *if* our random person has the disease. We go down the bottom branch *if* they do not. This is called **conditional probability**. The probability of testing positive is **dependent** on whether the person has the disease.
+
+How would you express this in statistical notation? P(A|B) is the same thing as the probability of A *given* B. P(A|B) essentially means the probability of A *if* we know for sure that B is true.
+
+```{marginfigure}
+**Positive:** The test results suggest that the patient has the disease.
+
+**False Positive:** The patient does not have the disease but the test results incorrectly suggest that they do.
+
+**Negative:** The test results suggest that the patient does not have the disease.
+
+**False Negative:** The patient has the disease but the test results incorrectly suggest that they do not.
+
+```
+
+```{r, echo=FALSE}
+
+# Probability of a
+
+a <- 0.6
+
+# Probability of (b | a)
+
+bGivena <- 0.8
+
+# Probability of (b | not a)
+
+bGivenNota <- 0.1
+
+# Calculate the rest of the values based upon the 3 variables above
+notbGivena<-1-bGivena
+notA<-1-a
+notbGivenNota<-1-bGivenNota
+ 
+#Joint Probabilities of a and B, a and notb, nota and b, nota and notb
+aANDb<-a*bGivena
+aANDnotb<-a*notbGivena
+notaANDb <- notA*bGivenNota
+notaANDnotb <- notA*notbGivenNota
+ 
+# Probability of B
+b <- aANDb + notaANDb
+notB <- 1-b
+ 
+# Bayes theorum - probabiliyt of A | B
+# (a | b) = Prob (a AND b) / prob (b)
+aGivenb <- aANDb / b
+ 
+# These are the labels of the nodes on the graph
+# To signify "Not A" - we use A' or A prime 
+ 
+node1<-"P"
+node2<-"Disease"
+node3<-"No Disease"
+node4<-"Positive"
+node5<-"False Negative"
+node6<-"False Positive"
+node7<-"Negative"
+nodeNames<-c(node1,node2,node3,node4,node5,node6,node7)
+ 
+rEG <- new("graphNEL", nodes=nodeNames, edgemode="directed")
+ 
+# Draw the "lines" or "branches" of the probability Tree
+rEG <- addEdge(nodeNames[1], nodeNames[2], rEG, 1)
+rEG <- addEdge(nodeNames[1], nodeNames[3], rEG, 1)
+rEG <- addEdge(nodeNames[2], nodeNames[4], rEG, 1)
+rEG <- addEdge(nodeNames[2], nodeNames[5], rEG, 1)
+rEG <- addEdge(nodeNames[3], nodeNames[6], rEG, 1)
+rEG <- addEdge(nodeNames[3], nodeNames[7], rEG, 10)
+ 
+eAttrs <- list()
+ 
+q <- edgeNames(rEG)
+ 
+# Add the probability values to the the branch lines
+ 
+eAttrs$label <- c(toString(a),toString(notA),
+ toString(bGivena), toString(notbGivena),
+ toString(bGivenNota), toString(notbGivenNota))
+names(eAttrs$label) <- c(q[1],q[2], q[3], q[4], q[5], q[6])
+edgeAttrs<-eAttrs
+ 
+# Set the color, etc, of the tree
+
+attributes<-list(node=list(label="foo", fillcolor="light blue", fontsize="14"),
+ edge=list(color="blue"),graph=list(rankdir="LR"))
+ 
+#Plot the probability tree using Rgraphviz
+
+plot(rEG, edgeAttrs=eAttrs, attrs=attributes)
+
+text(150,230, "P(Disease)",cex=.5)
+
+text(150,140, "P(No Disease)",cex=.5)
+
+text(340,300,"P(Positive | Disease)",cex=.5)
+
+text(340,210,"P(Negative | Disease)",cex=.5)
+
+text(340,60,"P(Negative | No Disease)",cex=.5)
+
+text(340,150,"P(Positive | No Disease)",cex=.5)
+
+```
+
+This concept of conditional probability is relevant in our everyday lives. For example, the probability of Trump's re-election might be different than the probability of Trump's re-election *given* that we are in a recession. The probability of you reading a textbook might vary, *depending* on the likelihood of your instructor cold-calling you in class. Whenever you encounter a question involving conditional probability, drawing a tree diagram is a very useful approach to visualization.
+
+<!-- EC: This could be a good section to include a disclaimer about not mixing up P(B|A) and P(A|B). Alternatively, could add more examples to the section below that mentions they are different, since it is mentioned in passing -->
+
+### Two Diagrams for One Set of Coin Flips
+
+In our histogram probability distribution, we didn't care what combinations of numbers made each sum. We only cared about the outcome. There are two ways of thinking about a coin toss as well. Your tree diagram should look different depending on whether the order of the results matters.
+
+To understand tree diagrams a little better, imagine you're flipping 2 coins. Your tree diagram may look different depending what you're interested in measuring.
+
+```{marginfigure}
+
+In this figure, the order of your coin toss results does not matter. We can imagine
+that you are rolling two coins together, or that you only care about the sum of the two die values.
+
+```
+
+```{r, echo=FALSE}
+
+# These are the labels of the nodes on the graph
+ 
+node1<-"P"
+node2<-"P(0 Heads, 2 Tails)"
+node3<-"P(1 Head, 1 Tail)"
+node4<-"P(2 Heads, 0 Tails)"
+nodeNames<-c(node1,node2,node3,node4)
+ 
+rEG <- new("graphNEL", nodes=nodeNames, edgemode="directed")
+ 
+# Draw the "lines" or "branches" of the probability Tree
+
+rEG <- addEdge(nodeNames[1], nodeNames[2], rEG, 1)
+rEG <- addEdge(nodeNames[1], nodeNames[3], rEG, 1)
+rEG <- addEdge(nodeNames[1], nodeNames[4], rEG, 1)
+ 
+eAttrs <- list()
+ 
+q <- edgeNames(rEG)
+
+edgeAttrs<-eAttrs
+ 
+# Set the color, etc, of the tree
+
+eAttrs$label <- c(toString(0.25),toString(0.5),
+ toString(0.25))
+names(eAttrs$label) <- c(q[1],q[2], q[3])
+edgeAttrs<-eAttrs
+
+attributes<-list(node=list(label="foo", fillcolor="light blue", fontsize="14"),
+ edge=list(color="blue"),graph=list(rankdir="LR"))
+ 
+#Plot the probability tree using Rgraphviz
+
+plot(rEG, edgeAttrs=eAttrs, attrs=attributes)
+
+```
+
+```{marginfigure}
+
+In this figure, the order of your coin toss results does matter. Depending on your first result, you go down a different branch.
+
+```
+
+```{r, echo=FALSE}
+
+# Probability of a
+
+a <- 0.5
+
+# Probability of (b | a)
+
+bGivena <- 0.5
+
+# Probability of (b | not a)
+
+bGivenNota <- 0.5
+
+# Calculate the rest of the values based upon the 3 variables above
+notbGivena<-1-bGivena
+notA<-1-a
+notbGivenNota<-1-bGivenNota
+ 
+#Joint Probabilities of a and B, a and notb, nota and b, nota and notb
+aANDb<-a*bGivena
+aANDnotb<-a*notbGivena
+notaANDb <- notA*bGivenNota
+notaANDnotb <- notA*notbGivenNota
+ 
+# Probability of B
+b <- aANDb + notaANDb
+notB <- 1-b
+ 
+# Bayes theorum - probability of A | B
+# (a | b) = Prob (a AND b) / prob (b)
+aGivenb <- aANDb / b
+ 
+# These are the labels of the nodes on the graph
+# To signify "Not A" - we use A' or A prime 
+ 
+node1<-"P"
+node2<-"P(H)"
+node3<-"P(T)"
+node4<-"P(H given H)"
+node5<-"P(T given H)"
+node6<-"P(H given T)"
+node7<-"P(T given T)"
+nodeNames<-c(node1,node2,node3,node4,node5,node6,node7)
+
+rEG <- new("graphNEL", nodes=nodeNames, edgemode="directed")
+ 
+# Draw the "lines" or "branches" of the probability Tree
+rEG <- addEdge(nodeNames[1], nodeNames[2], rEG, 1)
+rEG <- addEdge(nodeNames[1], nodeNames[3], rEG, 1)
+rEG <- addEdge(nodeNames[2], nodeNames[4], rEG, 1)
+rEG <- addEdge(nodeNames[2], nodeNames[5], rEG, 1)
+rEG <- addEdge(nodeNames[3], nodeNames[6], rEG, 1)
+rEG <- addEdge(nodeNames[3], nodeNames[7], rEG, 10)
+ 
+eAttrs <- list()
+ 
+q <- edgeNames(rEG)
+ 
+# Add the probability values to the the branch lines
+ 
+eAttrs$label <- c(toString(a),toString(notA),
+ toString(bGivena), toString(notbGivena),
+ toString(bGivenNota), toString(notbGivenNota))
+names(eAttrs$label) <- c(q[1],q[2], q[3], q[4], q[5], q[6])
+edgeAttrs<-eAttrs
+ 
+# Set the color, etc, of the tree
+
+attributes<-list(node=list(label="foo", fillcolor="light blue", fontsize="12"),
+ edge=list(color="blue"),graph=list(rankdir="LR"))
+ 
+#Plot the probability tree using Rgraphviz
+
+plot(rEG, edgeAttrs=eAttrs, attrs=attributes)
+
+```
+
+<!-- # Section 2: Trees as a formal structure for probability -->
+
+<!-- 2 a) Describe trees. Show some diagrams. (Maybe save making these for later? Are their R packages for this?) This is the basic structure which we will use for everything in the chapter. We can make trees for the examples above. We can discuss important statistical concepts: like conditional probability, marginal probability in the context of a tree. We can highlight subtle cases: Like throw two dice together versus throw one dice and then a second dice. These make for different tree structures, but the same set of leaves. Show an unbalanced tree, in which one branch is a different length, like a craps game or maybe blackjack. Again, no mathematical formalism. Also, no Bayesian stuff. We are just taking the same examples from above and making them a little more structured.  -->
+
+<!--https://github.com/YuLab-SMU/treedata-book is useful for tree diagrams-->
+
+<!-- Discuss conditional probability and marginal probability using a simple tree with 0.6/0.4 first branch, and then next branches slightly different: 0.8/0.2 and 0.1/0.9. -->
+
+<!-- We a tree, we can explain total probability, conditional probability and marginal probabity. Explain the meaning of p(A, B), p(A), p(B) and p(B|A). But that is it. Nothing more mathematical than that. Focus on words, directly connected to the tree images. -->
+
+<!-- 2 b) Another coding session, but this time with list-columns and map_functions. These do not have to be long. We just want to re-iterate the points we made in words. Maybe we don't need list-columns. Maybe just show map functions here. Again, the point of this section is ONLY to understand the key probabity concepts: joint, total, conditional and marginal. -->
+
+
+## Comparing Two Models
+
+<!-- # Section 3: Two Models, Scatterplots and Bayes Theorem -->
+
+<!-- 3 a) Key point of this section is how we deal with the simplest possible situation. There are only two possibilities. Either you have the disease, or you don't. Walk through this problem with counts first. There are 100,000 people in the country. (Top of tree.) 0.1% have the disease, which is 100 people. 999,900 do not. (These are the two branches from the top.) We give the test to all 100,000 people. And so on. We have the four leaves, and then we just add the two branches which positive test results together, and then divide that into the total with the disease who tested positive. Presto! Your true odds.
+
+See page 330 of the Bayesian Workshop for the use of the frequency format. Don't think in terms of percentages. Think in terms of counts. Would this be useful to show students?
+
+       1000
+      10   990
+     8  2  95 895
+     8/(8 + 95)
+
+Should we start with counts and then go to probabilities, or just start with probabilities? Flip a coin 100 times, and get 53 heads and 47 tails. Or maybe explain with counts each time we learn a new thing, and then do with percentages. Note how all this ties into the below discussion. When we are playing with models, we just "know" what the percentages are. We use this knowledge to determine what a single data point means. But we also do the opposite! (Call this the inverse?) We collect a lot of data (counts?) and then use that data to estimate the probabilities in the tree. Hmmm. 
+
+Then do another example, but point out we don't need the counts. Numbers are abritrary because we divide at the end. Show that.
+
+Now that we understand trees, we can do some Bayes' Theorem examples by hand. We don't even show the formula! Just walk through the four leaves, and how we add two and then divide into one of them. -->
+
+<!-- Then, with those ideas fixed, we make a Bayes Scatterplot with just two rows on the y-axis: have the disease or don't have the disease. (Or maybe we use another exmaple each time.) Since these two models have no fixed numeric meaning, we can just place them at 0 and 1 on the y-axis, which sort of corresponds to FALSE and TRUE. Then, we can x-axis we have the actual data. Which, in this case, is also a TRUE/FAlSE value: Either you tested positive or you tested negative, so also 0 and 1. Then, we can simulate. Put a 100,000 people through, fill out the values. There are only 4 possibilities, so we will need to jittter. (See below for an example of how to do this. And then explore the marginal distributions. Show how this gives you the same answer, roughly, as the math we did before.) -->
+
+<!-- 3 b) Code up a full featured simulation exercise, like the cookie problem but with more complexity. See the old 1005 problem set. Connect this to how 538 does things. 99.99% of real world problems are solved with simulation, not analytically. -->
+
+<!-- This prediction by 538 is really interesting: (https://projects.fivethirtyeight.com/2020-march-madness-predictions/), especially
+pre-game. Is this what you mean by how 538 does things? Potentially link something
+like this into the textbook to illustrate how simulations are used?  webshot() -->
+
+<!-- Do we like all the words below? I am not sure. -->
+
+<!-- adding my own version of this - looking for feedback IB -->
+
+Imagine you wake up one morning and feel a little bit under the weather. Not sick, just not 100%.
+So, you go to your doctor and your doctor is confused. So, she runs a slew of tests and in a couple of days, one of them comes back positive. You've tested positive for a rare disease, called $X$. Only *.1%* of the population has this disease. And the test correctly identifies you as positive *99%* of the time!
+
+So, understandably worried, you ask yourself: what is the probability I have this disease?
+
+The immediate, but *wrong*, answer would be 99%. Why is this wrong? Isn't 99% the accuracy of the test? To understand, we're going to abandon probability as a *proportion* (ie 99%) and think of it in *counts*. 
+
+Imagine you're part of a population of 1000 people. Now, the frequency of the disease is .1%. In terms of a count, that means 1 person has this disease of the 1000 in the population. The test would probably correctly identify this individual. However, a test with an accuracy of 99% would also identify 10 other perfectly healthy people out of 1000 people as sick! That means that the number of people who would test positive for the disease is 11 but *only one of them has the disease*. So, in simple terms, the probability of you having the disease given a positive test is $1\div11$! 
+
+
+It becomes easier to understand when you increase this population size 10,000 and model this!  
+
+```{r disease, fig.align="center", echo = FALSE}
+
+# Define a population of 10000 where 10 people have the disease but
+# 100 people have tested positive.
+
+pop <- tibble(
+  patient_id = 1:10000,
+  tested_positive = c(rep(1, 110), rep(0, 9890))
+) %>%
+  mutate(have_disease = case_when(patient_id == 1:10 ~ 1)) %>%
+  mutate(have_disease = case_when(patient_id == 1:10 ~ 1,
+                                  is.na(have_disease) ~ 0))
+
+# Call a plot. Make the variables factors.
+
+ggplot(pop, aes(x = as.factor(have_disease), y = as.factor(tested_positive))) + 
+  geom_point() + 
+  geom_jitter(alpha = .4) +
+  theme_classic() +
+  labs(
+    title = "Distribution of Disease Results in a Population of 10000",
+    x = "Do you have the disease?",
+    y = "Did you test positive?"
+  )
+
+```
+
+Remember, we're currently conceptualizing probability in counts. Therefore, a .1% chance of having the disease means 10 people have it and a 99% chance of testing correctly (a 1% chance of testing incorrectly) means 100 people were incorrectly identified as positive (in addition to the 10 people who tested positive correctly). So, to recap:
+
+* 10 people have the disease
+
+* They all tested positive
+
+* 9990 people don't have the disease
+
+* 100 of them still tested positive
+
+There's a population of 110 people who tested positive and only 10 of them have the disease. So, if you test positive, your chances of having the disease are $10\div110$, which is equal to 9%!
+
+Now, let's switch back to proportion-based probabilities and think about it. Just because the probability of having the disease is .1% and the test is 99% accurate, it doesn't mean that these are the exact numbers that always work out in the real world. That is, for a *sample* of 10,000, a disease frequency of .1% doesn't necessarily mean that 10 people have the disease. It could be 11. Or 9. Or 20! Given that uncertainty, we do what we did above. We model. We built and understanding of the world and expressed it in counts. We then used that to understand what the implications of an event (testing positive) are on our belief that we have the disease. In the next section, we'll follow the same principle but make this a little more complicated.
+
+
+## Comparing Three Models
+
+<!-- # Section 4: Three Models (use the the Two Marble Example) and Scatterplots -->
+
+<!-- 4 a)  Bayes Scatterplots show how both the data and the model can be viewed as probability distributions. If I tell the the model, the you look down one axis to see what the pdf of the data is. If I show you the data, then you look down the other axis to see the posterior pdf of the model. -->
+
+<!-- Having shown an example with two rows above, we now need an example with three. I like the two marble problem. (Cite Rethinking when you use it.) Bag of marbles contains either two white, two black or one of each. This can be formalized with a number p, which is the proportion of white marbles, which can only be 0, 0.5 or 1. Create a Bayes scatterplot for this case. Follow the coding style below. Show the marginal distributions after we observe some data. Big a useful number, like we did with 8 heads out of 20 above.-->
+
+<!-- 4 b) Show the code for doing this, both the simulation itself and how to make the graphic. Key is that we do no math anywhere. -->
+
+
+<!-- # Section 5: 11 and the 1001 models. Same as coin example with unknown p as used in Albert example. First, p is 0, 0.1, 0.2, ... 0.9, 1.0. Make Bayes Scatterplot. Show marginals. Then, extend it so p takes on 1,001 values. This is how we go from discrete to continuous. All the same tricks apply. -->
+
+
+## Comparing N Models
+
+<!-- 5 a) Now go on to Rethinking approach. I think that chapter 2 is just genius. Bayesian is really just counting. Maybe we do a very similar example to what he does? Maybe different? I am still pondering this myself. I think that there is a deep relationship here. In the simple Bayes rule decision trees, we know all the probabilities. But what if we don't? Instead, we get to observe lots of data (which are counts!) and then, from that data, figure out the probabilities. (Note that Rethinking does not talk like this --- after all, we know all the probabilities since each marble has a 20% chance of being drawn --- but I think it is implicit in his approach.) Key issue: Can we connect this in a sensible way to Bayesian scatterplot. There is always the data and the model and the relationship between the two. (And "the model" means, mainly, the parameter estimates thereof.) Tell me the data, and I will tell you the model. Tell me the model, and I will tell you the model. -->
+
+<!-- Note the connection between the marbles from Rethinking and the Bayesian scatterplot. In figure 2.2 in Rethinking represents the model where p = 0.25, where p is the proportion of blue marbles in the total collection. The y-axis models would be labeled with p = 0, 0.25, 0.5, 0.75, and 1. With the tree marble diagram in figure 2.2, we would be taking random samples with 3 marbles. The number of blue marbles we get each time would be plotted along p = 0.25. This is another example of model on the y-axis and data on the x-axis. -->
+
+Imagine there are 10 high schools in your district. Each high school has 1000 students. You are the statistics teacher at high school $A$ and the rest of the 
+high schools are $B$ through $J$. You're really into statistics and you have a 
+deep burning desire to know:
+
+* What portion of high school students at my lovely school of $A$ love statistics?
+
+The easy way to answer this question would be to ask all 1000 of the students at $A$  whether they love statistics. You count up the "Yes" answers and divide by 1000 and  boom! There's your answer. However, the statistics department at $A$ is extremely underfunded and you only have the power to ask 20 random students this question. So, you ask 20 random students and you get 8 "Yes" answers. Is the proportion of students that love statistics at high school $A$ equal to $8\div20 = .4$? 
+
+The correct answer is ... you don't know. Rather, this is information that may help you better understand the true (unknown) answer. So, where do you go from here? 
+
+The next question you ask is "well ... how likely is it to get a sample of 20 with a  sample proportion of .4 for various population proportions?" That is, if the population proportion is $500\div1000 = .5$, how likely is it I get a sample of 20 with 8 "Yes" answers. 
+
+Or, if the population proportion is .3, how likely is it I get a sample of 20 with 8 "Yes" answers?
+
+You contact all your other statistics teacher friends at high schools $B$ through $J$. Those statistics teacher are much more fortunate than you and have plenty of resources! They tell you that they were able to ask each one of the students the question and get a precise answer for the proportion of their students who love statistics! Great for them, but how does this help you.
+
+Well, incidentally, each of the other high schools has a distinct and exact proportion of students. At $B$, the teacher discovered that $100\div1000 = .1$ students love statistics. At $C$, the teacher discovered that $200\div1000 = .2$ students love statistics. This goes on and it turns out high school $J$ has $900\div1000 = .9$ students that love statistics.
+
+Well, each of these schools can serve as a *model* for sampling from a population with a given proportion. 
+
+You're pretty smart and so you ask each of your friends to repeatedly choose 20 random students at their schools and ask them if they love statistics. Your helpful teacher friends record the answers.
+
+* To clarify, the teacher at $B$ is asking random samples of 20 students whether they love statistics from a population in which 10% of the students love statistics. 
+
+So, at high school $B$, if the teacher asked 1000 groups of 20 random students, the distribution of the proportions of each group the teacher asked look like this: 
+
+
+```{r, echo = FALSE}
+
+# Create a school with 10% yes answers.
+
+school_b <- tibble(
+  students = c(rep("Yes", 100), rep("No", 900))) %>%
+  
+# Draw a bunch of samples of 20 from it and summarize the
+# percent that said yes. 
+
+  rep_sample_n(20, replace = TRUE, reps = 1000) %>%
+  filter(students == "Yes") %>%
+  group_by(replicate) %>%
+  count() %>%
+  mutate(prop_yes = n/20) %>%
+  mutate(school_prop = .1)
+
+
+# Display your findings!
+
+ggplot(school_b, aes(x = prop_yes)) + 
+  geom_histogram(binwidth = .01) + 
+  theme_tufte() + 
+  labs(
+    title = "Sampling Distribution from High School B", 
+    subtitle = "1000 samples of 20 students taken",
+    x = "Proportion of Yes Answers",
+    y = "Number of Samples"
+  )
+
+
+```
+
+This means that with a population proportion of .1, the teacher is likely to get answers that range from [.05, .5]. You, at your high school, with a sample proportion of .4, could easily fall into this. It could be the case that your population proportion is actually .1.
+
+Suppose the teacher at high school $J$ did this? Remember, $J$ has a 90% proportion of yes answers.
+
+
+```{r, echo = FALSE}
+
+# Create a school with 20% yes answers.
+
+school_j <- tibble(
+  school = "j",
+  school_prop = .9, 
+  students = c(rep("Yes", 900), rep("No", 100))) %>%
+
+# Draw a bunch of samples of 20 from it and summarize the
+# percent that said yes. 
+
+  rep_sample_n(20, replace = TRUE, reps = 1000) %>%
+  filter(students == "Yes") %>%
+  group_by(replicate) %>%
+  count() %>%
+  mutate(prop_yes = n/20) %>%
+  mutate(school_prop = .9)
+
+
+# Display your findings!
+
+ggplot(school_j, aes(x = prop_yes)) + 
+  geom_histogram(binwidth = .01) + 
+  theme_tufte() + 
+  labs(
+    title = "Sampling Distribution from High School J", 
+    subtitle = "1000 samples of 20 students taken",
+    x = "Proportion of Yes Answers",
+    y = "Number of Samples"
+  )
+
+
+```
+
+Then, your answers range from [.65, 1]! 
+
+So at your high school (where you got a sample proportion of .4), you can probabaly conclude your population percentage is not .9. That is, it's very unlikely 900 out of 1000 students at your high school $A$ love statistics. Why? Because your sample from $A$ gave you a proportion of .4 and when we sampled from high school $J$ (where we're sure the actual population proportion is .9), we got zero samples that had a proportion of .4. 
+
+This is how each of these other high schools is a model you can use to update your understanding of where your high school is. That's because you can use them to determine what samples look like if the population you are sampling from had various proportions.
+
+What if we did this for every high school $B$ through $J$?
+
+
+```{r, echo = FALSE}
+
+# Create every school with the right proportions.
+
+school_c <- tibble(
+  students = c(rep("Yes", 200), rep("No", 800))
+) %>%
+  rep_sample_n(20, replace = TRUE, reps = 1000) %>%
+  filter(students == "Yes") %>%
+  group_by(replicate) %>%
+  count() %>%
+  mutate(prop_yes = n/20) %>%
+  mutate(school_prop = .2)
+
+school_d <- tibble(
+  students = c(rep("Yes", 300), rep("No", 700))
+) %>%
+  rep_sample_n(20, replace = TRUE, reps = 1000) %>%
+  filter(students == "Yes") %>%
+  group_by(replicate) %>%
+  count() %>%
+  mutate(prop_yes = n/20) %>%
+  mutate(school_prop = .3)
+ 
+school_e <- tibble(
+  students = c(rep("Yes", 400), rep("No", 600))
+) %>%
+  rep_sample_n(20, replace = TRUE, reps = 1000) %>%
+  filter(students == "Yes") %>%
+  group_by(replicate) %>%
+  count() %>%
+  mutate(prop_yes = n/20) %>%
+  mutate(school_prop = .4)
+
+school_f <- tibble(
+  students = c(rep("Yes", 500), rep("No", 500))
+) %>%
+  rep_sample_n(20, replace = TRUE, reps = 1000) %>%
+  filter(students == "Yes") %>%
+  group_by(replicate) %>%
+  count() %>%
+  mutate(prop_yes = n/20) %>%
+  mutate(school_prop = .5)
+
+school_g <- tibble(
+  students = c(rep("Yes", 600), rep("No", 400))
+) %>%
+  rep_sample_n(20, replace = TRUE, reps = 1000) %>%
+  filter(students == "Yes") %>%
+  group_by(replicate) %>%
+  count() %>%
+  mutate(prop_yes = n/20) %>%
+  mutate(school_prop = .6)
+ 
+school_h <- tibble(
+  students = c(rep("Yes", 700), rep("No", 300))
+) %>%
+  rep_sample_n(20, replace = TRUE, reps = 1000) %>%
+  filter(students == "Yes") %>%
+  group_by(replicate) %>%
+  count() %>%
+  mutate(prop_yes = n/20) %>%
+  mutate(school_prop = .7)
+
+school_i <- tibble(
+  students = c(rep("Yes", 800), rep("No", 200))
+) %>%
+  rep_sample_n(20, replace = TRUE, reps = 1000) %>%
+  filter(students == "Yes") %>%
+  group_by(replicate) %>%
+  count() %>%
+  mutate(prop_yes = n/20) %>%
+  mutate(school_prop = .8)
+
+# Combine them all.
+
+all_school <- merge(school_b, school_c, all.x = TRUE, all.y = TRUE) %>%
+  merge(school_d, all.x = TRUE, all.y = TRUE) %>%
+  merge(school_e, all.x = TRUE, all.y = TRUE) %>%
+  merge(school_f, all.x = TRUE, all.y = TRUE) %>%
+  merge(school_g, all.x = TRUE, all.y = TRUE) %>%
+  merge(school_h, all.x = TRUE, all.y = TRUE) %>%
+  merge(school_i, all.x = TRUE, all.y = TRUE) %>%
+  merge(school_j, all.x = TRUE, all.y = TRUE) %>%
+  arrange(school_prop)
+
+ggplot(all_school, aes(x = prop_yes, y = school_prop)) + 
+  geom_point() +
+  geom_jitter(alpha = .2) +
+  theme_tufte() + 
+  labs(
+    title = "Sampling Distributions of Different Proportion High Schools",
+    subtitle = "1000 Samples Taken per High School (Population Proportion Level)",
+    x = "Proportion of Sample who Said Yes",
+    y = "Proportion of Population who Say Yes"
+  ) + 
+  scale_y_continuous(breaks = c(.1, .2, .3, .4, .5, .6, .7, .8, .9)) + 
+  scale_x_continuous(breaks = c(.1, .2, .3, .4, .5, .6, .7, .8, .9))
+
+```
+
+Clarifying notes:
+
+* Each row is a population (or "high school") and at each high school, we've surveyed 1000 random groups of 20 and recorded the proportions. The darkness of each cluster represents how many individual samples are in that area. The clusters with few, lighter points are less likely to occur in the sampling distribution. So, for example, if I wanted to know the sampling distribution of one particular high school, I'd look at that row. The animation below illustrates this concept:
+
+![](Maria_Drafts/color_red_combo.gif)
+
+* Read the graph vertically (find a point along the x-axis and look up) if you're trying to figure out in which population proportion(s) your sample statistic appears.
+
+```{marginfigure}
+
+Jim Albert goes through a very similar example and as he points out: "The histogram of the simulated values of the proportion p reflects the prior distribution that we
+placed on this parameter. The histogram of the simulated values of the data y is also meaningful. This is the distribution of data that is plausible assuming our prior on p and the binomial sampling model."
+
+
+*Read more: Jim Albert (1997) Teaching Bayes Rule: A Data-Oriented Approach, The
+American Statistician, 51:3, 247-253*
+
+```
+
+* Read the graph horizontally (find a point on the y-axis and look to the side) if you're trying to figure out the distribution of sample statistics given a population proportion.
+
+So, from this scatterplot you can observe some interesting things about your own initial sample of 20 at high school $A$. 
+
+* You got a sample proportion of .2. If you find that place on the x-axis, you can see all of the population proportions for which that sample proportion occurs. That would be from .1 to .5! You're pretty confident your high school has a proportion somewhere in there!
+
+* In fact, you even know the how likely a sample proportion tends to appear in a population proportion. While a .6 proportion population sometimes gives a sample with a proportion of .2, it doesn't do so as often as a population with the proportion of .2. If you took 10 more samples of 20 at your high school and got values close to .2, you're increasing your confidence the population of your high school is closer to .2 
+
+* The above means you can use this scatterplot to estimate a confidence interval for your sample of 20. If you want a 90% confidence interval, find population proportions which have a sampling distribution in which this sample result is in the middle 90% of the data!
+
+There are a few key takeaways we want to note in this situation.
+
+First, we are uncertain about the actual proportion of the population that loves statistics. This is likely to always be the case - that we are uncertain about the parameter. We won't really know what the true probability is. We can however, become better informed about what it could be. For that, we use models. That is the principle expressed in this in this example. We created a bunch of models for each potential probability and used the results of those models to understand which model is more or less likely to explain our specific results.
+
+Second, 
+
+
+
+## Testing is Evil
+
+<!-- Introduce concepts like the null model, testing, and p-values. Connect to permutation tests from chapter 3.  Side note quotation: "Amatuers test. Professionals summarize." Maybe we should pick an example in which the number of heads is low enough to provide some reasonable evidence against p = 0.5. -->
+
+In some fields, it is common to want to test a specific hypothesis. Consider the hypothesis that the coin is fair, i.e., that $p = 0.5$. Does the data we have support or reject that hypothesis? (Be wary that $p$ is both used for the probability of a head and the $p$-value of a hypothesis test.)
+
+Not really interested in that exact test except in toy scenarios.
+
+Difference between 0.04 and 0.06 is rarely significant. And is hardly ever a good reason to decide X over Y.
+
+
+
+
+
+## Posterior Predictions (Advanced)
+
+Looking at the marginal distributions from the Bayes scatterplots shows us the posterior distribution of the data, conditioning on the model, and of the model, conditioning on the data. In other words, if the model us true, this is what we believe about the distribution of the data, both the data that we have already seen and about the data we will see in the future, assuming that that the model is true.
+
+But such a forecast is, in the real world, not the best forecast possible because it is assuming that the model is 100% true --- in this case, that $p = 0.4$ --- even though we don't know, for certain, that the model is true. Indeed, the whole point of the Bayesian scatter plot is to show that, if we see 8 heads in 20 tosses, that, although $p = 0.4$ is the most likely model, it could be that $p = 0.3$ or $p = 0.5$. *We are uncertain about what $p$ is.* The best possible forecast will incorporate that uncertainty, will not pretend that we know, for certain, that $p = 0.4$. Forecasts which incorporate our uncertainty about parameter values are called "posterior predictions."
+
+To construct posterior predictions, we do the same sampling proceedure as with the Bayes scatterplots, while averaging over the rest of possible values for $p$, weighted by their relative likelihood. Recall the analysis above:
+
+  
+```{r}
+# Same code to get set up as before. But 10,000 this time for more stability,
+# and to really see some extreme values for p. Don't need to show this code
+# again. Maybe just show the plot.
+
+set.seed(10)
+
+mod <- seq(0, 1, 0.1)
+rep <- 1:10000
+toss <- 1:20
+
+x <- crossing(mod, rep, toss) %>% 
+  mutate(result = ifelse(runif(n = nrow(.)) < mod, 1, 0)) %>% 
+  group_by(mod, rep)  %>% 
+  summarize(total = sum(result)) %>% 
+  filter(total == 8)
+
+# Show that the plot is the same, but highlight that there is a chance, however
+# miniscule, that p is 0.8 or 0.1. 
+
+x %>% 
+  ggplot(aes(x = mod)) +
+    geom_bar(aes(y = (..count..)/sum(..count..))) + 
+    scale_y_continuous(labels=percent) +
+    labs(title = "Posterior Estimate of p Given 8 Heads in 20 Flips",
+         subtitle = "p is more likely to be something other than 0.4",
+         x = "Probability of Heads",
+         y = "Posterior")
+
+```
+  
+Although the most likely value for $p$ is 0.4, it is actually more likely that $p$ is a different value than 0.4, either lower or higher and, potentially, much lower or higher. To get the correct uncertainty in our forecasts for the number of heads in the next 20 tosses, we need to incorporate that uncertainty directly.
+
+```{r}
+# Did not get around to finishing this.
+
+x %>% 
+  select(-rep, -total) 
+
+
+```
+
+ 
+
+

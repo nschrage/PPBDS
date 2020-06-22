@@ -1,0 +1,592 @@
+---
+output_yaml:
+  - ../_output.yml
+---
+
+# Two Parameters {#two-parameters}
+
+<!-- This section is for general author comments and discussion. -->
+
+<!-- 0) Make clear the distinction between "modeling for prediction" and "modeling for causation." The first is only about comparisons between categories. The second is stronger, a claim about changing an individual; it is a claim about potential outcomes. Multiple paragraphs throughout the chapter. -->
+
+<!-- 1) Do we want to play the prediction game? If so, how? -->
+
+<!-- 2) How do we connect this to the probability chapter? I am still thinking about this. Basic idea is that, what would we estimate would happen with a new experiment, which might include one or 10 or 1,000 new people? Just like coin-tossing from chapter 5. We need to make this connection very explicit. Read through chapter 5 and discuss.  Posterior distribution, given the data we have, of an unknown parameter. -->
+
+<!-- 3) Should we make an explicit connection to the probability chapter by adding another dimension to that work? We have two coins, each with their own p. Build the joint distribution for them, with one on the x-axis and one on the y-axis. You need a near graphic for each value of the H number of heads total that you get from flipping them each N times. Then, you run the experiment, and you select the correct graphic. That shows you the best guess joint distribution. This is confusing!  -->
+
+
+## Immigration Attitudes
+
+<!--  Point out that att_start is not something we will use in this chapter, but will use later. This is a brie f warm up. Don't need to explore each variable in detail. All we are using is `treatment` and `income`. -->
+
+Recall the trains dataset from Enos (2014) that was first introduced in Chapter 3 in the context of the Rubin Causal Model. In this study, Enos and his team randomly placed Spanish-speaking confederates in nine train stations around Boston, MA. They examined how exposure to Spanish-speakers -- the `treatment` -- influenced attitudes toward immigration. These reactions were measured through changes in exclusionary attitudes regarding immigration. 
+
+```{r, message=FALSE}
+library(PPBDS.data)
+library(tidyverse)
+library(rsample)
+library(tufte)
+library(remotes)
+```
+
+```{r, include=FALSE}
+library(gt)
+```
+
+Let's refresh our memory with a look at the data:
+
+```{r}
+
+glimpse(trains)
+
+```
+
+Here, we can see variables that indicate each respondent's gender, political affiliation, age, and income. Additionally, we have variables that indicate whether a subject was in the control or treatment group, and the attitudes before or after the study in each of these subjects. Remember that for the `att_start` and `att_end` variables, a higher number means to a more conservative political standing and, correspondingly, a more exclusionary stance on immigration into the United States.
+
+Although the att_start and att_end variables are central to Enos' experiment, we will now focus our attention to the relationship between the `income` and `party` variable. The reason for investigating this instead of att_start and att_end will become clear later in the chapter. Furthermore, instead of investigating a single parameter of comparison like we did in chapter 7, we will incorporate the use of *two parameters* to create a holistic picture of how these two variables are related. How do our estimates and predictions regarding income change when we identify a specific party we want to work with within the data?
+
+
+## Estimate Income
+
+<!-- All the same tools which we used to estimate a single parameter in the previous chapter apply to estimate two parameters in this chapter. (Not sure what examples we will use in that chapter.) In fact, it is easy! We only need to do the bootstrap once. And, once we have those bootstrap samples, we just calculate mean(income) for treated and mean(income) for control. Key insight is that we don't need to do a bootstrap for each parameter we want to calculate. We do one bootstrap and then calculate as many parameters as we need to. We can also calculate medians or items like 5th highest income, and our uncertainty associated with those items. -->
+
+<!-- The difference between the means is the same as the mean of the differences, but the ratio of the means is not the same as the mean of the ratios, and the same for confidence intervals. -->
+
+
+```{r, include = FALSE}
+
+#Just calculating some values here that I need for the bootstrap distributions later on. Will not display to student.
+
+mean_income_value <- mean(trains %>% pull(income))
+
+mean_income_value_democrat <- mean(trains %>% filter(party == "Democrat") %>% pull(income))
+
+mean_income_value_republican <- mean(trains %>% filter(party == "Republican") %>% pull(income))
+
+median_income_value <- median(trains %>% pull(income))
+
+median_income_value_democrat <- median(trains %>% filter(party == "Democrat") %>% pull(income))
+
+median_income_value_republican <- median(trains %>% filter(party == "Republican") %>% pull(income))
+
+```
+
+Recall how we constructed bootstrap distributions for select parameters through sampling with replacement in ch7. Through this bootstrapping process, we were able to construct *confidence intervals* for these parameters. Remember, confidence intervals are a tool to help us identify *parameter uncertainty*, which is the degree to which we are confident in these approximations of the true values using limited data.
+
+Using the limited data in the `trains` dataset as representative of homogeneous white populations of the United States, this type of resampling will allow us to pinpoint a *true value* for a given parameter with a certain degree of confidence — this could, for example, be the true average income of Boston commuters, or the true percentage of Boston commuters that are Republican (refer back to chapter 7 for a refresher on how this works out mathematically). 
+
+<!-- EM: relying on the term "parameter uncertainty" being brought up in ch7 -->
+
+We will once again be using the `bootstraps()` function from the **rsample** package. You might think that since we're shifting to calculating two parameters of comparison, we might need to conduct the entire bootstrapping process twice, once for each parameter. However, it's much, much easier than that! We can actually calculate as many parameters as we need to for each replicate instead of doing a separate bootstrap for each parameter we want to track.
+
+That was a lot of words; the idea is best illustrated for an example. Here is a bootstrap sample of the trains dataset with 1000 replicates, and the data contained in the first of these 1000 replicates (note that we need the `analysis()` function in order to view the data stored within each replicate because of the split data column):
+
+
+```{r}
+
+x <- bootstraps(trains, 1000)
+
+x$splits[[1]] %>% analysis()
+
+```
+
+Now, let's say we're interested in calculating a single parameter across each of these bootstrapped samples: the mean income for each of these replicates. We can achieve this by applying the `mean()` function iteratively across each of the replicates using a mapping function, and adding a column to the condensed "data" tibble, as shown below:
+
+```{r}
+
+get_mean_income <- function(splits) {
+  x <- analysis(splits)
+  return(mean(x$income))
+}
+
+x$mean_income <- map_dbl(1:1000, ~get_mean_income(x$splits[[.]]))
+
+x
+```
+
+Now we have 1000 replicates and 1000 values of mean_income to work with. If we want to construct a distribution for the bootstrapped values of `mean_income` with a 95 percent confidence interval, we can calculate the bounds of this interval, just as we did in the previous chapter.
+
+<!-- Make sure this is done in previous chapter. I would be very surprised if it isn't-->
+
+```{r}
+
+quantiles <- x %>% pull(mean_income) %>% quantile(c(.025, .975), names = F)
+
+ggplot(x, aes(x = mean_income)) + 
+  geom_histogram(bins = 20) + 
+  geom_vline(xintercept = quantiles[1]) + 
+  geom_vline(xintercept = quantiles[2]) + 
+  geom_vline(xintercept = mean_income_value, color = "blue") +
+  labs(x = "Mean Income",
+       y = "Number of Replicates",
+       title = "Mean Income for 1000 Bootstrapped Samples of Trains Dataset") +
+  theme_classic()
+
+```
+
+We've calculated the mean income for each bootstrapped replicate and constructed a nice distribution graphic for it — and this is all well and good, but it's exactly the same thing that we did back in ch7. Extending our analysis of income to two parameters would allow us to investigate new trends and patterns in the data. 
+
+What if we wanted to extend this calculation to distinguish between, say, democratic and republican subjects in Enos' study?
+
+## Two Parameters
+
+This will require a bit of additional work but will not require any more bootstrapping. First, we'll slightly modify the `get_mean_income()` function: we'll add an input to the function, `whichParty`, that will allow the function to distinguish between subjects that identified as democrat and those that identified as republican.
+
+```{r}
+
+get_mean_income <- function(splits, whichParty) {
+  x <- analysis(splits) %>% filter(party == whichParty)
+  return(mean(x$income))
+}
+
+```
+
+Now that we've rewritten `get_mean_income()`, we can map the function onto each replicate. Here, we create two columns, mean_income_control and mean_income_treated, that distinguish between the mean incomes of the two groups.
+
+```{r}
+
+x$mean_income_democrat <- map_dbl(1:1000, ~get_mean_income(x$splits[[.]], "Democrat"))
+
+x$mean_income_republican <- map_dbl(1:1000, ~get_mean_income(x$splits[[.]], "Republican"))
+
+x %>% select(id, mean_income_democrat, mean_income_republican)
+
+```
+
+If we wanted to construct separate distributions for `mean_income_democrat` and `mean_income_republican`, we would need to be able to distinguish the two columns by a single variable. To do this, we use `pivot_longer()` and combine the two columns under a new column called `subject_party`:
+
+
+```{r}
+
+pivoted_data <- x %>% 
+  pivot_longer(cols = c(mean_income_democrat, mean_income_republican), 
+               names_to = "subject_party",
+               values_to = "income")
+
+pivoted_data
+
+```
+
+Now, if we want to calculate 95 percent confidence intervals for both the democrat and republican subjects, we can calculate these values manually and plot them both on the same graph, distinguishing between the two sets of values and intervals using color:
+
+```{r}
+
+democrat_intervals <- pivoted_data %>% filter(subject_party == "mean_income_democrat") %>% pull(income) %>% quantile(c(.025, .975), names = F)
+
+republican_intervals <- pivoted_data %>% filter(subject_party == "mean_income_republican") %>% pull(income) %>% quantile(c(.025, .975), names = F)
+
+ggplot(pivoted_data, aes(x = income, fill = subject_party)) +
+  geom_histogram(bins = 40) +
+  theme_classic() +
+  labs(x = "Mean Income",
+       y = "Number of Replicates",
+       title = "Mean Income for 1000 Bootstrapped Samples",
+       subtitle = "Bars represent 95 percent confidence intervals and original value",
+       fill = "Subject Party") +
+  scale_fill_discrete(labels = c("Democrat", "Republican")) +
+  geom_vline(xintercept = democrat_intervals[1], color = "red") + 
+  geom_vline(xintercept = democrat_intervals[2], color = "red") + 
+  geom_vline(xintercept = republican_intervals[1], color = "turquoise3") + 
+  geom_vline(xintercept = republican_intervals[2], color = "turquoise3") + 
+  geom_vline(xintercept = mean_income_value_democrat, color = "red") + 
+  geom_vline(xintercept = mean_income_value_republican, color = "turquoise3") 
+
+```
+
+This is a bit messy and difficult to decipher, but there are two observations regarding these distributions that we can make right off the bat:
+
+Observation 1: The `mean_income_republican` income distribution is visibly further to the right than the `mean_income_democrat` distribution; this means that the mean incomes for republicans are generally higher than the mean incomes for democrats in our bootstrap samples.
+
+Observation 2: There are wider confidence intervals for `mean_income_republican` than there are for `mean_income_democrat`. This means that we are less confident in our approximation of `mean_income_republican` than we are for `mean_income_democrats`.
+
+Observation 1 is pretty self-explanatory — it is simply a trend in the data that can be explained in a sentence or two — but why is Observation 2 the case? 
+
+This requires a bit more explanation. Let's take a look at the party splits in the train dataset:
+
+```{r}
+
+trains %>% 
+  count(party)
+
+```
+
+In the original dataset — and therefore, most likely for the majority of the bootstrapped samples — the number of democratic subjects vastly outnumber the number of republican subjects. Why does this lead to wider confidence intervals?
+
+Intuitively, we can think about the matter like this: since we have more data to work with for the democratic party, we are more confident that the mean income measurement from each bootstrapped sample is representative of the *true mean income of that sample* — remember, this "true value" is what we're trying to approximate through the bootstrapping process. This idea is more obvious on an extreme scale: if we were given one billion individuals' incomes, we'd feel more comfortable approximating the world's average income from that dataset than if we only had two individual's incomes to work with. These two individuals could be impoverished, or they could be billionaires, and we wouldn't reliably make any conclusions regarding world income based on those two individuals alone. Because there are far more democrats in the original sample than there are republicans, we are therefore more confident that the democrats' true average income is represented by the democratic subset of the data than we are of the republicans' true average income being accurately represented by the republican subset.
+
+The math behind the confidence INTERVALS specifically is a little more complex, but the premise behind it is simple. First, recall that bootstrapping with replacement creates different assortments of the data due to the possibility of data points being omitted from each sample, or values being included more than once. If I was sampling with replacement from the list of 1, 2, 3, 4, 5, One replicate might include "1" three times, while another might include "1" zero times.
+
+It is because of this possibility for omission/duplicate inclusion that subsets with small sample sizes are at the mercy of being misrepresented by sampling with replacement. In small sample sizes, individual points carry significant weight. As a result, we are more likely to get extreme values — values that are unreasonably small or large — the smaller the size of the subset.
+
+As it relates to the `trains` dataset, the subset with the larger sample size, the democrat contingent, is less susceptible from this because each data point carries far less weight — each one gets drowned out by the many other democrats in the dataset, and removing or duplicating a single or even a few data points won't drastically shift measurements, such as mean and median, for most of the bootstrap samples. However, for the smaller republican subset, even a single omission or double inclusion of a data point through bootstrapping with replacement could generate extreme values for these measurements.
+
+That's a mouthful, but it's also better illustrated by an extreme example. Let's consider a hypothetical dataset with 3 republican subjects and 112 democrat subjects, with everyone's income falling between 75000 and 150000, and bootstrap this data 10 times:
+
+```{r}
+
+fake_data <- tibble(party = c(rep("Republican", 3), rep("Democrat", 112)),
+                    income = sample(75000:150000, 115, replace = F))
+
+fake_data_bootstrap <- bootstraps(fake_data, 10)
+
+```
+
+Now, let's calculate `mean_income_democrat` and `mean_income_republican` for each of these ten samples:
+
+
+```{r}
+
+fake_data_bootstrap$mean_income_democrat <- map_dbl(1:10, ~get_mean_income(fake_data_bootstrap$splits[[.]], "Democrat"))
+
+fake_data_bootstrap$mean_income_republican <- map_dbl(1:10, ~get_mean_income(fake_data_bootstrap$splits[[.]], "Republican"))
+
+fake_data_bootstrap
+
+```
+
+One thing we can notice right away is the wider spread of `mean_income_republican` in spite of the fact that all the income values were randomly generated within the same number range. Because each of the three republican income values carried so much weight, duplicating one or omitting one in a bootstrap sample more easily led to extreme `mean_income_republican` values.
+
+In short: If we have fewer data points, bootstrap parameter calculations are more likely to be further from the true values, and our confidence intervals will be wider as a result. It's important to understand the mechanics behind these relationships as we continue our work with confidence intervals going forward.
+
+## Calculating a third parameter
+
+Now, the above graph looks a bit messy: trying to graph two distributions on the same graph often can turn out this way. So, how might we go about simplifying the graph but still show the differences in distributions?
+
+Let's say that we are now interested in a more viewable statistic that captures the same information, such as the *average difference* between treated income and control income. How do we go about calculating this kind of statistic? 
+
+Before we dive into the different ways we can calculate this parameter across our bootstrap samples, it is helpful to understand a shortcut we can take due to the nature of mean as a mathematical function. because mean is linear, *the average difference is equivalent to the difference in averages* — so, instead of averaging the difference between every single combination of democrat and republican in each sample, we can simply calculate the average income for democrat subjects, the average income for republican subjects, and take the difference of the two to get the average income difference for democrats and republicans.
+
+Since we've already calculated mean income for republicans and democrat, we can simply create a third column that represents the difference between these two parameters. Note that we subtract `mean_income_democrat` from `mean_income_republican` because the above distribution indicates the latter is larger, and it's convenient to work with positive values. However, we have to keep this ordering constant while we work with this parameter, or our differences might get flipped!
+
+```{r}
+
+x$mean_income_difference <- x$mean_income_republican - x$mean_income_democrat
+
+```
+
+The key insight here is that instead of going through with this messy calculation, we can utilize the two columns we had already created — and, as we can see, we achieve the same result with many less lines of code. It is always important to be wary of the tools you have at your disposal, as well as the calculations you have already made.
+
+```{r, include = FALSE}
+
+#Calculating the mean income difference value in the actual trains dataset based on the figures we calculated at the beginning of the chapter.
+
+mean_income_difference_value <- mean_income_value_republican - mean_income_value_democrat
+
+
+```
+
+Now, we can plot everything on a nice bootstrap distribution that displays the average difference in income, the new parameter we calculated from our previous two parameters:
+
+
+```{r}
+
+difference_intervals <- quantile(x %>% pull(mean_income_difference), 
+                                 c(.025, .975),
+                                 names = FALSE)
+
+
+ggplot(x, aes(x = mean_income_difference)) +
+  geom_histogram(bins = 40) +
+  theme_classic() +
+  labs(x = "Average Differences in Income for Democrats And Republicans",
+       y = "Number of Replicates",
+       title = "Average Differences in Income for 1000 Bootstrapped Samples",
+       subtitle = "Bars represent 95 percent confidence intervals and original value") +
+  geom_vline(xintercept = difference_intervals[1], color = "red") + 
+  geom_vline(xintercept = difference_intervals[2], color = "red") + 
+  geom_vline(xintercept = mean_income_difference_value)
+
+```
+
+As the distribution shows, the average difference in income of treated subjects and income of control subjects is skewed towards the right of 0, with republicans on average having a higher income than democrats.
+
+Recall that mean is a linear measurement. Let's now say that we're interested a separate parameter that is nonlinear — for example, we could be interested in the ratio of median treated income to median control income. 
+
+```{r, include = FALSE}
+
+median_income_ratio_value <- median_income_value_republican/ median_income_value_democrat
+
+```
+
+Like we did with mean incomes, let's iteratively calculate the median incomes and their ratio across each bootstrap sample: 
+
+```{r}
+
+get_median_income <- function(splits, whichParty) {
+  x <- analysis(splits) %>% filter(party == whichParty) %>% pull(income)
+  return(median(x))
+}
+
+x$median_income_democrat <- map_dbl(1:1000, ~get_median_income(x$splits[[.]], "Democrat"))
+
+x$median_income_republican <- map_dbl(1:1000, ~get_median_income(x$splits[[.]], "Republican"))
+
+
+x$median_income_ratio <- x$median_income_republican/x$median_income_democrat
+
+```
+
+And now, we'll construct a distribution out of this new parameter, like we did with the average difference in incomes:
+
+```{r}
+
+ratio_intervals <- quantile(x %>% pull(median_income_ratio), c(.025, .975))
+
+ggplot(x, aes(x = median_income_ratio)) +
+  geom_histogram(bins = 35) +
+  labs(x = "Ratio of Median Incomes",
+       y = "Number of Replicates",
+       title = "Ratio of median incomes across 1000 bootstrapped samples",
+       subtitle = "Bars represent 95% confidence intervals") +
+  geom_vline(xintercept = ratio_intervals[1]) +
+  geom_vline(xintercept = ratio_intervals[2]) +
+  geom_vline(xintercept = median_income_ratio_value, color = "blue") +
+  theme_classic()
+
+```
+
+Since there was some degree of rounding done to calculate income in the data, the spreads of median values and the ratio of median values are not that varied. However, we once again see that the data is skewed to the right, and that the republican median income exceeds democrat mean income more often than the other way around.
+
+## Estimate other things
+
+<!-- Often functions of these parameters, which are, after all, just functions of the bootstrap samples. Consider the difference in income between treated and control. Again, this is a case in which we know every number. There is no missing data. So, we can calculate exactly the average income for control and the average income for treated, as we did above. With those two parameters estimated, we can calculate the average difference between the two --- or the difference between the averages, which is the same thing because all this is linear. But what about the uncertainty of that difference? Again, the bootstrap comes to our rescue. What does the 95% confidence interval of the difference look like? Does it include zero? Would we expect it to? How does randomization of treatment/control figure in? -->
+
+## Estimate trickier things
+
+<!-- Explain how the above is a bit of a cheat since linear functions are special: the average difference is the same as the difference between the averages. This is an important point. But there are lots of things which are not like that! Consider the income ratio between the median treated and median control. This is something which, a priori, I might be as interested in as the difference in means. But the ratio of the medians is not the same thing as the median of the ratios! This is a key point. In order to calculate this, we need to, again, take the bootstrap and, in each bootstrap sample, calculate the median income of the treated, the median income of the controls, and record that ratio. We then save that ratio and look at its bootstrap distribution at the end of the exercise. -->
+
+
+## Using `lm()` and `stan_glm()`
+
+The bootstrapping process is a fantastic way to generate confidence intervals, but luckily for us, R has built-in functions that make the process of calculating confidence intervals much quicker. Recall the `lm()` and `tidy()` functions, which were used extensively in ch7.
+
+One trick we can use here that we didn't have the chance to use in chapter 7 is adding a "-1" to the lm expression, as shown below. This allows us to independently investigate regressions for the two separate parameters, `mean_income_democrat` and `mean_income_republican`, by telling `lm()` not to create a general intercept.
+
+```{r}
+
+lm(data = trains, income ~ -1 + party) %>% tidy(conf.int = TRUE) %>% select(term, estimate, conf.low, conf.high)
+
+```
+
+Recall that the third parameter we calculated, `mean_income_difference`, represents the average difference between republican income and democrat income. If we wanted to analyze this difference, which can be modeled as the offset in income that exists specifically due to a subject being a republican instead of a democrat, we can remove the "-1" to get the `partyRepublican` term that demonstrates this difference:
+
+<!- -Above paragraph is clunky -->
+
+```{r}
+
+lm(data = trains, income ~ party) %>% tidy(conf.int = TRUE) %>% select(term, estimate, conf.low, conf.high)
+
+```
+
+As you can see, the estimates for the mean income values and the mean income difference values generated by `lm()` are the same as those we calculated at the beginning of the chapter, and the confindence intervals generated by the function are virtually identical to those created by conducting bootstrap resampling. So, you might be wondering: why the heck did we make you go through the trouble of bootstrapping when we could've just run `lm()` from the beginning? You probably think we were just having a laugh by making you write hundreds more lines of code.
+
+Although writing code is fun, we didn't make you write out the bootstrap solely for the purpose of fun. It turns out that while `lm()` works spectacularly for linear calculations, such as mean income and the difference of mean incomes, it is useless when it comes to nonlinear measurements such as the ratio of median incomes. We can't even give you an example that throws out an error to demonstrate this, because there's literally no way to write `lm()` to construct non-linear parameters. In those cases, the best tool we have to construct confidence intervals is bootstrapping.
+
+## The prediction game
+
+Let's say that we want to play the "predicton game", so to speak. If we were to take a look at a brand new subject and predict their income based on their party affiliation, what would we guess their income to be, and how confident would we be in this guess?
+
+You might be tempted to say that the best guess for the new subject's income would be the mean income of this new subject's party — this instinct is correct! But if you say the prediction intervals for this new subject's income are the same as the confidence interval for the mean income of that new subject's party, that would be incorrect, although it might not be immediately clear as to why.
+
+Here's why. Take a look at the `summary()` function applied to the linear model we generated previously:
+
+```{r}
+
+lm(data = trains, income ~ party) %>% summary()
+
+```
+
+The residual standard error term corresponds to the variation in individual data — more specifically, it is the average deviation from the true regression line across all the data points in the trains dataset. This variation is omitted when generating confidence intervals for mean income, as those calculations only deal with *averages across and not the range of the data*. 
+
+<!-- Not sure exactly how the confidence interval part of lm works out? I know how to justify this variation being omitted when we bootstrapped but not with lm() -->
+
+Therefore, while we are 95% that the mean income falls in between the confidence intervals we generated, we are less than 95% sure that any given person's income falls within that range. This added uncertainty is called *unmodeled variation*, and it becomes relevant when we use our models to analyze and predict individual data points instead of summary statistics.
+
+<!-- EM: Not happy with this explanation: need a clearer answer -->
+
+## Using the predict() function
+
+We will introduce a new function here, `predict()`, which takes in a model as input and, given a specified parameter, will predict the value and confidence intervals of any given data point:
+
+```{r}
+
+trains.lm <- lm(data = trains, income ~ party)
+newdata <- tibble(party = c("Republican", "Democrat"))
+
+predict(trains.lm, newdata, interval = "prediction")
+
+```
+
+Note that for both democrats and republicans, the prediction interval is significantly wider than the confidence interval. This discrepancy illustrates the *unmodeled variation* of the dataset: while the mean values, as indicated by the "fit" column, are still the best guess you can make for any given subject, we are less confident in the value range of that individual subject than we are of the value range of the mean. *The unmodeled variation widens the prediction intervals relative to the confidence intervals.*
+
+Recall our discussion regarding the wider confidence intervals for republican subjects than democrat subjects (*would like to attach a link here that takes reader up to that part of the chapter*). Although the republican and democrat average incomes had vastly different confidence intervals — the republican convidence intervals were much wider — they have very similar prediction intervals. Although the *parameter uncertainty* of these two parameters were very different, the *unmodeled variation* for both parameters was roughly the same. Even though the data points were equally spread out for both democrat and republican income, were were able to more confidently pinpoint a true value for democrat income because we had more data to work with.
+
+#### Why should we care about the relationship between party and income?
+
+We just spent a ton of time analyzing the relationship between party and income. Although we have already accounted for parameter uncertainty (the confidence intervals) and unmodeled variation uncertainty (the prediction intervals), there is another area of uncertainty that is not immediately clear: why do we care about this relationship at all?
+
+This area of uncertainty is known in the world of data science as *validity*. How useful is it to know what someone's income is likely to be, given their party affiliation, or vice versa? How much does this relationship reflect real-life change that could occur specifically due to that relationship? One could argue that we should be far more concerned with how, for example, `treatment` influenced the difference in `att_start` and `att_end` because this relationship models how a specific action — treatment — leads to a specific outcome, which could have real-life implications of certain immigration patterns on political attitudes. With income and party, we can only observe... but we cannot do much more.
+
+<!-- EM: This explanation is weak. Need a better one. But honestly not sure what to write -->
+
+We are getting to the root of the issue here, which is that the model is limited in its usefulness because it is a predictive model, not a causal model. In the last part of the chapter, we'll dive deeper into the mechanics of why, and compare the two types of models.
+
+<!-- EM: How do we indicate important terms? "Parameter uncertainty" and "unmodeled variation" -->
+
+<!-- Will the term "prediction game" be brought up earlier in PPBDS? -->
+
+## Rubin Causal Model (WILL COME BACK TO THIS LAST)
+
+Let's establish the two types of models we've studied thus far. What we explored above was a predictive model: with someone's party affiliation, we can make a better guess as to what his or her income is. Conversely, given someone's income, we can make a more accurate prediction of his or her income.
+
+However, that's just about all we can do with this relationship. Recall that the trains dataset was originally introduced in the context of the Rubin Causal Model back in chapter 3. That model cannot be applied to the relationship between party and income because these values were independently decided outside the experiment — although we were able to identify correlations between those two variables, the combinations of party and income were predetermined and not randomly assigned in a way that allows us to establish a causal relationship.
+
+If that's difficult to wrap your head around, here's big-idea reason for why we wouldn't look at the party-income relationship as causal: if an individual suddenly decided to change party affiliations — say, he or she decided to vote for Biden in the 2020 election despite having voted for Trump in 2016 — we wouldn't suddenly expect his or her income to, solely because of this change in party affiliation, spike or plummet. There are many other factors at play when determining these two variables that make identifying a causal relationship impossible.
+
+In conclusion, while we can explore correlations or trends between party and income, we cannot label these correlations or trends as causal. However, `treatment` was a variable that was randomly assigned to subjects, and we have a variable that was measured after this random assignment, `att_end`. With this setup, we can calculate the Average Treatment Effect, or the average difference in `att_end` for treated subjects and control subjects. 
+
+```{r}
+
+mean_ends <- trains %>% 
+  group_by(treatment) %>% 
+  summarize(mean_att_end = mean(att_end))
+
+```
+
+```{r, include = FALSE}
+
+ATE <- mean_ends$mean_att_end[2] - mean_ends$mean_att_end[1]
+
+```
+
+Here, we see that the average treatment effect is `r ATE`; this is the average change in att_end caused by treatment (if this statistic looks unfamiliar, refer back to chapter 3 for a refresher on ATE). But how confident are we in this ATE? We can use `lm()` again to generate confidence intervals for this parameter (note that, as mean is a linear measure, we can use `lm()` no problem!):
+
+```{r}
+#This is necessary so we can see the offset as caused by treatmentTreated, not treatmentControl.
+
+trains$treatment <-fct_relevel(trains$treatment, "Control", "Treated")
+
+lm(data = trains, att_end ~-1 + treatment) %>% tidy(conf.int = TRUE) %>%
+  select(term, estimate, conf.low, conf.high)
+
+#To do: add row numbers, figure out a way to mutate columns as to include both values — maybe a function could be useful here?)
+
+```
+
+
+The confidence intervals represent our confidence in the average treatment effect of the `trains` dataset being representative of the true average treatment effect on Boston commmuters.
+
+Now, we'll create the RCM table of possible outcomes, as we did back in ch3:
+
+```{r}
+
+#Adding question marks where necessary
+
+trains_RCM <- trains %>% 
+  pivot_wider(names_from = treatment, values_from = att_end) %>%
+  slice(1:7) %>%
+  mutate(subject = 1:7) %>%
+  replace_na(list(Treated = "?", Control = "?")) %>% 
+  select(subject, Control, Treated)
+
+#Mathematical notation
+
+trains_RCM %>%
+  gt() %>%
+  cols_label(subject = md("$$\\mathbf{Subject}$$"),
+                Control = md("$$Y_c(u)$$"),
+                Treated = md("$$Y_t(u)$$")) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(subject))) %>%
+  tab_style(cell_text(weight = "bold"),
+            location = cells_body(columns = vars(subject))) %>%
+  cols_align(align = "center", columns = TRUE) %>%
+  tab_header(title = "Att_end of First Ten Respondents of Train Dataset")
+
+
+```
+
+There's one way we could fill in the missing values —
+
+<!-- CB: Do you want these tables included? I changed it to echo = FALSE instead of include = FALSE, but I don't know exactly what you want. The math notation works when the rmd is knitted, so I changed all of that. I would maybe explain what youre doing with the talbes if the intro is just sentence above (maybe even a margin note)? -->
+
+```{r, echo = FALSE}
+
+tibble(subject = 1:7,
+       Control = c("8.45 (7.76-9.14)", "8.45 (7.76-9.14)", "8.45 (7.76-9.14)", "8.45 (7.76-9.14)", "5", "8.45 (7.76-9.14)", "13"),
+       Treated = c("11", "10", "5", "11", "10 (9.2-10.8)", "13", "10 (9.2-10.8)")) %>% 
+  
+  gt() %>%
+  cols_label(subject = md("$$\\mathbf{Subject}$$"),
+                Control = md("$$Y_c(u)$$"),
+                Treated = md("$$Y_t(u)$$")) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(subject))) %>%
+  tab_style(cell_text(weight = "bold"),
+            location = cells_body(columns = vars(subject))) %>%
+  cols_align(align = "center", columns = TRUE) %>%
+  tab_header(title = "Att_end of First Ten Respondents of Train Dataset") 
+
+
+tibble(subject = 1:7,
+       Control = c("9.45", "8.45", "3.45", "9.45", "5", "11.45", "13"),
+       
+       Treated = c("11", "10", "5", "11", "6.55", "13", "14.55")) %>%
+  
+  gt() %>%
+  cols_label(subject = md("$$\\mathbf{Subject}$$"),
+                Control = md("$$Y_c(u)$$"),
+                Treated = md("$$Y_t(u)$$")) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(subject))) %>%
+  tab_style(cell_text(weight = "bold"),
+            location = cells_body(columns = vars(subject))) %>%
+  cols_align(align = "center", columns = TRUE) %>%
+  tab_header(title = "Att_end of First Ten Respondents of Train Dataset")
+
+lm(data = trains, att_end ~ treatment) %>% tidy(conf.int = TRUE) %>%
+  select(term, estimate, conf.low, conf.high)
+
+```
+
+Recall our earlier discussion regarding the difference between confidence intervals and prediction intervals: while the former accounts for *parameter uncertainty*, the latter accounts for *unmodeled variation*. We've already calculated the confidence intervals for the ATE, so let's go ahead and calculate the prediction intervals — in this case, the prediction intervals would give us a range of values that we'd expect treatment to have on a brand-new individual.
+
+```{r}
+
+trains.lm <- lm(data = trains, att_end ~ -1 + treatment)
+
+newdata <- tibble(treatment = c("Control", "Treated"))
+
+predict(trains.lm, newdata, interval = "prediction")
+
+```
+
+<!-- EM: Having trouble generating prediction interval for ATE -->
+
+<!-- Review the above, but quickly, looking att_end. Treatment can't effect income since we measured it before the experiment. But it can effect att_end. -->
+
+<!-- Revisit the RCM set up from chapter 3. (Do this last and after Cassidy has finished the chapter so you can use her exact table without making it yourself.) First pass, our key estimand is the average att_end of people who are treated and the average att_end of the people in control. We really want to know this for all people, but we can't because we can't see both potential outcomes for each person. But, the average of what we can see is probably a good estimate, because of randomization. -->
+
+<!-- EM: Unsure how to tie in probability -->
+
+## Uncertainties (Conclusion)
+
+
+5) The world is changing, and people 50 years from now will act differently and have vastly different characteristics; in the case of the trains dataset, it wouldn't be unreasonable to expect completely different combinations of income and party affiliation. That would render our mean income, median ratio, and prediction intervals for both those measures useless.
+
+<!--Below is copy pasted from the style RMD-->
+
+  + First, validity. Are the variables/numbers we have accurately capturing the concepts we care about.
+  + Third, parameter uncertainty. Even if the model has correct form, we still need to estimate the parameters. We will never know them perfectly. If our forecasts assume that we do, then we will be over-confident. Example: Confidence interval for the mean.
+  + Fourth, unmodeled variation. (This may be difficult to talk about since we don't (?) write down formulas with error terms.) Even if we have perfect parameter estimates for a model structure which matches the unknown data generating mechanism, we still won't make perfect predictions. Some randomness is intrinsic. Example: prediction for an individual.
+  + Fifth, unknown unknowns. What we really care about is data we haven't seen yet, mostly data from tomorrow. But what if the world changes, as it always does? If it doesn't change much, maybe we are OK. If it changes a lot, then what good will our model be? In general, the world changes some. That means that are forecasts are more uncertain that a naive use of our model might suggest.
+
+## Testing is Evil
+
+<!-- Will probably make more sense to dive into this after finishing up RCM step?
+
+<!-- See style.Rmd for a discussion -->
+
+
+
