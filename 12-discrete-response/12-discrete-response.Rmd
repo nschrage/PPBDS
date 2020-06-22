@@ -5,16 +5,17 @@ output_yaml:
 
 # Discrete Response {#classification}
 
-Many questions have binary (yes/no or success/failure) answers: 
+Many questions have binary answers. These questions can be answered by any pair of two answers (such as yes/no). Two examples of these questions include: 
   a. Are students with below average grades more likely to binge drink?
   b. Is exposure to a particular chemical associated with a cancer diagnosis?
  
-**Binary responses** take on only two values: success ($Y=1$) or failure ($Y=0$), Yes ($Y=1$) or No ($Y=0$), et cetera. Examples (a) and (b) above have binary responses (Does a student binge drink?  Was a patient diagnosed with cancer?). Binary responses are ubiquitous; they are one of the most common types of data that statisticians encounter.  We are often interested in modeling the probability of success, $p$, based on a set of covariates. As with regression, there are two broad categories of problems: *modeling for explanation* and *modeling for prediction*. Although terminology varies across fields, "regression" is generally used for situations in which our *dependent variable* is continuous. "Classification" applies to cases in which the dependent variable is binary.
+**Binary responses** take on only two values: success ($Y=1$) or failure ($Y=0$), yes ($Y=1$) or no ($Y=0$), et cetera. Examples (a) and (b) above have binary responses (Does a student binge drink?  Was a patient diagnosed with cancer?). Binary responses are one of the most common types of data that statisticians encounter.  We are often interested in modeling the probability of success, $p$, based on a set of covariates. As with regression, there are two broad categories of problems: *modeling for explanation* and *modeling for prediction*. Although terminology varies across fields, "regression" is generally used for situations in which our *dependent variable* is continuous. "Classification" applies to cases in which the dependent variable is binary.
 
 In this chapter, we will look at three common techniques of **classification** of binary data.  First, we will consider logistic regression, which is similar conceptually to the linear regression models we considered in Chapters \@ref(regression) and \@ref(multiple-regression).  Second, we will consider classification and regression trees (CART).  Third, we will discuss random forests.
 
-<!-- DK: I don't think we need this Needed packages section each chapter. Or, if we have something here, we should use it as an occasion to educate readers about cool package facts. Need to improve their technical knowledge each chapter. -->
-<!-- MB: Do i delete this -->
+<!-- MB: Should the ref() thing be replaced by a chapter number? -->
+
+<!-- MB: Only include this section if it uses new/unique packages -->
 
 ### Needed packages {-}
 
@@ -26,7 +27,7 @@ Recall from our discussion in Section \@ref(tidyverse-package) that loading the 
 * **readr** for importing spreadsheet data into R
 * As well as the more advanced **purrr**, **tibble**, **stringr**, and **forcats** packages
 
-If needed, read Section \@ref(packages) for information on how to install and load R packages. 
+Read Section \@ref(packages) for information on how to install and load R packages. 
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 library(tidyverse)
@@ -51,9 +52,9 @@ Figure \@ref(fig:OLSlogistic) illustrates a data set with a binary (0 or 1) resp
 
 The red curve is the *logistic regression* curve.  Note that its characteristic "S" shape always produces predicted probabilities between 0 and 1.  Here is the formula for a logistic regression:
 
-where $p$ is the probability of a "yes" or "success" for a given set of predictors $X$.
+Where $p$ is the probability of a "yes" or "success" for a given set of predictors $X$.
 
-<!-- This chunk literally crashes my R session everytime I try to run it -->
+<!-- MB: P should be Y? -->
 
 ```{r, OLSlogistic, fig.align="center", out.width="60%", fig.cap='Linear vs. logistic regression models for binary response data.', echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -74,23 +75,22 @@ ggplot(dat, aes(x = x)) +
 ```
 
 <!-- DK: How does the math work here? log(p/1-p) seems, to me, to map 0,1 to 0,infinity. -->
+<!-- MB: I also need to do more research to understand this -->
 
 The mathematical function $log\left(\frac{p}{1 - p}\right)$ is called the *logit function* and it transforms variables from the space $(0, 1)$ (like probabilities) to $(-\infty, \infty)$.  The inverse of that function, the *standard logistic function*, is $\frac{1}{1 + e^{-x}}$ and transforms variables from the space $(-\infty, \infty)$ to $(0, 1)$.  From that latter function's name we get the terminology of *logistic regression*.
 
 ### House elections: exploratory data analysis
 
-<!-- DK: Perhaps we can use house elections as a running example throughout the book? With regression we tried to forecast vote percentage. Here, we just care about wins and losses. Also provides an occasion to talk about which is best. Also to get into subtle issues like cases which are dropped, like redistricting contests. -->
-
-What affects whether a Democrat or Republican wins a race in the U.S. House of Representatives? This is an example of a binary response: either a Democrat wins (and a Republican loses) or a Republican wins (and a Democrat loses).^[It is rare that third party candidates mount serious bids in U.S. House elections, so it isn't a much of an oversimplication to think of the variable as binary.] In this section, we are going to consider several models predicting Democratic victory in House races.  First, we will consider a single categorical variable as a predictor, the region in which a district lies: Midwest, Northeast, South, or West.  Second, we will consider a single continuous variable: year.  Finally, we fill fit a model that contains both separately, and than also an interaction between the two.
+What affects whether a Democrat or Republican wins a race in the U.S. House of Representatives? This is an example of a binary response: either a Democrat wins (and a Republican loses) or a Republican wins (and a Democrat loses).^[It is rare that third party candidates mount serious bids in U.S. House elections, so it isn't a much of an oversimplication to think of the variable as binary.] In this section, we are going to consider several models predicting Democratic victory in House races. First, we will consider a single categorical variable as a predictor, the region in which a district lies: Midwest, Northeast, South, or West. Second, we will consider a single continuous variable: year. Finally, we fill fit a model that contains both separately, and than also an interaction between the two.
 
 <!-- DK: Too much cognitive load to create these datasets on the fly. They need to be ready to go. -->
 
-The data on House election results from 1976 to 2018 can be found in the `house_results` data frame in **politicaldata** package.  We'll create a version of this data frame called `house_ch13` that creates a new column `dem_win` that notes for each state if the Democratic candidate in a congressional district received more votes than the other candidates.  We'll also join it with the `state_info` data frame in the **fivethirtyeight** package to add the `region` of each state.
+The data on House election results from 1976 to 2018 can be found in the `house_results` data frame in **politicaldata** package.  We'll create a version of this data frame called `house_ch12` that creates a new column `dem_win` that notes for each state if the Democratic candidate in a congressional district received more votes than the other candidates.  We'll also join it with the `state_info` data frame in the **fivethirtyeight** package to add the `region` of each state.
 
 ```{r}
 library(politicaldata)
 
-house_ch13 <- house_results %>%
+house_ch12 <- house_results %>%
   
   # Create dem_win variable
   
@@ -108,28 +108,29 @@ house_ch13 <- house_results %>%
 
 <!-- DK: We use same dataset from other chapter, we need to modify this. But we won't have looked at everything! So, look at other stuff. Some is obvious, especially our new Y variable. But we can also look at stuff like number of elections per state, per year. Which state had the biggest districting rise and when? Indeed, the data exploration section in each chapter provides an occasion to learn more advanced R tricks. -->
 
+
 Recall the three common steps in an exploratory data analysis we saw in Subsection \@ref(model1EDA):
 
 1. Looking at the raw data values.
-1. Computing summary statistics.
-1. Creating data visualizations.
+2. Computing summary statistics.
+3. Creating data visualizations.
 
-Let's first look at the raw data values by either looking at `house_ch13` using RStudio's spreadsheet viewer or by using the `glimpse()` function from the **dplyr** package:
+Let's first look at the raw data values by either looking at `house_ch12` using RStudio's spreadsheet viewer or by using the `glimpse()` function from the **dplyr** package:
 
 ```{r}
-glimpse(house_ch13)
+glimpse(house_ch12)
 ```
 
 Let's also display a random sample of 5 rows of the 9,557 rows corresponding to different district-years. Remember due to the random nature of the sampling, you will likely end up with a different subset of 5 rows.
 
 ```{r, eval = FALSE}
-house_ch13 %>% 
+house_ch12 %>% 
   sample_n(size = 5)
 ```
 
 ```{r, echo = FALSE}
 
-house_ch13 %>%
+house_ch12 %>%
   sample_n(5) %>%
   gt() %>%
   cols_label(
@@ -142,10 +143,10 @@ house_ch13 %>%
 
 ```
 
-Now that we’ve looked at the raw values in our `house_ch13` data frame and got a sense of the data, let’s compute summary statistics. As we've done in our exploratory data analyses before, let’s use the `skim()` function from the `skimr` package, being sure to only select() the variables of interest in our model:
+Now that we’ve looked at the raw values in our `house_ch12` data frame and got a sense of the data, let’s compute summary statistics. As we've done in our exploratory data analyses before, let’s use the `skim()` function from the `skimr` package, being sure to only select() the variables of interest in our model:
 
 ```{r}
-house_ch13 %>% 
+house_ch12 %>% 
   select(dem_win, region, year) %>% 
   skim()
 ```
@@ -157,7 +158,7 @@ Let’s now perform the last of the three common steps in an exploratory data an
 For our categorical variable, we'll look at histograms of `dem_win` faceted by `region`:
 
 ```{r}
-house_ch13 %>%
+house_ch12 %>%
   ggplot(aes(x = dem_win)) +
   geom_histogram(bins = 10, color = "white") +
   labs(x = "Democratic victory percentage, 1976-2018", 
@@ -170,7 +171,7 @@ house_ch13 %>%
 Wait!  That doesn't tell us very much, because our outcome variable only takes two values, 0 and 1.  Let's instead `group_by(district)` and `summarize()` to get a better sense of the distributions:
 
 ```{r}
-house_ch13 %>%
+house_ch12 %>%
   group_by(region, district) %>%
   summarize(dem_win = mean(dem_win)) %>%
   ggplot(aes(x = dem_win)) +
@@ -187,7 +188,7 @@ This is much more informative!  We can see that the Midwest is highly bimodal, w
 What happens if we create a scatterplot of our outcome variable `dem_win` and a continuous predictor, `year`?
 
 ```{r}
-house_ch13 %>%
+house_ch12 %>%
   ggplot(aes(x = year, y = dem_win)) +
   geom_point() +
   labs(x = "Year", y = "Democratic Victory") +
@@ -196,17 +197,19 @@ house_ch13 %>%
 
 <!-- DK: The below seems like good stuff, but I don't really understand it. Needs more words. Why is log(p/1-p) an interesting thing. Is it really? -->
 
-This is completely incomprehensible!  When dealing with binary data, it is more helpful to construct an *empirical logit* plot instead of a regular scatterplot.  The steps for constructing such a plot are as follows:
+<!-- MB: I think I clarified it more, but may need more explaining. p/1-p is just the function that transforms data into logit form, which is why it's so frequently mentioned. Could be abstracted out some more though. -->
+
+This is incomprehensible!  When dealing with binary data, it is more helpful to construct an *empirical logit* plot instead of a regular scatterplot. An *empirical logit* is a linear model on logit-trasnformed data rather than a generalized linear model. The steps for constructing such a plot are as follows:
 
 1. `group_by` your continuous variable.
 2. `summarize` the percentage of successes in your outcome variable.
-3. Calculate the *empirical logit* for each group, using the logit function: $log\left(\frac{p}{1 - p}\right)$
+3. Calculate the *empirical logit* for each group, using the logit function: $log\left(\frac{p}{1 - p}\right)$. This step transforms the data to fit the form of a logistical regression with a binary outcome. 
 4. Plot the results.
 
 The logit function exists in base R as `qlogis()`. Let's look at the empirical logit plot:
 
 ```{r}
-house_ch13 %>%
+house_ch12 %>%
   group_by(year) %>%
   summarize(perc_dem_win = mean(dem_win),
             emplogit = qlogis(perc_dem_win)) %>%
@@ -223,7 +226,7 @@ Now we see that after the logit transformation, there is roughly a linear relati
 We can follow the same steps to look at this relationship within Census regions (Midwest, Northeast, South and West):
  
 ```{r}
-house_ch13 %>%
+house_ch12 %>%
   group_by(region, year) %>%
   summarize(perc_dem_win = mean(dem_win),
             emplogit = qlogis(perc_dem_win)) %>%
@@ -250,14 +253,14 @@ Note that the key difference is that instead of using `lm()`, we are now using `
 Let's create a binary variable for whether an observation is in the South:
 
 ```{r}
-house_ch13 <- house_ch13 %>%
+house_ch12 <- house_ch12 %>%
   mutate(south = 1 * (region == "South"))
 ```
 
 Next, let's fit a model and `tidy()` it:
 
 ```{r, eval=FALSE}
-house_south_model <- glm(dem_win ~ south, family = binomial, data = house_ch13)
+house_south_model <- glm(dem_win ~ south, family = binomial, data = house_ch12)
 house_south_model %>%
   tidy(conf.int = TRUE) %>%
   select(term, estimate)
@@ -265,7 +268,7 @@ house_south_model %>%
 
 ```{r, echo=FALSE}
 
-house_south_model <- glm(dem_win ~ south, family = binomial, data = house_ch13)
+house_south_model <- glm(dem_win ~ south, family = binomial, data = house_ch12)
 
 tidy(house_south_model) %>%
   select(term, estimate) %>%
@@ -304,14 +307,14 @@ Let's now estimate the uncertainty around our coefficients.  We'll start by show
 ```{r}
 library(infer)
 
-x <- house_ch13 %>% 
+x <- house_ch12 %>% 
   select(dem_win, south) %>% 
-  rep_sample_n(size = nrow(house_ch13), replace = TRUE, reps = 1000)
+  rep_sample_n(size = nrow(house_ch12), replace = TRUE, reps = 1000)
 
 x
 ```
 
-For each `replicate`, we have `r nrow(house_ch13)` resamples of `dem_win` and `south`.
+For each `replicate`, we have `r nrow(house_ch12)` resamples of `dem_win` and `south`.
 
 Next, we are going to `nest()` our data by `replicate`:
 
@@ -380,7 +383,7 @@ Thus, from now on, we'll just use `tidy(conf.int = TRUE)` when working with `glm
 Let's try running a slightly more complicated version of the above model, where we use `region` as a predictor instead of `south`.
 
 ```{r, eval=FALSE}
-house_region_model <- glm(dem_win ~ region, family = binomial, data = house_ch13)
+house_region_model <- glm(dem_win ~ region, family = binomial, data = house_ch12)
 house_region_model %>%
   tidy(conf.int = TRUE) %>%
   select(term, estimate, conf.low, conf.high)
@@ -388,7 +391,7 @@ house_region_model %>%
 
 ```{r, echo=FALSE}
 
-house_region_model <- glm(dem_win ~ region, family = binomial, data = house_ch13)
+house_region_model <- glm(dem_win ~ region, family = binomial, data = house_ch12)
 
 tidy(house_region_model,
      conf.int = TRUE) %>%
@@ -504,7 +507,7 @@ We'll now predict `dem_win` with a single numerical explanatory variable, `year`
 1. We get the regression table by applying the `tidy()` function from the **broom** package to `house_year_model`.  We'll print the `term`, `estimate`, `conf.low`, and `conf.high` columns.
 
 ```{r, eval=FALSE}
-house_year_model <- glm(dem_win ~ year, family = binomial, data = house_ch13)
+house_year_model <- glm(dem_win ~ year, family = binomial, data = house_ch12)
 house_year_model %>%
   tidy(conf.int = TRUE) %>%
   select(term, estimate, conf.low, conf.high)
@@ -512,7 +515,7 @@ house_year_model %>%
 
 ```{r, echo=FALSE}
 
-house_year_model <- glm(dem_win ~ year, family = binomial, data = house_ch13)
+house_year_model <- glm(dem_win ~ year, family = binomial, data = house_ch12)
 
 tidy(house_year_model,
      conf.int = TRUE) %>%
@@ -562,14 +565,14 @@ We'll now predict `dem_win` with a two variable, `region` and `year`, as well as
 1. We get the regression table by applying the `tidy()` function from the **broom** package to `house_interact_model`.  We'll print the `term`, `estimate`, `conf.low`, and `conf.high` columns.
 
 ```{r, eval=FALSE}
-house_interact_model <- glm(dem_win ~ region * year, family = binomial data = house_ch13)
+house_interact_model <- glm(dem_win ~ region * year, family = binomial data = house_ch12)
 house_interact_model %>%
   tidy(conf.int = TRUE) %>%
   select(term, estimate, conf.low, conf.high)
 ```
 
 ```{r, echo=FALSE}
-house_interact_model <- glm(dem_win ~ region * year, family = binomial, data = house_ch13)
+house_interact_model <- glm(dem_win ~ region * year, family = binomial, data = house_ch12)
 tidy(house_interact_model,
      conf.int = TRUE) %>%
   select(term, estimate, conf.low, conf.high) %>%
@@ -649,12 +652,12 @@ The code to do this is very similar to the code we used for the gubernatorial fo
 First, we'll filter to the states that have at least 50 district-years in the dataset. Next, let's use `map()` to learn about these districts:
 
 ```{r}
-infreq_states <- house_ch13 %>%
+infreq_states <- house_ch12 %>%
   count(state) %>%
   filter(n < 50) %>%
   pull(state)
 
-house_state_model <- house_ch13 %>%
+house_state_model <- house_ch12 %>%
   filter(! state %in%  infreq_states) %>%
   group_by(state) %>%
   nest() %>%
@@ -712,7 +715,7 @@ Note that our new object, `logistic_mod`, doesn't contain our data or a formula.
 ```{r}
 logistic_fit <- fit(logistic_mod,
                     factor(dem_win) ~ region * year,
-                    data = house_ch13)
+                    data = house_ch12)
 ```
 
 (We have to wrap `dem_win` in `factor()`, because `fit()` is more careful than `glm()` in requiring that classification models actually have categorical outcomes.)
@@ -802,7 +805,7 @@ Now that we have the object `tree_mod`, we can use `fit()` in the **parsnip** pa
 ```{r}
 house_region_tree <- fit(tree_mod,
                          factor(dem_win) ~ region, 
-                         data = house_ch13)
+                         data = house_ch12)
 ```
 
 See how when using **tidymodels**, this is exactly the same as how we would fit a logistic regression, but with our model specification saved in `tree_mod` rather than the model specification we saved in `logistic_fit`.
@@ -836,7 +839,7 @@ How do we interpret this tree?  Here we have two partitions, based on whether an
 As you can see, the algorithm is very simple when you have one categorical explanatory variable: it just classifies every observation based on the most common response per category.  Take a look at the following table:
 
 ```{r, echo = FALSE}
-house_ch13 %>%
+house_ch12 %>%
   group_by(region) %>%
   summarize(dem_win = mean(dem_win) * 100) %>%
   kable(digits = 1,
@@ -852,7 +855,7 @@ Once we have created our model specification `tree_mod`, it is easy to use it to
 ```{r}
 house_year_tree <- fit(tree_mod,
                        factor(dem_win) ~ year,
-                       data = house_ch13)
+                       data = house_ch12)
 
 house_year_tree$fit %>%
   prp_ch13()
@@ -867,7 +870,7 @@ How can we change $c_p$?  We don't need to create an entirely new model specific
 ```{r}
 house_year_tree_0 <- fit(update(tree_mod, cost_complexity = 0),
                          factor(dem_win) ~ year,
-                         data = house_ch13)
+                         data = house_ch12)
 ```
 
 We can then look at the new tree and see what changed:
@@ -897,7 +900,7 @@ Next, we need to create our bootstrapped data.  We can do that using **tidymodel
 
 ```{r}
 set.seed(12345)
-house_boots <- bootstraps(house_ch13)
+house_boots <- bootstraps(house_ch12)
 ```
 
 By default, the `bootstraps()` function generates 25 samples.  You can modify this with the `times` argument.
@@ -936,7 +939,7 @@ All we have left to do is to `update()` our model specification based on `best_c
 ```{r}
 house_year_tree_best <- fit(update(tree_mod, cost_complexity = best_cost),
                        factor(dem_win) ~ year,
-                       data = house_ch13)
+                       data = house_ch12)
 ```
 
 Let's look at the tree, saved in `house_year_tree_best$fit`:
@@ -955,7 +958,7 @@ What if we wanted to predict `dem_win` based on `region` and `year`?  The proces
 ```{r}
 region_year_tree <- fit(tree_mod,
                         factor(dem_win) ~ region + year,
-                        data = house_ch13)
+                        data = house_ch12)
 
 region_year_tree$fit %>%
   prp_ch13()
@@ -968,7 +971,7 @@ In the section on logistic regression, we used `map()` to fit many models to vis
 ```{r}
 state_year_tree <- fit(tree_mod,
                        factor(dem_win) ~ region + state + year,
-                       data = house_ch13)
+                       data = house_ch12)
 
 state_year_tree$fit %>%
   prp_ch13()
@@ -1037,7 +1040,7 @@ forest_mod <- rand_forest() %>%
 
 house_forest <- fit(forest_mod,
                     factor(dem_win) ~ region + state + year,
-                    data = house_ch13)
+                    data = house_ch12)
 
 house_forest
 ```
@@ -1086,19 +1089,19 @@ Those last two models we already have saved as `state_year_tree` and `house_fore
 
 house_logistic <- fit(logistic_mod,
                       factor(dem_win) ~ state * year,
-                      data = house_ch13)
+                      data = house_ch12)
 
 house_linear <- fit(linear_reg(),
                     dem_win ~ state * year,
-                    data = house_ch13)
+                    data = house_ch12)
 ```
 
 Note that fitting a linear regression is as simple as using the model specification `linear_reg()`, which by default uses `lm()` as its engine.
 
-How can we extract the predictions for each of these models?  **tidymodels** provides a unified function, `predict()`.  The first argument of the function is the fitted model object.  It also requires the argument `new_data`, which is the dataset on which you will be making your predictions.  Here, we are making predictions on our original data (`house_ch13`).  For example:
+How can we extract the predictions for each of these models?  **tidymodels** provides a unified function, `predict()`.  The first argument of the function is the fitted model object.  It also requires the argument `new_data`, which is the dataset on which you will be making your predictions.  Here, we are making predictions on our original data (`house_ch12`).  For example:
 
 ```{r}
-predict(house_logistic, new_data = house_ch13)
+predict(house_logistic, new_data = house_ch12)
 ```
 
 The result is a tibble with the predicted outcomes stored in the column `.pred_class`.
@@ -1106,26 +1109,26 @@ The result is a tibble with the predicted outcomes stored in the column `.pred_c
 For the linear model, the result is going to be a number, not a class:
 
 ```{r}
-predict(house_linear, new_data = house_ch13)
+predict(house_linear, new_data = house_ch12)
 ```
 
 We can interpret this as a predicted probability and classify responses $> 0.5$ as $1$ and $< 0.5$ as $0$:
 
 ```{r, eval = FALSE}
-1 * (predict(house_linear, new_data = house_ch13) > 0.5)
+1 * (predict(house_linear, new_data = house_ch12) > 0.5)
 ```
 
 Let's put it all together in a tibble called `house_preds`:
 
 ```{r}
-house_preds <- house_ch13 %>%
+house_preds <- house_ch12 %>%
   mutate(modal = 1,
-         logistic = predict(house_logistic, new_data = house_ch13) %>% 
+         logistic = predict(house_logistic, new_data = house_ch12) %>% 
            pull(.pred_class),
-         linear = 1 * (predict(house_linear, new_data = house_ch13) > 0.5),
-         tree = predict(state_year_tree, new_data = house_ch13) %>% 
+         linear = 1 * (predict(house_linear, new_data = house_ch12) > 0.5),
+         tree = predict(state_year_tree, new_data = house_ch12) %>% 
            pull(.pred_class),
-         forest = predict(house_forest, new_data = house_ch13) %>% 
+         forest = predict(house_forest, new_data = house_ch12) %>% 
            pull(.pred_class))
 ```
 
@@ -1193,8 +1196,8 @@ We saw that our models predicted 64%-65% of the House races from 1976--2018 accu
 While we can't evaluate our models' performance on the 2020 elections (yet!), we can take a look at the process by fitting our logistic, classification tree, and random forest models on the data we have pre-2018 and then evaluating their accuracy on the 2018 election results.  Let's start by creating tibbles of our pre-2018 and 2018 data:
 
 ```{r}
-house_pre_2018 <- house_ch13 %>% filter(year != 2018)
-house_2018 <- house_ch13 %>% filter(year == 2018)
+house_pre_2018 <- house_ch12 %>% filter(year != 2018)
+house_2018 <- house_ch12 %>% filter(year == 2018)
 ```
 
 Next, we'll fit the models on the pre-2018 data:
