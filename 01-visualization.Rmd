@@ -5,8 +5,6 @@ output_yaml:
 
 # Visualization
 
-testing!!
-
 <!-- Finalize Tufte recommendation. Settings for images? Wickham may have some advice. E-mail Kieran Healy and ask to see one of his Rmd files and his book_yaml. -->
 
 <!-- Use r scales::comma() throughout -->
@@ -48,6 +46,7 @@ library(knitr)
 library(readr)
 library(patchwork)
 library(stringr)
+library(kableExtra)
 
 # invalidate cache when the tufte version changes
 knitr::opts_chunk$set(tidy = FALSE, cache.extra = packageVersion('tufte'))
@@ -56,8 +55,6 @@ knitr::opts_chunk$set(tidy = FALSE, cache.extra = packageVersion('tufte'))
 
 
 <!-- Include the current chapter 1 and 2. Lots of prettiness. Must give enough detail that you can do Congressional age exercise. -->
-
-<!-- Discussion of the key parts of a graphic, especially title, subtitle and caption. themes(), starting with theme_minimal() but going on to cool stuff like fivethirtyeight and TV themes. ggtext. axis adjustments. Links to relevant readings in Healy. Also add a section on how to put a graphic in Rpubs. Include discussion of cleaning up YAML header so that it has nothing in it (except doc type) so that the resulting Rpubs is cleaner. And also saving graphics as jpeg. And then out the file someplace. Sets the stage for a homework exercise later. -->
 
 <!-- Give a tour of other cool graphics packages, including ggrepel, gghighlights. -->
 
@@ -464,6 +461,36 @@ tibble(
 )
 ```
 <!-- ::: -->
+
+# Summary of Geoms
+
+This table summarizes the differences among the `geom`s, or visual marks that represent data points, covered in this chapter. Using them, you'll be able to visualize the distributions and relationships of variables contained in a wide array of datasets. This will be even more the case as we start to map more variables to more of each `geom`etric object's `aes`thetic attribute options, further unlocking the awesome power of the **ggplot2** package.
+
+::: {.fullwidth}
+```{r echo=FALSE, message=FALSE, fig.align="center"}
+# The following Google Doc is published to CSV and loaded using read_csv():
+# https://docs.google.com/spreadsheets/d/1vzqlFiT6qm5wzy_L_0nL7EWAd6jiUZmLSCFhDhztDSg/edit#gid=0
+
+if(!file.exists("01-visualization/data/summary_table_ch2.rds")){
+  summary_table_ch3 <-
+    "https://docs.google.com/spreadsheets/d/e/2PACX-1vRGaUW6EMIGPhg2V7CahoSdVi_JCcESFRYV5tov6bjcwOcn7DZDzfpZgrvjfFG6PV57gcJYIrwl_Q2c/pub?gid=0&single=true&output=csv" %>% 
+    read_csv(na = "")
+  summary_table_ch3$Notes[2] <- "Used when there is a sequential order to x-variable, e.g., time"
+  write_rds(summary_table_ch3, "01-visualization/data/summary_table_ch2.rds")
+} else {
+  summary_table_ch2 <- read_rds("01-visualization/data/summary_table_ch2.rds")  %>% 
+    rename(` ` = `X1`)
+}
+
+summary_table_ch2 %>%
+  
+  # Weird tick marks show up in PDF:
+  mutate(`Geometric object` = str_replace_all(`Geometric object`, "`", "")) %>%
+  
+  gt() %>%
+    tab_header("Summary of Five Named Graphs")
+```
+:::
 
 # Scatterplots
 
@@ -890,7 +917,7 @@ ggplot(data = flights, mapping = aes(x = carrier)) +
   geom_bar()
 ```
 
-Observe in Figure \@ref(fig:flightsbar) that United Airlines (UA), JetBlue Airways (B6), and ExpressJet Airlines (EV) had the most flights depart NYC in 2013. If you don't know which airlines correspond to which carrier codes, then run `View(airlines)` to see a directory of airlines. For example, B6 is JetBlue Airways. Alternatively, say you had a data frame where the number of flights for each `carrier` was pre-counted as in Table \@ref(tab:flights-counted).
+Observe that United Airlines (UA), JetBlue Airways (B6), and ExpressJet Airlines (EV) had the most flights depart NYC in 2013. If you don't know which airlines correspond to which carrier codes, then run `View(airlines)` to see a directory of airlines. For example, B6 is JetBlue Airways. Alternatively, say you had a data frame where the number of flights for each `carrier` was pre-counted.
 
 ```{r message=FALSE, echo=FALSE}
 flights_counted <- flights %>% 
@@ -898,7 +925,7 @@ flights_counted <- flights %>%
   summarize(number = n())
 ```
 
-In order to create a barplot visualizing the distribution of the categorical variable `carrier` in this case, we would now use `geom_col()` instead of `geom_bar()`, with an additional `y = number` in the aesthetic mapping on top of the `x = carrier`. The resulting barplot would be identical to Figure \@ref(fig:flightsbar).
+In order to create a barplot visualizing the distribution of the categorical variable `carrier` in this case, we would now use `geom_col()` instead of `geom_bar()`, with an additional `y = number` in the aesthetic mapping on top of the `x = carrier`. The resulting barplot would be identical to the previous barplot.
 
 
 ## Must avoid pie charts!
@@ -972,7 +999,7 @@ ggplot(data = flights, mapping = aes(x = carrier), fill = origin) +
   geom_bar()
 ```
 
-An alternative to stacked barplots are \index{barplot!side-by-side} *side-by-side barplots*, also known as *dodged barplots*, as seen in Figure \@ref(fig:flights-dodged-bar-color). The code to create a side-by-side barplot is identical to the code to create a stacked barplot, but with a \index{ggplot2!position} `position = "dodge"` argument added to `geom_bar()`. In other words, we are overriding the default barplot type, which is a *stacked* barplot, and specifying it to be a side-by-side barplot instead.
+An alternative to stacked barplots are *side-by-side barplots*, also known as *dodged barplots*. The code to create a side-by-side barplot is identical to the code to create a stacked barplot, but with a `position = "dodge"` argument added to `geom_bar()`. In other words, we are overriding the default barplot type, which is a *stacked* barplot, and specifying it to be a side-by-side barplot instead.
 
 ```{r eval=FALSE}
 ggplot(data = flights, mapping = aes(x = carrier, fill = origin)) +
@@ -1013,33 +1040,34 @@ month_facet_ncol <- ggplot(data = flights, mapping = aes(x = carrier)) +
 month_facet_ncol
 ```
 
-
-
-## Summary
-
-Barplots are a common way of displaying the distribution of a categorical variable, or in other words the frequency with which the different categories (also called *levels*) occur.  They are easy to understand and make it easy to make comparisons across levels.  Furthermore, when trying to visualize the relationship of two categorical variables, you have many options: stacked barplots, side-by-side barplots, and faceted barplots. Depending on what aspect of the relationship you are trying to emphasize, you will need to make a choice between these three types of barplots and own that choice.
-
 # More Layers
 
-<!-- Want to edit later, may be a good place to introduce useful style tools within ggplot2 (title, subtitle, caption, text, etc) -->
+```{r, echo=FALSE, fig.cap="Data Visualization with ggplot2 Cheat Sheet", fig.margin = TRUE}
+knitr::include_graphics("01-visualization/images/ggplot2-cheatsheet.jpg")
+```
 
-There are other components of the grammar of graphics we can control as well.  As you start to delve deeper into the grammar of graphics, you'll start to encounter these topics more frequently. 
+Generally speaking, the grammar of graphics allows for a high degree of customization of plots and also a consistent framework for easily updating and modifying them. We will go over some of the additional layers here, but the [Data Visualization with ggplot2 Cheat Sheet](https://rstudio.com/wp-content/uploads/2015/03/ggplot2-cheatsheet.pdf) is a great resource to refer to as your ggplot visualizations get more complicated.
 
-- `facet`ing breaks up a plot into several plots split by the values of another variable (Section \@ref(facets)) \index{ggplot2!facet}
-- `position` adjustments for barplots (Section \@ref(geombar)) \index{ggplot2!position}
+<!-- Links to relevant readings in Healy.  -->
+
+## Labels
+- `labs` adds a title, subtitle, caption, label on the x axis, and label on the y axis
+
+## Themes
+- starting with `theme_minimal()` but going on to cool stuff like fivethirtyeight and TV themes
+
+## Legends
+
+## Scales
 - `scales` that both
     + convert *data units* to *physical units* the computer can display. For example, apply a log-transformation on one of the axes to focus on multiplicative rather than additive changes.
     + draw a legend and/or axes, which provide an inverse mapping to make it possible to read the original data values from the graph.
-- `coord`inate system for x/y values: typically `cartesian`, but can also be `map` or `polar`.
-- `stat`istical transformations: this includes smoothing, binning values into a histogram, or no transformation at all (known as the `"identity"` transformation).
 
-<!-- Add how to add key parts to a graphic (title, subtitle, caption), themes, ggtext, axis, axis adjustments... -->
+## Positions
+- `position` adjustments for barplots or scatterplots
 
-Generally speaking, the grammar of graphics allows for a high degree of customization of plots and also a consistent framework for easily updating and modifying them.
-
-<!-- Moved this section after all of the examples of graphs (scatterplots, linegraphs, histograms, boxplots, barplots) to add an additional section called "More Layers" or "Style" (to replace the facets section) -->
-
-<!-- Good section to include other layers we can add besides just facets; not sure if facets are significant enough to warrant having an entire section on them. Should probably include other layers including plot title, axes labels, visual themes for the plots, and facets -->
+## Faceting
+- `facet`ing breaks up a plot into several plots split by the values of another variable 
 
 Let's briefly introduce a new concept called *faceting*.  Faceting is used when we'd like to split a particular visualization by the values of another variable. This will create multiple copies of the same type of plot with matching x and y axes, but whose content will differ. 
 
@@ -1077,37 +1105,20 @@ month_facet_4
 
 Observe in both Figures \@ref(fig:facethistogram) and \@ref(fig:facethistogram2) that as we might expect in the Northern Hemisphere, temperatures tend to be higher in the summer months, while they tend to be lower in the winter. 
 
-# Conclusion
+## Coordinate Systems
+- `coord`inate system for x/y values: typically `cartesian`, but can also be `map` or `polar`.
 
-## Summary table
+## Stats
+- `stat`istical transformations: this includes smoothing, binning values into a histogram, or no transformation at all (known as the `"identity"` transformation).
 
-Table \@ref(tab:viz-summary-table) summarizes the differences among these graphs. Using them, you'll be able to visualize the distributions and relationships of variables contained in a wide array of datasets. This will be even more the case as we start to map more variables to more of each `geom`etric object's `aes`thetic attribute options, further unlocking the awesome power of the **ggplot2** package.
+## Adjusting Axes Limits
+- `xlim` and `ylim`
 
-```{r echo=FALSE, message=FALSE}
-# The following Google Doc is published to CSV and loaded using read_csv():
-# https://docs.google.com/spreadsheets/d/1vzqlFiT6qm5wzy_L_0nL7EWAd6jiUZmLSCFhDhztDSg/edit#gid=0
+## Adding Text to a Plot
+- `ggtext`
 
-if(!file.exists("01-visualization/data/summary_table_ch2.rds")){
-  summary_table_ch3 <-
-    "https://docs.google.com/spreadsheets/d/e/2PACX-1vRGaUW6EMIGPhg2V7CahoSdVi_JCcESFRYV5tov6bjcwOcn7DZDzfpZgrvjfFG6PV57gcJYIrwl_Q2c/pub?gid=0&single=true&output=csv" %>% 
-    read_csv(na = "")
-  summary_table_ch3$Notes[2] <- "Used when there is a sequential order to x-variable, e.g., time"
-  write_rds(summary_table_ch3, "01-visualization/data/summary_table_ch2.rds")
-} else {
-  summary_table_ch2 <- read_rds("01-visualization/data/summary_table_ch2.rds")  %>% 
-    rename(` ` = `X1`)
-}
 
-summary_table_ch2 %>%
-  
-  # Weird tick marks show up in PDF:
-  mutate(`Geometric object` = str_replace_all(`Geometric object`, "`", "")) %>%
-  
-  gt() %>%
-    tab_header("Summary of Five Named Graphs")
-```
-
-## Function argument specification
+# Using functions from the Tidyverse
 
 Let's go over some important points about specifying the arguments (i.e., inputs) to functions. Run the following two segments of code:
 
@@ -1127,12 +1138,7 @@ You'll notice that both code segments create the same barplot, even though in th
 
 Going forward for the rest of this book, all `ggplot()` code will be like the second segment: with the `data = ` and `mapping = ` explicit naming of the argument omitted with the default ordering of arguments respected. We'll do this for brevity's sake; it's common to see this style when reviewing other R users' code.
 
-<!-- EWF: Start section for Jessica --> 
-
 Data "in the wild" is never ready for visualization. We can't use all the beautiful plots that we learned in the previous chapter until we have "wrangled" the data into a convenient shape. In this chapter, we'll introduce a series of functions from the **tidyverse** collection of packages which help with wrangling, and everything else we need to do to work with data. Such functions include:
-
-<!-- DK: Need to add others to this list as we expand the chapter. How best to organize? -->
-<!-- EF: Need to add tail() in this list as well? --> 
 
 1. `filter()` a data frame's existing rows to only pick out a subset of them. For example, the `alaska_flights` data frame.
 1. `select()` specific variable columns in a data set. For example, choose the `dep_delay` and `arr_delay` variables to more easily view the relationship between the two. Additional functions like `slice()` can further subset the data.   
@@ -1140,6 +1146,7 @@ Data "in the wild" is never ready for visualization. We can't use all the beauti
 1. `group_by()` its rows. In other words, assign different rows to be part of the same *group*. We can then combine `group_by()` with `summarize()` to report summary statistics for each group *separately*. For example, say you don't want a single overall average departure delay `dep_delay` for all three `origin` airports combined, but rather three separate average departure delays, one computed for each of the three `origin` airports.
 1. `mutate()` its existing columns/variables to create new ones. For example, convert hourly temperature recordings from degrees Fahrenheit to degrees Celsius.
 1. `join()` it with another data frame by matching along a "key" variable. In other words, merge these two data frames together.
+1. `tail()`
 
 Notice how we used `computer_code` font to describe the actions we want to take on our data frames. This is because the **dplyr** package, one of the packages in the **tidyverse**, has intuitively verb-named functions that are easy to remember. 
 
@@ -1152,21 +1159,9 @@ library(tidyverse)
 library(nycflights13)
 ```
 
-```{r message=FALSE, warning=FALSE, echo=FALSE}
-# Packages needed internally, but not in text. 
+## The pipe operator: `%>%`
 
-# Do we need all of these? Probably knitr, but not the others?
-
-library(knitr)
-library(kableExtra)
-library(readr)
-library(stringr)
-```
-
-
-## The pipe operator: `%>%` {#piping}
-
-Before we start data wrangling, let's first introduce a nifty tool that gets loaded with the **dplyr** package: the \index{operators!pipe} pipe operator `%>%`. The pipe operator allows us to combine multiple operations in R into a single sequential *chain* of actions.
+Before we start data wrangling, let's first introduce a nifty tool that gets loaded with the **dplyr** package: the pipe operator `%>%`. The pipe operator allows us to combine multiple operations in R into a single sequential *chain* of actions.
 
 Recall from chapter 1 that to add the `geom` layer to your ggplot you had format your code as:
 
@@ -1212,7 +1207,7 @@ You will almost never write code that looks like this, at least with simple **dp
 
 Keep in mind, there are many more advanced data wrangling functions than just the six listed in the introduction to this chapter; you'll see some examples of these in Section \@ref(other-verbs). However, just with these six verb-named functions you'll be able to perform a broad array of data wrangling tasks for the rest of this book.
 
-## `filter` rows {#filter}
+## `filter` rows
 
 ```{r filter, echo=FALSE, fig.cap="Diagram of filter() rows operation."}
 knitr::include_graphics("01-visualization/images/filter.png")
@@ -1303,7 +1298,7 @@ As a final note, we recommend that `filter()` should often be among the first ve
 
 <!-- EF: Should we include something hear about NA values? -->
 
-## `select` variables {#select}
+## `select` variables
 
 ```{r, echo=FALSE, fig.cap="Diagram of select() columns."}
 knitr::include_graphics("01-visualization/images/select.png")
@@ -1357,8 +1352,7 @@ flights %>% select(ends_with("delay"))
 flights %>% select(contains("time"))
 ```
 
-
-### `slice` and `pull` and `[]`
+## `slice` and `pull` and `[]`
 
 `slice()` and `pull()` are additional functions that you can use to pick out specific observations within a data frame.
 
@@ -1391,7 +1385,7 @@ The most common way to subset vectors is to use the "bracket" operator `[]`. Exa
 flights$dep_time[2:5]
 ```
 
-## `arrange` and sort rows {#arrange}
+## `arrange` and sort rows
 
 One of the most commonly performed data wrangling tasks is to sort a data frame's rows in the alphanumeric order of one of the variables. Unlike `filter()` or `select()`, `arrange()` does not remove any rows or columns from the data frame. Instead, the **dplyr** package's `arrange()` function \index{dplyr!arrange()} allows us to sort/reorder a data frame's rows according to the values of the specified variable.
 
@@ -1428,7 +1422,7 @@ flights_dist %>%
 
 As you can see, character variables will be sorted alphabetically. Using the `desc()` helper function with a character variable, will sort the destinations reverse alphabetically. 
 
-## `group_by` rows {#groupby}
+## `group_by` rows
 
 <!-- To get `_` to work in caption title. Found at https://github.com/rstudio/bookdown/issues/209 -->
 (ref:groupby) Diagram of group_by() and summarize().
@@ -1490,7 +1484,7 @@ flights %>%
 
 Observe how the `# Groups: origin [3]` meta-data is no longer present. 
 
-### Grouping by more than one variable
+## Grouping by more than one variable
 
 You are not limited to grouping by one variable. Say you want to know the number of flights leaving each of the three New York City airports *for each month*. We can also group by a second variable `month` using `group_by(origin, month)`:
 
@@ -1593,9 +1587,17 @@ flights <- flights %>%
 <!-- EF: Instead of a detour straight into factors, perhaps a separate section "Variable Types" would 
 be useful here. It could be like: "Recall from ch. 1, there are several ways data is stored..." --> 
 
-<!-- EWF: End Section 1 for Jessica --> 
+# Data Types
 
-<!-- EWF: Start of section 2 for Jessica --> 
+Recall from Section 3.2 (Basic programming concepts and terminology) we talked about data types including integers, doubles/numerics, logicals, characters, and factors. Let's recap:
+- Integers are values like -1, 0, 2, 4092
+- Doubles or numerics are a larger set of values containing both the integers but also fractions and decimal values like -24.932 and 0.8
+- Logicals are either TRUE or FALSE 
+- Characters are text such as “cabbage”, “Hamilton”, “The Wire is the greatest TV show ever”, and “This ramen is delicious.” Note that characters are often denoted with the quotation marks around them.
+- Factors are ways of representing categorical data in R
+
+Factors are one of the more confusing data types in R, so let's learn more about factors and how to use them.
+
 ## Factors
 
 We've spent a lot of time working with big, beautiful data frames, like the Gapminder data. But we also need to manage the individual variables housed within.
@@ -1670,8 +1672,6 @@ h_gap$country %>%
   fct_drop() %>%
   levels()
 ```
-
-
 
 ### Change order of the levels, principled {#reorder-factors}
 
@@ -1819,20 +1819,18 @@ Umm, no. That is wrong on many levels! Use `fct_c()` to do this.
 ```{r}
 fct_c(df1$country, df2$country)
 ```
-<!-- EWF: End section 2 for Jessica --> 
 
-<!-- EWF: Section 3 for Jessica --> 
-## Importing data {#csv}
+# Importing data
 
 Up to this point, we've almost entirely used data stored inside of an R package. Say instead you have your own data saved on your computer or somewhere online. How can you analyze this data in R? Spreadsheet data is often saved in one of the following three formats:
 
-First, a *Comma Separated Values* `.csv` \index{CSV file} file.  You can think of a `.csv` file as a bare-bones spreadsheet where:
+First, a *Comma Separated Values* `.csv` file.  You can think of a `.csv` file as a bare-bones spreadsheet where:
 
 * Each line in the file corresponds to one row of data/one observation.
 * Values for each line are separated with commas. In other words, the values of different variables are separated by commas in each row.
 * The first line is often, but not always, a *header* row indicating the names of the columns/variables.
 
-Second, an Excel `.xlsx` spreadsheet file. This format is based on Microsoft's proprietary Excel software. As opposed to bare-bones `.csv` files, `.xlsx` Excel files contain a lot of meta-data\index{meta-data} (data about data). Recall we saw a previous example of meta-data in Section \@ref(groupby) when adding "group structure" meta-data to a data frame by using the `group_by()` verb. Some examples of Excel spreadsheet meta-data include the use of bold and italic fonts, colored cells, different column widths, and formula macros.
+Second, an Excel `.xlsx` spreadsheet file. This format is based on Microsoft's proprietary Excel software. As opposed to bare-bones `.csv` files, `.xlsx` Excel files contain a lot of meta-data (data about data). Recall we saw a previous example of meta-data in Section \@ref(groupby) when adding "group structure" meta-data to a data frame by using the `group_by()` verb. Some examples of Excel spreadsheet meta-data include the use of bold and italic fonts, colored cells, different column widths, and formula macros.
 
 Third, a [Google Sheets](https://www.google.com/sheets/about/) file, which is a "cloud" or online-based way to work with a spreadsheet. Google Sheets allows you to download your data in both comma separated values `.csv` and Excel `.xlsx` formats. To import Google Sheets data in R use the [`googlesheets4`](https://googlesheets4.tidyverse.org/) package.
 
@@ -1854,5 +1852,4 @@ Note that the `read_csv()` function included in the **readr** package is differe
 
 <!-- DDK: Add examples of using googlesheets4. Add some examples of dirty data and all the tricky arguments in read_csv.  -->
 
-<!-- EWF: Tentative end section 3 for Jessica. Do you want to include web scraping
-or should we keep it here for now --> 
+<!-- Web scraping? --> 
