@@ -171,39 +171,25 @@ Here our population is $N$ = whatever the number of pennies are being used in th
 We summarize the correspondence between the sampling urn exercise in Chapter \@ref(sampling) and our pennies exercise in Table \@ref(tab:table-ch8-b).
 
 
-```{r, echo=FALSE, message=FALSE}
-# DK: The below is an absurd hack. Create a proper gt table directly. Then, you
-# can delete the data directory.
+```{r, echo=FALSE}
+#absurd hack solution
+library(readr)
+library(tidyverse)
+library(gt)
 
-# The following Google Doc is published to CSV and loaded using read_csv():
-# https://docs.google.com/spreadsheets/d/1QkOpnBGqOXGyJjwqx1T2O5G5D72wWGfWlPyufOgtkk4/edit#gid=0
+x <- read.csv("https://docs.google.com/spreadsheets/d/e/2PACX-1vRd6bBgNwM3z-AJ7o4gZOiPAdPfbTp_V15HVHRmOH5Fc9w62yaG-fEKtjNUD2wOSa5IJkrDMaEBjRnA/pub?gid=0&single=true&output=csv")
 
-if(!file.exists("07-one-parameter/data/sampling_scenarios.rds")){
-  sampling_scenarios <- "https://docs.google.com/spreadsheets/d/e/2PACX-1vRd6bBgNwM3z-AJ7o4gZOiPAdPfbTp_V15HVHRmOH5Fc9w62yaG-fEKtjNUD2wOSa5IJkrDMaEBjRnA/pub?gid=0&single=true&output=csv" %>% 
-    read_csv(na = "") %>% 
-    slice(1:5)
-  write_rds(sampling_scenarios, "07-one-parameter/data/sampling_scenarios.rds")
-} else {
-  sampling_scenarios <- read_rds("07-one-parameter/data/sampling_scenarios.rds")
-}
+absurd_hack <- tibble(Scenario = c("1", "2", "3", "4", "5", "6"), 
+                      Population_parameter = c("Population Proportion", "Population mean", "Difference in population proportions", "Difference in Pupulation means", "Population regression slope", "Population regression coefficient"),
+                      Notation = c("$$p$$", "$$\\mu $$", "$$p_1 - p_2$$", "$$\\mu_1 - \\mu_2$$", "$$\\beta_1$$", "$$\\beta_0$$"), 
+                      Point_Estimate = c("Sample Proportion","Sample mean", "Difference in sample proportions", "Difference in sample means", "Fitted regression slope", "Fitted regression intercept"),
+                      Symbol = c("$$\\widehat{p}$$", "$$\\overline{x}$$ or $$\\widehat{\\mu}$$", "$$\\widehat{p}_1 - \\widehat{p}_2$$", "$$\\overline{x}_1 - \\overline{x}_2$$", "$$b_1$$ or $$\\widehat{\\beta}_1$$", "\\$$b_0$$ or $$\\widehat{\\beta}_0$$")) %>%  gt() %>%  fmt_markdown(columns = TRUE)
+absurd_hack
 
-sampling_scenarios %>%  
-  # Only first two scenarios
-  filter(Scenario <= 2) %>% 
-  kable(
-    caption = "Scenarios of sampling for inference", 
-    booktabs = TRUE,
-    escape = FALSE,
-    linesep = ""
-  ) %>% 
-  kable_styling(font_size = ifelse(knitr:::is_latex_output(), 10, 16),
-                latex_options = c("hold_position")) %>%
-  column_spec(1, width = "0.5in") %>% 
-  column_spec(2, width = "0.7in") %>%
-  column_spec(3, width = "1in") %>%
-  column_spec(4, width = "1.1in") %>% 
-  column_spec(5, width = "1in")
 ```
+
+
+
 
 Going back to our 50 sampled pennies in Figure \@ref(fig:resampling-exercise-c), the point estimate of interest is the sample mean $\overline{x}$ of `r x_bar %>% pull(mean_year) %>% round(2)`. This quantity is an *estimate* of the population mean year of *all* US pennies $\mu$.
 
@@ -1029,19 +1015,18 @@ In addition to using `lm()`, we can also use bootsrapping to extract confidence 
 To use bootstrapping, we will need the **tidyverse** and **rsample** packages. The **rsample** package gives us commands to use for bootstrapping. For the purpose of this example, let's try to find the confidence interval for the mean income in our trains dataset from Chapter 3. 
 
 ```{r}
-library(tidyverse)
-library(rsample)
-library(PPBDS.data)
-
-train_samples <- bootstraps(trains, times = 1000)
-
-derive_mean_income <- function(splits) {
- x <- analysis(splits)
- return(mean(x$income))
-}
-
-train_samples$mean_income <- map_dbl(train_samples$splits, derive_mean_income)
-quantile(train_samples$mean_income, probs = c(.025, .975))
+# library(tidyverse)
+# library(rsample)
+# 
+# train_samples <- bootstraps(trains, times = 1000)
+# 
+# derive_mean_income <- function(splits) {
+#  x <- analysis(splits)
+#  return(mean(x$income))
+# }
+# 
+# train_samples$mean_income <- map_dbl(train_samples$splits, derive_mean_income)
+# quantile(train_samples$mean_income, probs = c(.025, .975))
 
 ```
 
@@ -1051,18 +1036,18 @@ To find the confidence interval for the mean income in our train dataset, we fir
 If we want to find a different statistic like the median income, we can essentially do the same thing but edit the function to derive the median income. 
 
 ```{r}
-library(tidyverse)
-library(rsample)
-
-train_samples <- bootstraps(trains, times = 1000)
-
-derive_median_income <- function(splits) {
- x <- analysis(splits)
- return(median(x$income))
-}
-
-train_samples$median_income <- map_dbl(train_samples$splits, derive_median_income)
-quantile(train_samples$median_income, probs = c(.025, .975))
+# library(tidyverse)
+# library(rsample)
+# 
+# train_samples <- bootstraps(trains, times = 1000)
+# 
+# derive_median_income <- function(splits) {
+#  x <- analysis(splits)
+#  return(median(x$income))
+# }
+# 
+# train_samples$median_income <- map_dbl(train_samples$splits, derive_median_income)
+# quantile(train_samples$median_income, probs = c(.025, .975))
 
 
 ```
