@@ -9,14 +9,7 @@ output_yaml:
 
 <!-- TODOS
 
-1) Add section on PDFs and their relationship with histograms for flipping die
-- Rolling a dice 1 time gives us a flat histogram
-- Rolling a dice 1000 times gives us a histogram with probability on the y axis, where all the values add up to 1
-- Show that adding up the area under gives us a sum of 1.
-- Introduce the notation P(coin) and P(1 dice) earlier
-- Continuity is a lie, height is not continuous. The die are discrete, but height is continuous. So height is a sum of discrete things here.
-- You technically can't measure continuous anything and even if you could, you can't put it on a computer
-- Talk about the relationship between the height of buckets and the number of buckets.
+1) Add section on PDFs and their relationship with histograms for flipping die -- VZ: Done
 
 2) Right before comparing two models, add a section showing that a tree diagram may look different depending on whether order matters. Are we looking for sum or do we care about the order of rolling H vs T as well? Flip 2 coins. Only 4 branches from one dot if we care about sum. But if order matters, we need a more extensive diagram with 6 branches.
 
@@ -117,20 +110,19 @@ knitr::opts_chunk$set(tidy = FALSE, cache.extra = packageVersion('tufte'))
 <!-- Read Topic 14 in Bayesian Workshop. Lots of interesting ideas and examples there for this first section of the chapter. Any coding examples should be simple, with  no list-columns and map_* functions. Basic tool we are introducing is doing simulation within a tibble. Consider doing some of the sample problems from STAT 110, many of which are hard to do analytically but easy to do with simulation. Mention what a PDF is, but no math. Show histogram of results from one die and two die. Explain how those histograms are, more or less, PDFs. Explain what p(A), p(B) and p(A, B) using dice/coin examples. PDF. Trump's electoral votes as a PDF. -->
 
 
+```{r, echo=FALSE, fig.margin=TRUE, fig.cap="Dice and Probability."}
+
+knitr::include_graphics("05-probability/images/probability_dice.jpeg")
+
+```
+
 ```{marginfigure}
 
-Donald Rumsfeld, the former US Secretary of Defense, once said the following tongue-twisting quote:
+The opening paragraph of *Workshop Statistics:  Discovery with Data, A Bayesian Approach by James H. Albert and Allan J. Rossman* does a wonderful job of explaining the concept of probability.
 
-  "There are known knowns. There are things we know we know. We also know there are known unknowns. That is to say, we know there are some things we do not know. But there are also unknown unknowns, the ones we do not know we do not know."
-
-```
-
-```{r, echo-FALSE, fig.margin = TRUE}
-
-knitr::include_graphics("05-probability/images/donald_rumsfeld.jpg")
+  "In the activities to follow, we don’t know if we have a particular disease, if a die being used in the casino is fair, the exact number of fish in our backyard pond, or the number of defectives in a shipment of electronic components. A model is a possible description of this unknown phenomena. In each application, there will be a number of possible models. We assign prior probabilities to these models — these probabilities reflect our opinions about which models are more or less likely to be true. To learn about the correct model, data will be observed. In the activities, the data will consist of the results of a blood test, the results of a roll of the die, the results of a capture-recapture experiment, and the number of defectives observed in a sample. This data will change our opinions about the likelihoods of the different models. Bayes’ rule is the formula which tells us how to compute the new model probabilities."
 
 ```
-
 
 
 The central tension, and opportunity, in data science is the interplay between the *data* and the *science*, between our empirical observations and the models which we use to understand them. Probability is the language we use to explore that interplay; it connects models to data, and data to models.
@@ -142,14 +134,6 @@ Probability is about quantifying uncertainty. We can think of probability as a p
 Let's begin with the simplest events: coin flips and dice rolls. If the die and 
 the coins are fair, we can operate under the assumption that all outcomes are 
 equally likely.
-
-```{marginfigure}
-
-The opening paragraph of *Workshop Statistics:  Discovery with Data, A Bayesian Approach by James H. Albert and Allan J. Rossman* does a wonderful job of explaining the concept of probability.
-
-  "In the activities to follow, we don’t know if we have a particular disease, if a die being used in the casino is fair, the exact number of fish in our backyard pond, or the number of defectives in a shipment of electronic components. A model is a possible description of this unknown phenomena. In each application, there will be a number of possible models. We assign prior probabilities to these models — these probabilities reflect our opinions about which models are more or less likely to be true. To learn about the correct model, data will be observed. In the activities, the data will consist of the results of a blood test, the results of a roll of the die, the results of a capture-recapture experiment, and the number of defectives observed in a sample. This data will change our opinions about the likelihoods of the different models. Bayes’ rule is the formula which tells us how to compute the new model probabilities."
-
-```
 
 This allows us to make the following statements:
 
@@ -175,6 +159,8 @@ What does this mean? Well imagine there are people playing games on the street c
 
 Now, let's take our understanding of probability and apply it to a data science context.
 
+Flipping 1 coin 1 time gives us a flat histogram:
+
 ```{r, echo = FALSE}
 
 # Flipping one coin
@@ -196,6 +182,9 @@ ggplot(mydata, aes(x = results)) +
   scale_x_continuous(breaks = seq(0,1,1), labels = 0:1)
 
 ```
+
+Flipping a single dice 1000 times gives us a histogram with probability of around 0.5 for each of heads and tails. Notice that the sum of the probabilities is 1.
+
 ```{r, echo = FALSE}
 
 # Flipping one coin 1000 times
@@ -218,6 +207,8 @@ ggplot(mydata, aes(x = results)) +
 
 ```
 
+Here is the result of rolling a dice 1000 times:
+
 ```{r, echo=FALSE}
 
 # Flipping a dice 1000 times
@@ -239,7 +230,9 @@ ggplot(mydata, aes(x = dice_1)) +
 
 ```
 
-```{r}
+This is the result of rolling the same 2 die 1000 times:
+
+```{r, echo=FALSE}
 
 # Two die rolled 1000 times
 
@@ -256,7 +249,7 @@ mydata <- mydata %>%
 ggplot(mydata, aes(x = sum)) +
   geom_histogram(aes(y=..count../sum(..count..)), binwidth = 1, 
                  fill = "dark green", color = "white") +
-  labs(title = "Histogram Probability Distribution",
+  labs(title = "Histogram Probability Distribution for Rolling 2 Die 1000 times",
        x = "Sum of two die",
        y = "Probability") +
   scale_x_continuous(breaks = seq(0,12,1), labels = 0:12) +
@@ -264,14 +257,21 @@ ggplot(mydata, aes(x = sum)) +
 
 ```
 
-```{r}
+Do you notice a common characteristic among all the histograms we've seen so far? If we add up the area under the "curve," we get a sum of 1. Let's think about this intuitively. Each single dice roll is guaranteed to yield a result of 1, 2, 3, 4, 5, or 6. Thus, the sum of the probabilities of each result gives us 100%.
 
+Another way to denote a histogram showing many coin tosses is P(coin), since the histogram is really a representation of all the possible results of the toss. Similarly, the histogram for rolling a single dice many times is P(dice).
 
+A histogram is functionally a **probability distribution function** or **PDF**. A PDF in the field of statistics is a graph showing how likely a random observation would give a specific value on the x axis. With the first histogram where we flip 1 coin 1 time, for instance, the likelihood of getting the result we did is 1.
 
-```
+There is a caveat, though. The term PDF technically only applies to samples where the results on the x axis are continuous and not discrete values. The results of coin flips and die rolls seem to be discrete. However, let's look back at the histograms. The height of the histogram, which represents probability, is not discrete; the height is continuous even though the results are discrete. Taking this observation one step further, we realize the following:
 
+You technically can't measure continuous anything. Even if you could, you wouldn't be able to put it on a computer! Thus, we can functionally think of the histograms we've generated as PDFs.
+
+Using our knowledge of PDFs, histograms, and simulations, we can solve a problem.
 
 What are the odds of that the sum of two die will be seven? We could figure this out analytically, but a simulation in R is a easy way to predict and confirm our expected probability.
+
+We create a dice and set the number of simulations. Next, we build a tibble and filter for observations where the sum of the die equals 7.
 
 ```{marginfigure}
 Note that we could have hard-coded the `sims` value into the tibble call in step 3 by 
@@ -280,31 +280,19 @@ This way, if we want to change the number of simulations, we do not need to
 manually change all of our code.
 ```
 
-```{r, include=TRUE}
-
-# Step 1: Creating the dice.
+```{r}
 
 dice <- c(1:6)
 
-# Step 2: Selecting the number of simulations.
-
 sims <- 10000
-
-# Step 3: Creating a tibble with the data from each simulation.
 
 mydata <- tibble(dice_1 = sample(dice, size = sims, replace = TRUE),
                  dice_2 = sample(dice, size = sims, replace = TRUE))
 
-# Step 4: Filtering out simulations where we don't have any 6's, then
-# counting our remaining observations.
-
 count <- mydata %>%
-  filter(((dice_1 + dice_2)/2) %in% 3) %>%
+  filter((dice_1 + dice_2) %in% 7) %>%
   count() %>%
   pull(n)
-
-# Step 5: Calculating probability, given by the number of observations with even
-# numbers divided by the number of total observations.
 
 probability <- count/sims
 
@@ -315,62 +303,21 @@ In this simulation, we calculated a final probability of `r probability`.
 
 To visualize the probability of different outcomes, we can build a histogram using the tibble we just created.
 
+First, we create a column in our tibble containing the sum of the two die that we rolled.
+
 ```{r}
 
-# Let's create a column for the sum of the two die.
-
 mydata <- mydata %>%
-  mutate(average = (dice_1 + dice_2)/2)
+  mutate(sum = (dice_1 + dice_2))
 
-# Now let's create a histogram with the y-axis re-scaled to have a maximum of 1.
-
-ggplot(mydata, aes(x = average)) +
-  geom_histogram(aes(y=..count../sum(..count..)), binwidth = 0.5, 
+ggplot(mydata, aes(x = sum)) +
+  geom_histogram(aes(y=..count../sum(..count..)), binwidth = 1, 
                  fill = "dark green", color = "white") +
-  labs(title = "Histogram Probability Distribution",
-       x = "Sum of Two Die",
+  labs(title = "Histogram Probability Distribution of Sum for Rolling 2 Die 10000 Times",
+       x = "Value of dice roll",
        y = "Probability") +
-  scale_x_continuous(breaks = seq(0,6,1), labels = 0:6) +
+  scale_x_continuous(breaks = seq(0,12,1), labels = 0:12) +
   theme_classic()
-
-# As we increase the number of die we roll, our probability distribution looks
-# more and more like a probability density function.
-
-dice <- as.data.frame(dice)
-
-# Creating an empty tibble to fill with sampling data in the next step.
-
-updated_data <- data.frame()
-
-# Creating samples of different numbers of die, from 1 die to 100 die. Sampling
-# at each number of die sims = 10000 times.
-
-for (i in 1:2) {
-  
-  new_data <- rep_sample_n(dice, size = i, replace = TRUE, 
-                         reps = sims) %>%
-    group_by(replicate) %>%
-    summarize(average = sum(dice)/i)
-  
-  updated_data <- rbind(new_data, updated_data)
-  
-}
-
-# ggplot(newdata, aes(x = average)) +
-#   geom_histogram(aes(y=..count../sum(..count..)), binwidth = (1-(0.5*1/i)), 
-#                  fill = "dark green", color = "white")
-# 
-# number_of_die <- 100
-# 
-# mydata <- rep_sample_n(dice, size = number_of_die, replace = TRUE, reps = sims)
-# 
-# newdata <- mydata %>%
-#   group_by(replicate) %>%
-#   summarize(average = sum(dice)/number_of_die)
-# 
-# ggplot(newdata, aes(x = average)) +
-#   geom_histogram(aes(y=..count../sum(..count..)), binwidth = 0.01, 
-#                  fill = "dark green", color = "white")
 
 ```
 
@@ -1160,6 +1107,50 @@ x %>%
 
 ```
 
- 
+## Key Themes
+
+<!-- VZ: Added introductions to the 4 key themes relevant to this chapter 
+Question: should I add a comment about this being a recurring theme?
+Almost done
+-->
+
+### Parameter Uncertainty
+
+```{r, echo=FALSE, fig.margin=TRUE, fig.cap="Coin Flip Uncertainty."}
+
+knitr::include_graphics("05-probability/images/coin_flip.jpg")
+
+```
+
+Suppose your friend sets up a pseudo-casino in the playground of the neighborhood school. He's offering everyone the opportunity to play probability games and bet money. The first game is simple: coin tosses. If the coin lands on heads, you get five dollars. If it lands on tails, you pay three dollars.
+
+You have a sneaking suspicion that the coin isn't fair and you ask your friend to flip it 10 times to test your theory. However, you must not be overconfident. 10 observations might be too few to judge the fairness of the coin. Perhaps your friend secretly switches coins when it comes time for the actual betting and your sample in the initial simulation is nonrepresentative. You might be nervous about losing your money and even miscount the number of heads and tails. These are all examples of **parameter uncertainty**. Sometimes, a model has the correct form. But it's not practical to run the simulation millions of times to be certain of the outcome. It's not possible to be absolutely certain that your friend isn't switching coins. A perfect world does not exist, so we must have reservations when drawing likely conclusions.
+
+### Unmodeled Variation
+
+(This may be difficult to talk about since we don't (?) write down formulas with error terms.) But each chapter should discuss the concept of a residual. Even if we have perfect parameter estimates for a model structure which matches the unknown data generating mechanism, we still won't make perfect predictions. Some randomness is intrinsic. Example: prediction for an individual.
+
+### Predictive Uncertainty
+
+### Unknown Unknowns
+
+```{r, echo=FALSE, fig.margin=TRUE, fig.cap="Donald Rumsfeld."}
+
+knitr::include_graphics("05-probability/images/donald_rumsfeld.jpg")
+
+```
+
+Donald Rumsfeld, the former US Secretary of Defense, once said the following tongue-twisting quote:
+
+  "There are known knowns. There are things we know we know. We also know there are known unknowns. That is to say, we know there are some things we do not know. But there are also unknown unknowns, the ones we do not know we do not know."
+  
+```{r, echo=FALSE, fig.margin=TRUE, fig.cap="Three Card Monte."}
+
+knitr::include_graphics("05-probability/images/Three_Card_Monte.jpg")
+
+```
+
+What does this mean? Well imagine a crowd playing Three Card Monte in the streets of New York. The guy running the game runs a demo and shows you all the cards to make you confident. They earn money by making you overconfident and persuading you to bet. Your odds may seem good during the demo round, but that doesn't actually say anything about what will likely happen when the real, high stakes game begins. The person running the game does many simulations, making the "victim" forget that they cannot actually make any conclusions about the odds of winning. There are some variables that we simply do not know. People can be using slight of hand, for instance.
+
 
 
