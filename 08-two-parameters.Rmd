@@ -19,9 +19,9 @@ output_yaml:
 
 ## Immigration Attitudes
 
-<!--  Point out that att_start is not something we will use in this chapter, but will use later. This is a brie f warm up. Don't need to explore each variable in detail. All we are using is `treatment` and `income`. -->
+<!--  Point out that att_start is not something we will use in this chapter, but will use later. This is a brief warm up. Don't need to explore each variable in detail. All we are using is `treatment` and `income`. -->
 
-Recall the trains dataset from Enos (2014) that was first introduced in Chapter 3 in the context of the Rubin Causal Model. In this study, Enos and his team randomly placed Spanish-speaking confederates in nine train stations around Boston, MA. They examined how exposure to Spanish-speakers -- the `treatment` -- influenced attitudes toward immigration. These reactions were measured through changes in exclusionary attitudes regarding immigration. 
+Here, we'll be introducing the `trains` dataset from Enos (2014). In this study, Enos and his team randomly placed Spanish-speaking confederates in nine train stations around Boston, MA. They examined how exposure to Spanish-speakers -- the `treatment` -- influenced attitudes toward immigration. These reactions were measured through changes in exclusionary attitudes regarding immigration. 
 
 ```{r, message=FALSE}
 library(PPBDS.data)
@@ -29,11 +29,14 @@ library(tidyverse)
 library(rsample)
 library(tufte)
 library(remotes)
+library(skimr)
 ```
 
 ```{r, include=FALSE}
 library(gt)
 ```
+
+<!-- EM: Talk about trains like it's a brand new dataset!! I wrote this thinking that it was previously introduced in the book. It should be an introduction and not a refresher (as I wrote it to be) -->
 
 Let's refresh our memory with a look at the data:
 
@@ -41,14 +44,24 @@ Let's refresh our memory with a look at the data:
 
 glimpse(trains)
 
+summary(trains)
+
 ```
 
 Here, we can see variables that indicate each respondent's gender, political affiliation, age, and income. Additionally, we have variables that indicate whether a subject was in the control or treatment group, and the attitudes before or after the study in each of these subjects. Remember that for the `att_start` and `att_end` variables, a higher number means to a more conservative political standing and, correspondingly, a more exclusionary stance on immigration into the United States.
 
-Although the `att_start` and `att_end` variables are central to Enos' experiment, we will now focus our attention to the relationship between the `income` and `party` variable. The reason for investigating this instead of att_start and att_end will become clear later in the chapter. Furthermore, instead of investigating a single parameter of comparison like we did in chapter 7, we will incorporate the use of *two parameters* to create a holistic picture of how these two variables are related. How do our estimates and predictions regarding income change when we identify a specific party we want to work with within the data?
+Although the `att_start` and `att_end` variables are central to Enos' experiment, we will now focus our attention to the relationship between the `age` and `party` variable. The reason for investigating this instead of att_start and att_end will become clear later in the chapter. Furthermore, instead of investigating a single parameter of comparison like we did in chapter 7, we will incorporate the use of *two parameters* to create a holistic picture of how these two variables are related. How do our estimates and predictions regarding income change when we identify a specific party we want to work with within the data?
 
 
-## Estimate Income
+## Estimate Age
+
+<!-- EM: We have decided to pivot this section away from income (due to its wonky distribution) and move to estimating AGE as our dependent variable -->
+
+<!-- EM: We are also eliminating the bootstrap portion of this chapter in its entirety, as it was covered in ch7. At the very most, a reiteration of lm()'s validity is acceptable. Otherwise, it takes up too much space. -->
+
+<!-- EM: Lastly, there should also be a Rubin table that is constructed for age ~ party. Ask Preceptor for more detailed instructions regarding this as he does a fantastic job explaining why it's necessary. In summary: age~party instead of income~party, get rid of bootstrapping because it's redundant, and have a Rubin table for age~party (there's already one for att_end~treatment later in the chapter. -->
+
+<!-- EM: I cannot find the document that labels all the different kinds of uncertainty — I'm pretty sure "unknown unknowns" is used incorrectly below. -->
 
 <!-- All the same tools which we used to estimate a single parameter in the previous chapter apply to estimate two parameters in this chapter. (Not sure what examples we will use in that chapter.) In fact, it is easy! We only need to do the bootstrap once. And, once we have those bootstrap samples, we just calculate mean(income) for treated and mean(income) for control. Key insight is that we don't need to do a bootstrap for each parameter we want to calculate. We do one bootstrap and then calculate as many parameters as we need to. We can also calculate medians or items like 5th highest income, and our uncertainty associated with those items. -->
 
@@ -432,6 +445,15 @@ Yet another area of uncertainty that might not be immediately obvious is the pos
 
 In short, *while we can accept the model as representative of the United States at or around 2012 (the year in which Enos conducted his study), we cannot reasonably extrapolate that to the far future*.
 
+
+It is always important to keep the problem of validity in the back of our minds as we investigate data sets and how the data within these sets are collected. Given the many factors — those we are aware of and those we are not aware of — that go into any kind of data collection, there is no way to guarantee 100 percent validity.
+
+#### Unknown unknowns
+
+Yet another area of uncertainty that might not be immediately obvious is the possibiity of unknown unknowns — that is, all the things that might change with time. How do we know that our model — which relies heavily on figures like income and party affiliation — will still be able to draw conclusions about America 50 years from now? Mass migrations, political revolutions, and world wars are just a few of the things that could render all the conclusions we draw from the `trains` dataset moot. And, other than expanding our confidence intervals to the point of uselessness, there's no way to account for the unknown unknowns. 
+
+In short, *while we can accept the model as representative of the United States at or around 2012 (the year in which Enos conducted his study), we cannot reasonably extrapolate that to the far future*.
+
 <!-- EM: Is the above statement true? --> 
 
 <!-- Will the term "prediction game" be brought up earlier in PPBDS? -->
@@ -467,7 +489,8 @@ Here, we see that the average treatment effect is `r ATE`; this is the average c
 
 trains$treatment <-fct_relevel(trains$treatment, "Control", "Treated")
 
-lm(data = trains, att_end ~-1 + treatment) %>% tidy(conf.int = TRUE) %>%
+lm(data = trains, att_end ~-1 + treatment) %>% 
+  tidy(conf.int = TRUE) %>%
   select(term, estimate, conf.low, conf.high)
 
 #To do: add row numbers, figure out a way to mutate columns as to include both values — maybe a function could be useful here?)
@@ -477,6 +500,8 @@ lm(data = trains, att_end ~-1 + treatment) %>% tidy(conf.int = TRUE) %>%
 The confidence intervals represent our confidence in the average treatment effect of the `trains` dataset being representative of the true average treatment effect on Boston commuters.
 
 Now, we'll create the RCM table of possible outcomes, as we did back in ch3:
+
+<!-- EM: The Rubin tables below should be structurally different from the ones you constructed for age and party affiliation because age~party is merely predictive while att_end~treatment is CAUSAL. This explains there being TWO outcome columns for the att_end~treament model instead of only ONE outcome column, like we have for the age~party Rubin Table. Make sure that this distinction is clear — burn it into the reader's mind. -->
 
 ```{r}
 
@@ -533,6 +558,19 @@ Recall our earlier conversation regarding the difference between confidence inte
 
 ```{r}
 
+
+lm(data = trains, att_end ~ treatment) %>%
+predict(tibble(treatment = c("Treated", "Control")), 
+        interval = "prediction")
+
+```
+
+And we can reconstruct the table by filling in the unknowns with the predictions (note that these are unchanged) and their associated levels of uncertainty (which HAVE changed to accomodate for individual variation within the data):
+
+<!-- EM: Note that some of the uncertainty boundaries exceed 3 or 15, which were the minimum and maximum values for att_end, respectively. This should be made apparent in a margin note for the tables that have uncertainty bounds below 3 or above 15. -->
+
+``` {r}
+
 trains.lm <- lm(data = trains, att_end ~ treatment)
 newdata <- tibble(treatment = c("Treated", "Control"))
 
@@ -546,7 +584,7 @@ And we can reconstruct the table by filling in the unknowns with the predictions
 
 tibble(subject = 1:7,
        Control = c("8.45 (2.9-14.0)", "8.45 (2.9-14.0)", "8.45 (2.9-14.0)", "8.45 (2.9-14.0)", "5", "8.45 (2.9-14.0)", "13"),
-       Treated = c("11", "10", "5", "11", "10 (4.4-15)", "13", "10 (4.4-15)")) %>% 
+       Treated = c("11", "10", "5", "11", "10 (4.4-15.6)", "13", "10 (4.4-15.6)")) %>% 
   
   gt() %>%
   cols_label(subject = md("$$\\mathbf{Subject}$$"),
@@ -561,7 +599,6 @@ tibble(subject = 1:7,
   tab_footnote(footnote = "Note: minimum att_end is 3 and maximum att_end is 15",
                locations = cells_column_labels(
       columns = T))
-
 ```
 
 Regardless of whether we use confidence or prediction intervals for these unknowns, however, the table looks a bit funky: take a look at subject 3. According to this model, subject 3's attitude under control would be HIGHER than his/her attitude under treatment, which corresponds to a negative treatment effect. This would mean that he/she would become more LIBERAL after undergoing treatment, which flies in the face of the ATE we calculated earlier. Another example of this can be seen with subject 7, whose predicted `att_end` under treatment is lower than his/her `att_end` under control (also signifying a shift towards liberal attitudes regarding immigration). 
@@ -574,17 +611,16 @@ One such way is by attaching the ATE in the appropriate direction to fill in the
 
 #This is necessary so we can see the offset as caused by treatmentTreated, not treatmentControl.
 
-trains$treatment <-fct_relevel(trains$treatment, "Control", "Treated")
+trains$treatment <- fct_relevel(trains$treatment, "Control", "Treated")
 
-lm(data = trains, att_end ~ treatment) %>% tidy(conf.int = TRUE) %>%
+lm(data = trains, att_end ~ treatment) %>% 
+  tidy(conf.int = TRUE) %>%
   select(term, estimate, conf.low, conf.high)
 
 
 tibble(subject = 1:7,
        Control = c("9.45 (8.42, 10.48)", "8.45 (7.42, 9.48)", "3.45 (2.42, 4.48)", "9.45 (8.42, 10.48)", "5", "11.45 (10.42, 12.48)", "13"),
-       
-       Treated = c("11", "10", "5", "11", "6.55 (5.52, 7.58)", "13", "14.55 (13.52, 15)")) %>%
-  
+       Treated = c("11", "10", "5", "11", "6.55 (5.52, 7.58)", "13", "14.55 (13.52, 15.58)")) %>%
   gt() %>%
   cols_label(subject = md("$$\\mathbf{Subject}$$"),
                 Control = md("$$Y_c(u)$$"),
