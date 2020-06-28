@@ -26,30 +26,28 @@ knitr::opts_chunk$set(fig.width = 6, message = F, warning = F,
 
 library(tidyverse)
 library(xaringan)
-library(gov.1005.data)
+library(PPBDS.data)
 library(gganimate)
 ```
 
 ```{r, include = F}
-
-## qguide data
-data("qscores")
-
 gov <- qscores %>%
-  filter(department == "Government") 
+  filter(department == "GOV") 
   
 
 comp <- qscores %>%
-  filter(department == "Computer Science")
+  filter(department == "COMPSCI")
 
 ## testing 10,000 times
-n=10000 
-t2err=0
+
+n <- 10000 
+t2err <- 0
 
 ## each test, make new 5-course sample from each department
+
 for (i in 1:n){
-   x <- sample(gov$workload,5)
-   y <- sample(comp$workload,5)
+   x <- sample(gov$hours,5)
+   y <- sample(comp$hours,5)
   
 ## if p-value of t.test is greater than 0.05, fail to reject the null and add 1 to number of Type 2 Errors
    if (((t.test(x,y, alternative = "two.sided"))$p.value)>0.05) (t2err=t2err+1) 
@@ -58,8 +56,8 @@ t2_freq <- t2err / n
 
 ## Generate some fake data for plotting
 set.seed(12345)
-fake_data_gov <- data.frame(x = rnorm(5, mean(gov$workload+2.2), 1), y = jitter(rep(0.08,5),amount = 0.05), dep = rep("Government", 5))
-fake_data_comp <- data.frame(x = rnorm(5, mean(comp$workload - 2.6), 1), y = jitter(rep(0.05,5),amount = 0.05), dep = rep("Economics", 5))
+fake_data_gov <- data.frame(x = rnorm(5, mean(gov$hours+2.2), 1), y = jitter(rep(0.08,5),amount = 0.05), dep = rep("Government", 5))
+fake_data_comp <- data.frame(x = rnorm(5, mean(comp$hours - 2.6), 1), y = jitter(rep(0.05,5),amount = 0.05), dep = rep("Economics", 5))
 fake_data_2 <- fake_data_gov %>%
   full_join(fake_data_comp)
 ```
@@ -72,13 +70,13 @@ plot <- ggplot(fake_data_2, aes(x = x, y = y, colour = dep)) +
   ylim(-0.05,0.3) +
   coord_cartesian(clip = "off")
 
-##fig2, add true distribution of gov workload
+##fig2, add true distribution of gov hours
 plot1 <- plot +
-  stat_function(fun = dnorm, args = list(mean = mean(gov$workload), sd = sd(gov$workload)), colour = "#F8766D", size = 1.2) 
+  stat_function(fun = dnorm, args = list(mean = mean(gov$hours), sd = sd(gov$hours)), colour = "#F8766D", size = 1.2) 
 
-##fig3, add true distribution of cs workload
+##fig3, add true distribution of cs hours
 plot2 <- plot1 + 
-  stat_function(fun = dnorm, args = list(mean = mean(comp$workload), sd = sd(gov$workload)), colour = "#00BFC4", size = 1.2) 
+  stat_function(fun = dnorm, args = list(mean = mean(comp$hours), sd = sd(gov$hours)), colour = "#00BFC4", size = 1.2) 
 
 ##fig4, jitter in fake data
 plot3 <- plot2 +
@@ -123,7 +121,7 @@ ggplot(x, aes(x = x, y = y, color = as.factor(group))) +
 ---
 
 
-## Now, we want to test if there is a difference in workloads between the Computer Science and Government departments. We already know that Government courses average about 5 hours per week, and Computer Science courses average about 11 hours. A t-test of the full data would reject the null and see a significant difference in means. However, we are again limited and can only see the reported workload for 5 randomly chosen courses in each department.
+## Now, we want to test if there is a difference in hours between the Computer Science and Government departments. We already know that Government courses average about 5 hours per week, and Computer Science courses average about 11 hours. A t-test of the full data would reject the null and see a significant difference in means. However, we are again limited and can only see the reported hours for 5 randomly chosen courses in each department.
 
 
 ---
