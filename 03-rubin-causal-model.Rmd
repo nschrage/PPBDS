@@ -18,12 +18,15 @@ library(infer)
 ```
 
 
+<!-- Why is this not working? CB: ? -->
 
 <!--SJ:Rugby is much cooler than lacrosse :) -->
 
 
 <!-- 1. Table centering. Set up time with Yao. -->
+>>>>>>> master
 
+<!-- 1. Table centering. Set up time with Yao. CB: done-->
 
 <!-- 2. Permutation example and code. Biggest current hole is the lack of a permutation test coding example. When we do this, we will want to create the permutations "by hand," rather than relying on an R package for doing so, I think that there are some elegant ways to do this with tidyverse, like crossing() or expand(). Maybe rsample::bootstraps()?  -->
 
@@ -41,7 +44,6 @@ library(infer)
 
 <!-- Lots of useful material here: https://chabefer.github.io/STCI/ -->
 
-
 <!-- Other potential topics -->
 
 <!-- unit/item nonresponse -->
@@ -52,16 +54,24 @@ library(infer)
 
 <!-- DK: Does [this quote](https://www.davidkane.info/post/2019-07-12-rubin-suggestion/) or portions thereof belong in the chapter? If so, where? Or maybe split up? And we need Don Rubin's photo! -->
 
-<!-- DK: Make an appointment to talk with Yao about how we should do references in the book. -->
+<!-- DK: Make an appointment to talk with Yao about how we should do references in the book. CB: Done, Tuesday at 2-->
 
+```{r echo=FALSE, fig.cap="[Don Rubin was a professor of Statistics at  Harvard.](https://www.uni-bamberg.de/fileadmin/bagss/Bilder/Editorial/21711197.jpg).", fig.margin = TRUE}
+knitr::include_graphics("03-rubin-causal-model/images/don_rubin.jpg")
+```
 
-The Rubin Causal Model (RCM) is an approach to the statistical analysis of cause and effect based on the framework of potential outcomes, created by Donald Rubin. The name "Rubin Causal Model" was first coined in Holland (1986).  
+The Rubin Causal Model (RCM) is an approach to the statistical analysis of cause and effect based on the framework of potential outcomes, created by Donald Rubin. The name "Rubin Causal Model" was first coined in Holland (1986). 
 
 ## What is a causal effect?
 
 ```{r echo=FALSE, fig.cap="This study was conducted by Ryan Enos.", fig.margin = TRUE}
 knitr::include_graphics("03-rubin-causal-model/images/enos_seal.png")
 ```
+
+<!-- CB: I am torn between adding the Rubin quotes at the end of the section or at the beginning. At the end I could include examples of what each thing is in the chapter in the margin notes, but the beginning also outlines the section nicely, but might only be clear because I know what is coming in the section. Could also do both? -->
+
+> "We should start the inferential process with clear statements of scientific objectives and associated estimands, and a precise description of the hypothetical data set from which we would simply calculate the estimands. Such a data set could be composed mostly of unobserved or even unobservable values, but it defines the objects of inference." ^[Rubin 2011]
+`r tufte::quote_footer('--- Don Rubin')`
 
 The Rubin Causal Model (RCM) is based on the idea of **potential outcomes.** For example, let's use a social experiment that looked at exclusionary attitudes of commuters on a train platform. The commuters were exposed to one of two possible conditions, and then their attitudes towards immigrants were measured. One condition was being on a train platform near individuals speaking Spanish. The other was being on a train platform with no one in the vicinity. To calculate the causal effect of having Spanish-speaking people nearby, we need to compare the outcome for an individual in one alternative future (with Spanish-speaking people) to another (without Spanish-speaking people). Since it is impossible to see both potential outcomes at once, one of the potential outcomes is always missing. This dilemma is the "fundamental problem of causal inference." 
 <!-- SJ: Confused here, it seems it is assumed we know why it is impossible to see both outcomes at once? as a reader I don't know why that is maybe a little more explanation there?-->
@@ -100,16 +110,7 @@ tibble(subject = "Joe",
             location = cells_body(columns = vars(subject))) %>%
   tab_style(cell_text(weight = "bold"),
             location = cells_body(columns = vars(subject))) %>%
-  cols_align(align = "center", columns = TRUE) %>%
-  gtsave("gt1.png", path = tempdir())
-```
-
-```{r echo=FALSE, fig.align = 'center'}
-
-# CB: This works to center a gt table but have to do it individually for every
-# gt table in the book
-
-knitr::include_graphics(tempdir("gt1.png"))
+  cols_align(align = "center", columns = TRUE) 
 ```
 
 <!-- SJ: Something that is a bit unclear to me is the phrasing "Attitude if Treated" it seems when reading this that the patients are being treated even though I know you are talking about the treatment group. Is there a way you could explain why it is worded this way before using it? -->
@@ -248,8 +249,6 @@ tibble(subject = c("Joe", "Mary", "Sally", "Bob", "James"),
             location = cells_body(columns = vars(subject)))
 ```
 
-<!-- Would it be appropriate to include any of the mean values as an example of an estimand? As they are no longer in the table what would be the best way to present them? -->
-
 From this Rubin Table, there are many possible values we might calculate.  Here are just a sampling:
 
 <!-- DK: Need to discuss other estimands, like causal effect on the treated. -->
@@ -301,9 +300,13 @@ tibble(subject = c("Joe", "Mary", "Sally", "Bob", "James"),
             location = cells_body(columns = vars(subject))) 
 ```
 
-Question marks are responses that could not be observed. The **Fundamental Problem of Causal Inference**^[Holland 1986.] is that directly observing unit-level causal effects is impossible. If we don't have all the values in our table, how do we calculate anything?
+Remember, question marks are responses that could not be observed. The **Fundamental Problem of Causal Inference**^[Holland 1986.] is that directly observing unit-level causal effects is impossible. If we don't have all the values in our table, how do we calculate anything?
 
 ## How do we fill in the missing values?
+
+> "This inferential process is most directly conceptualized as finding the probability distribution of missing values given observed values and scientific assumptions, i.e., formally, finding the posterior predictive distribution of the missing values, whence the posterior distribution of the estimands can be calculated. ...
+The approach of distributionally filling in (or multiply imputing) the missing values is intuitive and reveals the natural uncertainty of inference." ^[Rubin 2011]
+`r tufte::quote_footer('--- Don Rubin')`
 
 How can we fill in the question marks?  Because of the fundamental problem of causal inference, we can never *know* the missing values. Because we can never know the missing values, we must make assumptions. "Assumption" just means that we need a "model," and all models have parameters.
 
@@ -416,8 +419,6 @@ Note that for some estimands, filling in the same causal effect for everyone wou
 In general, do we think that if Joe wasn't on the platform with Spanish-speaking people, his attitude toward immigrants would be exactly $14.33$? Of course not! We have some uncertainty around these numbers.  There are two main sources of uncertainty we have to take into account when making a prediction for Joe:
 
 1. `r newthought("Uncertainty in estimating the ATE.")` Even if treatment is randomly assigned, and thus $\widehat{ATE}$ is an unbiased estimate of ATE, we still may not have a very precise estimate if our sample is small. With this miniscule sample (five subjects!), the uncertainty might be gigantic, perhaps something like $(-3, 2)$, which would lead to a prediction for Joe of $(10, 15)$. As we get a larger sample size, this uncertainty decreases. 
-
-<!-- EC: Could you specify what exactly is the "true ATE"? -->
 
 2. `r newthought("Individual Variation.")` Even if we have a perfect estimate of the *average* treatment effect, it still may be the case that the effect *for Joe* is higher or lower than the average. We can assume this away if we say that the treatment effect is a constant $τ$ for everyone, but that is not likely to be true in the real world -- and this source of uncertainty does not go away simply by collecting more observations. So with a large sample, let's say that we calculated a confidence interval around $\widehat{ATE}$ of $(-1.66, -1)$, leading to an interval for Joe's outcome under control of $(14.66, 14)$. The uncertainty due to individual variation may still be a great deal greater -- say $(13, 15)$. These numbers are simply illustrative, but they highlight an important point: even if you have a good estimate of the ATE, you should still be much more uncertain about the causal effect for any *particular individual*. 
 
@@ -645,6 +646,9 @@ Indeed, there are an infinite number of possible treatments. The Rubin Table ext
 Thus, whenever you are considering a causal question, the best way to think about it is to start with the infinite Rubin Table.  First we throw out the rows we think are duplicates (such as all the observations for Joe one second from now, two seconds from now, etc.) or that are outside the scope of what we are interested in for now (maybe we don't care about outcomes 30 years in the future for this study).  Second, we throw out the columns that we don't care about, which are all the possible treatments we aren't considering.  Finally, we define precisely---in terms of potential outcomes---our estimand.  It may be something simple, such as the average treatment effect, or something more complex.  Once we have done these steps, we can start thinking about how to fill in the question marks.  But remember that the infinite Rubin Table is always there, and you should be conscious of which rows and columns you are throwing out!
 
 ## Confounding
+
+> "Then we should think about the mechanism that led to observed values being observed and unobserved values being missing. To me, statistical inference concerns estimating missing values from observed values rather than pondering p-values, and one cannot even begin to do this without assuming something about the process that created the missing values: was it, for example, simple random sampling or was it a censoring mechanism? ... We should not avoid discussing the scientific context of any statistical problem, because this can greatly affect the resulting inference." ^[Rubin 2011]
+`r tufte::quote_footer('--- Don Rubin')`
 
 ### The assignment mechanism
 
@@ -1062,6 +1066,11 @@ Keep in mind that the problem arises when there is a correlation between treatme
 
 ### Natural Experiments: Hormone Replacement Therapy
 
+Remember - 
+
+> "We should not avoid discussing the scientific context of any statistical problem, because this can greatly affect the resulting inference." ^[Rubin 2011]
+`r tufte::quote_footer('--- Don Rubin')`
+
 ```{r echo=FALSE, fig.margin = TRUE}
 knitr::include_graphics("03-rubin-causal-model/images/HRT.png")
 ```
@@ -1076,6 +1085,26 @@ Randomized trials rapidly proved HRT to be harmful rather than beneficial. Women
 
 The causal effect of a treatment on a single unit at a point in time is the difference between the outcome variable with the treatment and without the treatment. The fundamental problem of causal inference is that it is impossible to observe the causal effect on a single unit. As a consequence, assumptions---models---must be used in order to estimate the missing data.
 
+`r margin_note("We start with the Enos train study, which aims to understand how proximity to people speaking Spanish might impact peoples attitudes towards immigrants. Our data is based off of a survey that gives a numerical representation of attitude. We want to understand treatment effect, so our estimand of focus is ATE. We have discussed the fundamental problem of causal inference, and the concept that ev erything is a missing data problem.")`
+
+> "We should start the inferential process with clear statements of scientific objectives and associated estimands, and a precise description of the hypothetical data set from which we would simply calculate the estimands. Such a data set could be composed mostly of unobserved or even unobservable values, but it defines the objects of inference. 
+
+`r margin_note("We have considered the assignment mechanism, and different ways confounding can be introduced in our data.")`
+
+> "Then we should think about the mechanism that led to observed values being observed and unobserved values being missing. To me, statistical inference concerns estimating missing values from observed values rather than pondering p-values, and one cannot even begin to do this without assuming something about the process that created the missing values: was it, for example, simple random sampling or was it a censoring mechanism?
+
+`r margin_note("We have also discussed some ways in which we can fill the missing values in our data.")`
+
+> "This inferential process is most directly conceptualized as finding the probability distribution of missing values given observed values and scientific assumptions, i.e., formally, finding the posterior predictive distribution of the missing values, whence the posterior distribution of the estimands can be calculated.
+
+`r margin_note("Models require assumptions. The assumptions we make should not be taken lightly, as they can have real world impacts, as we saw in the hormonal replacement therapy example.")`
+
+> "There is no need to teach technical details of this Bayesian approach; instead we can use ideas based on simulating the unknowns under scientifically motivated models. We should not avoid discussing the scientific context of any statistical problem, because this can greatly affect the resulting inference. The approach of distributionally filling in (or multiply imputing) the missing values is intuitive and reveals the natural uncertainty of inference. ... 
+
+> "After understanding this natural approach to access uncertainty of inference, then we can teach the importance of evaluating operating characteristics of such procedures." ^[Rubin 2011]
+
+`r tufte::quote_footer('--- Don Rubin')`
+
 ## References
 
 <!-- AR: Need to integrate this with the rest of the book -->
@@ -1083,4 +1112,6 @@ The causal effect of a treatment on a single unit at a point in time is the diff
 Cox, D. R. (1958). *Planning of Experiments.* Wiley.
 
 Holland, Paul W. (1986). "Statistics and Causal Inference." *J. Amer. Statist. Assoc.* 81 (396): 945–960. doi:10.1080/01621459.1986.10478354.
+
+Rubin (2011, page 288), Discussion of “Towards more accessible conceptions of statistical inferences” by C. J. Wild, M. Pfannkuch, M. Regan and N. J. Horton, Journal of the Royal Statistical Society. Series A (Statistics in Society), Vol. 174, No. 2 (APRIL 2011), pp. 247-295.
 
