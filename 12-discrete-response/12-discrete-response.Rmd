@@ -1,14 +1,17 @@
 ---
 output_yaml:
-  - ../_output.yml
+  - _output.yml
 ---
 
-<!-- Work in discussion on validity. If you are changing the example in the chapter, do that first -->
-<!-- Deepen discussion of whether structure of our model --- linear regression, CART --- match the world. -->
-<!-- Discussion of unknown unknowns esp when talking about extrapolating data to 2020 -->
-
-
 # Discrete Response {#classification}
+
+<!-- Use CCES for data work. Map 0 and 1 to approve and disapprove. 
+Chapter assumes classification is just 0 or 1, but more broadly it can be with multiple categories.
+Don't frame chapter based on different models, base it on different ways of solving problems. 
+Speed up discussion of logistic regressions, maybe just do only one. 
+Delete aggressively,
+Learn tidymodels. Start without tidymodels but then move it over to tidymodels. 
+Margin note for math stuff -->
 
 Many questions have binary answers. These questions can be answered by any pair of two answers (such as yes/no). Two examples of these questions include: 
   a. Are students with below average grades more likely to binge drink?
@@ -16,29 +19,18 @@ Many questions have binary answers. These questions can be answered by any pair 
  
 **Binary responses** take on only two values: success ($Y=1$) or failure ($Y=0$), yes ($Y=1$) or no ($Y=0$), et cetera. Examples (a) and (b) above have binary responses (Does a student binge drink?  Was a patient diagnosed with cancer?). Binary responses are one of the most common types of data that statisticians encounter.  We are often interested in modeling the probability of success, $p$, based on a set of covariates. As with regression, there are two broad categories of problems: *modeling for explanation* and *modeling for prediction*. Although terminology varies across fields, "regression" is generally used for situations in which our *dependent variable* is continuous. "Classification" applies to cases in which the dependent variable is binary.
 
+All of the new models touched upon in this chapter speak to the wider discussion of fitting our model structures to better fit what is being measured in the world. Using logistical regressions of any type more accurately describe the measured effect when dealing with binary variables.  
+
 In this chapter, we will look at three common techniques of **classification** of binary data.  First, we will consider logistic regression, which is similar conceptually to the linear regression models we considered in Chapters \@ref(regression) and \@ref(multiple-regression).  Second, we will consider classification and regression trees (CART).  Third, we will discuss random forests.
 
-<!-- MB: Should the ref() thing be replaced by a chapter number? -->
-
-<!-- MB: Only include this section if it uses new/unique packages -->
-
-### Needed packages {-}
-
-Recall from our discussion in Section \@ref(tidyverse-package) that loading the **tidyverse** package by running `library(tidyverse)` loads the following commonly used data science packages all at once:
-
-* **ggplot2** for data visualization
-* **dplyr** for data wrangling
-* **tidyr** for converting data to "tidy" format
-* **readr** for importing spreadsheet data into R
-* As well as the more advanced **purrr**, **tibble**, **stringr**, and **forcats** packages
-
-Read Section \@ref(packages) for information on how to install and load R packages. 
+<!-- Deal with the ref() thing.  -->
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 library(tidyverse)
 library(broom)
 library(skimr)
 library(fivethirtyeight)
+library(PPBDS.data)
 ```
 
 ```{r, message=FALSE, warning=FALSE, echo=FALSE}
@@ -59,7 +51,7 @@ The red curve is the *logistic regression* curve.  Note that its characteristic 
 
 Where $p$ is the probability of a "yes" or "success" for a given set of predictors $X$.
 
-<!-- MB: P should be Y? -->
+<!-- Revisit nomenclature after chapter 5 -->
 
 ```{r, OLSlogistic, fig.align="center", out.width="60%", fig.cap='Linear vs. logistic regression models for binary response data.', echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -85,6 +77,8 @@ ggplot(dat, aes(x = x)) +
 The mathematical function $log\left(\frac{p}{1 - p}\right)$ is called the *logit function* and it transforms variables from the space $(0, 1)$ (like probabilities) to $(-\infty, \infty)$.  The inverse of that function, the *standard logistic function*, is $\frac{1}{1 + e^{-x}}$ and transforms variables from the space $(-\infty, \infty)$ to $(0, 1)$.  From that latter function's name we get the terminology of *logistic regression*.
 
 ### House elections: exploratory data analysis
+
+<!-- MB: Maybe just cut this entire section on exploratory data analysis?-->
 
 What affects whether a Democrat or Republican wins a race in the U.S. House of Representatives? This is an example of a binary response: either a Democrat wins (and a Republican loses) or a Republican wins (and a Democrat loses).^[It is rare that third party candidates mount serious bids in U.S. House elections, so it isn't a much of an oversimplication to think of the variable as binary.] In this section, we are going to consider several models predicting Democratic victory in House races. First, we will consider a single categorical variable as a predictor, the region in which a district lies: Midwest, Northeast, South, or West. Second, we will consider a single continuous variable: year. Finally, we fill fit a model that contains both separately, and than also an interaction between the two.
 
@@ -112,7 +106,6 @@ house_ch12 <- house_results %>%
 ```
 
 <!-- DK: We use same dataset from other chapter, we need to modify this. But we won't have looked at everything! So, look at other stuff. Some is obvious, especially our new Y variable. But we can also look at stuff like number of elections per state, per year. Which state had the biggest districting rise and when? Indeed, the data exploration section in each chapter provides an occasion to learn more advanced R tricks. -->
-
 
 Recall the three common steps in an exploratory data analysis we saw in Subsection \@ref(model1EDA):
 
@@ -307,6 +300,8 @@ Therefore, the predicted probability for an observation in the South is $\frac{1
 
 Note that you could also estimate this value through the so-called **"divide by 4" rule**: $-0.249 / 4 \approx 0.062$.  We'll discuss this further when we talk about interpreting the coefficiences of continuous predictors in logistic regression models.
 
+<!-- Here would be a good place to begin a discusssion of validity --> 
+
 Let's now estimate the uncertainty around our coefficients.  We'll start by showing how you can do this through the bootstrap.  We'll begin by loading the **infer** package.  We're going to use the function `rep_sample_n()` to resample from our data 1,000 times:
 
 ```{r}
@@ -314,12 +309,10 @@ library(infer)
 
 x <- house_ch12 %>% 
   select(dem_win, south) %>% 
-  rep_sample_n(size = nrow(house_ch12), replace = TRUE, reps = 10)
+  rep_sample_n(size = nrow(house_ch12), replace = TRUE, reps = 1000)
 
 x
 ```
-
-<!-- MB: had to change reps to 100 to run faster. change back later. -->
 
 For each `replicate`, we have `r nrow(house_ch12)` resamples of `dem_win` and `south`.
 
@@ -387,8 +380,6 @@ tidy(house_south_model, conf.int = TRUE) %>%
 
 Thus, from now on, we'll just use `tidy(conf.int = TRUE)` when working with `glm()`, just as we did with `lm()`.
 
-<!-- MB: Was this whole proof necessary? Has it been done in an earlier chapter? is the reminder worth it? -->
-
 Let's try running a slightly more complicated version of the above model, where we use `region` as a predictor instead of `south`.
 
 ```{r, eval=FALSE}
@@ -418,16 +409,13 @@ The intercept here is the omitted category, the Midwest.  We can calculate the p
 
 We can then interpret the effect of moving from one category to another.  For example, the effect of being in the Northeast as opposed to the Midwest is 0.16; the predicted probability of a Democratic victory in the Northeast is 0.16 greater than in the Midwest. Note too that we could have obtained this through the "divide by 4" rule:  $0.657 / 4 \approx 0.16$.
 
-<!-- MB: Where did 0.657 come from? And does the second sentence mean to say "greater than in the Midwest", because I don't think that's what it means to say. -->
-
-
 ### Observed/fitted values and residuals
 
 We have previously defined the following three concepts for a linear regression:
 
 1. Observed values $y$, or the observed value of the outcome variable
-2. Fitted values $\widehat{y}$, or the value on the regression line for a given $x$ value
-3. Residuals $y - \widehat{y}$, or the error between the observed value and the fitted value
+1. Fitted values $\widehat{y}$, or the value on the regression line for a given $x$ value
+1. Residuals $y - \widehat{y}$, or the error between the observed value and the fitted value
 
 We obtained these values and other values using the `augment()` function from the **broom** package. Recall too that we used the `.se.fit` column to construct confidence intervals.  We'll see here how we can apply these same concepts to logistic regression.
 
@@ -460,7 +448,6 @@ regression_points <- house_region_model %>%
   select(dem_win, region, .fitted, conf.low, conf.high, .resid)
 regression_points
 ```
-
 ```{r, echo=FALSE}
 regression_points <- augment(house_region_model,
                              type.predict = "response") %>%
@@ -481,8 +468,6 @@ You may be wondering how to interpret the residuals.  The residuals reported by 
 \textrm{d}_i = 
 \textrm{sign}(Y_i-\hat{p_i})\sqrt{-2 [ Y_i \text{log} \hat{p_i} + (1 - Y_i) \text{log} (1 - \hat{p_i}) ]}
 \]
-
-<!-- Is this math necessary -->
 
 where $Y_i$ is the actual outcome and $p_i$ is the predicted probability from the logistic regression model.
 
@@ -519,7 +504,7 @@ Now, the `.resid` value is the difference between the actual outcome (`dem_win`)
 We'll now predict `dem_win` with a single numerical explanatory variable, `year`. 
 
 1. We first "fit" the logistic regression model using the `glm(y ~ x, family, data)` function and save it in `house_year_model`.
-2. We get the regression table by applying the `tidy()` function from the **broom** package to `house_year_model`.  We'll print the `term`, `estimate`, `conf.low`, and `conf.high` columns.
+1. We get the regression table by applying the `tidy()` function from the **broom** package to `house_year_model`.  We'll print the `term`, `estimate`, `conf.low`, and `conf.high` columns.
 
 ```{r, eval=FALSE}
 house_year_model <- glm(dem_win ~ year, family = binomial, data = house_ch12)
@@ -537,6 +522,7 @@ tidy(house_year_model,
   select(term, estimate, conf.low, conf.high) %>%
   gt() %>%
   tab_source_note(md("Logistical Regression Table"))
+
 ```
 
 How do we interpret the coefficients in this model?  Since the `year` coefficient is negative, that means that each additional year is associated with a reduction in the chances of a Democratic victory. 
@@ -577,10 +563,10 @@ While `house_region_model` and `house_year_model` both tell us something interes
 We'll now predict `dem_win` with a two variable, `region` and `year`, as well as the interaction between the two 
 
 1. We first "fit" the logistic regression model using the `glm(y ~ x1 * x2, family, data)` function and save it in `house_interact_model`.
-2. We get the regression table by applying the `tidy()` function from the **broom** package to `house_interact_model`.  We'll print the `term`, `estimate`, `conf.low`, and `conf.high` columns.
+1. We get the regression table by applying the `tidy()` function from the **broom** package to `house_interact_model`.  We'll print the `term`, `estimate`, `conf.low`, and `conf.high` columns.
 
 ```{r, eval=FALSE}
-house_interact_model <- glm(dem_win ~ region * year, family = binomial, data = house_ch12)
+house_interact_model <- glm(dem_win ~ region * year, family = binomial data = house_ch12)
 house_interact_model %>%
   tidy(conf.int = TRUE) %>%
   select(term, estimate, conf.low, conf.high)
@@ -608,7 +594,6 @@ regression_points <- house_interact_model %>%
   select(dem_win, region, .fitted, conf.low, conf.high, .resid)
 regression_points
 ```
-
 ```{r, echo=FALSE}
 regression_points <- augment(house_interact_model,
                              type.predict = "response",
@@ -618,8 +603,14 @@ regression_points <- augment(house_interact_model,
   select(dem_win, region, .fitted, conf.low, conf.high, .resid)
 regression_points %>%
   slice(1:10) %>%
-  gt() %>%
-  tab_source_note(md("First 10 out of 4,201 district-years"))
+  knitr::kable(
+    digits = 3,
+    caption = "Regression points (First 10 out of 4,201 district-years)",
+    booktabs = TRUE,
+    linesep = ""
+  ) %>%
+  kable_styling(font_size = ifelse(knitr:::is_latex_output(), 10, 16),
+                latex_options = c("hold_position"))
 ```
 
 We can also use `augment` to make predictions for years that aren't in our data.  What would our model predict for the 2020 elections?  We use the `newdata` argument in `augment()` to make these predictions.
@@ -652,6 +643,8 @@ house_interact_model %>%
        x = "") +
   theme_classic()
 ```
+
+<!-- Here is a great place to discuss unknown unknowns --> 
 
 ### Fitting many models using `map()`
 
@@ -752,6 +745,8 @@ img_path <- "images"
 
 We have learned how to fit models for binary responses using logistic regression.  However, logistic regression is just one of many methods we can use to model binary responses.  CART is another approach, which we'll learn about in this section.  In the next section, we'll learn about random forests.
 
+<!-- Validity/model fitting the world. bias/variance  overfitting/underfitting. goal of the model -->
+
 A **tree** is basically a flow chart of yes or no questions. The general idea of the methods we are describing is to define an algorithm that uses data to create these trees with predictions at the ends, referred to as _nodes_. Decision trees predict an outcome variable $Y$ by *partitioning* the predictors.
 
 Decision trees like this are often used in practice. For example, to decide on a person's risk of poor outcome after having a heart attack, doctors use the following:
@@ -760,8 +755,6 @@ Decision trees like this are often used in practice. For example, to decide on a
 # source https://www.researchgate.net/profile/Douglas_Walton/publication/228297479/figure/fig1/AS:301828123185152@1448972840090/Decision-Tree-for-Heart-Attack-Victim-adapted-from-Gigerenzer-et-al-1999-4.png
 knitr::include_graphics(file.path(img_path,"Decision-Tree-for-Heart-Attack-Victim-adapted-from-Gigerenzer-et-al-1999-4.png"))
 ```
-
-<!-- MB: These image links don't work, need to fix--> 
 
 (Source: Walton 2010 Informal Logic, Vol. 30, No. 2, pp. 159-184^[https://papers.ssrn.com/sol3/Delivery.cfm/SSRN_ID1759289_code1486039.pdf?abstractid=1759289&mirid=1&type=2].)
 
@@ -793,7 +786,9 @@ If you study the formula carefully you will see that it is in fact 0 in the perf
 
 Once we are done partitioning the predictor space into regions, in each region a prediction is made using the observations in that region. 
 
-But when do we stop partitioning?  Every time we split and define two new partitions, the Gini Index improves. This is because with more partitions, our model has more flexibility to adapt to our data.  However, our model may therefore perform worse when exposed to new data (this problem is called *overfitting*).  To avoid this, the algorithm sets a minimum for how much the Gini Index must improve for another partition to be added. This parameter is referred to as the _complexity parameter_ ($c_p$). The measure of fit must improve by a factor of $c_p$ for the new partition to be added. Large values of $c_p$ will therefore force the algorithm to stop earlier which results in fewer nodes.
+But when do we stop partitioning?  Every time we split and define two new partitions, the Gini Index improves. This is because with more partitions, our model has more flexibility to adapt to our data.  However, our model may therefore perform worse when exposed to new data (this problem is called *overfitting*). This connects to our discussion of validity and models, as the conditions used to create the model will be too specific to accurately extrapolate to new data points. To avoid this, the algorithm sets a minimum for how much the Gini Index must improve for another partition to be added. This parameter is referred to as the _complexity parameter_ ($c_p$). The measure of fit must improve by a factor of $c_p$ for the new partition to be added. Large values of $c_p$ will therefore force the algorithm to stop earlier which results in fewer nodes.
+
+<!-- MB: Use overfitting to discuss validity/model fitting the world-->
 
 Classification trees have certain advantages that make them very useful. They are highly interpretable, even more so than linear models. They are easy to visualize (if small enough).  Finally, they can model human decision processes. However, in terms of accuracy, they are rarely the best performing method since they are not very flexible. Random forests, explained in the next section, improve on some of the shortcomings of classification trees.
 
@@ -899,7 +894,7 @@ But which tree is better?  We can answer that question using the `tune_grid()` f
 <!-- AR: material below commented out; can be deleted unless it may be
 repurposed for a discussion of the tune package at another time -->
 
-<!-- The basic idea is that we want to test out various values of $c_p$. and select the model that performs best.  We will provide code on how to decide which model is best by calculating the accuracy on 25 bootstrapped samples of our data.  (We wouldn't want to calculate the accuracy on our full data, because a lower value of $c_p$ will always perform best on any particular dataset, but the resulting model may not perform well on out-of-sample observations; this is an example of a general phenomenon called *overfitting*.)
+<!-- The basic idea is that we want to test out various values of $c_p$. and select the model that performs best.  We will provide code on how to decide which model is best by calculating the accuracy on 25 bootstrapped samples of our data.  (We wouldn't want to calculate the accuracy on our full data, because a lower value of $c_p$ will always perform best on any particular dataset, but the resulting model may not perform well on out-of-sample observations; this is an example of a general phenomenon called *overfitting*.) --> 
 
 First, we need to update the model specification to note that we are tuning the `cost_complexity` parameter.  We can do that using the `update()` function and setting `cost_complexity = tune()`:
 
@@ -1205,6 +1200,8 @@ Another concern is *post-treatment bias*.  For example, let's say that we were i
 
 We saw that our models predicted 64%-65% of the House races from 1976--2018 accurately using `state` and `year` as predictors.  However, these models were fitted on the same data that we used to evaluate their predictions.  These are called *in-sample* predictions.  A more strenuous test of a model's performance is whether it can generate good predictions on data that were not used in fitting the model. For election forecasting, for example, we are much more interested in forecasting the 2020 election results (which we don't know) than the 1976--2018 election results (which we know).  The 2020 predictions are an example of *out-of-sample* predictions.
 
+Making out-of-sample predictions is a great way of measuring unknown unknowns in the world, which is data we haven't yet observed. When making such predictions, it is important to make sure that the conditions used to create the model match the conditions of the world you are extrapolating about. Using 1976--2018 election results to predict election results in 2020, we contend, is a pretty safe extrapolation. An example of similar but unsafe extrapolation would be using UK election results to predict outcomes in the US. 
+
 While we can't evaluate our models' performance on the 2020 elections (yet!), we can take a look at the process by fitting our logistic, classification tree, and random forest models on the data we have pre-2018 and then evaluating their accuracy on the 2018 election results.  Let's start by creating tibbles of our pre-2018 and 2018 data:
 
 ```{r}
@@ -1250,7 +1247,3 @@ tibble(logistic = mean(house_2018_preds$logistic == house_2018_preds$dem_win),
 ```
 
 Here we see that when fitting the models on pre-2018 data and testing them on 2018 data, the random forest specification performs the best and the classification tree the worse, with the logistic regression in-between.
-
-# test
-# test 2
-
