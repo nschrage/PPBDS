@@ -15,6 +15,7 @@ library(tidyverse)
 
 Having created models with one parameter in Chapter \@ref(#one-parameter) and two parameters in Chapter \@ref(#two-parameters), you are now ready to make the jump to $N$ parameters. 
 
+<!-- HV: Maybe we should use NES (National Election Survey) instead of CCES. -->
 
 <!-- 
 intercept
@@ -41,17 +42,19 @@ What problems do we face? All the things that make modeling difficult. Why is th
 
 <!-- So, just what will we use? rstanarm(). If so (and if we have not introduced it earlier), we can begin with seeing how it is similar to lm() and then expand. This means that, in one paramter chapter, we should be doing lm( ~ 1). In two parameter, lm( ~ treatment) --- if treatment is zero one --- or, perhaps better, lm( ~ -1 + treatment) if treatment is a factor/character with two levels. We might also have introduced  -->
 
-## formatting linear models in R
+## Formatting Linear Models in R
 In the previous chapter, linear models were created using the general format of `dependent variable ~ -1 + independent variable`. After running the regression on a model of this type, the resulting table would show coefficients for both parameters of the independent variable, for example Democrat and Republican. This method works fine when there are only one or two parameters in consideration, however now we will be moving onto *n* parameters and we will have to change the formula we use; specifically, we will be removing the -1 from the lm formula.
 
-In order to remove the -1, we first have to understand the function of it in the linear regression formulas that you have seen previously. Using the `trains` data, when we use -1 in our formula and regress party on income, the table output lists both parameters and estimates their mean income values.
+In order to remove the -1, we first have to understand the function of it in the linear regression formulas that you have seen previously. Using the Enos (2014) `trains` data, when we use -1 in our formula and regress party on income, the table output lists both parameters and estimates their mean income values.
 
 ```{r}
 
 lm(data = trains, income ~ -1 + party) %>% tidy(conf.int = TRUE)
 
 ```
-<!-- Is there a way to make this output neater in the knit document? More of a typical regression table? -->
+<!-- HV: Is there a way to make this output neater in the knit document? More of a typical regression table? -->
+<!-- HV: Should I start off introducing rstanarm and use stan_glm for all models in this chapter? -->
+
 This table tells us that Democrats have an average income of $136,755.20, while Republicans have an average income of $167,368.40. 
 
 Once we remove the -1 from the formula, the the regression table replaces one of the parameter terms with "(Intercept)". For example, if we use the same regression as above but remove the -1, the output table changes to this:
@@ -77,7 +80,21 @@ lm(data = trains, income ~ party + gender) %>% tidy(conf.int = TRUE)
 
 ```
 
-In this model, the intercept represents female democrats and tells us that the mean income for female democrats is $121,086.46. If we want the mean income for a femal republican, we would add the partyRepublican coefficient to the intercept estimate, which gives us a mean income of $152,707.60, or we can say that female republicans have a mean income that is $31,621.14 more than female democrats. The genderMale coefficient tells us the difference between the income of a female democrat and a male democrat. By adding this coefficient to the intercept value, we find that male democrats have a mean income of $148,942. In order to find the mean income of a male republican, we would have to add both the partyRepublican coefficient *and* the genderMale coefficient to the intercept, since both parameters apply. From this we find the mean income of a republican male is $180,563.10. 
+### Understanding the Model
+Models with multiple predictors can become complicated to interpret, since the interpretation of a coefficient somewhat relies on the other variables of the model. The model we have just created summarizes the difference in average income of subjects based on both their political party affiliation and their gender. Using just these two predictors and their coefficients, we have three parameters to describe four types of people: democratic females, democratic males, republican females, and republican males.
+
+We can start off by converting the resulting output into mathematical notation using the simple linear regression equation of	$Y =\beta_{1}x_{1} + \beta_{2}x_{2} + \cdots + \epsilon $. Using this notation, this model could be written as Income = 121086.46 + 31621.14*Republican + 27855.54*Male. Both of these predictors, party and gender, are binary and given the output coefficient terms, if a person is Republican it is coded as 1, whereas if they are a Democrat it is coded as 0. The same intuition applies to gender, with male coded as 1 and female coded as 0. Now, we must interpret this model.
+
+*Intercept*: If we think about the intercept in terms of the linear equation we formulated above, it is the value of Y when x is zero, or the income when Republican and Male are both coded zero. Therefore in this model, the intercept represents female democrats and tells us that the mean income for female democrats is $121,086.46. 
+
+*Party coefficient*: Alone, this variable compares the incomes of people with different political affiliations. It tells us that Republicans have a mean income that is $31,621.14 more than Democrats. If we look at the model altogether and want the mean income for a female republican, we would add the partyRepublican coefficient to the intercept estimate by coding a 1 to the Republican variable. This gives us a mean income of $152,707.60 for female republicans, compared to the mean income of $121,086.46 for female democrats.
+
+*Gender coefficient*: The genderMale coefficient tells us the difference between the income of a female and a male. If we take out the partyRepublican term, the genderMale coefficient looks specifically at the difference in income of a female democrat versus a male democrat. By adding this coefficient to the intercept value, we find that male democrats have a mean income of $148,942, or $27,855.54 more than female democrats. 
+
+*Using both coefficients*: In order to find the mean income of a male republican, we would have to code a 1 to both variables which would lead us to add both the partyRepublican coefficient *and* the genderMale coefficient to the intercept, since both parameters apply. From this we find the mean income of a republican male is $180,563.10. 
+<!-- Fix choppy writing in this whole section. Maybe change formatting. -->
+
+It is important to note, however, that adding predictors brings about a range of complexities, including which predictors to omit and which to include, interpretations of multiple coefficients, and the uncertainty associated with our models.
 
 ## Interaction terms
 Another way to add parameters to a linear regression formula is by incorporating interaction terms. 
