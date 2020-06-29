@@ -410,7 +410,7 @@ But that still does not give us an estimate of the uncertainty around that inter
 
 <!-- EC: What is the reason for calculating the CIs at each age? -->
 
-Thankfully, there is an easy way to get that using `lm()` and `tidy()`.  Recall that our coefficient on `gendermale` reflects the effect for subjects whose age is 0.  If we *recenter* age so 0 is equal to the age we are interested in, then we can use both the coefficient and confidence inteveral around `gendermale` to get the confidence interval for that age.  For example, here is how we would get the coefficient and confidence interval for subjects whose age is 30:
+Thankfully, there is an easy way to get that using `lm()` and `tidy()`.  Recall that our coefficient on `gendermale` reflects the effect for subjects whose age is 0.  If we *recenter* age so 0 is equal to the age we are interested in, then we can use both the coefficient and confidence interval around `gendermale` to get the confidence interval for that age.  For example, here is how we would get the coefficient and confidence interval for subjects whose age is 30:
 
 ```{r}
 lm(income ~ I(age - 30) * gender, data = earnings) %>%
@@ -495,7 +495,7 @@ tibble(`Subject` = c("Alice", "Bob", "Charlie"),
 
 Again, however, one should always think carefully about whether a causal interpretation of a regression model is plausible.  Is it really the case that age is only confounder of the relationship between gender and teaching incomes?  Likely it is not, and therefore we should not interpret the results of this regression causally.
 
-EC: Here, we can talk about 
+<!-- EC: Would be good to insert a theme here, like testing is evil -->
 
 ### Parallel slopes model {#model4table}
 
@@ -558,7 +558,7 @@ tidy(earnings_model_parallel_slopes,
              conf.high = html("<b>conf.high</b>"))
 ```
 
-Similarly to the regression table for the interaction model from Table \@ref(tab:regtable-interaction), we have an `intercept` term corresponding to the intercept for the "baseline for comparison" female subject group and a `gendermale` term corresponding to the *offset* in intercept for the male subjects relative to female subjects. In other words, in Figure \@ref(fig:numxcatx-parallel) the `r if_else(knitr::is_latex_output(), "darker-colored", "red")` regression line corresponding to the female subjects has an intercept of 4.484 while the `r if_else(knitr::is_latex_output(), "lighter-colored", "blue")` regression line corresponding to the male subjects has an intercept of 4.484 + 0.191 = 4.675. Once again, since there aren't any subjects of age 0, the intercepts only have a mathematical interpretation but no practical one. 
+Similarly to the regression table for the interaction model from Table \@ref(tab:regtable-interaction), we have an `intercept` term corresponding to the intercept for the "baseline for comparison" female subject group and a `gendermale` term corresponding to the *offset* in intercept for the male participants relative to female participants. In other words, the `r if_else(knitr::is_latex_output(), "darker-colored", "red")` regression line corresponding to the female subjects has an intercept of 94053 while the `r if_else(knitr::is_latex_output(), "lighter-colored", "blue")` regression line corresponding to the male subjects has an intercept of 94053 + 25236 = `r 94053 + 25236`. Once again, since there aren't any participants of age 0, the intercepts only have a mathematical interpretation but no practical one. 
 
 ```{r echo=FALSE}
 age_coef <- tidy(earnings_model_parallel_slopes) %>% 
@@ -566,16 +566,16 @@ age_coef <- tidy(earnings_model_parallel_slopes) %>%
   pull(estimate)
 ```
 
-Unlike in Table \@ref(tab:regtable-interaction), however, we now only have a single slope for age of `r age_coef`. This is because the model dictates that both the female and male subjects have a common slope for age. This is telling us that an subject who is a year older than another subject received a teaching income that is on average `r abs(age_coef)` units *lower*. This penalty for being of advanced age applies equally to both female and male subjects. 
+Unlike the interaction table shown previously, however, we now only have a single slope for age of `r age_coef`. This is because the model dictates that both the female and male participants have a common slope for age. This is telling us that a participant who is a year older than another subject received a teaching income that is on average `r round(age_coef, digits = 2)` units *higher*. This reward for being of advanced age applies equally to both female and male subjects. 
 
-Let's summarize these values in Table \@ref(tab:parallel-slopes-summary), noting the different intercepts but common slopes:
+Let's summarize these values in a table below, noting the different intercepts but common slopes:
 
 ```{r echo=FALSE}
 options(digits = 4)
 tibble(
-  Gender = c("Female subjects", "Male subjects"),
-  Intercept = c(4.484, 4.675),
-  `Slope for age` = c(-0.009, -0.009)
+  Gender = c("Female participants", "Male participants"),
+  Intercept = c(94053, 119288.821),
+  `Slope for age` = c(795.836, 795.836)
 ) %>% 
   gt() %>%
   tab_header(title = "Comparison of intercepts and slope for parallel slopes model") %>%
@@ -587,7 +587,7 @@ Let's now write the equation for our regression lines, which we can use to compu
 $$
 \begin{aligned}
 \widehat{y} = \widehat{\text{score}} &= b_0 + b_{\text{age}} \cdot \text{age} + b_{\text{male}} \cdot \mathbb{1}_{\text{is male}}(x)\\
-&= 4.484 -0.009	\cdot \text{age} + 0.191 \cdot \mathbb{1}_{\text{is male}}(x) 
+&= 94053 + 795.836	\cdot \text{age} + 25235.821 \cdot \mathbb{1}_{\text{is male}}(x) 
 \end{aligned}
 $$
 
@@ -595,24 +595,24 @@ Let's put this all together and compute the fitted value $\widehat{y} = \widehat
 
 $$
 \begin{aligned}
-\widehat{y} = \widehat{\text{income}} &= 4.484 -0.009	\cdot \text{age} + 0.191 \cdot 0\\
-&= 4.484 -0.009	\cdot \text{age}
+\widehat{y} = \widehat{\text{income}} &= 94053 +795.836	\cdot \text{age} + 25235.821 \cdot 0\\
+&= 94053 +795.836	\cdot \text{age}
 \end{aligned}
 $$
 
-which is the equation of the `r if_else(knitr::is_latex_output(), "darker-colored", "red")` regression line in Figure \@ref(fig:numxcatx-parallel) corresponding to the female subjects. Correspondingly, since for male subjects the indicator function $\mathbb{1}_{\text{is male}}(x)$ = 1, the previous equation becomes
+which is the equation of the `r if_else(knitr::is_latex_output(), "darker-colored", "red")` regression line corresponding to the female subjects. Correspondingly, since for male subjects the indicator function $\mathbb{1}_{\text{is male}}(x)$ = 1, the previous equation becomes
 
 $$
 \begin{aligned}
-\widehat{y} = \widehat{\text{income}} &= 4.484 -0.009	\cdot \text{age} + 0.191 \cdot 1\\
-&= (4.484 + 0.191) - 0.009 \cdot \text{age}\\
-&= 4.675 -0.009 \cdot \text{age}
+\widehat{y} = \widehat{\text{income}} &= 94053 +795.836	\cdot \text{age} + 25235.821 \cdot 1\\
+&= (94053 + 25235.821) +795.836 \cdot \text{age}\\
+&= 119288.821 +795.836 \cdot \text{age}
 \end{aligned}
 $$
 
-which is the equation of the `r if_else(knitr::is_latex_output(), "lighter-colored", "blue")` regression line in Figure \@ref(fig:numxcatx-parallel) corresponding to the male subjects. 
+which is the equation of the `r if_else(knitr::is_latex_output(), "lighter-colored", "blue")` regression line corresponding to the male subjects. 
 
-Great! We've considered both an interaction model and a parallel slopes model for our data. Let's compare the visualizations for both models side-by-side in Figure \@ref(fig:numxcatx-comparison).
+Great! We've considered both an interaction model and a parallel slopes model for our data. Let's compare the visualizations for both models side-by-side.
 
 ```{r fig.width=8, echo=FALSE, warning=FALSE, fig.cap="Comparison of interaction and parallel slopes models."}
 
@@ -640,7 +640,7 @@ if(knitr::is_html_output()){
 }
 ```
 
-At this point, you might be asking yourself: "Why would we ever use a parallel slopes model?" Looking at the left-hand plot in Figure \@ref(fig:numxcatx-comparison), the two lines definitely do not appear to be parallel, so why would we *force* them to be parallel? For this data, we agree! It can easily be argued that the interaction model on the left is more appropriate. However, in the upcoming Subsection \@ref(model-selection) on model selection, we'll present an example where it can be argued that the case for a parallel slopes model might be stronger. 
+At this point, you might be asking yourself: "Why would we ever use a parallel slopes model?" Looking at the left-hand plot, the two lines definitely do not appear to be parallel, so why would we *force* them to be parallel? For this data, we agree! It can easily be argued that the interaction model on the left is more appropriate. However, in the upcoming Subsection on model selection, we'll present an example where it can be argued that the case for a parallel slopes model might be stronger. 
 
 ### Observed/fitted values and residuals {#model4points}
 
@@ -648,7 +648,7 @@ For brevity's sake, in this section we'll only compute the observed values, fitt
 
 Say, you have an subject who identifies as female and is 36 years old. What fitted value $\widehat{y}$ = $\widehat{\text{income}}$ would our model yield? Say, you have another subject who identifies as male and is 59 years old. What would their fitted value $\widehat{y}$ be? 
 
-We answer this question visually first for the female subject by finding the intersection of the `r if_else(knitr::is_latex_output(), "darker-colored", "red")` regression line and the vertical line at $x$ = age = 36. We mark this value with a large `r if_else(knitr::is_latex_output(), "darker-colored", "red")` dot in Figure \@ref(fig:fitted-values). Similarly, we can identify the fitted value $\widehat{y}$ = $\widehat{\text{income}}$ for the male subject by finding the intersection of the `r if_else(knitr::is_latex_output(), "lighter-colored", "blue")` regression line and the vertical line at $x$ = age = 59. We mark this value with a large `r if_else(knitr::is_latex_output(), "lighter-colored", "blue")` dot in Figure \@ref(fig:fitted-values).
+We answer this question visually first for the female subject by finding the intersection of the `r if_else(knitr::is_latex_output(), "darker-colored", "red")` regression line and the vertical line at $x$ = age = 36. We mark this value with a large `r if_else(knitr::is_latex_output(), "darker-colored", "red")` dot. Similarly, we can identify the fitted value $\widehat{y}$ = $\widehat{\text{income}}$ for the male subject by finding the intersection of the `r if_else(knitr::is_latex_output(), "lighter-colored", "blue")` regression line and the vertical line at $x$ = age = 59. We mark this value with a large `r if_else(knitr::is_latex_output(), "lighter-colored", "blue")` dot.
 
 ```{r echo=FALSE, warning=FALSE, fig.cap="Fitted values for two new professors.", fig.height=4.7}
 newpoints <- earnings %>% 
@@ -669,14 +669,14 @@ if(knitr::is_html_output()){
 }
 ```
 
-What are these two values of $\widehat{y}$ = $\widehat{\text{income}}$ precisely? We can use the equations of the two regression lines we computed in Subsection \@ref(model4interactiontable), which in turn were based on values from the regression table in Table \@ref(tab:regtable-interaction):
+What are these two values of $\widehat{y}$ = $\widehat{\text{income}}$ precisely? We can use the equations of the two regression lines we computed:
 
 * For all female subjects: $\widehat{y} = \widehat{\text{income}} = 4.883 - 0.018	\cdot \text{age}$
 * For all male subjects: $\widehat{y} = \widehat{\text{income}} = 4.437 - 0.004 \cdot \text{age}$
 
 So our fitted values would be: $4.883 - 0.018 \cdot 36 = 4.25$ and $4.437 - 0.004 \cdot 59 = 4.20$, respectively. 
 
-Now what if we want the fitted values not just for these two subjects, but for the subjects of all 463 courses included in the `earnings` data frame? Doing this by hand would be long and tedious! This is where the `augment()` function from the **broom** package can help: it will quickly automate the above calculations for all 463 courses. We present a preview of just the first 10 rows out of 463 in Table \@ref(tab:model4-points-table).  Just like in the last chapter, we'll use the `.se.fit` column to construct confidence intervals around our predicted values.
+Now what if we want the fitted values not just for these two subjects, but for the subjects of all 463 courses included in the `earnings` data frame? Doing this by hand would be long and tedious! This is where the `augment()` function from the **broom** package can help: it will quickly automate the above calculations for all 463 courses. We present a preview of just the first 10 rows out of 463.  Just like in the last chapter, we'll use the `.se.fit` column to construct confidence intervals around our predicted values.
 
 ```{r, eval=FALSE}
 regression_points <- earnings_model_interaction %>%
@@ -715,7 +715,7 @@ In this section, we'll fit a regression model where we have
 
 ### Exploratory data analysis {#model3EDA}
 
-Let's load the `Credit` dataset. To keep things simple let's `select()` the subset of the variables we'll consider in this chapter, and save this data in the new data frame `credit_ch12`. Notice our slightly different use of the `select()` verb here than we introduced in Subsection \@ref(select). For example, we'll select the `Balance` variable from `Credit` but then save it with a new variable name `debt`. We do this because here the term "debt" is easier to interpret than "balance."
+Let's load the `Credit` dataset. To keep things simple let's `select()` the subset of the variables we'll consider in this chapter, and save this data in the new data frame `credit_ch12`. Notice our slightly different use of the `select()` verb here than previously. For example, we'll select the `Balance` variable from `Credit` but then save it with a new variable name `debt`. We do this because here the term "debt" is easier to interpret than "balance."
 
 ```{r, warning=FALSE, message=FALSE}
 library(ISLR)
@@ -731,7 +731,7 @@ You can observe the effect of our use of `select()` in the first common step of 
 glimpse(credit_ch12)
 ```
 
-Furthermore, let's look at a random sample of five out of the `r nrow(credit_ch12)` credit card holders in Table \@ref(tab:model3-data-preview). Once again, note that due to the random nature of the sampling, you will likely end up with a different subset of five rows.
+Furthermore, let's look at a random sample of five out of the `r nrow(credit_ch12)` credit card holders. Once again, note that due to the random nature of the sampling, you will likely end up with a different subset of five rows.
 
 ```{r, eval=FALSE}
 credit_ch12 %>% 
@@ -755,7 +755,7 @@ credit_ch12 %>%
 
 Observe the summary statistics for the outcome variable `debt`: the mean and median credit card debt are \$520.01 and \$459.50, respectively, and that 25% of card holders had debts of \$68.75 or less. Let's now look at one of the explanatory variables `credit_limit`: the mean and median credit card limit are \$4735.6 and \$4622.50, respectively, while 75% of card holders had incomes of \$57,470 or less.
 
-Since our outcome variable `debt` and the explanatory variables `credit_limit` and `income` are numerical, we can compute the correlation coefficient between the different possible pairs of these variables. First, we can run the `cor()` command as seen in Subsection \@ref(model1EDA) twice, once for each explanatory variable:
+Since our outcome variable `debt` and the explanatory variables `credit_limit` and `income` are numerical, we can compute the correlation coefficient between the different possible pairs of these variables. First, we can run the `cor()` command twice, once for each explanatory variable:
 
 ```{r, eval=FALSE}
 credit_ch12 %>% 
@@ -800,7 +800,7 @@ We say there is a high degree of *collinearity* between the `credit_limit` and `
 
 So in our case since `credit_limit` and `income` are highly correlated, if we knew someone's `credit_limit`, we could make pretty good guesses about their `income` as well. Thus, these two variables provide somewhat redundant information. However, we'll leave discussion on how to work with collinear explanatory variables to a more intermediate-level book on regression modeling.
 
-Let's visualize the relationship of the outcome variable with each of the two explanatory variables in two separate plots in Figure \@ref(fig:2numxplot1).
+Let's visualize the relationship of the outcome variable with each of the two explanatory variables in two separate plots.
 
 ```{r, eval=FALSE}
 credit_ch12 %>%
@@ -839,7 +839,7 @@ model3_balance_vs_limit_plot + model3_balance_vs_income_plot
 
 Observe there is a positive relationship between credit limit and credit card debt: as credit limit increases so also does credit card debt.  This is consistent with the strongly positive correlation coefficient of 0.862 we computed earlier. In the case of income, the positive relationship doesn't appear as strong, given the weakly positive correlation coefficient of 0.464. 
 
-However, the two plots in Figure \@ref(fig:2numxplot1) only focus on the relationship of the outcome variable with each of the two explanatory variables *separately*. To visualize the *joint* relationship of all three variables simultaneously, we need a 3-dimensional (3D) scatterplot as seen in Figure \@ref(fig:3D-scatterplot). Each of the 400 observations in the `credit_ch12` data frame are marked with a `r if_else(knitr::is_latex_output(), "", "blue")` point where
+However, the two plots only focus on the relationship of the outcome variable with each of the two explanatory variables *separately*. To visualize the *joint* relationship of all three variables simultaneously, we need a 3-dimensional (3D) scatterplot. Each of the 400 observations in the `credit_ch12` data frame are marked with a `r if_else(knitr::is_latex_output(), "", "blue")` point where
 
 1. The numerical outcome variable $y$ `debt` is on the vertical axis.
 1. The two numerical explanatory variables, $x_1$ `income` and $x_2$ `credit_limit`, are on the two axes that form the bottom plane.
@@ -848,7 +848,7 @@ However, the two plots in Figure \@ref(fig:2numxplot1) only focus on the relatio
 knitr::include_graphics("11-continuous-response-ii/images/credit_card_balance_regression_plane.png")
 ```
 
-Furthermore, we also include the *regression plane*. Recall from Subsection \@ref(leastsquares) that regression lines are "best-fitting" in that of all possible lines we can draw through a cloud of points, the regression line minimizes the *sum of squared residuals*. This concept also extends to models with two numerical explanatory variables. The difference is instead of a "best-fitting" line, we now have a "best-fitting" plane that similarly minimizes the sum of squared residuals. Head to [this website](https://moderndive.com/regression-plane) to open an interactive version of this plot in your browser.
+Furthermore, we also include the *regression plane*. Recall that regression lines are "best-fitting" in that of all possible lines we can draw through a cloud of points, the regression line minimizes the *sum of squared residuals*. This concept also extends to models with two numerical explanatory variables. The difference is instead of a "best-fitting" line, we now have a "best-fitting" plane that similarly minimizes the sum of squared residuals. Head to [this website](https://moderndive.com/regression-plane) to open an interactive version of this plot in your browser.
 
 ```{r, eval=FALSE, echo=FALSE}
 # Source code for above 3D scatterplot & regression plane. 
@@ -902,7 +902,7 @@ plot_ly() %>%
 
 ### Regression plane {#model3table}
 
-Let's now fit a regression model and get the regression table corresponding to the regression plane in Figure \@ref(fig:3D-scatterplot). To keep things brief in this subsection, we won't consider an interaction model for the two numerical explanatory variables `income` and `credit_limit` like we did in Subsection \@ref(model4interactiontable) using the model formula `income ~ age * gender`. Rather we'll only consider a model fit with a formula of the form `y ~ x1 + x2`. Confusingly, however, since we now have a regression plane instead of multiple lines, the label "parallel slopes" doesn't apply when you have two numerical explanatory variables. Just as we have done multiple times throughout Chapters \@ref(regression) and this chapter, the regression table for this model using our two-step process is in Table \@ref(tab:model3-table-output).
+Let's now fit a regression model and get the regression table corresponding to the regression plane. To keep things brief in this subsection, we won't consider an interaction model for the two numerical explanatory variables `income` and `credit_limit` like we did in Subsection \@ref(model4interactiontable) using the model formula `income ~ age * gender`. Rather we'll only consider a model fit with a formula of the form `y ~ x1 + x2`. Confusingly, however, since we now have a regression plane instead of multiple lines, the label "parallel slopes" doesn't apply when you have two numerical explanatory variables. Just as we have done multiple times throughout Chapters \@ref(regression) and this chapter, the regression table for this model using our two-step process is in Table \@ref(tab:model3-table-output).
 
 ```{r, eval=FALSE}
 # Fit regression model:
