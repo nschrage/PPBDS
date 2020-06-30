@@ -67,19 +67,14 @@ Let's now begin with basic regression, \index{regression!basic} which refers to 
 
 Let's now load all the packages needed for this chapter (this assumes you've already installed them). In this chapter, we introduce some new packages:
 
-1. The **tidyverse** "umbrella" [@R-tidyverse] package. Recall from our discussion in Section \@ref(tidyverse-package) that loading the `tidyverse` package by running `library(tidyverse)` loads the following commonly used data science packages all at once:
-    + **ggplot2** for data visualization
-    + **dplyr** for data wrangling
-    + **tidyr** for converting data to "tidy" format
-    + **readr** for importing spreadsheet data into R
-    + As well as the more advanced **purrr**, **tibble**, **stringr**, and **forcats** packages
-1. The **broom** [@R-broom] package, which provides an easy way to deal with model objects.
-1. The **skimr** [@R-skimr] package, which provides a simple-to-use function to quickly compute a wide array of commonly used summary statistics. \index{summary statistics}
+1. The **tidyverse** "umbrella" [@R-tidyverse] package. 
+2. The **broom** [@R-broom] package, which provides an easy way to deal with model objects.
+3. The **skimr** [@R-skimr] package, which provides a simple-to-use function to quickly compute a wide array of commonly used summary statistics. \index{summary statistics}
 
 Additional Packages For Advanced Section: 
 
-1. The **rstanarm** package, which provides an interface to the statistical inference engine, Stan, for Bayesian Regression Modeling. 
-1. The **tidybayes** package, which aids in formating Bayesian modeling outputs in a tidy manner and provides ggplot geoms for plotting. 
+4. The **rstanarm** package, which provides an interface to the statistical inference engine, Stan, for Bayesian Regression Modeling. 
+5. The **tidybayes** package, which aids in formating Bayesian modeling outputs in a tidy manner and provides ggplot geoms for plotting. 
 
 If needed, read Section \@ref(packages) for information on how to install and load R packages.
 
@@ -117,7 +112,7 @@ library(patchwork)
 
 <!-- DK: Next version, can't use these examples. Need political ones. Let's use an updated version of US congress campaigns. This connects to the new introduction. Can use latest data. Can include variables like last election results, allowing us to follow Gelman's version. Can also include spending data, so that we can discuss a causal model. Perhaps in this chapter, we do one model with each, the second going faster. Then, next chapter, put both variables in the regression. This example would also be nice because we could use list columns for the secret trick, estimating models by year and by country region. -->
 
-<!-- EG: I think that using US Congress campaigns data sounds like a good plan. And using list cols would work very well with these models! -->
+<!-- EG: I'll change this to qscores, along with an adjusted EDA for that dataset and more explanation of how correlation != causation. I'll also provide more investigation into the many ways confounding variables could impact why students provide certain qscores rather than simply hours of work, along with more language of comparison. -->
 
 <!-- DK: I have skimmed the next section, since I plan on cutting it all. -->
 
@@ -157,8 +152,12 @@ You can do this by using RStudio's spreadsheet viewer or by using the `glimpse()
 <!-- DK: Add summary() -->
 
 ```{r}
-glimpse(evals_ch11)
+glimpse(evals_ch11) %>%
+  summary()
+
 ```
+
+<!-- EG: I can change some of this language later to reflect the vocab of glimpse with summary as opposed to just glimpse, if we like this option. -->
 
 Observe that `Observations: 463` indicates that there are 463 rows/observations in `evals_ch11`, where each row corresponds to one observed course at UT Austin. It is important to note that the *observational unit* \index{observational unit} is an individual course and not an individual instructor. Recall from Subsection \@ref(exploredataframes) that the observational unit is the "type of thing" that is being measured by our variables. Since instructors teach more than one course in an academic year, the same instructor will appear more than once in the data. Hence there are fewer than 463 unique instructors being represented in `evals_ch11`.
 
@@ -358,6 +357,8 @@ Furthermore, a regression line is "best-fitting" in that it minimizes some mathe
 The train example? With att_start and att_end? Or some other data set? Which one? Or qscores?
 -->
 
+<!-- EG: I like the train example. It's simple, politically-focused, and works well with the tricks we're trying to show here. -->
+
 You may recall from secondary/high school algebra that the equation of a line is $y = a + b\cdot x$. (Note that the $\cdot$ symbol is equivalent to the $\times$ "multiply by" mathematical symbol. We'll use the $\cdot$ symbol in the rest of this book as it is more succinct.) It is defined by two coefficients $a$ and $b$. The intercept coefficient $a$ is the value of $y$ when $x = 0$. The slope coefficient $b$ for $x$ is the increase in $y$ for every increase of one in $x$. This is also called the "rise over run."
 
 However, when defining a regression line, we use slightly different notation: the equation of the regression line is $\widehat{y} = b_0 + b_1 \cdot x$ \index{regression!equation of a line}. The intercept coefficient is $b_0$, so $b_0$ is the value of $\widehat{y}$ when $x = 0$. The slope coefficient for $x$ is $b_1$, i.e., the increase in $\widehat{y}$ for every increase of one in $x$. Why do we put a "hat" on top of the $y$? It's a form of notation commonly used in regression to indicate that we have a \index{regression!fitted value} "fitted value," or the value of $y$ on the regression line for a given $x$ value. We'll discuss this more in the upcoming Subsection \@ref(model1points).
@@ -447,11 +448,13 @@ $$
 
 <!-- DK: "beauty" rather than "bty_avg" would be a better variable name. Don't need to recall that the beauty score is an average. After all, the score is an average also! Also: Need a discussion of potential outcomes and RCM here. Can we manipulate beauty? On one hand, no. On the other hand, yes. Makeup, lighting and so on. Could provide an interesting complex case to discuss. -->
 
-<!-- EG: I agree that RCM and potential outcomes would fit well within this discussion. -->
+<!-- EG: I agree that RCM and potential outcomes would fit well within this discussion.Took a look at chapter 3 and noticed that the trains example is used there to explain potential outcomes. Should we stick with using the UT data here and simply apply the language of potential outcomes to this example as well? -->
 
 The intercept $b_0$ = `r evals_line[1]` is the average teaching score $\widehat{y}$ = $\widehat{\text{score}}$ for those courses where the instructor had a "beauty" score `bty_avg` of 0. Or in graphical terms, it's where the line intersects the $y$ axis when $x$ = 0. Note, however, that while the \index{regression!equation of a line!intercept} intercept of the regression line has a mathematical interpretation, it has no *practical* interpretation here, since observing a `bty_avg` of 0 is impossible; it is the average of six panelists' "beauty" scores ranging from 1 to 10. Furthermore, looking at the scatterplot with the regression line, no instructors had a "beauty" score anywhere near 0.
 
 <!-- DK: Add discussion of "hat". Recall the p hat which we estimated last time. y hat is like that! It is not a variable that we can observe. It is an estimate. (Indeed, it is an estimate of a potential outcome!) This is different form x, which has no hat, because it is real data, something we can see. Side note: not sure if the hat versus no hat distinction works well with b_0/b_1 being things we can't see and need to estimate, but for which we do not use hat notation. -->
+
+<!-- EG: I'll add a discussion of y hat as I start writing. -->
 
 Of greater interest is the \index{regression!equation of a line!slope} slope $b_1$ = $b_{\text{bty_avg}}$ of `r evals_line[2]`. The "bty_avg" subscript indicates that this number summarizes the relationship between the teaching and average beauty score variables. Note that the sign is positive, suggesting a positive relationship between these two variables, meaning teachers with higher `bty_avg` scores also tend to have higher teaching scores. Recall from earlier that the correlation coefficient is `r cor_ch11`. They both have the same positive sign, but have a different value. Recall further that the correlation's interpretation is the "strength of linear association". The \index{regression!interpretation of the slope} slope's interpretation is a little different:
 
@@ -501,6 +504,8 @@ Keeping with the causal interpretation, let's say that a teacher named Joe had a
 
 <!-- EG: Should we be using kable here? Or are we trying to make the switch to gt? -->
 
+<!-- EG: I'm going to switch this to gt next pass around. -->
+
 ```{r, echo = FALSE}
 # First, we create a tibble with the values we want for the table
 
@@ -543,6 +548,8 @@ tibble(`Subject` = "Joe",
 Thus, our best guess of Joe's potential outcome under the "treatment" of $score = 8$ is $4.067$.
 
 ## Uncertainty in simple linear regressions
+
+<!-- EG: Will provide more explanation of parameter undertainty using tidy(). -->
 
 You might be wondering what the remaining five columns created by `tidy()` are: `std.error`, `statistic`, `p.value`, `conf.low` and `conf.high`. They are the _standard error_, _test statistic_, _p-value_, _lower 95% confidence interval bound_, and _upper 95% confidence interval bound_. We will focus on the confidence interval bounds. We have already explored the concept of confidence intervals in Chapter \@ref(confidence-intervals).  These bounds are an application of the same concept, but applied to the slope of our simple linear regression.
 
@@ -779,356 +786,11 @@ Note that the uncertainty for *particular predictions* is higher than the uncert
 potential outcome table with estimates of the treatment effect + Joe's observed
 outcome, not with the predicted value for a particular bty_avg.-->
 
-## Life expectancy: one categorical explanatory variable {#model2}
-
-Let's explore differences in life expectancy in two ways:
-
-1. Differences between continents: Are there significant differences in average life expectancy between the five populated continents of the world: Africa, the Americas, Asia, Europe, and Oceania?
-1. Differences within continents: How does life expectancy vary within the world's five continents? For example, is the spread of life expectancy among the countries of Africa larger than the spread of life expectancy among the countries of Asia?
-
-To answer such questions, we'll use the `gapminder` data frame included in the **gapminder** \index{R packages!gapminder!gapminder data frame} package. This dataset has international development statistics such as life expectancy, GDP per capita, and population for 142 countries for 5-year intervals between 1952 and 2007. Recall we visualized some of this data in Figure \@ref(fig:gapminder) in Subsection \@ref(gapminder) on the grammar of graphics.
-
-We'll use this data for basic regression again, but now using an explanatory variable $x$ that is categorical, as opposed to the numerical explanatory variable model we used in the previous Section \@ref(model1).
-
-1. A numerical outcome variable $y$ (a country's life expectancy) and
-1. A single categorical explanatory variable $x$ (the continent that the country is a part of).
-
-When the explanatory variable $x$ is categorical, the concept of a "best-fitting" regression line is a little different than the one we saw previously in Section \@ref(model1) where the explanatory variable $x$ was numerical. We'll study these differences shortly in Subsection \@ref(model2table), but first we conduct an exploratory data analysis.
-
-
-### Exploratory data analysis {#model2EDA}
-
-The data on the 142 countries can be found in the `gapminder` data frame included in the **gapminder** package. However, to keep things simple, let's `filter()` for only those observations/rows corresponding to the year 2007. Additionally, let's `select()` only the subset of the variables we'll consider in this chapter. We'll save this data in a new data frame called `gapminder2007`:
-
-```{r, warning=FALSE, message=FALSE}
-library(gapminder)
-gapminder2007 <- gapminder %>%
-  filter(year == 2007) %>%
-  select(country, lifeExp, continent, gdpPercap)
-```
-
-```{r, echo=FALSE}
-# Hidden: internally compute mean and median life expectancy
-lifeExp_worldwide <- gapminder2007 %>%
-  summarize(median = median(lifeExp), mean = mean(lifeExp))
-mean_africa <- gapminder2007 %>%
-  filter(continent == "Africa") %>%
-  summarize(mean_africa = mean(lifeExp)) %>%
-  pull(mean_africa)
-```
-
-Let's perform the first common step in an exploratory data analysis: looking at the raw data values. You can do this by using RStudio's spreadsheet viewer or by using the `glimpse()` command as introduced in Subsection \@ref(exploredataframes) on exploring data frames:
-
-```{r}
-glimpse(gapminder2007)
-```
-
-Observe that `Observations: 142` indicates that there are 142 rows/observations in `gapminder2007`, where each row corresponds to one country. In other words, the *observational unit* is an individual country. Furthermore, observe that the variable `continent` is of type `<fct>`, which stands for _factor_, which is R's way of encoding categorical variables.
-
-A full description of all the variables included in `gapminder` can be found by reading the associated help file (run `?gapminder` in the console). However, let's fully describe only the `r ncol(gapminder2007)` variables we selected in `gapminder2007`:
-
-1. `country`: An identification variable of type character/text used to distinguish the 142 countries in the dataset.
-1. `lifeExp`: A numerical variable of that country's life expectancy at birth. This is the outcome variable $y$ of interest.
-1. `continent`: A categorical variable with five levels. Here "levels" correspond to the possible categories: Africa, Asia, Americas, Europe, and Oceania. This is the explanatory variable $x$ of interest.
-1. `gdpPercap`: A numerical variable of that country's GDP per capita in US inflation-adjusted dollars.
-
-Let's look at a random sample of five out of the `r nrow(gapminder2007)` countries. 
-
-```{r, eval=FALSE}
-gapminder2007 %>% sample_n(size = 5)
-```
-```{r, echo=FALSE}
-gapminder2007 %>%
-  sample_n(5) %>%
-  knitr::kable(
-    digits = 3,
-    caption = "Random sample of 5 out of 142 countries",
-    booktabs = TRUE,
-    linesep = ""
-  ) %>%
-  kable_styling(font_size = ifelse(knitr:::is_latex_output(), 10, 16),
-                latex_options = c("hold_position"))
-```
-
-Note that random sampling will likely produce a different subset of 5 rows for you than what's shown. Now that we've looked at the raw values in our `gapminder2007` data frame and got a sense of the data, let's move on to computing summary statistics. Let's once again apply the `skim()` function from the **skimr** package. Recall from our previous EDA that this function takes in a data frame, "skims" it, and returns commonly used summary statistics. Let's take our `gapminder2007` data frame, `select()` only the outcome and explanatory variables `lifeExp` and `continent`, and pipe them into the `skim()` function:
-
-```{r}
-gapminder2007 %>%
-  select(lifeExp, continent) %>%
-  skim()
-```
-
-The `skim()` output now reports summaries for categorical variables (`Variable type:factor`) separately from the numerical variables (`Variable type:numeric`). For the categorical variable `continent`, it reports:
-
-- `n_missing` and `complete_rate`,  which are the number of missing and the completion rate, respectively.
-- `n_unique`: The number of unique levels to this variable, corresponding to Africa, Asia, Americas, Europe, and Oceania. This refers to how many countries are in the data for each continent.
-- `top_counts`: In this case, the top four counts: `Africa` has 52 countries, `Asia` has 33, `Europe` has 30, and `Americas` has 25. Not displayed is `Oceania` with 2 countries.
-- `ordered`: This tells us whether the categorical variable is "ordinal": whether there is an encoded hierarchy (like low, medium, high). In this case, `continent` is not ordered.
-
-Turning our attention to the summary statistics of the numerical variable `lifeExp`, we observe that the global median life expectancy in 2007 was `r lifeExp_worldwide$median %>% round(2)`. Thus, half of the world's countries (71 countries) had a life expectancy less than `r lifeExp_worldwide$median %>% round(2)`. The mean life expectancy of `r lifeExp_worldwide$mean %>% round(2)` is lower, however. Why is the mean life expectancy lower than the median?
-
-We can answer this question by performing the last of the three common steps in an exploratory data analysis: creating data visualizations. Let's visualize the distribution of our outcome variable $y$ = `lifeExp`.
-
-```{r, echo=TRUE, warning=FALSE, fig.cap="Histogram of life expectancy in 2007."}
-gapminder2007 %>%
-  ggplot(aes(x = lifeExp)) +
-  geom_histogram(binwidth = 5, color = "white") +
-  labs(x = "Life expectancy", y = "Number of countries",
-       title = "Histogram of distribution of worldwide life expectancies")
-```
-
-We see that this data is *left-skewed*, also known as *negatively* \index{skew} skewed: there are a few countries with low life expectancy that are bringing down the mean life expectancy. However, the median is less sensitive to the effects of such outliers; hence, the median is greater than the mean in this case.
-
-Remember, however, that we want to compare life expectancies both between continents and within continents. In other words, our visualizations need to incorporate some notion of the variable `continent`. We can do this easily with a faceted histogram. Recall from Section \@ref(facets) that facets allow us to split a visualization by the different values of another variable. We display the resulting visualization by adding a \index{ggplot2!facet\_wrap()} `facet_wrap(~ continent, nrow = 2)` layer.
-
-```{r, eval=FALSE} 
-gapminder2007 %>%
-  ggplot(aes(x = lifeExp)) +
-  geom_histogram(binwidth = 5, color = "white") +
-  labs(x = "Life expectancy", 
-       y = "Number of countries",
-       title = "Histogram of distribution of worldwide life expectancies") +
-  facet_wrap(~ continent, nrow = 2)
-```
-
-```{r, echo=FALSE, warning=FALSE, fig.cap="Life expectancy in 2007."}
-faceted_life_exp <- ggplot(gapminder2007, aes(x = lifeExp)) +
-  geom_histogram(binwidth = 5, color = "white") +
-  labs(x = "Life expectancy", y = "Number of countries",
-       title = "Histogram of distribution of worldwide life expectancies") +
-  facet_wrap(~ continent, nrow = 2)
-
-faceted_life_exp
-```
-
-
-
-Observe that unfortunately the distribution of African life expectancies is much lower than the other continents, while in Europe life expectancies tend to be higher and furthermore do not vary as much. On the other hand, both Asia and Africa have the most variation in life expectancies. There is the least variation in Oceania, but keep in mind that there are only two countries in Oceania: Australia and New Zealand.
-
-Recall that an alternative method to visualize the distribution of a numerical variable split by a categorical variable is by using a side-by-side boxplot. We shall map the categorical variable `continent` to the $x$-axis and the different life expectancies within each continent on the $y$-axis.
-
-```{r, warning=FALSE, fig.cap="Life expectancy in 2007."}
-gapminder2007 %>%
-  ggplot(aes(x = continent, y = lifeExp)) +
-  geom_boxplot() +
-  labs(x = "Continent", y = "Life expectancy",
-       title = "Life expectancy by continent")
-```
-
-Some people prefer comparing the distributions of a numerical variable between different levels of a categorical variable using a boxplot instead of a faceted histogram. This is because we can make quick comparisons between the categorical variable's levels with imaginary horizontal lines. For example, observe that we can quickly convince ourselves that Oceania has the highest median life expectancies by drawing an imaginary horizontal line at $y$ = 80. Furthermore, as we observed in the faceted histogram, Africa and Asia have the largest variation in life expectancy as evidenced by their large interquartile ranges (the heights of the boxes).
-
-It’s important to remember, however, that the solid lines in the middle of the boxes correspond to the medians (the middle value) rather than the mean (the average). So, for example, if you look at Asia, the solid line denotes the median life expectancy of around 72 years. This tells us that half of all countries in Asia have a life expectancy below 72 years, whereas half have a life expectancy above 72 years.
-
-Let's compute the median and mean life expectancy for each continent with a little more data wrangling and display the results.
-
-```{r, eval=TRUE}
-lifeExp_by_continent <- gapminder2007 %>%
-  group_by(continent) %>%
-  summarize(median = median(lifeExp), 
-            mean = mean(lifeExp))
-```
-```{r, echo=FALSE}
-lifeExp_by_continent %>%
-  knitr::kable(
-    digits = 3,
-    caption = "Life expectancy by continent",
-    booktabs = TRUE,
-    linesep = ""
-  )
-```
-
-Observe the order of the second column `median` life expectancy: Africa is lowest, the Americas and Asia are next with similar medians, then Europe, then Oceania. This ordering corresponds to the ordering of the solid black lines inside the boxes in our side-by-side boxplot. 
-
-Let's now turn our attention to the values in the third column `mean`. Using Africa's mean life expectancy of 54.8 as a *baseline for comparison*, let's start making comparisons to the mean life expectancies of the other four continents and put these values in a table, which we'll revisit later on in this section.
-
-1. For the Americas, it is 73.6 - 54.8 = 18.8 years higher.
-1. For Asia, it is 70.7 - 54.8 = 15.9 years higher.
-1. For Europe, it is 77.6 - 54.8 = 22.8 years higher.
-1. For Oceania, it is 80.7 - 54.8 = 25.9 years higher.
-
-```{r, echo=FALSE}
-gapminder2007 %>%
-  group_by(continent) %>%
-  summarize(mean = mean(lifeExp)) %>%
-  mutate(`Difference versus Africa` = mean - mean_africa) %>%
-  knitr::kable(
-    digits = 3,
-    caption = "Mean life expectancy by continent and relative differences from mean for Africa",
-    booktabs = TRUE,
-    linesep = ""
-  ) %>%
-  kable_styling(font_size = ifelse(knitr:::is_latex_output(), 10, 16),
-                latex_options = c("hold_position"))
-```
-
-
-
-### Linear regression {#model2table}
-
-In Subsection \@ref(model1table) we introduced simple linear regression, which involves modeling the relationship between a numerical outcome variable $y$ and a numerical explanatory variable $x$. In our life expectancy example, we now instead have a categorical explanatory variable `continent`. Our model will not yield a "best-fitting" regression line, but rather *offsets* relative to a baseline for comparison.\index{offset}
-
-As we did in Subsection \@ref(model1table) when studying the relationship between teaching scores and "beauty" scores, let's output the regression table for this model. Recall that this is done in two steps:
-
-1. We first "fit" the linear regression model using the `lm(y ~ x, data)` function and save it in `lifeExp_model`.
-1. We get the regression table by applying the `tidy()` function from the **broom** package to `lifeExp_model`.  We'll print the `term`, `estimate`, `conf.low`, and `conf.high` columns.
-
-```{r, eval=FALSE}
-lifeExp_model <- lm(lifeExp ~ continent, data = gapminder2007)
-lifeExp_model %>%
-  tidy(conf.int = TRUE) %>%
-  select(term, estimate, conf.low, conf.high)
-```
-```{r, echo=FALSE}
-lifeExp_model <- lm(lifeExp ~ continent, data = gapminder2007)
-```
-```{r, echo=FALSE}
-tidy(lifeExp_model,
-     conf.int = TRUE) %>%
-  select(term, estimate, conf.low, conf.high) %>%
-  knitr::kable(
-    digits = 3,
-    caption = "Linear regression table",
-    booktabs = TRUE,
-    linesep = ""
-  ) %>%
-  kable_styling(font_size = ifelse(knitr:::is_latex_output(), 10, 16),
-                latex_options = c("hold_position"))
-```
-
-Why are there now 5 rows? Let's break them down one-by-one:
-
-1. `intercept` corresponds to the mean life expectancy of countries in Africa of 54.8 years (from the `estimate` column).
-1. `continentAmericas` corresponds to countries in the Americas and the value +18.8 is the same difference in mean life expectancy relative to Africa we previously saw. In other words, the mean life expectancy of countries in the Americas is $54.8 + 18.8 = 73.6$.
-1. `continentAsia` corresponds to countries in Asia and the value +15.9 is the same difference in mean life expectancy relative to Africa we previously saw. In other words, the mean life expectancy of countries in Asia is $54.8 + 15.9 = 70.7$.
-1. `continentEurope` corresponds to countries in Europe and the value +22.8 is the same difference in mean life expectancy relative to Africa we previously saw. In other words, the mean life expectancy of countries in Europe is $54.8 + 22.8 = 77.6$.
-1. `continentOceania` corresponds to countries in Oceania and the value +25.9 is the same difference in mean life expectancy relative to Africa we previously saw. In other words, the mean life expectancy of countries in Oceania is $54.8 + 25.9 = 80.7$.
-
-To summarize, the 5 values in the `estimate` column correspond to the "baseline for comparison" continent Africa (the intercept) as well as four "offsets" from this baseline for the remaining 4 continents: the Americas, Asia, Europe, and Oceania.
-
-You might be asking at this point why was Africa chosen as the "baseline for comparison" group. This is the case for no other reason than it comes first alphabetically of the five continents; by default R arranges factors/categorical variables in alphanumeric order. You can change this baseline group to be another continent if you manipulate the variable `continent`'s factor "levels" using the **forcats** package. See [Chapter 15](https://r4ds.had.co.nz/factors.html) of *R for Data Science* [@rds2016] for examples. 
-
-It is also important to take a look at the confidence intervals to get a sense of how uncertain our estimates are.  Note that the confidence interval for the Oceania estimate is the widest.  Why is that?  There are only two countries in Oceania (Australia and New Zealand), and thus we have a great deal of uncertainty around these estimates.  In contrast, there are `r gapminder2007 %>% count(continent) %>% filter(continent == "Africa") %>% pull(n)` countries in Africa, and thus it has the narrowest confidence interval.
-
-Let's now write the equation for our fitted values $\widehat{y} = \widehat{\text{life exp}}$.
-
-$$
-\begin{aligned}
-\widehat{y} = \widehat{\text{life exp}} &= b_0 + b_{\text{Amer}}\cdot\mathbb{1}_{\text{Amer}}(x) + b_{\text{Asia}}\cdot\mathbb{1}_{\text{Asia}}(x) + \\
-& \qquad b_{\text{Euro}}\cdot\mathbb{1}_{\text{Euro}}(x) + b_{\text{Ocean}}\cdot\mathbb{1}_{\text{Ocean}}(x)\\
-&= 54.8 + 18.8\cdot\mathbb{1}_{\text{Amer}}(x) + 15.9\cdot\mathbb{1}_{\text{Asia}}(x) + \\
-& \qquad 22.8\cdot\mathbb{1}_{\text{Euro}}(x) + 25.9\cdot\mathbb{1}_{\text{Ocean}}(x)
-\end{aligned}
-$$
-
-Whoa! That looks daunting! Don't fret, however, as once you understand what all the elements mean, things simplify greatly. First, $\mathbb{1}_{A}(x)$ is what's known in mathematics as an "indicator function." It returns only one of two possible values, 0 and 1, where
-
-$$
-\mathbb{1}_{A}(x) = \left\{
-\begin{array}{ll}
-1 & \text{if } x \text{ is in } A \\
-0 & \text{if } \text{otherwise} \end{array}
-\right.
-$$
-
-In a statistical modeling context, this is also known as a *dummy variable*. \index{dummy variable} In our case, let's consider the first such indicator variable $\mathbb{1}_{\text{Amer}}(x)$. This indicator function returns 1 if a country is in the Americas, 0 otherwise:
-
-$$
-\mathbb{1}_{\text{Amer}}(x) = \left\{
-\begin{array}{ll}
-1 & \text{if } \text{country } x \text{ is in the Americas} \\
-0 & \text{otherwise}\end{array}
-\right.
-$$
-
-Second, $b_0$ corresponds to the intercept as before; in this case, it's the mean life expectancy of all countries in Africa. Third, the $b_{\text{Amer}}$, $b_{\text{Asia}}$, $b_{\text{Euro}}$, and $b_{\text{Ocean}}$ represent the 4 "offsets relative to the baseline for comparison" in the regression table output: `continentAmericas`, `continentAsia`, `continentEurope`, and `continentOceania`.
-
-Let's put this all together and compute the fitted value $\widehat{y} = \widehat{\text{life exp}}$ for a country in Africa. Since the country is in Africa, all four indicator functions $\mathbb{1}_{\text{Amer}}(x)$, $\mathbb{1}_{\text{Asia}}(x)$, $\mathbb{1}_{\text{Euro}}(x)$, and $\mathbb{1}_{\text{Ocean}}(x)$ will equal 0, and thus:
-
-$$
-\begin{aligned}
-\widehat{\text{life exp}} &= b_0 + b_{\text{Amer}}\cdot\mathbb{1}_{\text{Amer}}(x) + b_{\text{Asia}}\cdot\mathbb{1}_{\text{Asia}}(x)
-+ \\
-& \qquad b_{\text{Euro}}\cdot\mathbb{1}_{\text{Euro}}(x) + b_{\text{Ocean}}\cdot\mathbb{1}_{\text{Ocean}}(x)\\
-&= 54.8 + 18.8\cdot\mathbb{1}_{\text{Amer}}(x) + 15.9\cdot\mathbb{1}_{\text{Asia}}(x)
-+ \\
-& \qquad 22.8\cdot\mathbb{1}_{\text{Euro}}(x) + 25.9\cdot\mathbb{1}_{\text{Ocean}}(x)\\
-&= 54.8 + 18.8\cdot 0 + 15.9\cdot 0 + 22.8\cdot 0 + 25.9\cdot 0\\
-&= 54.8
-\end{aligned}
-$$
-
-In other words, all that's left is the intercept $b_0$, corresponding to the average life expectancy of African countries of 54.8 years. Next, say we are considering a country in the Americas. In this case, only the indicator function $\mathbb{1}_{\text{Amer}}(x)$ for the Americas will equal 1, while all the others will equal 0, and thus:
-
-$$
-\begin{aligned}
-\widehat{\text{life exp}} &= 54.8 + 18.8\cdot\mathbb{1}_{\text{Amer}}(x) + 15.9\cdot\mathbb{1}_{\text{Asia}}(x)
-+ 22.8\cdot\mathbb{1}_{\text{Euro}}(x) + \\
-& \qquad 25.9\cdot\mathbb{1}_{\text{Ocean}}(x)\\
-&= 54.8 + 18.8\cdot 1 + 15.9\cdot 0 + 22.8\cdot 0 + 25.9\cdot 0\\
-&= 54.8 + 18.8 \\
-& = 73.6
-\end{aligned}
-$$
-
-which is the mean life expectancy for countries in the Americas of 73.6 years. Note the "offset from the baseline for comparison" is +18.8 years. 
-
-Let's do one more. Say we are considering a country in Asia. In this case, only the indicator function $\mathbb{1}_{\text{Asia}}(x)$ for Asia will equal 1, while all the others will equal 0, and thus:
-
-$$
-\begin{aligned}
-\widehat{\text{life exp}} &= 54.8 + 18.8\cdot\mathbb{1}_{\text{Amer}}(x) + 15.9\cdot\mathbb{1}_{\text{Asia}}(x)
-+ 22.8\cdot\mathbb{1}_{\text{Euro}}(x) + \\
-& \qquad 25.9\cdot\mathbb{1}_{\text{Ocean}}(x)\\
-&= 54.8 + 18.8\cdot 0 + 15.9\cdot 1 + 22.8\cdot 0 + 25.9\cdot 0\\
-&= 54.8 + 15.9 \\
-& = 70.7
-\end{aligned}
-$$
-
-which is the mean life expectancy for Asian countries of 70.7 years. The "offset from the baseline for comparison" here is +15.9 years.
-
-Let's generalize this idea a bit. If we fit a linear regression model using a categorical explanatory variable $x$ that has $k$ possible categories, the regression table will return an intercept and $k - 1$ "offsets." In our case, since there are $k = 5$ continents, the regression model returns an intercept corresponding to the baseline for comparison group of Africa and $k - 1 = 4$ offsets corresponding to the Americas, Asia, Europe, and Oceania.
-
-<!--Phew! That was a lot of work! --> Understanding a regression table output when you're using a categorical explanatory variable is a topic those new to regression often struggle with. The only real remedy for these struggles is practice, practice, practice. However, once you equip yourselves with an understanding of how to create regression models using categorical explanatory variables, you'll be able to incorporate many new variables into your models, given the large amount of the world's data that is categorical. If you feel like you're still struggling at this point, however, we suggest you closely compare the group means and the linear regression output and note how you can compute all the values from one table using the values in the other.
-
-Can we interpret these coefficients causally, using the [Rubin Causal Model](#rubin-causal-model)?  Remember the phrase *no causation without manipulation*.  If we interpreted the coefficient on Asia causally, we would be saying that a country being in Asia (rather than Africa) has a *causal effect* of 15.9 years on life expectancy: the potential outcome when "treatment" is Asia is 15.9 years higher than when "treatment" is Africa.  But does this make sense?  It's hard to imagine manipulating the continent a country is in.  Thus, it is hard to conceptualize these estimates as being the "causal effect" of being in one continent versus another.  Instead, we should think of these estimates in terms of prediction.  They attempt to answer the following question: given that we know a country's continent, what's our best guess of its average life expectancy?
-
-### Observed/fitted values and residuals {#model2points}
-
-Recall in Subsection \@ref(model1points), we defined the following three concepts:
-
-1. Observed values $y$, or the observed value of the outcome variable \index{regression!observed values}
-1. Fitted values $\widehat{y}$, or the value on the regression line for a given $x$ value
-1. Residuals $y - \widehat{y}$, or the error between the observed value and the fitted value
-
-We obtained these values and other values using the `augment()` function from the **broom** package. This time, however, let's add an argument setting `ID = "country"`: this is telling the function to use the variable `country` in `gapminder2007` as an *identification variable* in the output. This will help contextualize our analysis by matching values to countries.
-
-```{r, eval=FALSE}
-regression_points <- lifeExp_model %>%
-  augment(ID = "country")
-regression_points
-```
-```{r, echo=FALSE}
-regression_points <- augment(lifeExp_model, ID = "country")
-regression_points %>%
-  slice(1:10) %>%
-  knitr::kable(
-    digits = 3,
-    caption = "Regression points (First 10 out of 142 countries)",
-    booktabs = TRUE,
-    linesep = ""
-  ) %>%
-  kable_styling(font_size = ifelse(knitr:::is_latex_output(), 10, 16),
-                latex_options = c("hold_position"))
-```
-
-Observe that `.fitted` contains the fitted values $\widehat{y}$ = $\widehat{\text{lifeExp}}$. If you look closely, there are only 5 possible values for `.fitted`. These correspond to the five mean life expectancies for the 5 continents that we computed using the values in the `estimate` column of the regression table.
-
-The `.resid` column is simply $y - \widehat{y}$ = `lifeExp - .fitted`. These values can be interpreted as the deviation of a country's life expectancy from its continent's average life expectancy. For example, look at the residual for Afghanistan. The residual of $y - \widehat{y} = 43.8 - 70.7 = -26.9$ is telling us that Afghanistan's life expectancy is a whopping 26.9 years lower than the mean life expectancy of all Asian countries. This can in part be explained by the many years of war that country has suffered.
-
 ## Case study: 2018 gubernatorial forecasts
 
 <!-- AR: beginning of working with list columns -->
+
+<!-- EG: Will practice using augment with lm() to make predictions. Additionally, will add a discussion about Gelman's concern about the assumption of beta being perfectly estimated, but how this is likely an acceptable assumption to make. -->
 
 Now that we know how to run simple linear regressions, let's run many at once!  
 
@@ -1341,6 +1003,8 @@ regression_points %>%
 
 Any other straight line drawn in the figure would yield a sum of squared residuals greater than 132. This is a mathematically guaranteed fact that you can prove using calculus and linear algebra. That's why alternative names for the linear regression line are the *best-fitting line* and the *least-squares line*. Why do we square the residuals (i.e., the arrow lengths)? So that both positive and negative deviations of the same amount are treated equally.
 
+<!-- EG: Honestly, I'm not sure that this section on Bayesian regression belongs in this chapter. Jumping so quickly from introducting simple lm() modeling to Bayesian interpretations could be confusing, especially when so many new concepts and functions are being introduced. I personally think that this ought to be its own chapter, with in-depth exploration of examples and plenty of emphasis on how to properly interpret the meaning of EVERY part of a Bayesian model. If we add all that into this chapter, it would get very long. -->
+
 <!-- not sure yet how to best order these sections  -->
 
 ## Advanced: Bayesian Regression 
@@ -1359,9 +1023,11 @@ lm_score_model %>%
   select(estimate, conf.low, conf.high)
 ```
 
-From what we learned in Chapter 7, we intepreted this confidence intervals as a 95% chance that the true value of the coefficient of `bty_avg` is between, roughly, 0.03 and 0.1. Thus, we have taken our simple `lm()` model and interpreted it in a Bayesian way. However, is this a full fledge bayesian analysis? No! For example, `lm()` does not allow the user to incorporate priors. As mentioned before, `lm()` is an old function and to perform bayesian analysis we must use a bayesian analysis tool. 
+From what we learned in Chapter 7, we intepreted this confidence intervals as a 95% chance that the true value of the coefficient of `bty_avg` is between, roughly, 0.03 and 0.1. Thus, we have taken our simple `lm()` model and interpreted it in a Bayesian way. However, is this a full fledge bayesian analysis? No! For example, `lm()` does not allow the user to incorporate priors. As mentioned before, `lm()` is an old function and to perform bayesian analysis we must use a Bayesian analysis tool. 
 
-The tool we need to perform Bayesian Regression is the `rstanarm` package. `rstanarm` is an interface to connect with the Stan probabilistic programming language. You will see the `rstanarm` package is created to mirror functions like `lm()` and it simply requires adding a `stan_` prefix before common functions like `lm()`. We will focus on `stan_glm()` for the remainder of this section. 
+<!-- EG: Do students know what Bayesian regression is? How it differs fundamentally from frequentist modeling? Why we might consider using a Bayesian model instead of a frequentist model? If that hasn't already been introduced somewhere else in the book, I think it should happen here. -->
+
+The tool we need to perform Bayesian Regression is the `rstanarm` package. `rstanarm` is an interface to connect with the Stan probabilistic programming language. <!-- EG: should we have some explanation of what the Stan probabilistic programming language is?-->You will see the `rstanarm` package is created to mirror functions like `lm()` and it simply requires adding a `stan_` prefix before common functions like `lm()`. We will focus on `stan_glm()` for the remainder of this section. 
 
 
 ## Bayesian Regression with a Continuous Variable
@@ -1383,7 +1049,6 @@ bayes_score <- stan_glm(score ~ bty_avg, data = evals_ch11, refresh = 0)
 print(bayes_score, digits = 2)
 
 
-
 ```
 
 First, we "fit" the bayesian regression model to the `data` using the `stan_glm()` \index{lm()} function and saved this as `bayes_score`. Notice `stan_glm()` is used just as `lm()` was: `stan_glm(y ~ x, data = data_frame_name)` where:
@@ -1392,7 +1057,7 @@ First, we "fit" the bayesian regression model to the `data` using the `stan_glm(
 * `x` is the explanatory variable.
 * The model formula is `score ~ bty_avg`.
 * `data_frame_name` is the name of the data frame that contains the variables `y` and `x`. In our case, `data_frame_name` is the `evals_ch11` data frame.
-* `refresh = 0` is optional. Setting refresh equal to 0 suppresses the priting of the sampling algorithm from the model. We will touch more on this later. 
+* `refresh = 0` is optional. Setting refresh equal to 0 suppresses the printing of the sampling algorithm from the model. We will touch more on this later. 
 
 ### Interpreting Regression Coefficients 
 
@@ -1435,6 +1100,8 @@ intervals<-posterior_interval(bayes_score, prob = 0.95)
 
 Finally, for all of the coefficients, we are provided a `MAD_SD`. The `MAD SD`, which equals $1.483 * (\mathbf{median}^n_{i=1} |z_i - M|)$, summarizes the uncertainty in the model parameters. Since we are used to using the standard deviations to measure variation, the MAD SD is rescaled to mirror the standard error of the normal distribution. The `MAD_SD` can be used to retrieve our coefficient's credible intervals for each parameter. Thus, for `bty_avg`, the 95% credible interval is (`r intervals[2,]`). This tells us that there is a 95% probability that the true value of the parameter for `bty_avg` falls within the interval. 
 
+<!-- EG: Should we include an explanation of why the language of posteriors is so important/so heavily used within Bayesian modeling? -->
+
 Instead of trying to calcualate these by hand, the easiest way to retrieve our model's credible intervals is using the function `posterior_interval()` on our model object `bayes_score`.
 
 ```{r}
@@ -1463,7 +1130,7 @@ In MCMC diagnostics, we are provided with:
 
 * `log-posterior`, which is the log of the combined posterior distributions. 
 * `mcse`, which stands for the Monte Carlo standard error. Markov Chain Monte Carlo is the algorithm used to draw from the posterior distribution.
-* `Rhat`, which indicates whether or not the model converges. 
+* `Rhat`, which indicates whether or not the model converges.
 * `n_eff`, a measure of the effective sample size.
 
 The only thing that you need to be concerned about is the `Rhat`. When we know whether or not the model converges, we know whether or not the results are reliable. We hope to get values for `Rhat` as close to 1 as possible. Rhat values less than 1.1 indicate model convergence and that the model is reliable. Thus, since all the `Rhat` for our model are 1.0, `bayes_score` is reliable.
