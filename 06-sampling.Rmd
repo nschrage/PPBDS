@@ -8,17 +8,17 @@ output_yaml:
 
 <!-- Priorities: -->
 
-<!-- 1) Remove library(moderndive) and anything which depends in it. This may require creating our own copy of some of its built in datasets, or replacing them. Example: the code uses `tactile_prop_red` a dataset in **moderndive**. So, create, on the fly, a similar looking data set and just use that. (Hint: IN your own code chunk, use the include=FALSE code chunk option.) -->
+<!-- -1) Fix "`summarise()` ungrouping output (override with `.groups`" -->
 
-<!-- 3) Read the current versions of 05-probability.Rmd. This is tricky and important stuff. The below comments only make sense with that background knowledge. The biggest changes involving connecting the current chapter to that chapter and, to a lesser extent, to the Rubin Causal Model chapter. Not really RCM, but still a Rubin Table. *missing data*. -->
+<!-- 0) Replace kable() with gt(). No code chunk names. No purl or width in figures. -->
 
-<!-- Add in Bayesian! -->
+<!-- 1) Remove library(moderndive) and anything which depends in it. This may require creating our own copy of some of its built in datasets, or replacing them. Example: the code uses `tactile_prop_red` a dataset in **moderndive**. So, create, on the fly, a similar looking data set and just use that. (Hint: IN your own code chunk, use the include=FALSE code chunk option.) See where we create the `urn` object for an guidance. -->
 
-<!-- m&m example? Is it useful to imagine an urn where, instead of two colors, an income is written on the bead? -->
+<!-- 2) Set up Zoom with Cass about "sampling mechanism," which is just like the "assignment mechanism." How did some beads get sampled and some did not? Bias and censoring are relevant topics here. Every problem has a Rubin Table highlighting what God would know, what we know, and then how we form a pdf about what we don't know. (Read chapter 3 for background.) This is even so with sampling! Until we sample a bead, it is a "?". Then, it resolves to red/white. After drawing our sample, we make inferences about the other beads. In one sense, we are inferring the value of p. In another, we are guessing what each of the "?" is, at least in expectation. But we can then also capture uncertainty! Each bead might be red or white, regardless of p. And there is uncertainty about p as well. This is the first time we are seeing both model uncertainty --- what is p? --- and predictive uncertainty --- what color is the next bead? -->
 
-<!-- 4) *Bias* is important, connect to chapter 3 discussion. Sampling goes wrong all the time. People underestimate the true uncertainty in the world.  -->
+<!-- 3) Set up Zoom with Vivian. Draw direct connection to her coin example. -->
 
-<!--5) *Censoring*: Problem with your tape measure. -->
+<!-- How about an urn with more than two colors? An urn with an income is written on the bead? -->
 
 <!-- Key issues for summer 2020. -->
 
@@ -46,34 +46,22 @@ output_yaml:
 
 <!-- Revisit Albert's functions. Is it OK that urn is just treated as a global variable? Or should it be passed in as an argument. Also, are two functions really necessary? -->
 
-<!-- Discuss hypothesis tests and why we hate them. See style.Rmd for details. -->
-
-<!-- Every problem has a Rubin Table highlighting what God would know, what we know, and then how we form a pdf about what we don't know. (Read chapter 3 for background.) This is even so with sampling! Until we sample a bead, it is a "?". Then, it resolves to red/white. After drawing our sample, we make inferences about the other beads. In one sense, we are inferring the value of p. In another, we are guessing what each of the "?" is, at least in expectation. But we can then also capture uncertainty! Each bead might be red or white, regardless of p. And there is uncertainty about p as well. This is the first time we are seeing both model uncertainty --- what is p? --- and predictive uncertainty --- what color is the next bead? -->
+<!-- Discuss hypothesis tests and why we hate them. See themes.Rmd for details. -->
 
 <!-- Also interesting to think about tables which we know are finite but we don't ever know how many rows, like number of living people in US right now (i.e., includes planes landing? someone whose heart has stopped beating but has not been "pronounced" dead?)  -->
 
 <!-- Might also use Topic 16 from the Workshop here, or save it for the next chapter. -->
 
-Last chapter, we learned about probability, the act of quantifying uncertainty. This chapter, we will be learning about *sampling*, the beginning of our journey toward inference. 
-
-### Needed packages {-}
-
-Let's load all the packages needed for this chapter (this assumes you've already installed them). Recall from our discussion in Section \@ref(tidyverse-package) that loading the **tidyverse** package by running `library(tidyverse)` loads the following commonly used data science packages all at once:
-
-* **ggplot2** for data visualization
-* **dplyr** for data wrangling
-* **tidyr** for converting data to "tidy" format
-* **readr** for importing spreadsheet data into R
-* As well as the more advanced **purrr**, **tibble**, **stringr**, and **forcats** packages
-
-If needed, read Section \@ref(packages) for information on how to install and load R packages. 
+Last chapter, we learned about probability, the act of quantifying uncertainty. This chapter, we will be learning about *sampling*, the beginning of our journey toward inference. As always, we will need the **tidyverse** package. The **infer** package has a handy function, `rep_sample_n()`, for simulating the process of sampling.
 
 ```{r message=FALSE, warning=FALSE}
 library(tidyverse)
+library(infer)
 ```
 
 ```{r message=FALSE, warning=FALSE, echo=FALSE}
 # Packages needed internally, but not in text.
+library(gt)
 library(knitr)
 library(kableExtra)
 library(patchwork)
@@ -91,7 +79,7 @@ Let's now ask ourselves, what proportion of this urn's balls are red?
 
 <!-- What is the best approach to R code chunks for images in the book? What is "purl" doing? Why out.width set to 95%? Need to understand this better and standardize it. -->
 
-```{r sampling-exercise-1, echo=FALSE, fig.cap="An urn with red and white balls.", purl=FALSE, out.width = "95%"}
+```{r, echo=FALSE, fig.cap="An urn with red and white balls."}
 knitr::include_graphics("06-sampling/images/sampling_bowl_1.jpg")
 ```
 
@@ -259,8 +247,6 @@ Now, let's use `rep_sample_n()` to take a sample of 50 balls from our virtual ur
 
 
 ```{r}
-library(infer)
-
 virtual_shovel <- urn %>% 
   rep_sample_n(size = 50)
 virtual_shovel
@@ -846,7 +832,7 @@ So random sampling ensures our point estimates are *accurate*, while on the othe
 knitr::include_graphics("06-sampling/images/accuracy_vs_precision.jpg")
 ```
 
-<!-- DRAFT: Let's apply these ideas to gambling. If we were to bet money on the proportion of the red balls in the urn, and we could perform virtual simulations beforehand, we would want the most *accurate* and most *precise* estimate. Here, our *estimand*, the thing we want to know, would be the proportion of red balls in the urn. INCORP DISCUSSION OF PREDICTION UNCERTAINTY, UNMODELED VARIATION, PARAMETER UNCERTAINTY, MODEL STRUCTURE. -->
+<!-- DRAFT: Let's apply these ideas to gambling. If we were to bet money on the proportion of the red balls in the urn, and we could perform virtual simulations beforehand, we would want the most *accurate* and most *precise* estimate. Here, our *estimand*, the thing we want to know, would be the proportion of red balls in the urn. INCORP DISCUSSION OF PREDICTION UNCERTAINTY, UNMODELED VARIATION, PARAMETER UNCERTAINTY,  -->
 
 <!-- MF: Stick with urn example for gambling? Something less predictable & involving more unknowns might be better for explanining model structure, paramater uncertainty, prediction uncertainty, etc. On the other hand, I don't want this chapter to get too lengthy.  -->
 
