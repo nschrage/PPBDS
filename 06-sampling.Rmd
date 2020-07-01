@@ -10,8 +10,6 @@ output_yaml:
 
 <!-- 1) Remove library(moderndive) and anything which depends in it. This may require creating our own copy of some of its built in datasets, or replacing them. Example: the code uses `tactile_prop_red` a dataset in **moderndive**. So, create, on the fly, a similar looking data set and just use that. (Hint: IN your own code chunk, use the include=FALSE code chunk option.) -->
 
-<!-- 2) Remove library(infer). This means that we need to replace `rep_sample_n()`. Chapters 7 and later use `rsample::bootstraps()` in its place. Here is a [nice example](https://juliasilge.com/blog/beer-production/) of how to use it and [this excellent introduction](https://afit-r.github.io/bootstrapping). Should we do that here? Or perhaps we just have three (?) lines of R code which do what `rep_sample_n()` use to do? Take a look at the current version of chapter 7 for one approach. -->
-
 <!-- 3) Read the current versions of 05-probability.Rmd. This is tricky and important stuff. The below comments only make sense with that background knowledge. The biggest changes involving connecting the current chapter to that chapter and, to a lesser extent, to the Rubin Causal Model chapter. Not really RCM, but still a Rubin Table. *missing data*. -->
 
 <!-- Add in Bayesian! -->
@@ -48,10 +46,6 @@ output_yaml:
 
 <!-- Revisit Albert's functions. Is it OK that urn is just treated as a global variable? Or should it be passed in as an argument. Also, are two functions really necessary? -->
 
-<!-- A big point of confusion is the difference between random sampling and random assignment. So, explain in a paragraph.  -->
-
-<!-- Would be great to have a concrete example of how biased sampling can be, like all the red beads at the bottom. Maybe just a picture and discussion? -->
-
 <!-- Discuss hypothesis tests and why we hate them. See style.Rmd for details. -->
 
 <!-- Every problem has a Rubin Table highlighting what God would know, what we know, and then how we form a pdf about what we don't know. (Read chapter 3 for background.) This is even so with sampling! Until we sample a bead, it is a "?". Then, it resolves to red/white. After drawing our sample, we make inferences about the other beads. In one sense, we are inferring the value of p. In another, we are guessing what each of the "?" is, at least in expectation. But we can then also capture uncertainty! Each bead might be red or white, regardless of p. And there is uncertainty about p as well. This is the first time we are seeing both model uncertainty --- what is p? --- and predictive uncertainty --- what color is the next bead? -->
@@ -60,8 +54,7 @@ output_yaml:
 
 <!-- Might also use Topic 16 from the Workshop here, or save it for the next chapter. -->
 
-
-Sampling is the beginning of our journey toward inference.
+Last chapter, we learned about probability, the act of quantifying uncertainty. This chapter, we will be learning about *sampling*, the beginning of our journey toward inference. 
 
 ### Needed packages {-}
 
@@ -86,7 +79,7 @@ library(kableExtra)
 library(patchwork)
 ```
 
-## Sampling urn activity {#sampling-activity}
+## Real sampling activity {#sampling-activity}
 
 Let's start with a hands-on activity.
 
@@ -94,7 +87,7 @@ Let's start with a hands-on activity.
 
 Take a look at the urn in Figure \@ref(fig:sampling-exercise-1). It has a certain number of red and a certain number of white balls all of equal size. Furthermore, it appears the urn has been mixed beforehand, as there does not seem to be any coherent pattern to the spatial distribution of the red and white balls.
 
-Let's now ask ourselves, what proportion of this urn's balls are red?
+Let's now ask ourselves, what proportion of this urn's balls are red? 
 
 <!-- What is the best approach to R code chunks for images in the book? What is "purl" doing? Why out.width set to 95%? Need to understand this better and standardize it. -->
 
@@ -104,9 +97,9 @@ knitr::include_graphics("06-sampling/images/sampling_bowl_1.jpg")
 
 One way to answer this question would be to perform an exhaustive count: remove each ball individually, count the number of red balls and the number of white balls, and divide the number of red balls by the total number of balls. However, this would be a long and tedious process. 
 
-### Using the shovel once 
+### Using the shovel method once 
 
-Instead of performing an exhaustive count, let's insert a shovel into the urn as seen in Figure \@ref(fig:sampling-exercise-2). Using the shovel, let's remove $5 \cdot 10 = 50$ balls, as seen in Figure \@ref(fig:sampling-exercise-3).
+Instead of performing an exhaustive count, let's insert a shovel into the urn as seen in Figure \@ref(fig:sampling-exercise-2). Using the shovel, let's remove $5 \cdot 10 = 50$ balls, as seen in Figure \@ref(fig:sampling-exercise-3). Here, we are taking a *random sample* of the total population of balls. 
 
 ```{r sampling-exercise-2, echo=FALSE, fig.cap="Inserting a shovel into the urn.", purl=FALSE, out.width = "100%"}
 knitr::include_graphics("06-sampling/images/sampling_bowl_2.jpg")
@@ -117,17 +110,17 @@ knitr::include_graphics("06-sampling/images/sampling_bowl_2.jpg")
 knitr::include_graphics("06-sampling/images/sampling_bowl_3_cropped.jpg")
 ```
 
-Observe that 17 of the balls are red and thus 17/50 = 0.34 = 34% of the shovel's balls are red. We can view the proportion of balls that are red in this shovel as a guess of the proportion of balls that are red in the entire urn. While not as exact as doing an exhaustive count of all the balls in the urn, our guess of 34% took much less time and energy to make. 
+Observe that 17 of the 50 sampled balls are red and thus 17/50 = 0.34 = 34% of the shovel's balls are red. We can view the proportion of balls that are red in this shovel as a guess of the proportion of balls that are red in the entire urn. While not as exact as doing an exhaustive count of all the balls in the urn, our guess of 34% took much less time and energy to make. 
 
-However, say, we started this activity over from the beginning. In other words, we replace the 50 balls back into the urn and start over. Would we remove exactly 17 red balls again? In other words, would our guess at the proportion of the urn's balls that are red be exactly 34% again? Maybe? 
+However, say, we started this activity over from the beginning. In other words, we replace the 50 balls back into the urn and start over. Would we remove exactly 17 red balls again? Would our guess at the proportion of the urn's balls that are red be exactly 34% again? Maybe? 
 
-What if we repeated this activity several times following the process shown in Figure \@ref(fig:sampling-exercise-3b)? Would we obtain exactly 17 red balls each time? In other words, would our guess at the proportion of the urn's balls that are red be exactly 34% every time? Surely not. Let's repeat this exercise several times with the help of 33 groups of friends to understand how the value differs with repetition.
+What if we repeated this activity several times following the process shown in Figure \@ref(fig:sampling-exercise-3b)? Would we obtain exactly 17 red balls each time? In other words, would our guess at the proportion of the urn's balls that are red be exactly 34% every time? Surely not. 
+
+The true proportion of red balls in the urn is our **estimand**, the thing we want to know. Here, we are taking a sample and inferring the estimand from that sample. To give us the best odds of inferring the estimand, let's repeat this exercise with the help of 33 groups of friends to understand how the value differs with repetition. 
 
 ### Using the shovel 33 times {#student-shovels}
 
 <!-- Create this dataset on my own. Approximately the same is fine. -->
-
-
 
 Each of our 33 groups of friends will do the following: 
 
@@ -148,7 +141,7 @@ Each of our 33 groups of friends make note of their proportion of red balls from
 knitr::include_graphics("06-sampling/images/tactile_3_a.jpg")
 ```
 
-Recall from Section \@ref(histograms) that histograms allow us to visualize the *distribution* \index{distribution} of a numerical variable. In particular, where the center of the values falls and how the values vary. A partially completed histogram of the first 10 out of 33 groups of friends' results can be seen in Figure \@ref(fig:sampling-exercise-5).
+Recall from Section \@ref(histograms) that histograms allow us to visualize the *distribution* of a numerical variable. In particular, where the center of the values falls and how the values vary. A partially completed histogram of the first 10 out of 33 groups of friends' results can be seen in Figure \@ref(fig:sampling-exercise-5).
 
 ```{r sampling-exercise-5, echo=FALSE, fig.cap="Hand-drawn histogram of first 10 out of 33 proportions.", purl=FALSE, out.width = "70%"}
 knitr::include_graphics("06-sampling/images/tactile_3_c.jpg")
@@ -191,9 +184,9 @@ tactile_histogram +
 
 ### What did we just do?
 
-What we just demonstrated in this activity is the statistical concept of \index{sampling} *sampling*. We would like to know the proportion of the urn's balls that are red. Because the urn has a large number of balls, performing an exhaustive count of the red and white balls would be time-consuming. We thus extracted a *sample* of 50 balls using the shovel to make an *estimate*. Using this sample of 50 balls, we estimated the proportion of the *urn's* balls that are red to be 34%.
+What we just demonstrated in this activity is the statistical concept of **sampling**. We would like to know the proportion of the urn's balls that are red. Because the urn has a large number of balls, performing an exhaustive count of the red and white balls would be time-consuming. We thus extracted a *sample* of 50 balls using the shovel to make an *estimate*. Using this sample of 50 balls, we estimated the proportion of the *urn's* balls that are red to be 34%.
 
-Moreover, because we mixed the balls before each use of the shovel, the samples were randomly drawn. Because each sample was drawn at random, the samples were different from each other. Because the samples were different from each other, we obtained the different proportions red observed in Figure \@ref(fig:samplingdistribution-tactile). This is known as the concept of *sampling variation*. \index{sampling!variation}
+Moreover, because we mixed the balls before each use of the shovel, the samples were randomly drawn. Because each sample was drawn at random, the samples were different from each other. Because the samples were different from each other, we obtained the different proportions red observed in Figure \@ref(fig:samplingdistribution-tactile). This is known as the concept of *sampling variation*. 
 
 The purpose of this sampling activity is to develop an understanding of two key concepts relating to sampling: 
 
@@ -216,12 +209,9 @@ In the previous Section \@ref(sampling-activity), we performed a *tactile* sampl
 
 Let's start by performing the virtual analog of the tactile sampling exercise we performed in Section \@ref(sampling-activity). We first need a virtual analog of the urn seen in Figure \@ref(fig:sampling-exercise-1). To this end, we creat a data frame named `urn`. The rows of `urn` correspond exactly with the contents of the actual urn. 
 
-<!-- Per the style guide, these comments will need to be removed from the code chunk and explained in the paragraph above. -->
+For reference, `sample-frac()` merely re-arranges the rows of the tibble. We use `set.seed()` to ensure that the balls in our virtual urn are always in the same order. This makes certain that the figures in the book match their written descriptions. 
 
 ```{r, echo=TRUE}
-# sample_frac() just re-arranges the rows of the tibble. We use set.seed() to
-# ensure that the beads in the urn are always in the same order. This ensures
-# that figures in the book match their written descriptions.
 
 set.seed(9)
 
@@ -235,8 +225,7 @@ urn
 
 Observe that `urn` has 2400 rows, telling us that the urn contains 2400 equally sized balls. The first variable `ball_ID` is used as an *identification variable* as discussed in Subsection \@ref(identification-vs-measurement-variables); none of the balls in the actual urn are marked with numbers. The second variable `color` indicates whether a particular virtual ball is red or white. View the contents of the urn in RStudio's data viewer and scroll through the contents to convince yourself that `urn` is indeed a virtual analog of the actual urn in Figure \@ref(fig:sampling-exercise-1).
 
-Now that we have a virtual analog of our urn, we now need a virtual analog to the shovel seen in Figure \@ref(fig:sampling-exercise-2) to generate virtual samples of 50 balls. We're going to use the `rep_sample_n()` function included in the **infer** package. This function allows us to take `rep`eated, or `rep`licated, `samples` of size `n`. 
-
+Now that we have a virtual analog of our urn, we now need a virtual analog of the shovel seen in Figure \@ref(fig:sampling-exercise-2) to generate virtual samples of 50 balls. We're going to use the `rep_sample_n()` function included in the **infer** package. This function allows us to take `rep`eated, or `rep`licated, `samples` of size `n`. 
 
 Let's show an example of this function in action. Let's first use the `tibble()` function to manually create a data frame of five fruit called `fruit_basket`. 
 
@@ -264,9 +253,9 @@ Error in sample.int(n, size, replace = replace, prob = prob) :
   cannot take a sample larger than the population when 'replace = FALSE'
 ```
 
-We get an error message telling us that we cannot take a sample that has more rows than the original data frame. This is because `rep_sample_n()` by defaults samples *without replacement*\index{sampling without replacement}. Once it samples a fruit from the basket, it does not put it back in. 
+We get an error message telling us that we cannot take a sample that has more rows than the original data frame. This is because `rep_sample_n()` by defaults samples *without replacement*. Once it samples a fruit from the basket, it does not put it back in. 
 
-<!-- Is this section on rep_sample_n() and replacement irrelevant once we remove the infer package? -->
+Now, let's use `rep_sample_n()` to take a sample of 50 balls from our virtual urn.
 
 
 ```{r}
@@ -333,7 +322,7 @@ Great! `r virtual_shovel_perc_red`% of `virtual_shovel`'s 50 balls were red! So 
 
 ### Using the virtual shovel 33 times
 
-Recall that in our tactile sampling exercise in Section \@ref(sampling-activity), we had 33 groups of students each use the shovel, yielding 33 samples of size 50 balls. We then used these 33 samples to compute 33 proportions. In other words, we repeated/replicated using the shovel 33 times. We can perform this repeated/replicated sampling virtually by once again using our virtual shovel function `rep_sample_n()`, but by adding the `reps = 33` argument. This is telling R that we want to repeat the sampling 33 times. 
+Recall that in our tactile sampling exercise in Section \@ref(sampling-activity), we had 33 groups of students each use the shovel, yielding 33 samples of size 50 balls. We then used these 33 samples to compute 33 proportions. In other words, we repeated/replicated using the shovel 33 times. We can perform this repeated/replicated sampling virtually by once again using our virtual shovel function `rep_sample_n()`, but by adding the `reps = 33` argument. This is telling R that we want to *repeat* the sampling 33 times. 
 
 We'll save these results in a data frame called `virtual_samples`. While we provide a preview of the first 10 rows of `virtual_samples` in what follows, we highly suggest you scroll through its contents using RStudio's spreadsheet viewer by running `View(virtual_samples)`. 
 
@@ -438,10 +427,9 @@ Once again, the most frequently occurring proportions of red balls occur between
 
 <!-- Gambling might flow naturally here. -->
 
-### Using different shovels {#different-shovels}
+### The effect of different shovel sizes {#different-shovels}
 
 Now say instead of just one shovel, you have three choices of shovels to extract a sample of balls with: shovels of size 25, 50, and 100.
-
 
 ```{r three-shovels, echo=FALSE, fig.align='center', fig.cap="Three shovels to extract three different sample sizes.", out.width='100%', purl=FALSE}
 knitr::include_graphics("06-sampling/images/three_shovels.png")
@@ -577,9 +565,7 @@ comparing_sampling_distributions
 
 Observe that as the sample size increases, the variation of the 1,000 replicates of the proportion of red decreases. In other words, as the sample size increases, there are fewer differences due to sampling variation and the distribution centers more tightly around the same value. Eyeballing Figure \@ref(fig:comparing-sampling-distributions), all three histograms appear to center around roughly 40%.
 
-<!-- Though standard deviation is an important part of the shovel size difference, this section is already pretty long and might be fine without the next code chunk. -->
-
-We can be numerically explicit about the amount of variation in our three sets of 1,000 values of `prop_red` using the \index{standard deviation} *standard deviation*. A standard deviation is a summary statistic that measures the amount of variation within a numerical variable. For all three sample sizes, let's compute the standard deviation of the 1,000 proportions red by running the following data wrangling code that uses the `sd()` summary function.
+We can be numerically explicit about the amount of variation in our three sets of 1,000 values of `prop_red` using the *standard deviation*. A standard deviation is a summary statistic that measures the amount of variation within a numerical variable. For all three sample sizes, let's compute the standard deviation of the 1,000 proportions red by running the following data wrangling code that uses the `sd()` summary function.
 
 ```{r, eval=FALSE}
 # n = 25
@@ -600,8 +586,6 @@ virtual_prop_red_100 %>%
 
 Let's compare these three measures of distributional variation in Table \@ref(tab:comparing-n).
 
-<!-- I think the idea of "as the sample size goes up, variation goes down" is already clear without this next addition. -->
-
 ```{r comparing-n, eval=TRUE, echo=FALSE}
 comparing_n_table <- virtual_prop %>% 
   group_by(n) %>% 
@@ -619,11 +603,9 @@ comparing_n_table  %>%
                 latex_options = c("hold_position"))
 ```
 
-As we observed in Figure \@ref(fig:comparing-sampling-distributions), as the sample size increases, the variation decreases. In other words, there is less variation in the 1,000 values of the proportion red. So as the sample size increases, our guesses at the true proportion of the urn's balls that are red get more precise. 
+As we observed in Figure \@ref(fig:comparing-sampling-distributions), as the sample size increases, the variation decreases. In other words, there is less variation in the 1,000 values of the proportion red. So as the sample size increases, our guesses at the true proportion of the urn's balls that are red get more precise. Therefore, our initial assumption that the larger shovel yields the most precise result is correct! 
 
-<!-- MF: This seems to indicate that the larger shovel is, as expected, the most precise. Maybe an additional paragraph explicitly stating which shovel size is best should be added here. -->
-
-### Using many shovels at once
+### Functions are your friend
 
 Note that in the last section, we ran more or less the same code three times, but with different sizes for our shovel (25, 50, and 100).  Whenever you find yourself writing the same code three or more times, you should write a *function* that does the same thing.  Let's look at the code that used a shovel of size 25 and calculated the proportion of balls that were red one more time:
 
@@ -651,8 +633,6 @@ use_shovel(x = urn, size = 25, reps = 1000)
 
 See that we now can create the object `virtual_samples_25` with the code `virtual_samples_25 <- use_shovel(x = urn, size = 25, reps = 1000)`.  This is far more succinct than our previous code, and it allows us to use a shovel of any size we'd like.
 
-<!-- MF: Why use two functions, rather than one? Given that functions aren't covered much prior to this chapter, it might be easier to interpret this section with one function and more clarification of how the function itself is working. -->
-
 Now, we can use our `use_shovel()` function to develop another function, `prop_red()`:
 
 ```{r}
@@ -674,11 +654,7 @@ virtual_prop_red_50 <- prop_red(x = urn, size = 50, reps = 1000)
 virtual_prop_red_100 <- prop_red(x = urn, size = 100, reps = 1000)
 ```
 
-But this still isn't the best way.  Note that we have three objects we need to deal with, `virtual_prop_red_25`, `virtual_prop_red_50`, and `virtual_prop_red_100`.  Furthermore, we don't actually know that the names are accurate! Perhaps we made a mistake and created `virtual_prop_red_50` with the code `virtual_prop_red_50 <- prop_red(25)`; our object name will now be misleading as to what's actually in the object.
-
-<!-- MF: Maybe a different introduction to storing in a tibble... -->
-
-Instead, let's store our results in a single tibble.  How can we do this?  By using `map()` to create a list column!
+But this still isn't the best way.  Note that we have three objects we need to deal with, `virtual_prop_red_25`, `virtual_prop_red_50`, and `virtual_prop_red_100`. Instead, let's store our results in a single tibble.  How can we do this?  By using `map()` to create a list column!
 
 First, we'll create a tibble called `shovels` that will have a variable named `shovel_size` with our values (25, 50, 100):
 
@@ -742,9 +718,7 @@ shovels_100 %>%
 
 This is interesting!  You may recognize that the standard deviation of the proportion red is declining at a rate proportional to the square root of the shovel size.   This is something you could have discovered by finding a formula in a statistics textbook, but it's easier to understand if you see it for yourself.
 
-<!-- MF: The square root of the shovel size comment might confuse readers. Is there a way to say this differently? Maybe in terms of exponential decrease? -->
-
-This is the power of running many analyses at once using `map_*` functions and list columns:  before, we could tell that the standard deviation was decreasing as the shovel size increased, but when only looking at shovel sizes of 25, 50, and 100, it wasn't very clear *how quickly* it was decreasing.
+This is the power of running many analyses at once using `map_*` functions and list columns: before, we could tell that the standard deviation was decreasing as the shovel size increased, but when only looking at shovel sizes of 25, 50, and 100, it wasn't very clear *how quickly* it was decreasing.
 
 ## Sampling framework {#sampling-framework}
 
@@ -774,9 +748,7 @@ Sixth is the idea of **representative sampling**. A sample is said to be a *repr
 
 Seventh is the idea of **generalizability**. We say a sample is generalizable if any results based on the sample can generalize to the population. In other words, does the value of the point estimate *generalize* to the population? In our sampling activity, can we generalize the sample proportion from our shovels to the entire urn? Using our mathematical notation, this is akin to asking if $\widehat{p}$ is a "good guess" of $p$?
 
-Eighth, we say **biased sampling** occurs if certain individuals or observations in a population have a higher chance of being included in a sample than others. We say a sampling procedure is *unbiased* if every observation in a population had an equal chance of being sampled. In our sampling activities, since we mixed all $N = 2400$ balls prior to each group's sampling and since each of the equally sized balls had an equal chance of being sampled, our samples were unbiased.
-
-<!-- MF: This may be a good location for an example of biased sampling. -->
+Eighth, we say **biased sampling** occurs if certain individuals or observations in a population have a higher chance of being included in a sample than others. We say a sampling procedure is *unbiased* if every observation in a population had an equal chance of being sampled. Had the red balls been much smaller than the white balls, and therefore more prone to falling through the shovel, our sample would have been *biased*. In our sampling activities, since we mixed all $N = 2400$ balls prior to each group's sampling and since each of the equally sized balls had an equal chance of being sampled, our samples were *unbiased*.
 
 Ninth and lastly, the idea of **random sampling**. We say a sampling procedure is *random* if we sample randomly from the population in an unbiased fashion. In our sampling activities, this would correspond to sufficiently mixing the urn before each use of the shovel. 
 
@@ -809,9 +781,9 @@ Now, for some important statistical definitions related to sampling. As a refres
 comparing_sampling_distributions
 ```
 
-These types of distributions have a special name: **sampling distributions**; \index{sampling distributions} their visualization displays the effect of sampling variation on the distribution of any point estimate, in this case, the sample proportion $\widehat{p}$. Using these sampling distributions, for a given sample size $n$, we can make statements about what values we can typically expect. 
+These types of distributions have a special name: **sampling distributions**; their visualization displays the effect of sampling variation on the distribution of any point estimate, in this case, the sample proportion $\widehat{p}$. Using these sampling distributions, for a given sample size $n$, we can make statements about what values we can typically expect. 
 
-For example, observe the centers of all three sampling distributions: they are all roughly centered around $0.4 = 40\%$. Furthermore, observe that while we are somewhat likely to observe sample proportions of red balls of $0.2 = 20\%$ when using the shovel with 25 slots, we will almost never observe a proportion of 20% when using the shovel with 100 slots. Observe also the effect of sample size on the sampling variation. As the sample size $n$ increases from 25 to 50 to 100, \index{sampling distributions!relationship to sample size} the variation of the sampling distribution decreases and thus the values cluster more and more tightly around the same center of around 40%. We quantified this variation using the standard deviation of our sample proportions, seeing that the standard deviation decreases with the square root of the sample size:
+For example, observe the centers of all three sampling distributions: they are all roughly centered around $0.4 = 40\%$. Furthermore, observe that while we are somewhat likely to observe sample proportions of red balls of $0.2 = 20\%$ when using the shovel with 25 slots, we will almost never observe a proportion of 20% when using the shovel with 100 slots. Observe also the effect of sample size on the sampling variation. As the sample size $n$ increases from 25 to 50 to 100, the variation of the sampling distribution decreases and thus the values cluster more and more tightly around the same center of around 40%. We quantified this variation using the standard deviation of our sample proportions, seeing that the standard deviation decreases with the square root of the sample size:
 
 ```{r, echo = FALSE, fig.cap = "Previously seen comparing standard deviations of proportions red for 100 different shovels"}
 shovels_100 %>%
@@ -821,7 +793,7 @@ shovels_100 %>%
        y = "Standard deviation of the proportion red")
 ```
 
-So as the sample size increases, the standard deviation of the proportion of red balls decreases. This type of standard deviation has another special name: \index{standard error} **standard error**. Standard errors quantify the effect of sampling variation induced on our estimates. In other words, they quantify how much we can expect different proportions of a shovel's balls that are red *to vary* from one sample to another sample to another sample, and so on. As a general rule, as sample size increases, the standard error decreases.
+So as the sample size increases, the standard deviation of the proportion of red balls decreases. This type of standard deviation has another special name: **standard error**. Standard errors quantify the effect of sampling variation induced on our estimates. In other words, they quantify how much we can expect different proportions of a shovel's balls that are red *to vary* from one sample to another sample to another sample, and so on. As a general rule, as sample size increases, the standard error decreases.
 
 Unfortunately, these names confuse many people who are new to statistical inference. For example, it's common for people who are new to statistical inference to call the "sampling distribution" the "sample distribution." Another additional source of confusion is the name "standard deviation" and "standard error." Remember that a standard error is merely a *kind* of standard deviation: the standard deviation of any point estimate from sampling. In other words, all standard errors are standard deviations, but not every standard deviation is necessarily a standard error. 
 
@@ -863,6 +835,20 @@ shovels_100 %>%
 
 Remember the key message of this last table: that as the sample size $n$ goes up, the "typical" error of your point estimate will go down, as quantified by the *standard error*.
 
+### To gamble or not to gamble?
+
+We also saw in the previous section that as your sample size $n$ increases, your point estimates will vary less and less and be more and more concentrated around the true population parameter. This variation is quantified by the decreasing *standard error*. In other words, the typical error of your point estimates will decrease. In our sampling exercise, as the sample size increased, the variation of our sample proportions $\widehat{p}$ decreased. You can observe this behavior in Figure \@ref(fig:comparing-sampling-distributions-3).  This is also known as having a *precise* estimate. 
+
+So random sampling ensures our point estimates are *accurate*, while on the other hand having a large sample size ensures our point estimates are *precise*. While the terms "accuracy" and "precision" may sound like they mean the same thing, there is a subtle difference. Accuracy describes how "on target" our estimates are, whereas precision describes how "consistent" our estimates are. Figure \@ref(fig:accuracy-vs-precision) illustrates the difference.
+
+
+```{r accuracy-vs-precision, echo=FALSE, fig.cap="Comparing accuracy and precision.", purl=FALSE, out.width="75%", out.height="75%"}
+knitr::include_graphics("06-sampling/images/accuracy_vs_precision.jpg")
+```
+
+<!-- DRAFT: Let's apply these ideas to gambling. If we were to bet money on the proportion of the red balls in the urn, and we could perform virtual simulations beforehand, we would want the most *accurate* and most *precise* estimate. Here, our *estimand*, the thing we want to know, would be the proportion of red balls in the urn. INCORP DISCUSSION OF PREDICTION UNCERTAINTY, UNMODELED VARIATION, PARAMETER UNCERTAINTY, MODEL STRUCTURE. -->
+
+<!-- MF: Stick with urn example for gambling? Something less predictable & involving more unknowns might be better for explanining model structure, paramater uncertainty, prediction uncertainty, etc. On the other hand, I don't want this chapter to get too lengthy.  -->
 
 ### The moral of the story {#moral-of-the-story}
 
@@ -870,7 +856,7 @@ Let's recap this section so far. We've seen that if a sample is generated at ran
 
 However, what do we mean by our point estimate being a "good guess"? Sometimes, we'll get an estimate that is less than the true value of the population parameter, while at other times we'll get an estimate that is greater. This is due to sampling variation. However, despite this sampling variation, our estimates will "on average" be correct and thus will be centered at the true value. This is because our sampling was done at random and thus in an unbiased fashion. 
 
-In our sampling activities, sometimes our sample proportion $\widehat{p}$ was less than the true population proportion $p$, while at other times it was greater. This was due to the sampling variability. However, despite this sampling variation, our sample proportions $\widehat{p}$ were "on average" correct and thus were centered at the true value of the population proportion $p$. This is because we mixed our urn before taking samples and thus the sampling was done at random and thus in an unbiased fashion. This is also known as having an *accurate* estimate\index{accuracy}.
+In our sampling activities, sometimes our sample proportion $\widehat{p}$ was less than the true population proportion $p$, while at other times it was greater. This was due to the sampling variability. However, despite this sampling variation, our sample proportions $\widehat{p}$ were "on average" correct and thus were centered at the true value of the population proportion $p$. This is because we mixed our urn before taking samples and thus the sampling was done at random and thus in an unbiased fashion. This is also known as having an *accurate* estimate.
 
 What was the value of the population proportion $p$ of the $N$ = 2400 balls in the actual urn that were red? There were 900 red balls, for a proportion red of 900/2400 = 0.375 = 37.5%! How do we know this? Did the authors do an exhaustive count of all the balls? No! They were listed in the contents of the box that the urn came in! Hence we were able to make the contents of the virtual `urn` match the tactile urn:
 
@@ -911,18 +897,6 @@ if(knitr::is_latex_output()){
 }
 ```
 
-We also saw in this section that as your sample size $n$ increases, your point estimates will vary less and less and be more and more concentrated around the true population parameter. This variation is quantified by the decreasing *standard error*. In other words, the typical error of your point estimates will decrease. In our sampling exercise, as the sample size increased, the variation of our sample proportions $\widehat{p}$ decreased. You can observe this behavior in Figure \@ref(fig:comparing-sampling-distributions-3).  This is also known as having a *precise* estimate\index{precision}. 
-
-So random sampling ensures our point estimates are *accurate*, while on the other hand having a large sample size ensures our point estimates are *precise*. While the terms "accuracy" and "precision" may sound like they mean the same thing, there is a subtle difference. Accuracy describes how "on target" our estimates are, whereas precision describes how "consistent" our estimates are. Figure \@ref(fig:accuracy-vs-precision) illustrates the difference.
-
-<!-- MF: So which one of the simulated sampling activities was most precise & accurate? The 100 shovel performed 1000 times? -->
-
-```{r accuracy-vs-precision, echo=FALSE, fig.cap="Comparing accuracy and precision.", purl=FALSE, out.width="75%", out.height="75%"}
-knitr::include_graphics("06-sampling/images/accuracy_vs_precision.jpg")
-```
-
-<!-- MF: Maybe apply the sample examples done in this chapter overlayed over the image? For example, under high precision/low accurancy, put "biased sampling with large sample size". Under low precision/low accuracy, put "biased sample with small sample size", etc. -->
-
 At this point, you might be asking yourself: "If we already knew the true proportion of the urn's balls that are red was 37.5%, then why did we do any sampling?" You might also be asking: "Why did we take 1,000 repeated samples of various sizes (n = 1 to n = 100)? Shouldn't we be taking only *one* sample that's as large as possible?". If you did ask yourself these questions, your suspicion is merited! 
 
 The sampling activity involving the urn is merely an *idealized version* of how sampling is done in real life. We performed this exercise only to study and understand:
@@ -931,7 +905,6 @@ The sampling activity involving the urn is merely an *idealized version* of how 
 1. The effect of sample size on sampling variation.
 
 This is not how sampling is done in real life. In a real-life scenario, we won't know what the true value of the population parameter is. Furthermore, we wouldn't take 1,000 repeated/replicated samples, but rather a single sample that's as large as we can afford. In the next section, let's now study a real-life example of sampling: polls.
-
 
 
 ## Case study: Polls {#sampling-case-study}
@@ -946,22 +919,22 @@ On December 4, 2013, National Public Radio in the US reported on a poll of Presi
 
 Let's tie elements of the real-life poll in this new article with our "tactile" and "virtual" urn activity from Sections \@ref(sampling-activity) and \@ref(sampling-simulation) using the terminology, notations, and definitions we learned in Section \@ref(sampling-framework). You'll see that our sampling activity with the urn is an idealized version of what pollsters are trying to do in real life. 
 
-First, who is the **(Study) Population** of $N$ individuals or observations of interest? \index{sampling!population}
+First, who is the **(Study) Population** of $N$ individuals or observations of interest? 
 
 * Urn: $N$ = 2400 identically sized red and white balls
 * Obama poll: $N$ = ? young Americans aged 18-29
 
-Second, what is the **population parameter**? \index{sampling!population parameter}
+Second, what is the **population parameter**? 
 
 * Urn: The population proportion $p$ of *all* the balls in the urn that are red.
 * Obama poll: The population proportion $p$ of *all* young Americans who approve of Obama's job performance.
 
-Third, what would a **census** look like? \index{sampling!census}
+Third, what would a **census** look like?
 
 * Urn: Manually going over all $N$ = 2400 balls and exactly computing the population proportion $p$ of the balls that are red.
 * Obama poll: Locating all $N$ young Americans and asking them all if they approve of Obama's job performance. In this case, we don't even know what the population size $N$ is!
 
-Fourth, how do you perform **sampling** to obtain a sample of size $n$? \index{sampling}
+Fourth, how do you perform **sampling** to obtain a sample of size $n$?
 
 * Urn: Using a shovel with $n$ slots. 
 * Obama poll: One method is to get a list of phone numbers of all young Americans and pick out $n$ phone numbers. In this poll's case, the sample size of this poll was $n = 2089$ young Americans.
@@ -969,29 +942,29 @@ Fourth, how do you perform **sampling** to obtain a sample of size $n$? \index{s
 Fifth, what is your **point estimate (AKA sample statistic)** of the unknown population parameter?
 
 * Urn: The sample proportion $\widehat{p}$ of the balls in the shovel that were red. 
-* Obama poll: The sample proportion $\widehat{p}$ of young Americans in the sample that approve of Obama's job performance. In this poll's case, $\widehat{p} = 0.41 = 41\%$, the quoted percentage in the second paragraph of the article. \index{point estimate} \index{sample statistic}
+* Obama poll: The sample proportion $\widehat{p}$ of young Americans in the sample that approve of Obama's job performance. In this poll's case, $\widehat{p} = 0.41 = 41\%$, the quoted percentage in the second paragraph of the article. 
 
-Sixth, is the sampling procedure **representative**? \index{sampling!representative}
+Sixth, is the sampling procedure **representative**?
 
 * Urn: Are the contents of the shovel representative of the contents of the urn? Because we mixed the urn before sampling, we can feel confident that they are. 
 * Obama poll: Is the sample of $n = 2089$ young Americans representative of *all* young Americans aged 18-29? This depends on whether the sampling was random.
 
-Seventh, are the samples **generalizable** to the greater population? \index{generalizability}
+Seventh, are the samples **generalizable** to the greater population?
 
 * Urn: Is the sample proportion $\widehat{p}$ of the shovel's balls that are red a "good guess" of the population proportion $p$ of the urn's balls that are red? Given that the sample was representative, the answer is yes.
 * Obama poll: Is the sample proportion $\widehat{p} = 0.41$ of the sample of young Americans who supported Obama a "good guess" of the population proportion $p$ of all young Americans who supported Obama at this time in 2013? In other words, can we confidently say that roughly 41% of *all* young Americans approved of Obama at the time of the poll? Again, this depends on whether the sampling was random.
 
-Eighth, is the sampling procedure **unbiased**? In other words, do all observations have an equal chance of being included in the sample? \index{bias}
+Eighth, is the sampling procedure **unbiased**? In other words, do all observations have an equal chance of being included in the sample?
 
 * Urn: Since each ball was equally sized and we mixed the urn before using the shovel, each ball had an equal chance of being included in a sample and hence the sampling was unbiased. 
 * Obama poll: Did all young Americans have an equal chance at being represented in this poll? Again, this depends on whether the sampling was random.
 
-Ninth and lastly, was the sampling done at **random**? \index{sampling!random}
+Ninth and lastly, was the sampling done at **random**? 
 
 * Urn: As long as you mixed the urn sufficiently before sampling, your samples would be random.
-* Obama poll: Was the sample conducted at random? We can't answer this question without knowing about the *sampling methodology*\index{sampling methodology} used by Kennedy School's Institute of Politics at Harvard University. We'll discuss this more at the end of this section.
+* Obama poll: Was the sample conducted at random? We can't answer this question without knowing about the *sampling methodology* used by Kennedy School's Institute of Politics at Harvard University. We'll discuss this more at the end of this section.
 
-In other words, the poll by Kennedy School's Institute of Politics at Harvard University  can be thought of as *an instance* of using the shovel to sample balls from the urn. Furthermore, if another polling company conducted a similar poll of young Americans at roughly the same time, they would likely get a different estimate than 41%. This is due to *sampling variation*.
+In other words, the poll by Kennedy School's Institute of Politics at Harvard University can be thought of as *an instance* of using the shovel to sample balls from the urn. Furthermore, if another polling company conducted a similar poll of young Americans at roughly the same time, they would likely get a different estimate than 41%. This is due to *sampling variation*.
 
 Let's now revisit the sampling paradigm from Subsection \@ref(terminology-and-notation):
 
@@ -1019,12 +992,14 @@ Let's now revisit the sampling paradigm from Subsection \@ref(terminology-and-no
 * the reported sample approval rating of 41% of these 2089 young Americans is a **good guess** of the true approval rating among all young Americans in 2013, thus
 * instead of performing an expensive census of all young Americans in 2013, we can **infer** about all young Americans in 2013 using polling.
 
-So as you can see, it was critical for the sample obtained by Kennedy School's Institute of Politics at Harvard University to be truly random in order to infer about *all* young Americans' opinions about Obama. Was their sample truly random? It's hard to answer such questions without knowing about the *sampling methodology* they used\index{sampling methodology}. For example, if this poll was conducted using only mobile phone numbers, people without mobile phones would be left out and therefore not represented in the sample. What about if Kennedy School's Institute of Politics at Harvard University conducted this poll on an internet news site? Then people who don't read this particular internet news site would be left out. Ensuring that our samples were random was easy to do in our sampling urn exercises; however, in a real-life situation like the Obama poll, this is much harder to do.
+So as you can see, it was critical for the sample obtained by Kennedy School's Institute of Politics at Harvard University to be truly random in order to infer about *all* young Americans' opinions about Obama. Was their sample truly random? It's hard to answer such questions without knowing about the *sampling methodology* they used. 
+
+For example, what if Kennedy School's Institute of Politics at Harvard University conducted this poll using only mobile phone numbers? People without mobile phones would be left out and therefore not represented in the sample. This flaw is an example of **censoring**, the exclusion of certain datapoints due to an issue with data collection. This results in an incomplete observation and increases the prediction uncertainty of the estimand, Obama's approval rating amount young Americans. Ensuring that our samples were random was easy to do in our sampling urn exercises; however, in a real-life situation like the Obama poll, this is much harder to do.
 
 
 ### Central Limit Theorem {#sampling-conclusion-central-limit-theorem}
 
-What you visualized in Figures \@ref(fig:comparing-sampling-distributions) and \@ref(fig:comparing-sampling-distributions-2) and summarized in Table \@ref(tab:comparing-n) was a demonstration of a famous theorem, or mathematically proven truth, called the \index{Central Limit Theorem} *Central Limit Theorem*. It loosely states that when sample means are based on larger and larger sample sizes, the sampling distribution of these sample means becomes both more and more normally shaped and more and more narrow.
+What you visualized in Figures \@ref(fig:comparing-sampling-distributions) and \@ref(fig:comparing-sampling-distributions-2) and summarized in Table \@ref(tab:comparing-n) was a demonstration of a famous theorem, or mathematically proven truth, called the *Central Limit Theorem*. It loosely states that when sample means are based on larger and larger sample sizes, the sampling distribution of these sample means becomes both more and more normally shaped and more and more narrow.
 
 In other words, their sampling distribution increasingly follows a *normal distribution* and the variation of these sampling distributions gets smaller, as quantified by their standard errors.
 
@@ -1037,7 +1012,15 @@ knitr::include_graphics("06-sampling/images/CLT_video_preview.png")
 
 ## Rubin Causal Model
 
-<!-- MF: Here, we are taking the blood pressure example and applying it to sampling/RCM by placing the unknown condition as the population that didn't respond to the query? -->
+Now that we have mastered sampling, let's consider how these scenarios connect to the Rubin Causal Model (RCM). For the most part, they don't! 
+
+Remember the RCM's slogan: *No causation without manipulation*. In both the urn example and our Obama poll, we are not manipulating our units (the balls and the opinions of the pollees, respectively). There are not a control and treatment condition to compare; there is no causal effect to measure. That must mean that the RCM is completely irrelevant, right?
+
+Not exactly. Certain elements of the RCM *can* be applied here. 
+
+In both the RCM and in our exercises, randomization is *incredibly important* to ensure validity and precision. In the RCM, this randomization exists in the form of  **random assignment**, the act of assigning units a condition (control or treatment) randomly. In sampling, this randomization exists in the form of **random sampling**.
+
+<!-- MF: Still wondering how to incorporate RCM into this chapter, since we are not dealing with assignment & two realities (one observed, one not observed) for each ball. Should this section focus on proving that RCM is still relevant, or explaining that RCM can't be applied perfectly to the urn scenario? -->
 
 <!-- With a big enough sample, we can probably get a pretty good measure of the average blood pressure for that sample.  Have we solved our problem?  That is, can we now assume that our estimate of the average blood pressure in our sample is a good estimate of the average blood pressure in the U.S. adult population? -->
 
@@ -1099,7 +1082,5 @@ In this chapter, we performed both tactile and virtual sampling exercises to inf
 Recall in our Obama poll case study in Section \@ref(sampling-case-study) that based on this particular sample, the best guess by Kennedy School's Institute of Politics at Harvard University of the U.S. President Obama's approval rating among all young Americans was 41%. However, this isn't the end of the story. If you read the article further, it states:
 
 > The online survey of 2,089 adults was conducted from Oct. 30 to Nov. 11, just weeks after the federal government shutdown ended and the problems surrounding the implementation of the Affordable Care Act began to take center stage. The poll's margin of error was plus or minus 2.1 percentage points.
-
-<!-- MF: What is the relevance of the above passage, other than the margin of error? To clarify, the shutdown & ACA comment seems irrelevant. -->
 
 Note the term *margin of error*, which here is "plus or minus 2.1 percentage points." Most polls won't produce an estimate that's perfectly right; there will always be a certain amount of error caused by *sampling variation*. The margin of error of plus or minus 2.1 percentage points is saying that a typical range of errors for polls of this type is about $\pm$ 2.1%, in words from about 2.1% too small to about 2.1% too big. We can restate this as the interval of $[41\% - 2.1\%, 41\% + 2.1\%] = [37.9\%, 43.1\%]$ (this notation indicates the interval contains all values between 37.9% and 43.1%, including the end points of 37.9% and 43.1%). We'll see in the next chapter that such intervals are known as *confidence intervals*.
