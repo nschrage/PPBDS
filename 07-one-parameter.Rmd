@@ -34,6 +34,8 @@ library(patchwork)
 
 <!-- e) Relatedly, what if I told you that your 2018F data did not include one class (or ten classes), which was (were) dropped at random from the data by mistake. What is your guess as to the rating of that single class, or the rating of the average of the 10 classes or the highest of the 10 classes? What is your confidence interval for that? Want to bet? -->
 
+<!-- TA: is this estimands or something?
+
 <!-- All of this allows us to hit all the themes from style.Rmd even though we are only estimating one parameter. I think that this is enough for one chapter, especially if we keep the pennies around. No need to get into other data sets. -->
 
 <!-- 2) Need to get rid of `rep_sample_n()` and replace with `rsample:boostraps()`. Example usage [here](https://juliasilge.com/blog/beer-production/). Do this first, just to get warmed up. Make sure everything still works! Consult this [useful tutorial](https://www.danielphadley.com/bootstrap_tutto/) for the bootstraps function. We can keep everything else with the penny example the same, for now. -->
@@ -731,6 +733,8 @@ perc_cis_80
 
 <!-- DK: Need to make variable name choice, like `boots` more consistent across chapters. Wouldn't `data` be better? Also, the next chunk of code is very confusing! Isn't there an easier way? We do something like this in each of the next few chapters. Worth getting right! -->
 
+<!-- TA: so should i refer to everything as data even though it may override previous code? Im assuming you want me to use the confidence interval tidy approach but with bootstraps?-->
+
 Now that we have a list column called `boots` for each of our original 10 samples, we can now get 1,000 estimates per sample of `prop_red` from the bootstrap:
 
 ```{r}
@@ -1004,6 +1008,8 @@ lm(year ~ 1, data = pennies_sample)
 
 <!-- DK: Do we explain this later? If so, provide a link here. -->
 
+<!-- TA: Like link to the chapter? -->
+
 Once we learn about regression, we'll learn why this is labeled the "intercept."  The key thing to note right now is that `lm()` takes two main arguments, `formula` and `data`.  The notation `year ~ 1` will get the mean of `year`.
 
 The **broom** package makes it easier to work with `lm()` model objects.  In particular, the function `tidy()` has the option `conf.int = TRUE`, which we can use to get a confidence interval:
@@ -1025,6 +1031,8 @@ lm(year ~ 1, data = pennies_sample) %>%
 ```
 
 <!-- DK: Do we need more discussion here? In what sense is this approximation "close enough?" -->
+<!-- TA: Is it because there were many bootstrap CI but only one is used with lm? -->
+
 
 These are not identical to our bootstrap confidence interval estimates, but they are close enough.  Thus, if you are interested in constructing a confidence interval for a mean, you can use `lm()` and `tidy()` as a shortcut. `tidy()` also has an argument, `conf.level`, which allows us to specify the confidence level. By default, it is 0.95.
 
@@ -1035,10 +1043,7 @@ In addition to using `lm()`, we can also use bootsrapping to extract confidence 
 To use bootstrapping, we will need the **tidyverse** and **rsample** packages. The **rsample** package gives us commands to use for bootstrapping. For the purpose of this example, let's try to find the confidence interval for the mean income in our trains dataset from Chapter 3. 
 
 ```{r}
-<<<<<<< HEAD
 
-=======
->>>>>>> master
 library(tidyverse)
 library(rsample)
 library(PPBDS.data)
@@ -1093,6 +1098,58 @@ Furthermore, it is important that we understand what a residual is. The residual
 But the reason why residuals are so important is that they help explain why we can't make perfect predictions, especially for an individual. In our experiments, there is a lot of unmodeled variation, or residual variation. Residual variance refers to the variance of residuals, and occurs because randomness in our data is inherently intrinsic. There will be randomness in our data even if we have full knowldge of our data. This thus implies that we cannot really make fully accurate predictions of the future; we can only make probabilistic predictions. It is essentially difficult to control for residual variation, and predictions we get from methods like bootstrapping should not be taken as the final concensus. 
 
 I might need to talk more about unmodeled variation here.
+
+
+## Case study: Looking at 2018 Qscore data
+
+```{r, message=FALSE}
+library(remotes)
+remotes::install_github("davidkane9/PPBDS.data")
+library(PPBDS.data)
+```
+
+
+```{r}
+
+qscoresdata <- qscores %>%
+  filter(term == "2018F") %>%
+  select(course_name, department, rating)
+
+set.seed(9)
+sampleqscore <- sample_n(qscoresdata, 50, replace = FALSE)
+
+qscoreboot <- bootstraps(sampleqscore, times = 10)
+
+derive_mean_rating <- function(splits) {
+ x <- analysis(splits)
+ return(mean(x$rating))
+}
+
+qscoreboot$mean_rating <- map_dbl(qscoreboot$splits, derive_mean_rating)
+quantile(qscoreboot$mean_rating, probs = c(.025, .975))
+
+```
+
+<!-- TA: Is this you want it done with bootstraps? Am a little confused how the directions ask to make bootstraps from one sample -->
+
+
+```{r}
+set.seed(9)
+
+qscoresamples <- rep_sample_n(qscores, 50, replace = TRUE, reps = 1000)
+qscorebootstraps <- bootstraps(qscoresamples, times = 1000)
+
+derive_mean_rating <- function(splits) {
+ x <- analysis(splits)
+ return(mean(x$rating))
+}
+
+qscorebootstraps$mean_rating <- map_dbl(qscorebootstraps$splits, derive_mean_rating)
+quantile(qscorebootstraps$mean_rating, probs = c(.025, .975))
+```
+
+<!-- TA: Based on the directions, it seems that i need to use rep_sample_n but Im confused how we are then going to apply bootstraps function to those samples.  -->
+
 
 ## Case study: Is yawning contagious? {#case-study-two-prop-ci}
 
