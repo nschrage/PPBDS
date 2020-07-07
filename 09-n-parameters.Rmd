@@ -5,15 +5,84 @@ output_yaml:
 
 # N Parameters {#n-parameters}
 
+Having created models with one parameter in Chapter \@ref(#one-parameter) and two parameters in Chapter \@ref(#two-parameters), you are now ready to make the jump to $N$ parameters.  The more parameters we include in our models, the more flexible they can become. But we must be careful of *overfitting*, of making models which are inaccurate because they don't use enough data to accurately estimate those parameters. The tension between overfitting and underfitting is central to the practice of data science.
+
+## Explorator Data Analysis of `shaming`
+
+Begin by loading packages which we have used in previous chapters.
+
 ```{r include=FALSE}
 knitr::opts_chunk$set(echo=FALSE, tidy=FALSE)
 library(PPBDS.data)
-library(rstanarm)
+library(skimr)
 library(broom)
 library(tidyverse)
 ```
 
-Having created models with one parameter in Chapter \@ref(#one-parameter) and two parameters in Chapter \@ref(#two-parameters), you are now ready to make the jump to $N$ parameters. 
+Consider the `shaming` tibble from **PPBDS.data**.
+
+<!-- Provide a EDA of the shaming tibble, perhaps restricting it to a subset of the provided columns. Follow the lead of chapter 10. Make sure to use `glimpse()`, `sample_n()` and `skim()`. Readers need to know understand what the dependent variable means, along with left-hand side variables like treatment. -->
+
+```{r}
+glimpse(shaming)
+```
+
+```{r}
+shaming %>% 
+  sample_n(5)
+```
+
+```{r}
+shaming %>% 
+  select(vote_06, treatment, sex) %>% 
+  skim()
+```
+
+
+
+## Causal Effects of `treament`
+
+<!-- This follows the discussion in chapter 8 very closely. See below for some key R code, which must be explained. (Obviously, you can use other code as well.) -->
+
+```{r}
+shaming %>% 
+  lm(data = ., vote_06 ~ treatment - 1)
+```
+
+```{r}
+shaming %>% 
+  lm(data = ., vote_06 ~ treatment - 1) %>% 
+  tidy(conf.int = TRUE)
+```
+
+```{r}
+shaming %>% 
+  lm(data = ., vote_06 ~ treatment - 1) %>% 
+  tidy(conf.int = TRUE, conf.level = 0.99) %>% 
+  select(term, conf.low, estimate, conf.high)
+```
+
+
+<!-- Once we talk about these things --- and, again, this is exactly what we have talked about in chapter 8 --- we can do a bit more. Like discuss how we are using 99%, because there is nothing magical aboyt 95%, other than convention. I also think it would be fun to show a nice graphic of this, highlighting how the estimates for Civic and Hawthorne overlap.  -->
+
+
+### Interactions
+
+<!-- This is new. With only two parameters, we can't really look at interaction effects. Need to discuss interaction effects in general. Also, note that heterogenous treatment effects are the same thing as interaction effects that involve a treatment effect as one of the variables.  -->
+
+<!-- Feel free to build up this code, and other examples, more slowly than I am doing it here. -->
+
+```{r}
+shaming %>% 
+  lm(data = ., vote_06 ~ sex*treatment - 1) %>% 
+  tidy() %>% 
+  select(term, estimate)
+```
+
+<!-- Takes a while to explain what all this means. -->
+
+
+
 
 <!-- Two key issues: 1) Interpreting lots of parameters in a model. interactions, heterogenous treatment effects. shaming using lm(). 
 
