@@ -25,6 +25,18 @@ library(webshot)
 
 <!-- Third, connect all this to the central theme of 98% of social science research --- using observational data to infer causation by treating the assignment mechanism as being close enough to random. Let's discuss. -->
 
+<!-- Experiments in which you know tau is some positive number.
+
+Experiment with known, constant, positive treatment effect and 6 people. (Or whatever small number you like. ) Does random asignment guarantee that we get a good estimate of the treatment effect? No! Easy to get an "unlucky" assignment. But, cool thing, if you try all posssible assignments, the average result will be the treatment effect. This shows why we say that randomized assignment generates an "unbiased" estimate of the treatment effect. The average answer it gives is good. But it is also variable! -->
+
+<!-- Now, same thing with 10,000 (same treatment effect size). Can't calculate all possible assignments. But we can sample. Two things will be true. Average of this sample will be the (true) treatment. And it will be much more precisely estimated. -->
+
+<!-- Overlap the density estimates, the second is much more peaked. -->
+
+<!-- Experiments in which you assume tau = 0. That is what a permutation test is.  -->
+
+
+
 
 <!-- 2. Permutation example and code. Biggest current hole is the lack of a permutation test coding example. When we do this, we will want to create the permutations "by hand," rather than relying on an R package for doing so, I think that there are some elegant ways to do this with tidyverse, like crossing() or expand(). Maybe rsample::bootstraps()?  -->
 
@@ -57,13 +69,10 @@ knitr::include_graphics("03-rubin-causal-model/images/enos_seal.png")
 ```
 
 The Rubin Causal Model (RCM) is based on the idea of **potential outcomes.** For example, let's use a social experiment that looked at exclusionary attitudes of commuters on a train platform. The commuters were exposed to one of two possible conditions, and then their attitudes towards immigrants were measured. One condition was being on a train platform near individuals speaking Spanish. The other was being on a train platform with no one in the vicinity. To calculate the causal effect of having Spanish speakers nearby, we need to compare the outcome for an individual in one alternative future (with Spanish speakers) to another (without Spanish speakers). Since it is impossible to see both potential outcomes at once, one of the potential outcomes is always missing. This dilemma is the *Fundamental Problem of Causal Inference*. 
-<!-- SJ: Confused here, it seems it is assumed we know why it is impossible to see both outcomes at once? as a reader I don't know why that is maybe a little more explanation there? CB: Emailed with Shea, going to add a section about how we cannot assume homogeneity later in the chapter? Or in this section? and reference it here so that if people are confused they can reference that? -->
+
+<!-- Going to add a section about how we cannot assume homogeneity later in the chapter? Or in this section? and reference it here so that if people are confused they can reference that? The relationship between the counterfactual and the fundamental problem of causal inference could be made more clear here. -->
 
 In most circumstances, we are interested in comparing two futures, one generally termed "treatment" and the other "control." These labels are somewhat arbitrary. The difference between the potential outcome under treatment and the potential outcome under control is called a "causal effect" or a "treatment effect."  The scenario that didn't actually happen, and thus that we didn't observe, is called a "counterfactual." 
-
-<!-- EC: The relationship between the counterfactual and the fundamental problem of causal inference could be made more clear here -->
-
-<!-- MB: What do you mean when you call the labels arbitrary? Doesn't relate in context to rest of paragraph as stands -->
 
 Thus, according to the RCM, the **causal effect** of being on the platform with Spanish speakers is the *difference* between what your attitude would have been under "treatment" (with Spanish speakers) and "control" (no Spanish speakers).
 
@@ -351,7 +360,9 @@ tibble(subject = c("Yao", "Emma", "Cassidy", "Thamid", "Diego"),
 ```
 
 Now we need to find an estimate for $\tau$ in order to fill in our table with numbers that we can begin to understand. Again, we are assuming $Y_t(u) - Y_c(u) = \tau$. 
-<!-- CB: Should I be explaining how to find average treatment effect in this section? Because it will be the same as the average treatment effect later on with the only difference being that we are emphasizing in the later section that we aren't trying to understand individuals and fill in the table but rather just want to know the average more generally. But I also feel like it is necessary to set up the two parameters section. --> 
+
+<!-- CB: Should I be explaining how to find average treatment effect in this section? No! Because it will be the same as the average treatment effect later on with the only difference being that we are emphasizing in the later section that we aren't trying to understand individuals and fill in the table but rather just want to know the average more generally. But I also feel like it is necessary to set up the two parameters section. --> 
+
 That equation outlines a clear way in which we can estimate $\tau$. We can subtract the average of the observed control values from the observed treated values. $$((13 + 11 + 5) / 3) - ((10 + 12) /  2)$$ $$9.67 - 11 = -1.33$$
 This gives us an estimate of $-1.33$ for $\tau$. Let's fill in our missing values is by adding $\tau$ to the observed value under control (for units in the control group) or by subtracting $\tau$ from the observed value under treatment (for units in the treatment group), like so:
 
@@ -476,7 +487,9 @@ tibble(subject = c("Yao", "Emma", "Cassidy", "Thamid", "Diego"),
             location = cells_body(columns = vars(subject)))
 ```
 
-We now have two different estimates for Emma. When we estimate her Attitude if Control using an assumption of constant treatment effect, we estimate $Y_c(Emma)$ to be 12.33. When we estimate assuming treatment effect is constant across sexes, we get $Y_c(Emma)$ to be 10. This difference between our estimates for Emma is the heart of inference. <!-- CB: I am confused now because thinking about no causation without manipulation. Is it possible to say that gender does not "cause" the effect, but rather treatment effect just varies by gender? Or no? -->
+We now have two different estimates for Emma. When we estimate her Attitude if Control using an assumption of constant treatment effect, we estimate $Y_c(Emma)$ to be 12.33. When we estimate assuming treatment effect is constant across sexes, we get $Y_c(Emma)$ to be 10. This difference between our estimates for Emma is the heart of inference. 
+
+<!-- CB: I am confused now because thinking about no causation without manipulation. Is it possible to say that gender does not "cause" the effect, but rather treatment effect just varies by gender? Or no? -->
 
 <!-- SJ: It might be helpful to explain what the assumption is that is being made in the "$\tau \times age$" model, it may seem obvious to you writing it but it is helpful for the reader to get a nice solid example of what the assumption is, what it looks like, and why it's important  -->
 
@@ -551,7 +564,6 @@ So, a heterogeneous treatment effect can both explain individual variation, as w
 The approach of distributionally filling in (or multiply imputing) the missing values is intuitive and reveals the natural uncertainty of inference." ^[Rubin 2011]
 `r tufte::quote_footer('--- Don Rubin')`
 
-<!-- CB: This needs to go somewhere later -- right before confounding  -->
 
 <!-- We may not just be interested in the effect on Yao, a person in our sample, but on Eliot, for whom we observe neither potential outcome.  Even if we have a good estimate of the ATE for *this sample*, it may be a bad estimate of the ATE for the *population* if not all people have the same chance of being included in our sample.  So reducing our uncertainty about Yao may still not answer the question we really care about. There is still a lot of missing data. -->
 
@@ -728,7 +740,6 @@ Again, there are many possible estimands.  It's worth noting when the treatments
 
 Instead of considering the treatment in terms of duration, we could also consider different volume levels at which Spanish is being spoken. We might assume that the volume at which the Spanish is being spoken on the train platform could influence potential outcomes, so we are interested in it for that reason:
 
-<!-- SJ: It could be helpful to add a note saying, "In other words, the louder/quieter the Spanish is being spoken on the train likely influences the outcome." This may seem obvious but it is just very helpful to be constantly reminded the larger picture of the choices we make as data scientists and reasons for creating tibbles with different treatments CB: Done?   -->
 
 ```{r, echo = FALSE}
 # First, we create a tibble with the values we want for the table
