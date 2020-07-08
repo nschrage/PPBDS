@@ -14,7 +14,7 @@
 
 <meta name="author" content="David Kane" />
 
-<meta name="date" content="2020-06-28" />
+<meta name="date" content="2020-07-07" />
 
 <script type="text/x-mathjax-config">
 MathJax.Hub.Config({
@@ -142,7 +142,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <a href="functions.html"><span class="toc-section-number">4</span> Functions</a>
 <a href="probability.html"><span class="toc-section-number">5</span> Probability</a>
 <a id="active-page" href="sampling.html"><span class="toc-section-number">6</span> Sampling</a><ul class="toc-sections">
-<li class="toc"><a href="#sampling-activity"> Sampling urn activity</a></li>
+<li class="toc"><a href="#sampling-activity"> Real sampling activity</a></li>
 <li class="toc"><a href="#sampling-simulation"> Virtual sampling</a></li>
 <li class="toc"><a href="#sampling-framework"> Sampling framework</a></li>
 <li class="toc"><a href="#sampling-case-study"> Case study: Polls</a></li>
@@ -157,7 +157,6 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <a href="classification.html"><span class="toc-section-number">12</span> Discrete Response</a>
 <a href="appendices.html">Appendices</a>
 <a href="productivity.html">Productivity</a>
-<a href="getting-help.html">Getting Help</a>
 <a href="shiny.html">Shiny</a>
 <a href="maps.html">Maps</a>
 <a href="animation.html">Animation</a>
@@ -175,13 +174,12 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <h1>
 <span class="header-section-number">Chapter 6</span> Sampling</h1>
 <!-- Priorities: -->
-<!-- 1) Remove library(moderndive) and anything which depends in it. This may require creating our own copy of some of its built in datasets, or replacing them. Example: the code uses `tactile_prop_red` a dataset in **moderndive**. So, create, on the fly, a similar looking data set and just use that. (Hint: IN your own code chunk, use the include=FALSE code chunk option.) -->
-<!-- 2) Remove library(infer). This means that we need to replace `rep_sample_n()`. Chapters 7 and later use `rsample::bootstraps()` in its place. Here is a [nice example](https://juliasilge.com/blog/beer-production/) of how to use it and [this excellent introduction](https://afit-r.github.io/bootstrapping). Should we do that here? Or perhaps we just have three (?) lines of R code which do what `rep_sample_n()` use to do? Take a look at the current version of chapter 7 for one approach. -->
-<!-- 3) Read the current versions of 05-probability.Rmd. This is tricky and important stuff. The below comments only make sense with that background knowledge. The biggest changes involving connecting the current chapter to that chapter and, to a lesser extent, to the Rubin Causal Model chapter. Not really RCM, but still a Rubin Table. *missing data*. -->
-<!-- Add in Bayesian! -->
-<!-- m&m example? Is it useful to imagine an urn where, instead of two colors, an income is written on the bead? -->
-<!-- 4) *Bias* is important, connect to chapter 3 discussion. Sampling goes wrong all the time. People underestimate the true uncertainty in the world.  -->
-<!--5) *Censoring*: Problem with your tape measure. -->
+<!-- -1) Fix "`summarise()` ungrouping output (override with `.groups`" -->
+<!-- 0) Replace kable() with gt(). No code chunk names. No purl or width in figures. -->
+<!-- 1) Remove library(moderndive) and anything which depends in it. This may require creating our own copy of some of its built in datasets, or replacing them. Example: the code uses `tactile_prop_red` a dataset in **moderndive**. So, create, on the fly, a similar looking data set and just use that. (Hint: IN your own code chunk, use the include=FALSE code chunk option.) See where we create the `urn` object for an guidance. -->
+<!-- 2) Set up Zoom with Cass about "sampling mechanism," which is just like the "assignment mechanism." How did some beads get sampled and some did not? Bias and censoring are relevant topics here. Every problem has a Rubin Table highlighting what God would know, what we know, and then how we form a pdf about what we don't know. (Read chapter 3 for background.) This is even so with sampling! Until we sample a bead, it is a "?". Then, it resolves to red/white. After drawing our sample, we make inferences about the other beads. In one sense, we are inferring the value of p. In another, we are guessing what each of the "?" is, at least in expectation. But we can then also capture uncertainty! Each bead might be red or white, regardless of p. And there is uncertainty about p as well. This is the first time we are seeing both model uncertainty --- what is p? --- and predictive uncertainty --- what color is the next bead? -->
+<!-- 3) Set up Zoom with Vivian. Draw direct connection to her coin example. -->
+<!-- How about an urn with more than two colors? An urn with an income is written on the bead? -->
 <!-- Key issues for summer 2020. -->
 <!-- 1) We need to provide a Bayes scatterplot which is the next step in complexity from the ones we finished with in chapter 5. The x-axis is the number of red beads pulled in the sample, a number which varies from 0 to 25. (And we can discuss how different paddles would lead to different displays.) The y-axis is the model.  -->
 <!-- 2) One new complexity with the notion of the "model" is that we can "parameterize" the same thing in different ways. We want to show that. First, we parameterize it in the same way as chapter 5. There is a p, which can have certain values, but we restrict the set of possible values. Although perhaps making it different from previously. Maybe 0 to 1 by 0.05, so 21 values. Then we do the same thing as before, look at one sample from the urn, look at the marginal distribution, posterior predict the outcomes of the next draw, and so on. Just like before. -->
@@ -195,53 +193,35 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <!-- Can we incorporate some notion of uncertainty, even before we see the bootstrap in the next chapter? And, along with that notion of uncertainty, discuss a Bayesian interpretation. -->
 <!-- Without what range would you offer 50/50 odds that the true percentage lies? -->
 <!-- Revisit Albert's functions. Is it OK that urn is just treated as a global variable? Or should it be passed in as an argument. Also, are two functions really necessary? -->
-<!-- A big point of confusion is the difference between random sampling and random assignment. So, explain in a paragraph.  -->
-<!-- Would be great to have a concrete example of how biased sampling can be, like all the red beads at the bottom. Maybe just a picture and discussion? -->
-<!-- Discuss hypothesis tests and why we hate them. See style.Rmd for details. -->
-<!-- Every problem has a Rubin Table highlighting what God would know, what we know, and then how we form a pdf about what we don't know. (Read chapter 3 for background.) This is even so with sampling! Until we sample a bead, it is a "?". Then, it resolves to red/white. After drawing our sample, we make inferences about the other beads. In one sense, we are inferring the value of p. In another, we are guessing what each of the "?" is, at least in expectation. But we can then also capture uncertainty! Each bead might be red or white, regardless of p. And there is uncertainty about p as well. This is the first time we are seeing both model uncertainty --- what is p? --- and predictive uncertainty --- what color is the next bead? -->
+<!-- Discuss hypothesis tests and why we hate them. See themes.Rmd for details. -->
 <!-- Also interesting to think about tables which we know are finite but we don't ever know how many rows, like number of living people in US right now (i.e., includes planes landing? someone whose heart has stopped beating but has not been "pronounced" dead?)  -->
 <!-- Might also use Topic 16 from the Workshop here, or save it for the next chapter. -->
-<p>Sampling is the beginning of our journey toward inference.</p>
-<div id="needed-packages" class="section level3 unnumbered">
-<h3>Needed packages</h3>
-<p>Let’s load all the packages needed for this chapter (this assumes you’ve already installed them). Recall from our discussion in Section <a href="wrangling.html#tidyverse-package">2.8</a> that loading the <strong>tidyverse</strong> package by running <code>library(tidyverse)</code> loads the following commonly used data science packages all at once:</p>
-<ul>
-<li>
-<strong>ggplot2</strong> for data visualization</li>
-<li>
-<strong>dplyr</strong> for data wrangling</li>
-<li>
-<strong>tidyr</strong> for converting data to “tidy” format</li>
-<li>
-<strong>readr</strong> for importing spreadsheet data into R</li>
-<li>As well as the more advanced <strong>purrr</strong>, <strong>tibble</strong>, <strong>stringr</strong>, and <strong>forcats</strong> packages</li>
-</ul>
-<p>If needed, read Section <a href="#packages"><strong>??</strong></a> for information on how to install and load R packages.</p>
-<div class="sourceCode" id="cb500"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb500-1"><a href="sampling.html#cb500-1"></a><span class="kw">library</span>(tidyverse)</span></code></pre></div>
-</div>
+<p>Last chapter, we learned about probability, the act of quantifying uncertainty. This chapter, we will be learning about <em>sampling</em>, the beginning of our journey toward inference. As always, we will need the <strong>tidyverse</strong> package. The <strong>infer</strong> package has a handy function, <code>rep_sample_n()</code>, for simulating the process of sampling.</p>
+<div class="sourceCode" id="cb547"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb547-1"><a href="sampling.html#cb547-1"></a><span class="kw">library</span>(tidyverse)</span>
+<span id="cb547-2"><a href="sampling.html#cb547-2"></a><span class="kw">library</span>(infer)</span></code></pre></div>
 <div id="sampling-activity" class="section level2">
 <h2>
-<span class="header-section-number">6.1</span> Sampling urn activity</h2>
+<span class="header-section-number">6.1</span> Real sampling activity</h2>
 <p>Let’s start with a hands-on activity.</p>
 <div id="what-proportion-of-this-urns-balls-are-red" class="section level3">
 <h3>
 <span class="header-section-number">6.1.1</span> What proportion of this urn’s balls are red?</h3>
-<p>Take a look at the urn in Figure <a href="sampling.html#fig:sampling-exercise-1">6.1</a>. It has a certain number of red and a certain number of white balls all of equal size. Furthermore, it appears the urn has been mixed beforehand, as there does not seem to be any coherent pattern to the spatial distribution of the red and white balls.</p>
+<p>Take a look at the urn in Figure <a href="#fig:sampling-exercise-1"><strong>??</strong></a>. It has a certain number of red and a certain number of white balls all of equal size. Furthermore, it appears the urn has been mixed beforehand, as there does not seem to be any coherent pattern to the spatial distribution of the red and white balls.</p>
 <p>Let’s now ask ourselves, what proportion of this urn’s balls are red?</p>
 <!-- What is the best approach to R code chunks for images in the book? What is "purl" doing? Why out.width set to 95%? Need to understand this better and standardize it. -->
 <div class="figure">
-<span id="fig:sampling-exercise-1"></span>
+<span id="fig:unnamed-chunk-344"></span>
 <p class="caption marginnote shownote">
 FIGURE 6.1: An urn with red and white balls.
 </p>
-<img src="06-sampling/images/sampling_bowl_1.jpg" alt="An urn with red and white balls." width="95%">
+<img src="06-sampling/images/sampling_bowl_1.jpg" alt="An urn with red and white balls.">
 </div>
 <p>One way to answer this question would be to perform an exhaustive count: remove each ball individually, count the number of red balls and the number of white balls, and divide the number of red balls by the total number of balls. However, this would be a long and tedious process.</p>
 </div>
-<div id="using-the-shovel-once" class="section level3">
+<div id="using-the-shovel-method-once" class="section level3">
 <h3>
-<span class="header-section-number">6.1.2</span> Using the shovel once</h3>
-<p>Instead of performing an exhaustive count, let’s insert a shovel into the urn as seen in Figure <a href="sampling.html#fig:sampling-exercise-2">6.2</a>. Using the shovel, let’s remove <span class="math inline">\(5 \cdot 10 = 50\)</span> balls, as seen in Figure <a href="sampling.html#fig:sampling-exercise-3">6.3</a>.</p>
+<span class="header-section-number">6.1.2</span> Using the shovel method once</h3>
+<p>Instead of performing an exhaustive count, let’s insert a shovel into the urn as seen in Figure <a href="sampling.html#fig:sampling-exercise-2">6.2</a>. Using the shovel, let’s remove <span class="math inline">\(5 \cdot 10 = 50\)</span> balls, as seen in Figure <a href="sampling.html#fig:sampling-exercise-3">6.3</a>. Here, we are taking a <em>random sample</em> of the total population of balls.</p>
 <div class="figure">
 <span id="fig:sampling-exercise-2"></span>
 <p class="caption marginnote shownote">
@@ -256,9 +236,10 @@ FIGURE 6.3: Removing 50 balls from the urn.
 </p>
 <img src="06-sampling/images/sampling_bowl_3_cropped.jpg" alt="Removing 50 balls from the urn." width="100%">
 </div>
-<p>Observe that 17 of the balls are red and thus 17/50 = 0.34 = 34% of the shovel’s balls are red. We can view the proportion of balls that are red in this shovel as a guess of the proportion of balls that are red in the entire urn. While not as exact as doing an exhaustive count of all the balls in the urn, our guess of 34% took much less time and energy to make.</p>
-<p>However, say, we started this activity over from the beginning. In other words, we replace the 50 balls back into the urn and start over. Would we remove exactly 17 red balls again? In other words, would our guess at the proportion of the urn’s balls that are red be exactly 34% again? Maybe?</p>
-<p>What if we repeated this activity several times following the process shown in Figure <a href="sampling.html#fig:sampling-exercise-3b">6.4</a>? Would we obtain exactly 17 red balls each time? In other words, would our guess at the proportion of the urn’s balls that are red be exactly 34% every time? Surely not. Let’s repeat this exercise several times with the help of 33 groups of friends to understand how the value differs with repetition.</p>
+<p>Observe that 17 of the 50 sampled balls are red and thus 17/50 = 0.34 = 34% of the shovel’s balls are red. We can view the proportion of balls that are red in this shovel as a guess of the proportion of balls that are red in the entire urn. While not as exact as doing an exhaustive count of all the balls in the urn, our guess of 34% took much less time and energy to make.</p>
+<p>However, say, we started this activity over from the beginning. In other words, we replace the 50 balls back into the urn and start over. Would we remove exactly 17 red balls again? Would our guess at the proportion of the urn’s balls that are red be exactly 34% again? Maybe?</p>
+<p>What if we repeated this activity several times following the process shown in Figure <a href="sampling.html#fig:sampling-exercise-3b">6.4</a>? Would we obtain exactly 17 red balls each time? In other words, would our guess at the proportion of the urn’s balls that are red be exactly 34% every time? Surely not.</p>
+<p>The true proportion of red balls in the urn is our <strong>estimand</strong>, the thing we want to know. Here, we are taking a sample and inferring the estimand from that sample. To give us the best odds of inferring the estimand, let’s repeat this exercise with the help of 33 groups of friends to understand how the value differs with repetition.</p>
 </div>
 <div id="student-shovels" class="section level3">
 <h3>
@@ -286,7 +267,7 @@ FIGURE 6.5: Constructing a histogram of proportions.
 </p>
 <img src="06-sampling/images/tactile_3_a.jpg" alt="Constructing a histogram of proportions." width="80%">
 </div>
-<p>Recall from Section <a href="visualization.html#histograms">1.9</a> that histograms allow us to visualize the <em>distribution</em>  of a numerical variable. In particular, where the center of the values falls and how the values vary. A partially completed histogram of the first 10 out of 33 groups of friends’ results can be seen in Figure <a href="sampling.html#fig:sampling-exercise-5">6.6</a>.</p>
+<p>Recall from Section <a href="visualization.html#histograms">1.9</a> that histograms allow us to visualize the <em>distribution</em> of a numerical variable. In particular, where the center of the values falls and how the values vary. A partially completed histogram of the first 10 out of 33 groups of friends’ results can be seen in Figure <a href="sampling.html#fig:sampling-exercise-5">6.6</a>.</p>
 <div class="figure">
 <span id="fig:sampling-exercise-5"></span>
 <p class="caption marginnote shownote">
@@ -302,9 +283,9 @@ FIGURE 6.6: Hand-drawn histogram of first 10 out of 33 proportions.
 <li>The shape of this distribution is somewhat bell-shaped.</li>
 </ul>
 <p>Let’s construct this same hand-drawn histogram in R using your data visualization skills that you honed in Chapter <a href="#viz"><strong>??</strong></a>. The 33 groups of friends’ results are saved in the <code>tactile_prop_red</code> data frame included in the <strong>moderndive</strong> package. Run the following to display the first 10 of 33 rows:</p>
-<div class="sourceCode" id="cb501"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb501-1"><a href="sampling.html#cb501-1"></a><span class="kw">library</span>(moderndive)</span>
-<span id="cb501-2"><a href="sampling.html#cb501-2"></a></span>
-<span id="cb501-3"><a href="sampling.html#cb501-3"></a>tactile_prop_red</span></code></pre></div>
+<div class="sourceCode" id="cb548"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb548-1"><a href="sampling.html#cb548-1"></a><span class="kw">library</span>(moderndive)</span>
+<span id="cb548-2"><a href="sampling.html#cb548-2"></a></span>
+<span id="cb548-3"><a href="sampling.html#cb548-3"></a>tactile_prop_red</span></code></pre></div>
 <pre><code>## # A tibble: 33 x 4
 ##    group            replicate red_balls prop_red
 ##    &lt;chr&gt;                &lt;int&gt;     &lt;int&gt;    &lt;dbl&gt;
@@ -321,11 +302,11 @@ FIGURE 6.6: Hand-drawn histogram of first 10 out of 33 proportions.
 ## # … with 23 more rows</code></pre>
 <p>Observe for each <code>group</code> that we have their names, the number of <code>red_balls</code> they obtained, and the corresponding proportion out of 50 balls that were red named <code>prop_red</code>. We also have a <code>replicate</code> variable enumerating each of the 33 groups. We chose this name because each row can be viewed as one instance of a replicated (in other words repeated) activity: using the shovel to remove 50 balls and computing the proportion of those balls that are red.</p>
 <p>Let’s visualize the distribution of these 33 proportions using <code>geom_histogram()</code> with <code>binwidth = 0.05</code> in Figure <a href="sampling.html#fig:samplingdistribution-tactile">6.7</a>. This is a computerized and complete version of the partially completed hand-drawn histogram you saw in Figure <a href="sampling.html#fig:sampling-exercise-5">6.6</a>. Note that setting <code>boundary = 0.4</code> indicates that we want a binning scheme such that one of the bins’ boundary is at 0.4. This helps us to more closely align this histogram with the hand-drawn histogram in Figure <a href="sampling.html#fig:sampling-exercise-5">6.6</a>.</p>
-<div class="sourceCode" id="cb503"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb503-1"><a href="sampling.html#cb503-1"></a>tactile_prop_red <span class="op">%&gt;%</span></span>
-<span id="cb503-2"><a href="sampling.html#cb503-2"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> prop_red)) <span class="op">+</span></span>
-<span id="cb503-3"><a href="sampling.html#cb503-3"></a><span class="st">  </span><span class="kw">geom_histogram</span>(<span class="dt">binwidth =</span> <span class="fl">0.05</span>, <span class="dt">boundary =</span> <span class="fl">0.4</span>, <span class="dt">color =</span> <span class="st">"white"</span>) <span class="op">+</span></span>
-<span id="cb503-4"><a href="sampling.html#cb503-4"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">"Proportion of 50 balls that were red"</span>, </span>
-<span id="cb503-5"><a href="sampling.html#cb503-5"></a>       <span class="dt">title =</span> <span class="st">"Distribution of 33 proportions red"</span>) </span></code></pre></div>
+<div class="sourceCode" id="cb550"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb550-1"><a href="sampling.html#cb550-1"></a>tactile_prop_red <span class="op">%&gt;%</span></span>
+<span id="cb550-2"><a href="sampling.html#cb550-2"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> prop_red)) <span class="op">+</span></span>
+<span id="cb550-3"><a href="sampling.html#cb550-3"></a><span class="st">  </span><span class="kw">geom_histogram</span>(<span class="dt">binwidth =</span> <span class="fl">0.05</span>, <span class="dt">boundary =</span> <span class="fl">0.4</span>, <span class="dt">color =</span> <span class="st">"white"</span>) <span class="op">+</span></span>
+<span id="cb550-4"><a href="sampling.html#cb550-4"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">"Proportion of 50 balls that were red"</span>, </span>
+<span id="cb550-5"><a href="sampling.html#cb550-5"></a>       <span class="dt">title =</span> <span class="st">"Distribution of 33 proportions red"</span>) </span></code></pre></div>
 <div class="figure">
 <span id="fig:samplingdistribution-tactile"></span>
 <p class="caption marginnote shownote">
@@ -337,8 +318,8 @@ FIGURE 6.7: Distribution of 33 proportions based on 33 samples of size 50.
 <div id="what-did-we-just-do" class="section level3">
 <h3>
 <span class="header-section-number">6.1.4</span> What did we just do?</h3>
-<p>What we just demonstrated in this activity is the statistical concept of  <em>sampling</em>. We would like to know the proportion of the urn’s balls that are red. Because the urn has a large number of balls, performing an exhaustive count of the red and white balls would be time-consuming. We thus extracted a <em>sample</em> of 50 balls using the shovel to make an <em>estimate</em>. Using this sample of 50 balls, we estimated the proportion of the <em>urn’s</em> balls that are red to be 34%.</p>
-<p>Moreover, because we mixed the balls before each use of the shovel, the samples were randomly drawn. Because each sample was drawn at random, the samples were different from each other. Because the samples were different from each other, we obtained the different proportions red observed in Figure <a href="sampling.html#fig:samplingdistribution-tactile">6.7</a>. This is known as the concept of <em>sampling variation</em>. </p>
+<p>What we just demonstrated in this activity is the statistical concept of <strong>sampling</strong>. We would like to know the proportion of the urn’s balls that are red. Because the urn has a large number of balls, performing an exhaustive count of the red and white balls would be time-consuming. We thus extracted a <em>sample</em> of 50 balls using the shovel to make an <em>estimate</em>. Using this sample of 50 balls, we estimated the proportion of the <em>urn’s</em> balls that are red to be 34%.</p>
+<p>Moreover, because we mixed the balls before each use of the shovel, the samples were randomly drawn. Because each sample was drawn at random, the samples were different from each other. Because the samples were different from each other, we obtained the different proportions red observed in Figure <a href="sampling.html#fig:samplingdistribution-tactile">6.7</a>. This is known as the concept of <em>sampling variation</em>.</p>
 <p>The purpose of this sampling activity is to develop an understanding of two key concepts relating to sampling:</p>
 <ol style="list-style-type: decimal">
 <li>Understanding the effect of sampling variation.</li>
@@ -356,20 +337,16 @@ FIGURE 6.7: Distribution of 33 proportions based on 33 samples of size 50.
 <div id="using-the-virtual-shovel-once" class="section level3">
 <h3>
 <span class="header-section-number">6.2.1</span> Using the virtual shovel once</h3>
-<p>Let’s start by performing the virtual analog of the tactile sampling exercise we performed in Section <a href="sampling.html#sampling-activity">6.1</a>. We first need a virtual analog of the urn seen in Figure <a href="sampling.html#fig:sampling-exercise-1">6.1</a>. To this end, we creat a data frame named <code>urn</code>. The rows of <code>urn</code> correspond exactly with the contents of the actual urn.</p>
-<!-- Per the style guide, these comments will need to be removed from the code chunk and explained in the paragraph above. -->
-<div class="sourceCode" id="cb504"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb504-1"><a href="sampling.html#cb504-1"></a><span class="co"># sample_frac() just re-arranges the rows of the tibble. We use set.seed() to</span></span>
-<span id="cb504-2"><a href="sampling.html#cb504-2"></a><span class="co"># ensure that the beads in the urn are always in the same order. This ensures</span></span>
-<span id="cb504-3"><a href="sampling.html#cb504-3"></a><span class="co"># that figures in the book match their written descriptions.</span></span>
-<span id="cb504-4"><a href="sampling.html#cb504-4"></a></span>
-<span id="cb504-5"><a href="sampling.html#cb504-5"></a><span class="kw">set.seed</span>(<span class="dv">9</span>)</span>
-<span id="cb504-6"><a href="sampling.html#cb504-6"></a></span>
-<span id="cb504-7"><a href="sampling.html#cb504-7"></a>urn &lt;-<span class="st"> </span><span class="kw">tibble</span>(<span class="dt">color =</span> <span class="kw">c</span>(<span class="kw">rep</span>(<span class="st">"red"</span>, <span class="dv">900</span>), <span class="kw">rep</span>(<span class="st">"white"</span>, <span class="dv">1500</span>))) <span class="op">%&gt;%</span></span>
-<span id="cb504-8"><a href="sampling.html#cb504-8"></a><span class="st">  </span><span class="kw">sample_frac</span>() <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb504-9"><a href="sampling.html#cb504-9"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">ball_ID =</span> <span class="dv">1</span><span class="op">:</span><span class="dv">2400</span>) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb504-10"><a href="sampling.html#cb504-10"></a><span class="st">  </span><span class="kw">select</span>(ball_ID, color)</span>
-<span id="cb504-11"><a href="sampling.html#cb504-11"></a></span>
-<span id="cb504-12"><a href="sampling.html#cb504-12"></a>urn  </span></code></pre></div>
+<p>Let’s start by performing the virtual analog of the tactile sampling exercise we performed in Section <a href="sampling.html#sampling-activity">6.1</a>. We first need a virtual analog of the urn seen in Figure <a href="#fig:sampling-exercise-1"><strong>??</strong></a>. To this end, we creat a data frame named <code>urn</code>. The rows of <code>urn</code> correspond exactly with the contents of the actual urn.</p>
+<p>For reference, <code>sample-frac()</code> merely re-arranges the rows of the tibble. We use <code>set.seed()</code> to ensure that the balls in our virtual urn are always in the same order. This makes certain that the figures in the book match their written descriptions.</p>
+<div class="sourceCode" id="cb551"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb551-1"><a href="sampling.html#cb551-1"></a><span class="kw">set.seed</span>(<span class="dv">9</span>)</span>
+<span id="cb551-2"><a href="sampling.html#cb551-2"></a></span>
+<span id="cb551-3"><a href="sampling.html#cb551-3"></a>urn &lt;-<span class="st"> </span><span class="kw">tibble</span>(<span class="dt">color =</span> <span class="kw">c</span>(<span class="kw">rep</span>(<span class="st">"red"</span>, <span class="dv">900</span>), <span class="kw">rep</span>(<span class="st">"white"</span>, <span class="dv">1500</span>))) <span class="op">%&gt;%</span></span>
+<span id="cb551-4"><a href="sampling.html#cb551-4"></a><span class="st">  </span><span class="kw">sample_frac</span>() <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb551-5"><a href="sampling.html#cb551-5"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">ball_ID =</span> <span class="dv">1</span><span class="op">:</span><span class="dv">2400</span>) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb551-6"><a href="sampling.html#cb551-6"></a><span class="st">  </span><span class="kw">select</span>(ball_ID, color)</span>
+<span id="cb551-7"><a href="sampling.html#cb551-7"></a></span>
+<span id="cb551-8"><a href="sampling.html#cb551-8"></a>urn  </span></code></pre></div>
 <pre><code>## # A tibble: 2,400 x 2
 ##    ball_ID color
 ##      &lt;int&gt; &lt;chr&gt;
@@ -384,15 +361,15 @@ FIGURE 6.7: Distribution of 33 proportions based on 33 samples of size 50.
 ##  9       9 red  
 ## 10      10 red  
 ## # … with 2,390 more rows</code></pre>
-<p>Observe that <code>urn</code> has 2400 rows, telling us that the urn contains 2400 equally sized balls. The first variable <code>ball_ID</code> is used as an <em>identification variable</em> as discussed in Subsection <a href="#identification-vs-measurement-variables"><strong>??</strong></a>; none of the balls in the actual urn are marked with numbers. The second variable <code>color</code> indicates whether a particular virtual ball is red or white. View the contents of the urn in RStudio’s data viewer and scroll through the contents to convince yourself that <code>urn</code> is indeed a virtual analog of the actual urn in Figure <a href="sampling.html#fig:sampling-exercise-1">6.1</a>.</p>
-<p>Now that we have a virtual analog of our urn, we now need a virtual analog to the shovel seen in Figure <a href="sampling.html#fig:sampling-exercise-2">6.2</a> to generate virtual samples of 50 balls. We’re going to use the <code>rep_sample_n()</code> function included in the <strong>infer</strong> package. This function allows us to take <code>rep</code>eated, or <code>rep</code>licated, <code>samples</code> of size <code>n</code>.</p>
+<p>Observe that <code>urn</code> has 2400 rows, telling us that the urn contains 2400 equally sized balls. The first variable <code>ball_ID</code> is used as an <em>identification variable</em> as discussed in Subsection <a href="#identification-vs-measurement-variables"><strong>??</strong></a>; none of the balls in the actual urn are marked with numbers. The second variable <code>color</code> indicates whether a particular virtual ball is red or white. View the contents of the urn in RStudio’s data viewer and scroll through the contents to convince yourself that <code>urn</code> is indeed a virtual analog of the actual urn in Figure <a href="#fig:sampling-exercise-1"><strong>??</strong></a>.</p>
+<p>Now that we have a virtual analog of our urn, we now need a virtual analog of the shovel seen in Figure <a href="sampling.html#fig:sampling-exercise-2">6.2</a> to generate virtual samples of 50 balls. We’re going to use the <code>rep_sample_n()</code> function included in the <strong>infer</strong> package. This function allows us to take <code>rep</code>eated, or <code>rep</code>licated, <code>samples</code> of size <code>n</code>.</p>
 <p>Let’s show an example of this function in action. Let’s first use the <code>tibble()</code> function to manually create a data frame of five fruit called <code>fruit_basket</code>.</p>
-<div class="sourceCode" id="cb506"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb506-1"><a href="sampling.html#cb506-1"></a>fruit_basket &lt;-<span class="st"> </span><span class="kw">tibble</span>(</span>
-<span id="cb506-2"><a href="sampling.html#cb506-2"></a>  <span class="dt">fruit =</span> <span class="kw">c</span>(<span class="st">"Mango"</span>, <span class="st">"Tangerine"</span>, <span class="st">"Apricot"</span>, <span class="st">"Pamplemousse"</span>, <span class="st">"Lime"</span>)</span>
-<span id="cb506-3"><a href="sampling.html#cb506-3"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb553"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb553-1"><a href="sampling.html#cb553-1"></a>fruit_basket &lt;-<span class="st"> </span><span class="kw">tibble</span>(</span>
+<span id="cb553-2"><a href="sampling.html#cb553-2"></a>  <span class="dt">fruit =</span> <span class="kw">c</span>(<span class="st">"Mango"</span>, <span class="st">"Tangerine"</span>, <span class="st">"Apricot"</span>, <span class="st">"Pamplemousse"</span>, <span class="st">"Lime"</span>)</span>
+<span id="cb553-3"><a href="sampling.html#cb553-3"></a>)</span></code></pre></div>
 <p>We’ll then <code>%&gt;%</code> pipe the <code>fruit_basket</code> data frame into the <code>rep_sample_n()</code> function and set <code>size = 3</code>, indicating that we want to sample three fruit:</p>
-<div class="sourceCode" id="cb507"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb507-1"><a href="sampling.html#cb507-1"></a>fruit_basket <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb507-2"><a href="sampling.html#cb507-2"></a><span class="st">  </span><span class="kw">rep_sample_n</span>(<span class="dt">size =</span> <span class="dv">3</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb554"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb554-1"><a href="sampling.html#cb554-1"></a>fruit_basket <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb554-2"><a href="sampling.html#cb554-2"></a><span class="st">  </span><span class="kw">rep_sample_n</span>(<span class="dt">size =</span> <span class="dv">3</span>)</span></code></pre></div>
 <pre><code>## # A tibble: 3 x 2
 ## # Groups:   replicate [1]
 ##   replicate fruit       
@@ -401,17 +378,15 @@ FIGURE 6.7: Distribution of 33 proportions based on 33 samples of size 50.
 ## 2         1 Mango       
 ## 3         1 Pamplemousse</code></pre>
 <p>Your results will likely be different, since we are taking a <em>random</em> sample of size 3. Now let’s see what happens when we try to sample six fruit:</p>
-<div class="sourceCode" id="cb509"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb509-1"><a href="sampling.html#cb509-1"></a>fruit_basket <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb509-2"><a href="sampling.html#cb509-2"></a><span class="st">  </span><span class="kw">rep_sample_n</span>(<span class="dt">size =</span> <span class="dv">6</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb556"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb556-1"><a href="sampling.html#cb556-1"></a>fruit_basket <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb556-2"><a href="sampling.html#cb556-2"></a><span class="st">  </span><span class="kw">rep_sample_n</span>(<span class="dt">size =</span> <span class="dv">6</span>)</span></code></pre></div>
 <pre><code>Error in sample.int(n, size, replace = replace, prob = prob) : 
   cannot take a sample larger than the population when 'replace = FALSE'</code></pre>
 <p>We get an error message telling us that we cannot take a sample that has more rows than the original data frame. This is because <code>rep_sample_n()</code> by defaults samples <em>without replacement</em>. Once it samples a fruit from the basket, it does not put it back in.</p>
-<!-- Is this section on rep_sample_n() and replacement irrelevant once we remove the infer package? -->
-<div class="sourceCode" id="cb511"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb511-1"><a href="sampling.html#cb511-1"></a><span class="kw">library</span>(infer)</span>
-<span id="cb511-2"><a href="sampling.html#cb511-2"></a></span>
-<span id="cb511-3"><a href="sampling.html#cb511-3"></a>virtual_shovel &lt;-<span class="st"> </span>urn <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb511-4"><a href="sampling.html#cb511-4"></a><span class="st">  </span><span class="kw">rep_sample_n</span>(<span class="dt">size =</span> <span class="dv">50</span>)</span>
-<span id="cb511-5"><a href="sampling.html#cb511-5"></a>virtual_shovel</span></code></pre></div>
+<p>Now, let’s use <code>rep_sample_n()</code> to take a sample of 50 balls from our virtual urn.</p>
+<div class="sourceCode" id="cb558"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb558-1"><a href="sampling.html#cb558-1"></a>virtual_shovel &lt;-<span class="st"> </span>urn <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb558-2"><a href="sampling.html#cb558-2"></a><span class="st">  </span><span class="kw">rep_sample_n</span>(<span class="dt">size =</span> <span class="dv">50</span>)</span>
+<span id="cb558-3"><a href="sampling.html#cb558-3"></a>virtual_shovel</span></code></pre></div>
 <pre><code>## # A tibble: 50 x 3
 ## # Groups:   replicate [1]
 ##    replicate ball_ID color
@@ -429,8 +404,8 @@ FIGURE 6.7: Distribution of 33 proportions based on 33 samples of size 50.
 ## # … with 40 more rows</code></pre>
 <p>Observe that <code>virtual_shovel</code> has 50 rows corresponding to our virtual sample of size 50. The <code>ball_ID</code> variable identifies which of the 2400 balls from <code>urn</code> are included in our sample of 50 balls while <code>color</code> denotes its color. However, what does the <code>replicate</code> variable indicate? In <code>virtual_shovel</code>’s case, <code>replicate</code> is equal to 1 for all 50 rows. This is telling us that these 50 rows correspond to the first repeated/replicated use of the shovel, in our case our first sample. We’ll see shortly that when we “virtually” take 33 samples, <code>replicate</code> will take values between 1 and 33.</p>
 <p>Let’s compute the proportion of balls in our virtual sample that are red using the <strong>dplyr</strong> data wrangling verbs you learned in Chapter <a href="wrangling.html#wrangling">2</a>. First, for each of our 50 sampled balls, let’s identify if it is red or not using a test for equality with <code>==</code>. Let’s create a new Boolean variable <code>is_red</code> using the <code>mutate()</code> function from Section <a href="visualization.html#mutate">1.13.8</a>:</p>
-<div class="sourceCode" id="cb513"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb513-1"><a href="sampling.html#cb513-1"></a>virtual_shovel <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb513-2"><a href="sampling.html#cb513-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">is_red =</span> (color <span class="op">==</span><span class="st"> "red"</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb560"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb560-1"><a href="sampling.html#cb560-1"></a>virtual_shovel <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb560-2"><a href="sampling.html#cb560-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">is_red =</span> (color <span class="op">==</span><span class="st"> "red"</span>))</span></code></pre></div>
 <pre><code>## # A tibble: 50 x 4
 ## # Groups:   replicate [1]
 ##    replicate ball_ID color is_red
@@ -448,9 +423,9 @@ FIGURE 6.7: Distribution of 33 proportions based on 33 samples of size 50.
 ## # … with 40 more rows</code></pre>
 <p>Observe that for every row where <code>color == "red"</code>, the Boolean (logical) value <code>TRUE</code> is returned and for every row where <code>color</code> is not equal to <code>"red"</code>, the Boolean <code>FALSE</code> is returned.</p>
 <p>Second, let’s compute the number of balls out of 50 that are red using the <code>summarize()</code> function. Recall from Section <a href="wrangling.html#summarize">2.1</a> that <code>summarize()</code> takes a data frame with many rows and returns a data frame with a single row containing summary statistics, like the <code>mean()</code> or <code>median()</code>. In this case, we use the <code>sum()</code>:</p>
-<div class="sourceCode" id="cb515"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb515-1"><a href="sampling.html#cb515-1"></a>virtual_shovel <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb515-2"><a href="sampling.html#cb515-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">is_red =</span> (color <span class="op">==</span><span class="st"> "red"</span>)) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb515-3"><a href="sampling.html#cb515-3"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">num_red =</span> <span class="kw">sum</span>(is_red))</span></code></pre></div>
+<div class="sourceCode" id="cb562"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb562-1"><a href="sampling.html#cb562-1"></a>virtual_shovel <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb562-2"><a href="sampling.html#cb562-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">is_red =</span> (color <span class="op">==</span><span class="st"> "red"</span>)) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb562-3"><a href="sampling.html#cb562-3"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">num_red =</span> <span class="kw">sum</span>(is_red))</span></code></pre></div>
 <pre><code>## `summarise()` ungrouping output (override with `.groups` argument)</code></pre>
 <pre><code>## # A tibble: 1 x 2
 ##   replicate num_red
@@ -459,10 +434,10 @@ FIGURE 6.7: Distribution of 33 proportions based on 33 samples of size 50.
 <pre><code>## `summarise()` ungrouping output (override with `.groups` argument)</code></pre>
 <p>Why does this work? Because R treats <code>TRUE</code> like the number <code>1</code> and <code>FALSE</code> like the number <code>0</code>. So summing the number of <code>TRUE</code>s and <code>FALSE</code>s is equivalent to summing <code>1</code>’s and <code>0</code>’s. In the end, this operation counts the number of balls where <code>color</code> is <code>red</code>. In our case, 13 of the 50 balls were red. However, you might have gotten a different number red because of the randomness of the virtual sampling.</p>
 <p>Third and lastly, let’s compute the proportion of the 50 sampled balls that are red by dividing <code>num_red</code> by 50:</p>
-<div class="sourceCode" id="cb519"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb519-1"><a href="sampling.html#cb519-1"></a>virtual_shovel <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb519-2"><a href="sampling.html#cb519-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">is_red =</span> color <span class="op">==</span><span class="st"> "red"</span>) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb519-3"><a href="sampling.html#cb519-3"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">num_red =</span> <span class="kw">sum</span>(is_red)) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb519-4"><a href="sampling.html#cb519-4"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">prop_red =</span> num_red <span class="op">/</span><span class="st"> </span><span class="dv">50</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb566"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb566-1"><a href="sampling.html#cb566-1"></a>virtual_shovel <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb566-2"><a href="sampling.html#cb566-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">is_red =</span> color <span class="op">==</span><span class="st"> "red"</span>) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb566-3"><a href="sampling.html#cb566-3"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">num_red =</span> <span class="kw">sum</span>(is_red)) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb566-4"><a href="sampling.html#cb566-4"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">prop_red =</span> num_red <span class="op">/</span><span class="st"> </span><span class="dv">50</span>)</span></code></pre></div>
 <pre><code>## `summarise()` ungrouping output (override with `.groups` argument)</code></pre>
 <pre><code>## # A tibble: 1 x 3
 ##   replicate num_red prop_red
@@ -470,9 +445,9 @@ FIGURE 6.7: Distribution of 33 proportions based on 33 samples of size 50.
 ## 1         1      13     0.26</code></pre>
 <pre><code>## `summarise()` ungrouping output (override with `.groups` argument)</code></pre>
 <p>In other words, 26% of this virtual sample’s balls were red. Let’s make this code a little more compact and succinct by combining the first <code>mutate()</code> and the <code>summarize()</code> as follows:</p>
-<div class="sourceCode" id="cb523"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb523-1"><a href="sampling.html#cb523-1"></a>virtual_shovel <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb523-2"><a href="sampling.html#cb523-2"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">num_red =</span> <span class="kw">sum</span>(color <span class="op">==</span><span class="st"> "red"</span>)) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb523-3"><a href="sampling.html#cb523-3"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">prop_red =</span> num_red <span class="op">/</span><span class="st"> </span><span class="dv">50</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb570"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb570-1"><a href="sampling.html#cb570-1"></a>virtual_shovel <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb570-2"><a href="sampling.html#cb570-2"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">num_red =</span> <span class="kw">sum</span>(color <span class="op">==</span><span class="st"> "red"</span>)) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb570-3"><a href="sampling.html#cb570-3"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">prop_red =</span> num_red <span class="op">/</span><span class="st"> </span><span class="dv">50</span>)</span></code></pre></div>
 <pre><code>## `summarise()` ungrouping output (override with `.groups` argument)</code></pre>
 <pre><code>## # A tibble: 1 x 3
 ##   replicate num_red prop_red
@@ -483,11 +458,11 @@ FIGURE 6.7: Distribution of 33 proportions based on 33 samples of size 50.
 <div id="using-the-virtual-shovel-33-times" class="section level3">
 <h3>
 <span class="header-section-number">6.2.2</span> Using the virtual shovel 33 times</h3>
-<p>Recall that in our tactile sampling exercise in Section <a href="sampling.html#sampling-activity">6.1</a>, we had 33 groups of students each use the shovel, yielding 33 samples of size 50 balls. We then used these 33 samples to compute 33 proportions. In other words, we repeated/replicated using the shovel 33 times. We can perform this repeated/replicated sampling virtually by once again using our virtual shovel function <code>rep_sample_n()</code>, but by adding the <code>reps = 33</code> argument. This is telling R that we want to repeat the sampling 33 times.</p>
+<p>Recall that in our tactile sampling exercise in Section <a href="sampling.html#sampling-activity">6.1</a>, we had 33 groups of students each use the shovel, yielding 33 samples of size 50 balls. We then used these 33 samples to compute 33 proportions. In other words, we repeated/replicated using the shovel 33 times. We can perform this repeated/replicated sampling virtually by once again using our virtual shovel function <code>rep_sample_n()</code>, but by adding the <code>reps = 33</code> argument. This is telling R that we want to <em>repeat</em> the sampling 33 times.</p>
 <p>We’ll save these results in a data frame called <code>virtual_samples</code>. While we provide a preview of the first 10 rows of <code>virtual_samples</code> in what follows, we highly suggest you scroll through its contents using RStudio’s spreadsheet viewer by running <code>View(virtual_samples)</code>.</p>
-<div class="sourceCode" id="cb526"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb526-1"><a href="sampling.html#cb526-1"></a>virtual_samples &lt;-<span class="st"> </span>urn <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb526-2"><a href="sampling.html#cb526-2"></a><span class="st">  </span><span class="kw">rep_sample_n</span>(<span class="dt">size =</span> <span class="dv">50</span>, <span class="dt">reps =</span> <span class="dv">33</span>)</span>
-<span id="cb526-3"><a href="sampling.html#cb526-3"></a>virtual_samples</span></code></pre></div>
+<div class="sourceCode" id="cb573"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb573-1"><a href="sampling.html#cb573-1"></a>virtual_samples &lt;-<span class="st"> </span>urn <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb573-2"><a href="sampling.html#cb573-2"></a><span class="st">  </span><span class="kw">rep_sample_n</span>(<span class="dt">size =</span> <span class="dv">50</span>, <span class="dt">reps =</span> <span class="dv">33</span>)</span>
+<span id="cb573-3"><a href="sampling.html#cb573-3"></a>virtual_samples</span></code></pre></div>
 <pre><code>## # A tibble: 1,650 x 3
 ## # Groups:   replicate [33]
 ##    replicate ball_ID color
@@ -505,12 +480,12 @@ FIGURE 6.7: Distribution of 33 proportions based on 33 samples of size 50.
 ## # … with 1,640 more rows</code></pre>
 <p>Observe in the spreadsheet viewer that the first 50 rows of <code>replicate</code> are equal to <code>1</code> while the next 50 rows of <code>replicate</code> are equal to <code>2</code>. This is telling us that the first 50 rows correspond to the first sample of 50 balls while the next 50 rows correspond to the second sample of 50 balls. This pattern continues for all <code>reps = 33</code> replicates and thus <code>virtual_samples</code> has 33 <span class="math inline">\(\cdot\)</span> 50 = 1650 rows.</p>
 <p>Let’s now take <code>virtual_samples</code> and compute the resulting 33 proportions red. We’ll use the same <strong>dplyr</strong> verbs as before, but this time with an additional <code>group_by()</code> of the <code>replicate</code> variable. Recall from Section <a href="#groupby"><strong>??</strong></a> that by assigning the grouping variable “meta-data” before we <code>summarize()</code>, we’ll obtain 33 different proportions red. We display a preview of the first 10 out of 33 rows:</p>
-<div class="sourceCode" id="cb528"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb528-1"><a href="sampling.html#cb528-1"></a>virtual_prop_red &lt;-<span class="st"> </span>virtual_samples <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb528-2"><a href="sampling.html#cb528-2"></a><span class="st">  </span><span class="kw">group_by</span>(replicate) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb528-3"><a href="sampling.html#cb528-3"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">red =</span> <span class="kw">sum</span>(color <span class="op">==</span><span class="st"> "red"</span>)) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb528-4"><a href="sampling.html#cb528-4"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">prop_red =</span> red <span class="op">/</span><span class="st"> </span><span class="dv">50</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb575"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb575-1"><a href="sampling.html#cb575-1"></a>virtual_prop_red &lt;-<span class="st"> </span>virtual_samples <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb575-2"><a href="sampling.html#cb575-2"></a><span class="st">  </span><span class="kw">group_by</span>(replicate) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb575-3"><a href="sampling.html#cb575-3"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">red =</span> <span class="kw">sum</span>(color <span class="op">==</span><span class="st"> "red"</span>)) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb575-4"><a href="sampling.html#cb575-4"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">prop_red =</span> red <span class="op">/</span><span class="st"> </span><span class="dv">50</span>)</span></code></pre></div>
 <pre><code>## `summarise()` ungrouping output (override with `.groups` argument)</code></pre>
-<div class="sourceCode" id="cb530"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb530-1"><a href="sampling.html#cb530-1"></a>virtual_prop_red</span></code></pre></div>
+<div class="sourceCode" id="cb577"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb577-1"><a href="sampling.html#cb577-1"></a>virtual_prop_red</span></code></pre></div>
 <pre><code>## # A tibble: 33 x 3
 ##    replicate   red prop_red
 ##        &lt;int&gt; &lt;int&gt;    &lt;dbl&gt;
@@ -526,10 +501,10 @@ FIGURE 6.7: Distribution of 33 proportions based on 33 samples of size 50.
 ## 10        10    18     0.36
 ## # … with 23 more rows</code></pre>
 <p>As with our 33 groups of friends’ tactile samples, there is variation in the resulting 33 virtual proportions red. Let’s visualize this variation in a histogram in Figure <a href="sampling.html#fig:samplingdistribution-virtual">6.8</a>. Note that we add <code>binwidth = 0.05</code> and <code>boundary = 0.4</code> arguments as well. Recall that setting <code>boundary = 0.4</code> ensures a binning scheme with one of the bins’ boundaries at 0.4. Since the <code>binwidth = 0.05</code> is also set, this will create bins with boundaries at 0.30, 0.35, 0.45, 0.5, etc. as well.</p>
-<div class="sourceCode" id="cb532"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb532-1"><a href="sampling.html#cb532-1"></a><span class="kw">ggplot</span>(virtual_prop_red, <span class="kw">aes</span>(<span class="dt">x =</span> prop_red)) <span class="op">+</span></span>
-<span id="cb532-2"><a href="sampling.html#cb532-2"></a><span class="st">  </span><span class="kw">geom_histogram</span>(<span class="dt">binwidth =</span> <span class="fl">0.05</span>, <span class="dt">boundary =</span> <span class="fl">0.4</span>, <span class="dt">color =</span> <span class="st">"white"</span>) <span class="op">+</span></span>
-<span id="cb532-3"><a href="sampling.html#cb532-3"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">"Proportion of 50 balls that were red"</span>, </span>
-<span id="cb532-4"><a href="sampling.html#cb532-4"></a>       <span class="dt">title =</span> <span class="st">"Distribution of 33 proportions red"</span>) </span></code></pre></div>
+<div class="sourceCode" id="cb579"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb579-1"><a href="sampling.html#cb579-1"></a><span class="kw">ggplot</span>(virtual_prop_red, <span class="kw">aes</span>(<span class="dt">x =</span> prop_red)) <span class="op">+</span></span>
+<span id="cb579-2"><a href="sampling.html#cb579-2"></a><span class="st">  </span><span class="kw">geom_histogram</span>(<span class="dt">binwidth =</span> <span class="fl">0.05</span>, <span class="dt">boundary =</span> <span class="fl">0.4</span>, <span class="dt">color =</span> <span class="st">"white"</span>) <span class="op">+</span></span>
+<span id="cb579-3"><a href="sampling.html#cb579-3"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">"Proportion of 50 balls that were red"</span>, </span>
+<span id="cb579-4"><a href="sampling.html#cb579-4"></a>       <span class="dt">title =</span> <span class="st">"Distribution of 33 proportions red"</span>) </span></code></pre></div>
 <div class="figure">
 <span id="fig:samplingdistribution-virtual"></span>
 <p class="caption marginnote shownote">
@@ -551,9 +526,9 @@ FIGURE 6.9: Comparing 33 virtual and 33 tactile proportions red.
 <h3>
 <span class="header-section-number">6.2.3</span> Using the virtual shovel 1,000 times</h3>
 <p>Now say we want to study the effects of sampling variation not for 33 samples, but rather for a larger number of samples, say 1,000. We have two choices at this point. We could have our groups of friends manually take 1,000 samples of 50 balls and compute the corresponding 1,000 proportions. However, this would be a tedious and time-consuming task. This is where computers excel: automating long and repetitive tasks while performing them quite quickly. Thus, at this point we will abandon tactile sampling in favor of only virtual sampling. Let’s once again use the <code>rep_sample_n()</code> function with sample <code>size</code> set to be 50 once again, but this time with the number of replicates <code>reps</code> set to <code>1000</code>. Be sure to scroll through the contents of <code>virtual_samples</code> in RStudio’s viewer.</p>
-<div class="sourceCode" id="cb533"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb533-1"><a href="sampling.html#cb533-1"></a>virtual_samples &lt;-<span class="st"> </span>urn <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb533-2"><a href="sampling.html#cb533-2"></a><span class="st">  </span><span class="kw">rep_sample_n</span>(<span class="dt">size =</span> <span class="dv">50</span>, <span class="dt">reps =</span> <span class="dv">1000</span>)</span>
-<span id="cb533-3"><a href="sampling.html#cb533-3"></a>virtual_samples</span></code></pre></div>
+<div class="sourceCode" id="cb580"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb580-1"><a href="sampling.html#cb580-1"></a>virtual_samples &lt;-<span class="st"> </span>urn <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb580-2"><a href="sampling.html#cb580-2"></a><span class="st">  </span><span class="kw">rep_sample_n</span>(<span class="dt">size =</span> <span class="dv">50</span>, <span class="dt">reps =</span> <span class="dv">1000</span>)</span>
+<span id="cb580-3"><a href="sampling.html#cb580-3"></a>virtual_samples</span></code></pre></div>
 <pre><code>## # A tibble: 50,000 x 3
 ## # Groups:   replicate [1,000]
 ##    replicate ball_ID color
@@ -570,12 +545,12 @@ FIGURE 6.9: Comparing 33 virtual and 33 tactile proportions red.
 ## 10         1     747 white
 ## # … with 49,990 more rows</code></pre>
 <p>Observe that now <code>virtual_samples</code> has 1,000 <span class="math inline">\(\cdot\)</span> 50 = 50,000 rows, instead of the 33 <span class="math inline">\(\cdot\)</span> 50 = 1650 rows from earlier. Using the same data wrangling code as earlier, let’s take the data frame <code>virtual_samples</code> with 1,000 <span class="math inline">\(\cdot\)</span> 50 = 50,000 rows and compute the resulting 1,000 proportions of red balls.</p>
-<div class="sourceCode" id="cb535"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb535-1"><a href="sampling.html#cb535-1"></a>virtual_prop_red &lt;-<span class="st"> </span>virtual_samples <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb535-2"><a href="sampling.html#cb535-2"></a><span class="st">  </span><span class="kw">group_by</span>(replicate) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb535-3"><a href="sampling.html#cb535-3"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">red =</span> <span class="kw">sum</span>(color <span class="op">==</span><span class="st"> "red"</span>)) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb535-4"><a href="sampling.html#cb535-4"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">prop_red =</span> red <span class="op">/</span><span class="st"> </span><span class="dv">50</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb582"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb582-1"><a href="sampling.html#cb582-1"></a>virtual_prop_red &lt;-<span class="st"> </span>virtual_samples <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb582-2"><a href="sampling.html#cb582-2"></a><span class="st">  </span><span class="kw">group_by</span>(replicate) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb582-3"><a href="sampling.html#cb582-3"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">red =</span> <span class="kw">sum</span>(color <span class="op">==</span><span class="st"> "red"</span>)) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb582-4"><a href="sampling.html#cb582-4"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">prop_red =</span> red <span class="op">/</span><span class="st"> </span><span class="dv">50</span>)</span></code></pre></div>
 <pre><code>## `summarise()` ungrouping output (override with `.groups` argument)</code></pre>
-<div class="sourceCode" id="cb537"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb537-1"><a href="sampling.html#cb537-1"></a>virtual_prop_red</span></code></pre></div>
+<div class="sourceCode" id="cb584"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb584-1"><a href="sampling.html#cb584-1"></a>virtual_prop_red</span></code></pre></div>
 <pre><code>## # A tibble: 1,000 x 3
 ##    replicate   red prop_red
 ##        &lt;int&gt; &lt;int&gt;    &lt;dbl&gt;
@@ -591,10 +566,10 @@ FIGURE 6.9: Comparing 33 virtual and 33 tactile proportions red.
 ## 10        10    22     0.44
 ## # … with 990 more rows</code></pre>
 <p>Observe that we now have 1,000 replicates of <code>prop_red</code>, the proportion of 50 balls that are red. Using the same code as earlier, let’s now visualize the distribution of these 1,000 replicates of <code>prop_red</code> in a histogram in Figure <a href="sampling.html#fig:samplingdistribution-virtual-1000">6.10</a>.</p>
-<div class="sourceCode" id="cb539"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb539-1"><a href="sampling.html#cb539-1"></a><span class="kw">ggplot</span>(virtual_prop_red, <span class="kw">aes</span>(<span class="dt">x =</span> prop_red)) <span class="op">+</span></span>
-<span id="cb539-2"><a href="sampling.html#cb539-2"></a><span class="st">  </span><span class="kw">geom_histogram</span>(<span class="dt">binwidth =</span> <span class="fl">0.05</span>, <span class="dt">boundary =</span> <span class="fl">0.4</span>, <span class="dt">color =</span> <span class="st">"white"</span>) <span class="op">+</span></span>
-<span id="cb539-3"><a href="sampling.html#cb539-3"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">"Proportion of 50 balls that were red"</span>, </span>
-<span id="cb539-4"><a href="sampling.html#cb539-4"></a>       <span class="dt">title =</span> <span class="st">"Distribution of 1,000 proportions red"</span>) </span></code></pre></div>
+<div class="sourceCode" id="cb586"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb586-1"><a href="sampling.html#cb586-1"></a><span class="kw">ggplot</span>(virtual_prop_red, <span class="kw">aes</span>(<span class="dt">x =</span> prop_red)) <span class="op">+</span></span>
+<span id="cb586-2"><a href="sampling.html#cb586-2"></a><span class="st">  </span><span class="kw">geom_histogram</span>(<span class="dt">binwidth =</span> <span class="fl">0.05</span>, <span class="dt">boundary =</span> <span class="fl">0.4</span>, <span class="dt">color =</span> <span class="st">"white"</span>) <span class="op">+</span></span>
+<span id="cb586-3"><a href="sampling.html#cb586-3"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">"Proportion of 50 balls that were red"</span>, </span>
+<span id="cb586-4"><a href="sampling.html#cb586-4"></a>       <span class="dt">title =</span> <span class="st">"Distribution of 1,000 proportions red"</span>) </span></code></pre></div>
 <pre><code>## `summarise()` ungrouping output (override with `.groups` argument)</code></pre>
 <div class="figure">
 <span id="fig:samplingdistribution-virtual-1000"></span>
@@ -608,7 +583,7 @@ FIGURE 6.10: Distribution of 1,000 proportions based on 1,000 samples of size 50
 </div>
 <div id="different-shovels" class="section level3">
 <h3>
-<span class="header-section-number">6.2.4</span> Using different shovels</h3>
+<span class="header-section-number">6.2.4</span> The effect of different shovel sizes</h3>
 <p>Now say instead of just one shovel, you have three choices of shovels to extract a sample of balls with: shovels of size 25, 50, and 100.</p>
 <div class="figure" style="text-align: center">
 <span id="fig:three-shovels"></span>
@@ -625,67 +600,67 @@ FIGURE 6.11: Three shovels to extract three different sample sizes.
 <li>Visualize the distribution of these 1,000 proportions red using a histogram.</li>
 </ol>
 <p>Run each of the following code segments individually and then compare the three resulting histograms.</p>
-<div class="sourceCode" id="cb541"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb541-1"><a href="sampling.html#cb541-1"></a><span class="co"># Segment 1: sample size = 25 ------------------------------</span></span>
-<span id="cb541-2"><a href="sampling.html#cb541-2"></a><span class="co"># 1.a) Virtually use shovel 1,000 times</span></span>
-<span id="cb541-3"><a href="sampling.html#cb541-3"></a></span>
-<span id="cb541-4"><a href="sampling.html#cb541-4"></a>virtual_samples_<span class="dv">25</span> &lt;-<span class="st"> </span>urn <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb541-5"><a href="sampling.html#cb541-5"></a><span class="st">  </span><span class="kw">rep_sample_n</span>(<span class="dt">size =</span> <span class="dv">25</span>, <span class="dt">reps =</span> <span class="dv">1000</span>)</span>
-<span id="cb541-6"><a href="sampling.html#cb541-6"></a></span>
-<span id="cb541-7"><a href="sampling.html#cb541-7"></a><span class="co"># 1.b) Compute resulting 1,000 replicates of proportion red</span></span>
-<span id="cb541-8"><a href="sampling.html#cb541-8"></a></span>
-<span id="cb541-9"><a href="sampling.html#cb541-9"></a>virtual_prop_red_<span class="dv">25</span> &lt;-<span class="st"> </span>virtual_samples_<span class="dv">25</span> <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb541-10"><a href="sampling.html#cb541-10"></a><span class="st">  </span><span class="kw">group_by</span>(replicate) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb541-11"><a href="sampling.html#cb541-11"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">red =</span> <span class="kw">sum</span>(color <span class="op">==</span><span class="st"> "red"</span>)) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb541-12"><a href="sampling.html#cb541-12"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">prop_red =</span> red <span class="op">/</span><span class="st"> </span><span class="dv">25</span>)</span>
-<span id="cb541-13"><a href="sampling.html#cb541-13"></a></span>
-<span id="cb541-14"><a href="sampling.html#cb541-14"></a><span class="co"># 1.c) Plot distribution via a histogram</span></span>
-<span id="cb541-15"><a href="sampling.html#cb541-15"></a></span>
-<span id="cb541-16"><a href="sampling.html#cb541-16"></a>virtual_prop_red_<span class="dv">25</span> <span class="op">%&gt;%</span></span>
-<span id="cb541-17"><a href="sampling.html#cb541-17"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> prop_red)) <span class="op">+</span></span>
-<span id="cb541-18"><a href="sampling.html#cb541-18"></a><span class="st">  </span><span class="kw">geom_histogram</span>(<span class="dt">binwidth =</span> <span class="fl">0.05</span>, <span class="dt">boundary =</span> <span class="fl">0.4</span>, <span class="dt">color =</span> <span class="st">"white"</span>) <span class="op">+</span></span>
-<span id="cb541-19"><a href="sampling.html#cb541-19"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">"Proportion of 25 balls that were red"</span>, <span class="dt">title =</span> <span class="st">"25"</span>) </span>
-<span id="cb541-20"><a href="sampling.html#cb541-20"></a></span>
-<span id="cb541-21"><a href="sampling.html#cb541-21"></a></span>
-<span id="cb541-22"><a href="sampling.html#cb541-22"></a><span class="co"># Segment 2: sample size = 50 ------------------------------</span></span>
-<span id="cb541-23"><a href="sampling.html#cb541-23"></a><span class="co"># 2.a) Virtually use shovel 1,000 times</span></span>
-<span id="cb541-24"><a href="sampling.html#cb541-24"></a></span>
-<span id="cb541-25"><a href="sampling.html#cb541-25"></a>virtual_samples_<span class="dv">50</span> &lt;-<span class="st"> </span>urn <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb541-26"><a href="sampling.html#cb541-26"></a><span class="st">  </span><span class="kw">rep_sample_n</span>(<span class="dt">size =</span> <span class="dv">50</span>, <span class="dt">reps =</span> <span class="dv">1000</span>)</span>
-<span id="cb541-27"><a href="sampling.html#cb541-27"></a></span>
-<span id="cb541-28"><a href="sampling.html#cb541-28"></a><span class="co"># 2.b) Compute resulting 1,000 replicates of proportion red</span></span>
-<span id="cb541-29"><a href="sampling.html#cb541-29"></a></span>
-<span id="cb541-30"><a href="sampling.html#cb541-30"></a>virtual_prop_red_<span class="dv">50</span> &lt;-<span class="st"> </span>virtual_samples_<span class="dv">50</span> <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb541-31"><a href="sampling.html#cb541-31"></a><span class="st">  </span><span class="kw">group_by</span>(replicate) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb541-32"><a href="sampling.html#cb541-32"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">red =</span> <span class="kw">sum</span>(color <span class="op">==</span><span class="st"> "red"</span>)) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb541-33"><a href="sampling.html#cb541-33"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">prop_red =</span> red <span class="op">/</span><span class="st"> </span><span class="dv">50</span>)</span>
-<span id="cb541-34"><a href="sampling.html#cb541-34"></a></span>
-<span id="cb541-35"><a href="sampling.html#cb541-35"></a><span class="co"># 2.c) Plot distribution via a histogram</span></span>
-<span id="cb541-36"><a href="sampling.html#cb541-36"></a></span>
-<span id="cb541-37"><a href="sampling.html#cb541-37"></a>virtual_prop_red_<span class="dv">50</span> <span class="op">%&gt;%</span></span>
-<span id="cb541-38"><a href="sampling.html#cb541-38"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> prop_red)) <span class="op">+</span></span>
-<span id="cb541-39"><a href="sampling.html#cb541-39"></a><span class="st">  </span><span class="kw">geom_histogram</span>(<span class="dt">binwidth =</span> <span class="fl">0.05</span>, <span class="dt">boundary =</span> <span class="fl">0.4</span>, <span class="dt">color =</span> <span class="st">"white"</span>) <span class="op">+</span></span>
-<span id="cb541-40"><a href="sampling.html#cb541-40"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">"Proportion of 50 balls that were red"</span>, <span class="dt">title =</span> <span class="st">"50"</span>)  </span>
-<span id="cb541-41"><a href="sampling.html#cb541-41"></a></span>
-<span id="cb541-42"><a href="sampling.html#cb541-42"></a></span>
-<span id="cb541-43"><a href="sampling.html#cb541-43"></a><span class="co"># Segment 3: sample size = 100 ------------------------------</span></span>
-<span id="cb541-44"><a href="sampling.html#cb541-44"></a><span class="co"># 3.a) Virtually using shovel with 100 slots 1,000 times</span></span>
-<span id="cb541-45"><a href="sampling.html#cb541-45"></a></span>
-<span id="cb541-46"><a href="sampling.html#cb541-46"></a>virtual_samples_<span class="dv">100</span> &lt;-<span class="st"> </span>urn <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb541-47"><a href="sampling.html#cb541-47"></a><span class="st">  </span><span class="kw">rep_sample_n</span>(<span class="dt">size =</span> <span class="dv">100</span>, <span class="dt">reps =</span> <span class="dv">1000</span>)</span>
-<span id="cb541-48"><a href="sampling.html#cb541-48"></a></span>
-<span id="cb541-49"><a href="sampling.html#cb541-49"></a><span class="co"># 3.b) Compute resulting 1,000 replicates of proportion red</span></span>
-<span id="cb541-50"><a href="sampling.html#cb541-50"></a></span>
-<span id="cb541-51"><a href="sampling.html#cb541-51"></a>virtual_prop_red_<span class="dv">100</span> &lt;-<span class="st"> </span>virtual_samples_<span class="dv">100</span> <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb541-52"><a href="sampling.html#cb541-52"></a><span class="st">  </span><span class="kw">group_by</span>(replicate) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb541-53"><a href="sampling.html#cb541-53"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">red =</span> <span class="kw">sum</span>(color <span class="op">==</span><span class="st"> "red"</span>)) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb541-54"><a href="sampling.html#cb541-54"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">prop_red =</span> red <span class="op">/</span><span class="st"> </span><span class="dv">100</span>)</span>
-<span id="cb541-55"><a href="sampling.html#cb541-55"></a></span>
-<span id="cb541-56"><a href="sampling.html#cb541-56"></a><span class="co"># 3.c) Plot distribution via a histogram</span></span>
-<span id="cb541-57"><a href="sampling.html#cb541-57"></a></span>
-<span id="cb541-58"><a href="sampling.html#cb541-58"></a>virtual_prop_red_<span class="dv">100</span> <span class="op">%&gt;%</span></span>
-<span id="cb541-59"><a href="sampling.html#cb541-59"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> prop_red)) <span class="op">+</span></span>
-<span id="cb541-60"><a href="sampling.html#cb541-60"></a><span class="st">  </span><span class="kw">geom_histogram</span>(<span class="dt">binwidth =</span> <span class="fl">0.05</span>, <span class="dt">boundary =</span> <span class="fl">0.4</span>, <span class="dt">color =</span> <span class="st">"white"</span>) <span class="op">+</span></span>
-<span id="cb541-61"><a href="sampling.html#cb541-61"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">"Proportion of 100 balls that were red"</span>, <span class="dt">title =</span> <span class="st">"100"</span>) </span></code></pre></div>
+<div class="sourceCode" id="cb588"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb588-1"><a href="sampling.html#cb588-1"></a><span class="co"># Segment 1: sample size = 25 ------------------------------</span></span>
+<span id="cb588-2"><a href="sampling.html#cb588-2"></a><span class="co"># 1.a) Virtually use shovel 1,000 times</span></span>
+<span id="cb588-3"><a href="sampling.html#cb588-3"></a></span>
+<span id="cb588-4"><a href="sampling.html#cb588-4"></a>virtual_samples_<span class="dv">25</span> &lt;-<span class="st"> </span>urn <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb588-5"><a href="sampling.html#cb588-5"></a><span class="st">  </span><span class="kw">rep_sample_n</span>(<span class="dt">size =</span> <span class="dv">25</span>, <span class="dt">reps =</span> <span class="dv">1000</span>)</span>
+<span id="cb588-6"><a href="sampling.html#cb588-6"></a></span>
+<span id="cb588-7"><a href="sampling.html#cb588-7"></a><span class="co"># 1.b) Compute resulting 1,000 replicates of proportion red</span></span>
+<span id="cb588-8"><a href="sampling.html#cb588-8"></a></span>
+<span id="cb588-9"><a href="sampling.html#cb588-9"></a>virtual_prop_red_<span class="dv">25</span> &lt;-<span class="st"> </span>virtual_samples_<span class="dv">25</span> <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb588-10"><a href="sampling.html#cb588-10"></a><span class="st">  </span><span class="kw">group_by</span>(replicate) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb588-11"><a href="sampling.html#cb588-11"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">red =</span> <span class="kw">sum</span>(color <span class="op">==</span><span class="st"> "red"</span>)) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb588-12"><a href="sampling.html#cb588-12"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">prop_red =</span> red <span class="op">/</span><span class="st"> </span><span class="dv">25</span>)</span>
+<span id="cb588-13"><a href="sampling.html#cb588-13"></a></span>
+<span id="cb588-14"><a href="sampling.html#cb588-14"></a><span class="co"># 1.c) Plot distribution via a histogram</span></span>
+<span id="cb588-15"><a href="sampling.html#cb588-15"></a></span>
+<span id="cb588-16"><a href="sampling.html#cb588-16"></a>virtual_prop_red_<span class="dv">25</span> <span class="op">%&gt;%</span></span>
+<span id="cb588-17"><a href="sampling.html#cb588-17"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> prop_red)) <span class="op">+</span></span>
+<span id="cb588-18"><a href="sampling.html#cb588-18"></a><span class="st">  </span><span class="kw">geom_histogram</span>(<span class="dt">binwidth =</span> <span class="fl">0.05</span>, <span class="dt">boundary =</span> <span class="fl">0.4</span>, <span class="dt">color =</span> <span class="st">"white"</span>) <span class="op">+</span></span>
+<span id="cb588-19"><a href="sampling.html#cb588-19"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">"Proportion of 25 balls that were red"</span>, <span class="dt">title =</span> <span class="st">"25"</span>) </span>
+<span id="cb588-20"><a href="sampling.html#cb588-20"></a></span>
+<span id="cb588-21"><a href="sampling.html#cb588-21"></a></span>
+<span id="cb588-22"><a href="sampling.html#cb588-22"></a><span class="co"># Segment 2: sample size = 50 ------------------------------</span></span>
+<span id="cb588-23"><a href="sampling.html#cb588-23"></a><span class="co"># 2.a) Virtually use shovel 1,000 times</span></span>
+<span id="cb588-24"><a href="sampling.html#cb588-24"></a></span>
+<span id="cb588-25"><a href="sampling.html#cb588-25"></a>virtual_samples_<span class="dv">50</span> &lt;-<span class="st"> </span>urn <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb588-26"><a href="sampling.html#cb588-26"></a><span class="st">  </span><span class="kw">rep_sample_n</span>(<span class="dt">size =</span> <span class="dv">50</span>, <span class="dt">reps =</span> <span class="dv">1000</span>)</span>
+<span id="cb588-27"><a href="sampling.html#cb588-27"></a></span>
+<span id="cb588-28"><a href="sampling.html#cb588-28"></a><span class="co"># 2.b) Compute resulting 1,000 replicates of proportion red</span></span>
+<span id="cb588-29"><a href="sampling.html#cb588-29"></a></span>
+<span id="cb588-30"><a href="sampling.html#cb588-30"></a>virtual_prop_red_<span class="dv">50</span> &lt;-<span class="st"> </span>virtual_samples_<span class="dv">50</span> <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb588-31"><a href="sampling.html#cb588-31"></a><span class="st">  </span><span class="kw">group_by</span>(replicate) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb588-32"><a href="sampling.html#cb588-32"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">red =</span> <span class="kw">sum</span>(color <span class="op">==</span><span class="st"> "red"</span>)) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb588-33"><a href="sampling.html#cb588-33"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">prop_red =</span> red <span class="op">/</span><span class="st"> </span><span class="dv">50</span>)</span>
+<span id="cb588-34"><a href="sampling.html#cb588-34"></a></span>
+<span id="cb588-35"><a href="sampling.html#cb588-35"></a><span class="co"># 2.c) Plot distribution via a histogram</span></span>
+<span id="cb588-36"><a href="sampling.html#cb588-36"></a></span>
+<span id="cb588-37"><a href="sampling.html#cb588-37"></a>virtual_prop_red_<span class="dv">50</span> <span class="op">%&gt;%</span></span>
+<span id="cb588-38"><a href="sampling.html#cb588-38"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> prop_red)) <span class="op">+</span></span>
+<span id="cb588-39"><a href="sampling.html#cb588-39"></a><span class="st">  </span><span class="kw">geom_histogram</span>(<span class="dt">binwidth =</span> <span class="fl">0.05</span>, <span class="dt">boundary =</span> <span class="fl">0.4</span>, <span class="dt">color =</span> <span class="st">"white"</span>) <span class="op">+</span></span>
+<span id="cb588-40"><a href="sampling.html#cb588-40"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">"Proportion of 50 balls that were red"</span>, <span class="dt">title =</span> <span class="st">"50"</span>)  </span>
+<span id="cb588-41"><a href="sampling.html#cb588-41"></a></span>
+<span id="cb588-42"><a href="sampling.html#cb588-42"></a></span>
+<span id="cb588-43"><a href="sampling.html#cb588-43"></a><span class="co"># Segment 3: sample size = 100 ------------------------------</span></span>
+<span id="cb588-44"><a href="sampling.html#cb588-44"></a><span class="co"># 3.a) Virtually using shovel with 100 slots 1,000 times</span></span>
+<span id="cb588-45"><a href="sampling.html#cb588-45"></a></span>
+<span id="cb588-46"><a href="sampling.html#cb588-46"></a>virtual_samples_<span class="dv">100</span> &lt;-<span class="st"> </span>urn <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb588-47"><a href="sampling.html#cb588-47"></a><span class="st">  </span><span class="kw">rep_sample_n</span>(<span class="dt">size =</span> <span class="dv">100</span>, <span class="dt">reps =</span> <span class="dv">1000</span>)</span>
+<span id="cb588-48"><a href="sampling.html#cb588-48"></a></span>
+<span id="cb588-49"><a href="sampling.html#cb588-49"></a><span class="co"># 3.b) Compute resulting 1,000 replicates of proportion red</span></span>
+<span id="cb588-50"><a href="sampling.html#cb588-50"></a></span>
+<span id="cb588-51"><a href="sampling.html#cb588-51"></a>virtual_prop_red_<span class="dv">100</span> &lt;-<span class="st"> </span>virtual_samples_<span class="dv">100</span> <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb588-52"><a href="sampling.html#cb588-52"></a><span class="st">  </span><span class="kw">group_by</span>(replicate) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb588-53"><a href="sampling.html#cb588-53"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">red =</span> <span class="kw">sum</span>(color <span class="op">==</span><span class="st"> "red"</span>)) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb588-54"><a href="sampling.html#cb588-54"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">prop_red =</span> red <span class="op">/</span><span class="st"> </span><span class="dv">100</span>)</span>
+<span id="cb588-55"><a href="sampling.html#cb588-55"></a></span>
+<span id="cb588-56"><a href="sampling.html#cb588-56"></a><span class="co"># 3.c) Plot distribution via a histogram</span></span>
+<span id="cb588-57"><a href="sampling.html#cb588-57"></a></span>
+<span id="cb588-58"><a href="sampling.html#cb588-58"></a>virtual_prop_red_<span class="dv">100</span> <span class="op">%&gt;%</span></span>
+<span id="cb588-59"><a href="sampling.html#cb588-59"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> prop_red)) <span class="op">+</span></span>
+<span id="cb588-60"><a href="sampling.html#cb588-60"></a><span class="st">  </span><span class="kw">geom_histogram</span>(<span class="dt">binwidth =</span> <span class="fl">0.05</span>, <span class="dt">boundary =</span> <span class="fl">0.4</span>, <span class="dt">color =</span> <span class="st">"white"</span>) <span class="op">+</span></span>
+<span id="cb588-61"><a href="sampling.html#cb588-61"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">"Proportion of 100 balls that were red"</span>, <span class="dt">title =</span> <span class="st">"100"</span>) </span></code></pre></div>
 <p>For easy comparison, we present the three resulting histograms in a single row with matching x and y axes in Figure <a href="sampling.html#fig:comparing-sampling-distributions">6.12</a>.</p>
 <pre><code>## `summarise()` ungrouping output (override with `.groups` argument)
 ## `summarise()` ungrouping output (override with `.groups` argument)
@@ -698,24 +673,22 @@ FIGURE 6.12: Comparing the distributions of proportion red for different sample 
 <img src="_book_temp_files/figure-html/comparing-sampling-distributions-1.png" alt="Comparing the distributions of proportion red for different sample sizes." width="672">
 </div>
 <p>Observe that as the sample size increases, the variation of the 1,000 replicates of the proportion of red decreases. In other words, as the sample size increases, there are fewer differences due to sampling variation and the distribution centers more tightly around the same value. Eyeballing Figure <a href="sampling.html#fig:comparing-sampling-distributions">6.12</a>, all three histograms appear to center around roughly 40%.</p>
-<!-- Though standard deviation is an important part of the shovel size difference, this section is already pretty long and might be fine without the next code chunk. -->
-<p>We can be numerically explicit about the amount of variation in our three sets of 1,000 values of <code>prop_red</code> using the  <em>standard deviation</em>. A standard deviation is a summary statistic that measures the amount of variation within a numerical variable. For all three sample sizes, let’s compute the standard deviation of the 1,000 proportions red by running the following data wrangling code that uses the <code>sd()</code> summary function.</p>
-<div class="sourceCode" id="cb543"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb543-1"><a href="sampling.html#cb543-1"></a><span class="co"># n = 25</span></span>
-<span id="cb543-2"><a href="sampling.html#cb543-2"></a></span>
-<span id="cb543-3"><a href="sampling.html#cb543-3"></a>virtual_prop_red_<span class="dv">25</span> <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb543-4"><a href="sampling.html#cb543-4"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">sd =</span> <span class="kw">sd</span>(prop_red))</span>
-<span id="cb543-5"><a href="sampling.html#cb543-5"></a></span>
-<span id="cb543-6"><a href="sampling.html#cb543-6"></a><span class="co"># n = 50</span></span>
-<span id="cb543-7"><a href="sampling.html#cb543-7"></a></span>
-<span id="cb543-8"><a href="sampling.html#cb543-8"></a>virtual_prop_red_<span class="dv">50</span> <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb543-9"><a href="sampling.html#cb543-9"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">sd =</span> <span class="kw">sd</span>(prop_red))</span>
-<span id="cb543-10"><a href="sampling.html#cb543-10"></a></span>
-<span id="cb543-11"><a href="sampling.html#cb543-11"></a><span class="co"># n = 100</span></span>
-<span id="cb543-12"><a href="sampling.html#cb543-12"></a></span>
-<span id="cb543-13"><a href="sampling.html#cb543-13"></a>virtual_prop_red_<span class="dv">100</span> <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb543-14"><a href="sampling.html#cb543-14"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">sd =</span> <span class="kw">sd</span>(prop_red))</span></code></pre></div>
+<p>We can be numerically explicit about the amount of variation in our three sets of 1,000 values of <code>prop_red</code> using the <em>standard deviation</em>. A standard deviation is a summary statistic that measures the amount of variation within a numerical variable. For all three sample sizes, let’s compute the standard deviation of the 1,000 proportions red by running the following data wrangling code that uses the <code>sd()</code> summary function.</p>
+<div class="sourceCode" id="cb590"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb590-1"><a href="sampling.html#cb590-1"></a><span class="co"># n = 25</span></span>
+<span id="cb590-2"><a href="sampling.html#cb590-2"></a></span>
+<span id="cb590-3"><a href="sampling.html#cb590-3"></a>virtual_prop_red_<span class="dv">25</span> <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb590-4"><a href="sampling.html#cb590-4"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">sd =</span> <span class="kw">sd</span>(prop_red))</span>
+<span id="cb590-5"><a href="sampling.html#cb590-5"></a></span>
+<span id="cb590-6"><a href="sampling.html#cb590-6"></a><span class="co"># n = 50</span></span>
+<span id="cb590-7"><a href="sampling.html#cb590-7"></a></span>
+<span id="cb590-8"><a href="sampling.html#cb590-8"></a>virtual_prop_red_<span class="dv">50</span> <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb590-9"><a href="sampling.html#cb590-9"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">sd =</span> <span class="kw">sd</span>(prop_red))</span>
+<span id="cb590-10"><a href="sampling.html#cb590-10"></a></span>
+<span id="cb590-11"><a href="sampling.html#cb590-11"></a><span class="co"># n = 100</span></span>
+<span id="cb590-12"><a href="sampling.html#cb590-12"></a></span>
+<span id="cb590-13"><a href="sampling.html#cb590-13"></a>virtual_prop_red_<span class="dv">100</span> <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb590-14"><a href="sampling.html#cb590-14"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">sd =</span> <span class="kw">sd</span>(prop_red))</span></code></pre></div>
 <p>Let’s compare these three measures of distributional variation in Table <a href="sampling.html#tab:comparing-n">6.1</a>.</p>
-<!-- I think the idea of "as the sample size goes up, variation goes down" is already clear without this next addition. -->
 <pre><code>## `summarise()` ungrouping output (override with `.groups` argument)</code></pre>
 <table class="table" style="font-size: 16px; margin-left: auto; margin-right: auto;">
 <caption style="font-size: initial !important;">
@@ -756,27 +729,26 @@ Standard deviation of proportions red
 </tr>
 </tbody>
 </table>
-<p>As we observed in Figure <a href="sampling.html#fig:comparing-sampling-distributions">6.12</a>, as the sample size increases, the variation decreases. In other words, there is less variation in the 1,000 values of the proportion red. So as the sample size increases, our guesses at the true proportion of the urn’s balls that are red get more precise.</p>
-<!-- MF: This seems to indicate that the larger shovel is, as expected, the most precise. Maybe an additional paragraph explicitly stating which shovel size is best should be added here. -->
+<p>As we observed in Figure <a href="sampling.html#fig:comparing-sampling-distributions">6.12</a>, as the sample size increases, the variation decreases. In other words, there is less variation in the 1,000 values of the proportion red. So as the sample size increases, our guesses at the true proportion of the urn’s balls that are red get more precise. Therefore, our initial assumption that the larger shovel yields the most precise result is correct!</p>
 </div>
-<div id="using-many-shovels-at-once" class="section level3">
+<div id="functions-are-your-friend" class="section level3">
 <h3>
-<span class="header-section-number">6.2.5</span> Using many shovels at once</h3>
+<span class="header-section-number">6.2.5</span> Functions are your friend</h3>
 <p>Note that in the last section, we ran more or less the same code three times, but with different sizes for our shovel (25, 50, and 100). Whenever you find yourself writing the same code three or more times, you should write a <em>function</em> that does the same thing. Let’s look at the code that used a shovel of size 25 and calculated the proportion of balls that were red one more time:</p>
-<div class="sourceCode" id="cb545"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb545-1"><a href="sampling.html#cb545-1"></a>virtual_samples_<span class="dv">25</span> &lt;-<span class="st"> </span>urn <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb545-2"><a href="sampling.html#cb545-2"></a><span class="st">  </span><span class="kw">rep_sample_n</span>(<span class="dt">size =</span> <span class="dv">25</span>, <span class="dt">reps =</span> <span class="dv">1000</span>)</span>
-<span id="cb545-3"><a href="sampling.html#cb545-3"></a></span>
-<span id="cb545-4"><a href="sampling.html#cb545-4"></a>virtual_prop_red_<span class="dv">25</span> &lt;-<span class="st"> </span>virtual_samples_<span class="dv">25</span> <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb545-5"><a href="sampling.html#cb545-5"></a><span class="st">  </span><span class="kw">group_by</span>(replicate) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb545-6"><a href="sampling.html#cb545-6"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">red =</span> <span class="kw">sum</span>(color <span class="op">==</span><span class="st"> "red"</span>)) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb545-7"><a href="sampling.html#cb545-7"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">prop_red =</span> red <span class="op">/</span><span class="st"> </span><span class="dv">25</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb592"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb592-1"><a href="sampling.html#cb592-1"></a>virtual_samples_<span class="dv">25</span> &lt;-<span class="st"> </span>urn <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb592-2"><a href="sampling.html#cb592-2"></a><span class="st">  </span><span class="kw">rep_sample_n</span>(<span class="dt">size =</span> <span class="dv">25</span>, <span class="dt">reps =</span> <span class="dv">1000</span>)</span>
+<span id="cb592-3"><a href="sampling.html#cb592-3"></a></span>
+<span id="cb592-4"><a href="sampling.html#cb592-4"></a>virtual_prop_red_<span class="dv">25</span> &lt;-<span class="st"> </span>virtual_samples_<span class="dv">25</span> <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb592-5"><a href="sampling.html#cb592-5"></a><span class="st">  </span><span class="kw">group_by</span>(replicate) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb592-6"><a href="sampling.html#cb592-6"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">red =</span> <span class="kw">sum</span>(color <span class="op">==</span><span class="st"> "red"</span>)) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb592-7"><a href="sampling.html#cb592-7"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">prop_red =</span> red <span class="op">/</span><span class="st"> </span><span class="dv">25</span>)</span></code></pre></div>
 <p>We will break this into two functions, one called <code>use_shovel()</code> which will use a shovel of the specified size, and another called <code>prop_red()</code> which will calculate the proportion of red for a shovel of the specified size.</p>
 <p>First, let’s create <code>use_shovel()</code></p>
-<div class="sourceCode" id="cb546"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb546-1"><a href="sampling.html#cb546-1"></a>use_shovel &lt;-<span class="st"> </span><span class="cf">function</span>(x, size, reps) {</span>
-<span id="cb546-2"><a href="sampling.html#cb546-2"></a>  x <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">rep_sample_n</span>(<span class="dt">size =</span> size, <span class="dt">reps =</span> reps)</span>
-<span id="cb546-3"><a href="sampling.html#cb546-3"></a>}</span>
-<span id="cb546-4"><a href="sampling.html#cb546-4"></a></span>
-<span id="cb546-5"><a href="sampling.html#cb546-5"></a><span class="kw">use_shovel</span>(<span class="dt">x =</span> urn, <span class="dt">size =</span> <span class="dv">25</span>, <span class="dt">reps =</span> <span class="dv">1000</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb593"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb593-1"><a href="sampling.html#cb593-1"></a>use_shovel &lt;-<span class="st"> </span><span class="cf">function</span>(x, size, reps) {</span>
+<span id="cb593-2"><a href="sampling.html#cb593-2"></a>  x <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">rep_sample_n</span>(<span class="dt">size =</span> size, <span class="dt">reps =</span> reps)</span>
+<span id="cb593-3"><a href="sampling.html#cb593-3"></a>}</span>
+<span id="cb593-4"><a href="sampling.html#cb593-4"></a></span>
+<span id="cb593-5"><a href="sampling.html#cb593-5"></a><span class="kw">use_shovel</span>(<span class="dt">x =</span> urn, <span class="dt">size =</span> <span class="dv">25</span>, <span class="dt">reps =</span> <span class="dv">1000</span>)</span></code></pre></div>
 <pre><code>## # A tibble: 25,000 x 3
 ## # Groups:   replicate [1,000]
 ##    replicate ball_ID color
@@ -793,16 +765,15 @@ Standard deviation of proportions red
 ## 10         1      40 red  
 ## # … with 24,990 more rows</code></pre>
 <p>See that we now can create the object <code>virtual_samples_25</code> with the code <code>virtual_samples_25 &lt;- use_shovel(x = urn, size = 25, reps = 1000)</code>. This is far more succinct than our previous code, and it allows us to use a shovel of any size we’d like.</p>
-<!-- MF: Why use two functions, rather than one? Given that functions aren't covered much prior to this chapter, it might be easier to interpret this section with one function and more clarification of how the function itself is working. -->
 <p>Now, we can use our <code>use_shovel()</code> function to develop another function, <code>prop_red()</code>:</p>
-<div class="sourceCode" id="cb548"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb548-1"><a href="sampling.html#cb548-1"></a>prop_red &lt;-<span class="st"> </span><span class="cf">function</span>(x, size, reps) {</span>
-<span id="cb548-2"><a href="sampling.html#cb548-2"></a>  <span class="kw">use_shovel</span>(<span class="dt">x =</span> x, <span class="dt">size =</span> size, <span class="dt">reps =</span> reps) <span class="op">%&gt;%</span></span>
-<span id="cb548-3"><a href="sampling.html#cb548-3"></a><span class="st">    </span><span class="kw">group_by</span>(replicate) <span class="op">%&gt;%</span></span>
-<span id="cb548-4"><a href="sampling.html#cb548-4"></a><span class="st">    </span><span class="kw">summarize</span>(<span class="dt">red =</span> <span class="kw">sum</span>(color <span class="op">==</span><span class="st"> "red"</span>)) <span class="op">%&gt;%</span></span>
-<span id="cb548-5"><a href="sampling.html#cb548-5"></a><span class="st">    </span><span class="kw">mutate</span>(<span class="dt">prop_red =</span> red <span class="op">/</span><span class="st"> </span>size)</span>
-<span id="cb548-6"><a href="sampling.html#cb548-6"></a>}</span>
-<span id="cb548-7"><a href="sampling.html#cb548-7"></a></span>
-<span id="cb548-8"><a href="sampling.html#cb548-8"></a><span class="kw">prop_red</span>(<span class="dt">x =</span> urn, <span class="dt">size =</span> <span class="dv">25</span>, <span class="dt">reps =</span> <span class="dv">1000</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb595"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb595-1"><a href="sampling.html#cb595-1"></a>prop_red &lt;-<span class="st"> </span><span class="cf">function</span>(x, size, reps) {</span>
+<span id="cb595-2"><a href="sampling.html#cb595-2"></a>  <span class="kw">use_shovel</span>(<span class="dt">x =</span> x, <span class="dt">size =</span> size, <span class="dt">reps =</span> reps) <span class="op">%&gt;%</span></span>
+<span id="cb595-3"><a href="sampling.html#cb595-3"></a><span class="st">    </span><span class="kw">group_by</span>(replicate) <span class="op">%&gt;%</span></span>
+<span id="cb595-4"><a href="sampling.html#cb595-4"></a><span class="st">    </span><span class="kw">summarize</span>(<span class="dt">red =</span> <span class="kw">sum</span>(color <span class="op">==</span><span class="st"> "red"</span>)) <span class="op">%&gt;%</span></span>
+<span id="cb595-5"><a href="sampling.html#cb595-5"></a><span class="st">    </span><span class="kw">mutate</span>(<span class="dt">prop_red =</span> red <span class="op">/</span><span class="st"> </span>size)</span>
+<span id="cb595-6"><a href="sampling.html#cb595-6"></a>}</span>
+<span id="cb595-7"><a href="sampling.html#cb595-7"></a></span>
+<span id="cb595-8"><a href="sampling.html#cb595-8"></a><span class="kw">prop_red</span>(<span class="dt">x =</span> urn, <span class="dt">size =</span> <span class="dv">25</span>, <span class="dt">reps =</span> <span class="dv">1000</span>)</span></code></pre></div>
 <pre><code>## `summarise()` ungrouping output (override with `.groups` argument)</code></pre>
 <pre><code>## # A tibble: 1,000 x 3
 ##    replicate   red prop_red
@@ -819,38 +790,36 @@ Standard deviation of proportions red
 ## 10        10    12     0.48
 ## # … with 990 more rows</code></pre>
 <p>See how this just uses the code we had before to create <code>virtual_prop_red_25</code>, but generalizes it. Now we can create the same tibbles we did before, ready to plot the histograms, with only three lines of code:</p>
-<div class="sourceCode" id="cb551"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb551-1"><a href="sampling.html#cb551-1"></a>virtual_prop_red_<span class="dv">25</span> &lt;-<span class="st"> </span><span class="kw">prop_red</span>(<span class="dt">x =</span> urn, <span class="dt">size =</span> <span class="dv">25</span>, <span class="dt">reps =</span> <span class="dv">1000</span>)</span>
-<span id="cb551-2"><a href="sampling.html#cb551-2"></a>virtual_prop_red_<span class="dv">50</span> &lt;-<span class="st"> </span><span class="kw">prop_red</span>(<span class="dt">x =</span> urn, <span class="dt">size =</span> <span class="dv">50</span>, <span class="dt">reps =</span> <span class="dv">1000</span>)</span>
-<span id="cb551-3"><a href="sampling.html#cb551-3"></a>virtual_prop_red_<span class="dv">100</span> &lt;-<span class="st"> </span><span class="kw">prop_red</span>(<span class="dt">x =</span> urn, <span class="dt">size =</span> <span class="dv">100</span>, <span class="dt">reps =</span> <span class="dv">1000</span>)</span></code></pre></div>
-<p>But this still isn’t the best way. Note that we have three objects we need to deal with, <code>virtual_prop_red_25</code>, <code>virtual_prop_red_50</code>, and <code>virtual_prop_red_100</code>. Furthermore, we don’t actually know that the names are accurate! Perhaps we made a mistake and created <code>virtual_prop_red_50</code> with the code <code>virtual_prop_red_50 &lt;- prop_red(25)</code>; our object name will now be misleading as to what’s actually in the object.</p>
-<!-- MF: Maybe a different introduction to storing in a tibble... -->
-<p>Instead, let’s store our results in a single tibble. How can we do this? By using <code>map()</code> to create a list column!</p>
+<div class="sourceCode" id="cb598"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb598-1"><a href="sampling.html#cb598-1"></a>virtual_prop_red_<span class="dv">25</span> &lt;-<span class="st"> </span><span class="kw">prop_red</span>(<span class="dt">x =</span> urn, <span class="dt">size =</span> <span class="dv">25</span>, <span class="dt">reps =</span> <span class="dv">1000</span>)</span>
+<span id="cb598-2"><a href="sampling.html#cb598-2"></a>virtual_prop_red_<span class="dv">50</span> &lt;-<span class="st"> </span><span class="kw">prop_red</span>(<span class="dt">x =</span> urn, <span class="dt">size =</span> <span class="dv">50</span>, <span class="dt">reps =</span> <span class="dv">1000</span>)</span>
+<span id="cb598-3"><a href="sampling.html#cb598-3"></a>virtual_prop_red_<span class="dv">100</span> &lt;-<span class="st"> </span><span class="kw">prop_red</span>(<span class="dt">x =</span> urn, <span class="dt">size =</span> <span class="dv">100</span>, <span class="dt">reps =</span> <span class="dv">1000</span>)</span></code></pre></div>
+<p>But this still isn’t the best way. Note that we have three objects we need to deal with, <code>virtual_prop_red_25</code>, <code>virtual_prop_red_50</code>, and <code>virtual_prop_red_100</code>. Instead, let’s store our results in a single tibble. How can we do this? By using <code>map()</code> to create a list column!</p>
 <p>First, we’ll create a tibble called <code>shovels</code> that will have a variable named <code>shovel_size</code> with our values (25, 50, 100):</p>
-<div class="sourceCode" id="cb552"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb552-1"><a href="sampling.html#cb552-1"></a>shovels &lt;-<span class="st"> </span><span class="kw">tibble</span>(<span class="dt">shovel_size =</span> <span class="kw">c</span>(<span class="dv">25</span>, <span class="dv">50</span>, <span class="dv">100</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb599"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb599-1"><a href="sampling.html#cb599-1"></a>shovels &lt;-<span class="st"> </span><span class="kw">tibble</span>(<span class="dt">shovel_size =</span> <span class="kw">c</span>(<span class="dv">25</span>, <span class="dv">50</span>, <span class="dv">100</span>))</span></code></pre></div>
 <p>Next, we’ll create list columns called <code>use_shovel_results</code> and <code>prop_red_results</code> that are the outputs of <code>use_shovel()</code> and <code>prop_red</code>, respectively:</p>
-<div class="sourceCode" id="cb553"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb553-1"><a href="sampling.html#cb553-1"></a>shovels &lt;-<span class="st"> </span>shovels <span class="op">%&gt;%</span></span>
-<span id="cb553-2"><a href="sampling.html#cb553-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">use_shovel_results =</span> <span class="kw">map</span>(shovel_size,</span>
-<span id="cb553-3"><a href="sampling.html#cb553-3"></a>                                  <span class="op">~</span><span class="st"> </span><span class="kw">use_shovel</span>(<span class="dt">x =</span> urn,</span>
-<span id="cb553-4"><a href="sampling.html#cb553-4"></a>                                               <span class="dt">size =</span> .x,</span>
-<span id="cb553-5"><a href="sampling.html#cb553-5"></a>                                               <span class="dt">reps =</span> <span class="dv">1000</span>))) <span class="op">%&gt;%</span></span>
-<span id="cb553-6"><a href="sampling.html#cb553-6"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">prop_red_results =</span> <span class="kw">map</span>(shovel_size,</span>
-<span id="cb553-7"><a href="sampling.html#cb553-7"></a>                                <span class="op">~</span><span class="st"> </span><span class="kw">prop_red</span>(<span class="dt">x =</span> urn, </span>
-<span id="cb553-8"><a href="sampling.html#cb553-8"></a>                                           <span class="dt">size =</span> .x, </span>
-<span id="cb553-9"><a href="sampling.html#cb553-9"></a>                                           <span class="dt">reps =</span> <span class="dv">1000</span>)))</span></code></pre></div>
+<div class="sourceCode" id="cb600"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb600-1"><a href="sampling.html#cb600-1"></a>shovels &lt;-<span class="st"> </span>shovels <span class="op">%&gt;%</span></span>
+<span id="cb600-2"><a href="sampling.html#cb600-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">use_shovel_results =</span> <span class="kw">map</span>(shovel_size,</span>
+<span id="cb600-3"><a href="sampling.html#cb600-3"></a>                                  <span class="op">~</span><span class="st"> </span><span class="kw">use_shovel</span>(<span class="dt">x =</span> urn,</span>
+<span id="cb600-4"><a href="sampling.html#cb600-4"></a>                                               <span class="dt">size =</span> .x,</span>
+<span id="cb600-5"><a href="sampling.html#cb600-5"></a>                                               <span class="dt">reps =</span> <span class="dv">1000</span>))) <span class="op">%&gt;%</span></span>
+<span id="cb600-6"><a href="sampling.html#cb600-6"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">prop_red_results =</span> <span class="kw">map</span>(shovel_size,</span>
+<span id="cb600-7"><a href="sampling.html#cb600-7"></a>                                <span class="op">~</span><span class="st"> </span><span class="kw">prop_red</span>(<span class="dt">x =</span> urn, </span>
+<span id="cb600-8"><a href="sampling.html#cb600-8"></a>                                           <span class="dt">size =</span> .x, </span>
+<span id="cb600-9"><a href="sampling.html#cb600-9"></a>                                           <span class="dt">reps =</span> <span class="dv">1000</span>)))</span></code></pre></div>
 <pre><code>## `summarise()` ungrouping output (override with `.groups` argument)
 ## `summarise()` ungrouping output (override with `.groups` argument)
 ## `summarise()` ungrouping output (override with `.groups` argument)</code></pre>
-<div class="sourceCode" id="cb555"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb555-1"><a href="sampling.html#cb555-1"></a><span class="kw">glimpse</span>(shovels)</span></code></pre></div>
+<div class="sourceCode" id="cb602"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb602-1"><a href="sampling.html#cb602-1"></a><span class="kw">glimpse</span>(shovels)</span></code></pre></div>
 <pre><code>## Rows: 3
 ## Columns: 3
 ## $ shovel_size        &lt;dbl&gt; 25, 50, 100
 ## $ use_shovel_results &lt;list&gt; [&lt;grouped_df[25000 x 3]&gt;, &lt;grouped_df[50000 x 3]&gt;…
 ## $ prop_red_results   &lt;list&gt; [&lt;tbl_df[1000 x 3]&gt;, &lt;tbl_df[1000 x 3]&gt;, &lt;tbl_df[…</code></pre>
 <p>Adding another <code>map_*</code> function will let us get the standard deviations of our estimated proportions:</p>
-<div class="sourceCode" id="cb557"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb557-1"><a href="sampling.html#cb557-1"></a>shovels &lt;-<span class="st"> </span>shovels <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb557-2"><a href="sampling.html#cb557-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">prop_red_sd =</span> <span class="kw">map_dbl</span>(prop_red_results, <span class="op">~</span><span class="st"> </span><span class="kw">pull</span>(., prop_red) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">sd</span>()))</span>
-<span id="cb557-3"><a href="sampling.html#cb557-3"></a></span>
-<span id="cb557-4"><a href="sampling.html#cb557-4"></a><span class="kw">glimpse</span>(shovels)</span></code></pre></div>
+<div class="sourceCode" id="cb604"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb604-1"><a href="sampling.html#cb604-1"></a>shovels &lt;-<span class="st"> </span>shovels <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb604-2"><a href="sampling.html#cb604-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">prop_red_sd =</span> <span class="kw">map_dbl</span>(prop_red_results, <span class="op">~</span><span class="st"> </span><span class="kw">pull</span>(., prop_red) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">sd</span>()))</span>
+<span id="cb604-3"><a href="sampling.html#cb604-3"></a></span>
+<span id="cb604-4"><a href="sampling.html#cb604-4"></a><span class="kw">glimpse</span>(shovels)</span></code></pre></div>
 <pre><code>## Rows: 3
 ## Columns: 4
 ## $ shovel_size        &lt;dbl&gt; 25, 50, 100
@@ -858,17 +827,17 @@ Standard deviation of proportions red
 ## $ prop_red_results   &lt;list&gt; [&lt;tbl_df[1000 x 3]&gt;, &lt;tbl_df[1000 x 3]&gt;, &lt;tbl_df[…
 ## $ prop_red_sd        &lt;dbl&gt; 0.09942621, 0.06623292, 0.04560038</code></pre>
 <p>But now that we have this framework, there’s no need to limit ourselves to the sizes 25, 50, and 100. Why not try all integers from 1 to 100? We can use the same code, except we’ll now set <code>shovel_size = 1:100</code> when initializing the tibble.</p>
-<div class="sourceCode" id="cb559"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb559-1"><a href="sampling.html#cb559-1"></a>shovels_<span class="dv">100</span> &lt;-<span class="st"> </span><span class="kw">tibble</span>(<span class="dt">shovel_size =</span> <span class="dv">1</span><span class="op">:</span><span class="dv">100</span>) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb559-2"><a href="sampling.html#cb559-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">use_shovel_results =</span> <span class="kw">map</span>(shovel_size,</span>
-<span id="cb559-3"><a href="sampling.html#cb559-3"></a>                                  <span class="op">~</span><span class="st"> </span><span class="kw">use_shovel</span>(<span class="dt">x =</span> urn,</span>
-<span id="cb559-4"><a href="sampling.html#cb559-4"></a>                                               <span class="dt">size =</span> .x,</span>
-<span id="cb559-5"><a href="sampling.html#cb559-5"></a>                                               <span class="dt">reps =</span> <span class="dv">1000</span>))) <span class="op">%&gt;%</span></span>
-<span id="cb559-6"><a href="sampling.html#cb559-6"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">prop_red_results =</span> <span class="kw">map</span>(shovel_size,</span>
-<span id="cb559-7"><a href="sampling.html#cb559-7"></a>                                <span class="op">~</span><span class="st"> </span><span class="kw">prop_red</span>(<span class="dt">x =</span> urn, </span>
-<span id="cb559-8"><a href="sampling.html#cb559-8"></a>                                           <span class="dt">size =</span> .x, </span>
-<span id="cb559-9"><a href="sampling.html#cb559-9"></a>                                           <span class="dt">reps =</span> <span class="dv">1000</span>))) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb559-10"><a href="sampling.html#cb559-10"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">prop_red_sd =</span> <span class="kw">map_dbl</span>(prop_red_results, </span>
-<span id="cb559-11"><a href="sampling.html#cb559-11"></a>                               <span class="op">~</span><span class="st"> </span><span class="kw">pull</span>(., prop_red) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">sd</span>()))</span></code></pre></div>
+<div class="sourceCode" id="cb606"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb606-1"><a href="sampling.html#cb606-1"></a>shovels_<span class="dv">100</span> &lt;-<span class="st"> </span><span class="kw">tibble</span>(<span class="dt">shovel_size =</span> <span class="dv">1</span><span class="op">:</span><span class="dv">100</span>) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb606-2"><a href="sampling.html#cb606-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">use_shovel_results =</span> <span class="kw">map</span>(shovel_size,</span>
+<span id="cb606-3"><a href="sampling.html#cb606-3"></a>                                  <span class="op">~</span><span class="st"> </span><span class="kw">use_shovel</span>(<span class="dt">x =</span> urn,</span>
+<span id="cb606-4"><a href="sampling.html#cb606-4"></a>                                               <span class="dt">size =</span> .x,</span>
+<span id="cb606-5"><a href="sampling.html#cb606-5"></a>                                               <span class="dt">reps =</span> <span class="dv">1000</span>))) <span class="op">%&gt;%</span></span>
+<span id="cb606-6"><a href="sampling.html#cb606-6"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">prop_red_results =</span> <span class="kw">map</span>(shovel_size,</span>
+<span id="cb606-7"><a href="sampling.html#cb606-7"></a>                                <span class="op">~</span><span class="st"> </span><span class="kw">prop_red</span>(<span class="dt">x =</span> urn, </span>
+<span id="cb606-8"><a href="sampling.html#cb606-8"></a>                                           <span class="dt">size =</span> .x, </span>
+<span id="cb606-9"><a href="sampling.html#cb606-9"></a>                                           <span class="dt">reps =</span> <span class="dv">1000</span>))) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb606-10"><a href="sampling.html#cb606-10"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">prop_red_sd =</span> <span class="kw">map_dbl</span>(prop_red_results, </span>
+<span id="cb606-11"><a href="sampling.html#cb606-11"></a>                               <span class="op">~</span><span class="st"> </span><span class="kw">pull</span>(., prop_red) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">sd</span>()))</span></code></pre></div>
 <pre><code>## `summarise()` ungrouping output (override with `.groups` argument)
 ## `summarise()` ungrouping output (override with `.groups` argument)
 ## `summarise()` ungrouping output (override with `.groups` argument)
@@ -969,7 +938,7 @@ Standard deviation of proportions red
 ## `summarise()` ungrouping output (override with `.groups` argument)
 ## `summarise()` ungrouping output (override with `.groups` argument)
 ## `summarise()` ungrouping output (override with `.groups` argument)</code></pre>
-<div class="sourceCode" id="cb561"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb561-1"><a href="sampling.html#cb561-1"></a><span class="kw">glimpse</span>(shovels_<span class="dv">100</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb608"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb608-1"><a href="sampling.html#cb608-1"></a><span class="kw">glimpse</span>(shovels_<span class="dv">100</span>)</span></code></pre></div>
 <pre><code>## Rows: 100
 ## Columns: 4
 ## $ shovel_size        &lt;int&gt; 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,…
@@ -977,20 +946,19 @@ Standard deviation of proportions red
 ## $ prop_red_results   &lt;list&gt; [&lt;tbl_df[1000 x 3]&gt;, &lt;tbl_df[1000 x 3]&gt;, &lt;tbl_df[…
 ## $ prop_red_sd        &lt;dbl&gt; 0.48462239, 0.34354880, 0.28958394, 0.23754827, 0.…</code></pre>
 <p>Now, we have the standard deviation of <code>prop_red</code> for all shovel sizes from 1 to 100. Let’s plot that value to see how it changes as the shovel gets larger:</p>
-<div class="sourceCode" id="cb563"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb563-1"><a href="sampling.html#cb563-1"></a>shovels_<span class="dv">100</span> <span class="op">%&gt;%</span></span>
-<span id="cb563-2"><a href="sampling.html#cb563-2"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> shovel_size, <span class="dt">y =</span> prop_red_sd)) <span class="op">+</span></span>
-<span id="cb563-3"><a href="sampling.html#cb563-3"></a><span class="st">  </span><span class="kw">geom_point</span>() <span class="op">+</span></span>
-<span id="cb563-4"><a href="sampling.html#cb563-4"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">"Shovel size"</span>,</span>
-<span id="cb563-5"><a href="sampling.html#cb563-5"></a>       <span class="dt">y =</span> <span class="st">"Standard deviation of the proportion red"</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb610"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb610-1"><a href="sampling.html#cb610-1"></a>shovels_<span class="dv">100</span> <span class="op">%&gt;%</span></span>
+<span id="cb610-2"><a href="sampling.html#cb610-2"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> shovel_size, <span class="dt">y =</span> prop_red_sd)) <span class="op">+</span></span>
+<span id="cb610-3"><a href="sampling.html#cb610-3"></a><span class="st">  </span><span class="kw">geom_point</span>() <span class="op">+</span></span>
+<span id="cb610-4"><a href="sampling.html#cb610-4"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">"Shovel size"</span>,</span>
+<span id="cb610-5"><a href="sampling.html#cb610-5"></a>       <span class="dt">y =</span> <span class="st">"Standard deviation of the proportion red"</span>)</span></code></pre></div>
 <div class="figure">
-<span id="fig:unnamed-chunk-351"></span>
+<span id="fig:unnamed-chunk-374"></span>
 <p class="caption marginnote shownote">
 FIGURE 6.13: Comparing standard deviations of proportions red for 100 different shovels
 </p>
-<img src="_book_temp_files/figure-html/unnamed-chunk-351-1.png" alt="Comparing standard deviations of proportions red for 100 different shovels" width="672">
+<img src="_book_temp_files/figure-html/unnamed-chunk-374-1.png" alt="Comparing standard deviations of proportions red for 100 different shovels" width="672">
 </div>
 <p>This is interesting! You may recognize that the standard deviation of the proportion red is declining at a rate proportional to the square root of the shovel size. This is something you could have discovered by finding a formula in a statistics textbook, but it’s easier to understand if you see it for yourself.</p>
-<!-- MF: The square root of the shovel size comment might confuse readers. Is there a way to say this differently? Maybe in terms of exponential decrease? -->
 <p>This is the power of running many analyses at once using <code>map_*</code> functions and list columns: before, we could tell that the standard deviation was decreasing as the shovel size increased, but when only looking at shovel sizes of 25, 50, and 100, it wasn’t very clear <em>how quickly</em> it was decreasing.</p>
 </div>
 </div>
@@ -1014,8 +982,7 @@ FIGURE 6.13: Comparing standard deviations of proportions red for 100 different 
 <p>Fifth, a <strong>point estimate (AKA sample statistic)</strong> is a summary statistic computed from a sample that <em>estimates</em> an unknown population parameter. In our sampling activities, recall that the unknown population parameter was the population proportion and that this is mathematically denoted with <span class="math inline">\(p\)</span>. Our point estimate is the <em>sample proportion</em>: the proportion of the shovel’s balls that are red. In other words, it is our guess of the proportion of the urn’s balls that are red. We mathematically denote the sample proportion using <span class="math inline">\(\widehat{p}\)</span>. The “hat” on top of the <span class="math inline">\(p\)</span> indicates that it is an estimate of the unknown population proportion <span class="math inline">\(p\)</span>.</p>
 <p>Sixth is the idea of <strong>representative sampling</strong>. A sample is said to be a <em>representative sample</em> if it roughly <em>looks like</em> the population. In other words, are the sample’s characteristics a good representation of the population’s characteristics? In our sampling activity, are the samples of <span class="math inline">\(n\)</span> balls extracted using our shovels representative of the urn’s <span class="math inline">\(N\)</span> = 2400 balls?</p>
 <p>Seventh is the idea of <strong>generalizability</strong>. We say a sample is generalizable if any results based on the sample can generalize to the population. In other words, does the value of the point estimate <em>generalize</em> to the population? In our sampling activity, can we generalize the sample proportion from our shovels to the entire urn? Using our mathematical notation, this is akin to asking if <span class="math inline">\(\widehat{p}\)</span> is a “good guess” of <span class="math inline">\(p\)</span>?</p>
-<p>Eighth, we say <strong>biased sampling</strong> occurs if certain individuals or observations in a population have a higher chance of being included in a sample than others. We say a sampling procedure is <em>unbiased</em> if every observation in a population had an equal chance of being sampled. In our sampling activities, since we mixed all <span class="math inline">\(N = 2400\)</span> balls prior to each group’s sampling and since each of the equally sized balls had an equal chance of being sampled, our samples were unbiased.</p>
-<!-- MF: This may be a good location for an example of biased sampling. -->
+<p>Eighth, we say <strong>biased sampling</strong> occurs if certain individuals or observations in a population have a higher chance of being included in a sample than others. We say a sampling procedure is <em>unbiased</em> if every observation in a population had an equal chance of being sampled. Had the red balls been much smaller than the white balls, and therefore more prone to falling through the shovel, our sample would have been <em>biased</em>. In our sampling activities, since we mixed all <span class="math inline">\(N = 2400\)</span> balls prior to each group’s sampling and since each of the equally sized balls had an equal chance of being sampled, our samples were <em>unbiased</em>.</p>
 <p>Ninth and lastly, the idea of <strong>random sampling</strong>. We say a sampling procedure is <em>random</em> if we sample randomly from the population in an unbiased fashion. In our sampling activities, this would correspond to sufficiently mixing the urn before each use of the shovel.</p>
 <p>Phew, that’s a lot of new terminology and notation to learn! Let’s put them all together to describe the paradigm of sampling.</p>
 <p><strong>In general:</strong></p>
@@ -1047,16 +1014,16 @@ FIGURE 6.14: Previously seen three distributions of the sample proportion <span 
 </p>
 <img src="_book_temp_files/figure-html/comparing-sampling-distributions-1b-1.png" alt="Previously seen three distributions of the sample proportion $\widehat{p}$." width="672">
 </div>
-<p>These types of distributions have a special name: <strong>sampling distributions</strong>;  their visualization displays the effect of sampling variation on the distribution of any point estimate, in this case, the sample proportion <span class="math inline">\(\widehat{p}\)</span>. Using these sampling distributions, for a given sample size <span class="math inline">\(n\)</span>, we can make statements about what values we can typically expect.</p>
-<p>For example, observe the centers of all three sampling distributions: they are all roughly centered around <span class="math inline">\(0.4 = 40\%\)</span>. Furthermore, observe that while we are somewhat likely to observe sample proportions of red balls of <span class="math inline">\(0.2 = 20\%\)</span> when using the shovel with 25 slots, we will almost never observe a proportion of 20% when using the shovel with 100 slots. Observe also the effect of sample size on the sampling variation. As the sample size <span class="math inline">\(n\)</span> increases from 25 to 50 to 100,  the variation of the sampling distribution decreases and thus the values cluster more and more tightly around the same center of around 40%. We quantified this variation using the standard deviation of our sample proportions, seeing that the standard deviation decreases with the square root of the sample size:</p>
+<p>These types of distributions have a special name: <strong>sampling distributions</strong>; their visualization displays the effect of sampling variation on the distribution of any point estimate, in this case, the sample proportion <span class="math inline">\(\widehat{p}\)</span>. Using these sampling distributions, for a given sample size <span class="math inline">\(n\)</span>, we can make statements about what values we can typically expect.</p>
+<p>For example, observe the centers of all three sampling distributions: they are all roughly centered around <span class="math inline">\(0.4 = 40\%\)</span>. Furthermore, observe that while we are somewhat likely to observe sample proportions of red balls of <span class="math inline">\(0.2 = 20\%\)</span> when using the shovel with 25 slots, we will almost never observe a proportion of 20% when using the shovel with 100 slots. Observe also the effect of sample size on the sampling variation. As the sample size <span class="math inline">\(n\)</span> increases from 25 to 50 to 100, the variation of the sampling distribution decreases and thus the values cluster more and more tightly around the same center of around 40%. We quantified this variation using the standard deviation of our sample proportions, seeing that the standard deviation decreases with the square root of the sample size:</p>
 <div class="figure">
-<span id="fig:unnamed-chunk-352"></span>
+<span id="fig:unnamed-chunk-375"></span>
 <p class="caption marginnote shownote">
 FIGURE 6.15: Previously seen comparing standard deviations of proportions red for 100 different shovels
 </p>
-<img src="_book_temp_files/figure-html/unnamed-chunk-352-1.png" alt="Previously seen comparing standard deviations of proportions red for 100 different shovels" width="672">
+<img src="_book_temp_files/figure-html/unnamed-chunk-375-1.png" alt="Previously seen comparing standard deviations of proportions red for 100 different shovels" width="672">
 </div>
-<p>So as the sample size increases, the standard deviation of the proportion of red balls decreases. This type of standard deviation has another special name:  <strong>standard error</strong>. Standard errors quantify the effect of sampling variation induced on our estimates. In other words, they quantify how much we can expect different proportions of a shovel’s balls that are red <em>to vary</em> from one sample to another sample to another sample, and so on. As a general rule, as sample size increases, the standard error decreases.</p>
+<p>So as the sample size increases, the standard deviation of the proportion of red balls decreases. This type of standard deviation has another special name: <strong>standard error</strong>. Standard errors quantify the effect of sampling variation induced on our estimates. In other words, they quantify how much we can expect different proportions of a shovel’s balls that are red <em>to vary</em> from one sample to another sample to another sample, and so on. As a general rule, as sample size increases, the standard error decreases.</p>
 <p>Unfortunately, these names confuse many people who are new to statistical inference. For example, it’s common for people who are new to statistical inference to call the “sampling distribution” the “sample distribution.” Another additional source of confusion is the name “standard deviation” and “standard error.” Remember that a standard error is merely a <em>kind</em> of standard deviation: the standard deviation of any point estimate from sampling. In other words, all standard errors are standard deviations, but not every standard deviation is necessarily a standard error.</p>
 <p>To help reinforce these concepts, let’s re-display Figure <a href="sampling.html#fig:comparing-sampling-distributions">6.12</a> but using our new terminology, notation, and definitions relating to sampling in Figure <a href="sampling.html#fig:comparing-sampling-distributions-2">6.16</a>.</p>
 <div class="figure">
@@ -1068,47 +1035,51 @@ FIGURE 6.16: Three sampling distributions of the sample proportion <span class="
 </div>
 <p>Furthermore, let’s display the graph of standard errors for <span class="math inline">\(n = 1\)</span> to <span class="math inline">\(n = 100\)</span> using our new terminology, notation, and definitions relating to sampling.</p>
 <div class="figure">
-<span id="fig:unnamed-chunk-353"></span>
+<span id="fig:unnamed-chunk-376"></span>
 <p class="caption marginnote shownote">
 FIGURE 6.17: Standard errors of the sample proportion based on sample sizes of 1 to 100
 </p>
-<img src="_book_temp_files/figure-html/unnamed-chunk-353-1.png" alt="Standard errors of the sample proportion based on sample sizes of 1 to 100" width="672">
+<img src="_book_temp_files/figure-html/unnamed-chunk-376-1.png" alt="Standard errors of the sample proportion based on sample sizes of 1 to 100" width="672">
 </div>
 <p>Remember the key message of this last table: that as the sample size <span class="math inline">\(n\)</span> goes up, the “typical” error of your point estimate will go down, as quantified by the <em>standard error</em>.</p>
 </div>
+<div id="to-gamble-or-not-to-gamble" class="section level3">
+<h3>
+<span class="header-section-number">6.3.3</span> To gamble or not to gamble?</h3>
+<p>We also saw in the previous section that as your sample size <span class="math inline">\(n\)</span> increases, your point estimates will vary less and less and be more and more concentrated around the true population parameter. This variation is quantified by the decreasing <em>standard error</em>. In other words, the typical error of your point estimates will decrease. In our sampling exercise, as the sample size increased, the variation of our sample proportions <span class="math inline">\(\widehat{p}\)</span> decreased. You can observe this behavior in Figure <a href="sampling.html#fig:comparing-sampling-distributions-3">6.19</a>. This is also known as having a <em>precise</em> estimate.</p>
+<p>So random sampling ensures our point estimates are <em>accurate</em>, while on the other hand having a large sample size ensures our point estimates are <em>precise</em>. While the terms “accuracy” and “precision” may sound like they mean the same thing, there is a subtle difference. Accuracy describes how “on target” our estimates are, whereas precision describes how “consistent” our estimates are. Figure <a href="sampling.html#fig:accuracy-vs-precision">6.18</a> illustrates the difference.</p>
+<div class="figure">
+<span id="fig:accuracy-vs-precision"></span>
+<p class="caption marginnote shownote">
+FIGURE 6.18: Comparing accuracy and precision.
+</p>
+<img src="06-sampling/images/accuracy_vs_precision.jpg" alt="Comparing accuracy and precision." width="75%" height="75%">
+</div>
+<!-- DRAFT: Let's apply these ideas to gambling. If we were to bet money on the proportion of the red balls in the urn, and we could perform virtual simulations beforehand, we would want the most *accurate* and most *precise* estimate. Here, our *estimand*, the thing we want to know, would be the proportion of red balls in the urn. INCORP DISCUSSION OF PREDICTION UNCERTAINTY, UNMODELED VARIATION, PARAMETER UNCERTAINTY,  -->
+<!-- MF: Stick with urn example for gambling? Something less predictable & involving more unknowns might be better for explanining model structure, paramater uncertainty, prediction uncertainty, etc. On the other hand, I don't want this chapter to get too lengthy.  -->
+</div>
 <div id="moral-of-the-story" class="section level3">
 <h3>
-<span class="header-section-number">6.3.3</span> The moral of the story</h3>
+<span class="header-section-number">6.3.4</span> The moral of the story</h3>
 <p>Let’s recap this section so far. We’ve seen that if a sample is generated at random, then the resulting point estimate is a “good guess” of the true unknown population parameter. In our sampling activities, since we made sure to mix the balls first before extracting a sample with the shovel, the resulting sample proportion <span class="math inline">\(\widehat{p}\)</span> of the shovel’s balls that were red was a “good guess” of the population proportion <span class="math inline">\(p\)</span> of the urn’s balls that were red.</p>
 <p>However, what do we mean by our point estimate being a “good guess”? Sometimes, we’ll get an estimate that is less than the true value of the population parameter, while at other times we’ll get an estimate that is greater. This is due to sampling variation. However, despite this sampling variation, our estimates will “on average” be correct and thus will be centered at the true value. This is because our sampling was done at random and thus in an unbiased fashion.</p>
 <p>In our sampling activities, sometimes our sample proportion <span class="math inline">\(\widehat{p}\)</span> was less than the true population proportion <span class="math inline">\(p\)</span>, while at other times it was greater. This was due to the sampling variability. However, despite this sampling variation, our sample proportions <span class="math inline">\(\widehat{p}\)</span> were “on average” correct and thus were centered at the true value of the population proportion <span class="math inline">\(p\)</span>. This is because we mixed our urn before taking samples and thus the sampling was done at random and thus in an unbiased fashion. This is also known as having an <em>accurate</em> estimate.</p>
 <p>What was the value of the population proportion <span class="math inline">\(p\)</span> of the <span class="math inline">\(N\)</span> = 2400 balls in the actual urn that were red? There were 900 red balls, for a proportion red of 900/2400 = 0.375 = 37.5%! How do we know this? Did the authors do an exhaustive count of all the balls? No! They were listed in the contents of the box that the urn came in! Hence we were able to make the contents of the virtual <code>urn</code> match the tactile urn:</p>
-<div class="sourceCode" id="cb564"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb564-1"><a href="sampling.html#cb564-1"></a>urn <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb564-2"><a href="sampling.html#cb564-2"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">sum_red =</span> <span class="kw">sum</span>(color <span class="op">==</span><span class="st"> "red"</span>), </span>
-<span id="cb564-3"><a href="sampling.html#cb564-3"></a>            <span class="dt">sum_not_red =</span> <span class="kw">sum</span>(color <span class="op">!=</span><span class="st"> "red"</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb611"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb611-1"><a href="sampling.html#cb611-1"></a>urn <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb611-2"><a href="sampling.html#cb611-2"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">sum_red =</span> <span class="kw">sum</span>(color <span class="op">==</span><span class="st"> "red"</span>), </span>
+<span id="cb611-3"><a href="sampling.html#cb611-3"></a>            <span class="dt">sum_not_red =</span> <span class="kw">sum</span>(color <span class="op">!=</span><span class="st"> "red"</span>))</span></code></pre></div>
 <pre><code>## # A tibble: 1 x 2
 ##   sum_red sum_not_red
 ##     &lt;int&gt;       &lt;int&gt;
 ## 1     900        1500</code></pre>
-<p>Let’s re-display our sampling distributions from Figures <a href="sampling.html#fig:comparing-sampling-distributions">6.12</a> and <a href="sampling.html#fig:comparing-sampling-distributions-2">6.16</a>, but now with a vertical red line marking the true population proportion <span class="math inline">\(p\)</span> of balls that are red = 37.5% in Figure <a href="sampling.html#fig:comparing-sampling-distributions-3">6.18</a>. We see that while there is a certain amount of error in the sample proportions <span class="math inline">\(\widehat{p}\)</span> for all three sampling distributions, on average the <span class="math inline">\(\widehat{p}\)</span> are centered at the true population proportion red <span class="math inline">\(p\)</span>.</p>
+<p>Let’s re-display our sampling distributions from Figures <a href="sampling.html#fig:comparing-sampling-distributions">6.12</a> and <a href="sampling.html#fig:comparing-sampling-distributions-2">6.16</a>, but now with a vertical red line marking the true population proportion <span class="math inline">\(p\)</span> of balls that are red = 37.5% in Figure <a href="sampling.html#fig:comparing-sampling-distributions-3">6.19</a>. We see that while there is a certain amount of error in the sample proportions <span class="math inline">\(\widehat{p}\)</span> for all three sampling distributions, on average the <span class="math inline">\(\widehat{p}\)</span> are centered at the true population proportion red <span class="math inline">\(p\)</span>.</p>
 <div class="figure">
 <span id="fig:comparing-sampling-distributions-3"></span>
 <p class="caption marginnote shownote">
-FIGURE 6.18: Three sampling distributions with population proportion <span class="math inline">\(p\)</span> marked by vertical line.
+FIGURE 6.19: Three sampling distributions with population proportion <span class="math inline">\(p\)</span> marked by vertical line.
 </p>
 <img src="_book_temp_files/figure-html/comparing-sampling-distributions-3-1.png" alt="Three sampling distributions with population proportion $p$ marked by vertical line." width="672">
 </div>
-<p>We also saw in this section that as your sample size <span class="math inline">\(n\)</span> increases, your point estimates will vary less and less and be more and more concentrated around the true population parameter. This variation is quantified by the decreasing <em>standard error</em>. In other words, the typical error of your point estimates will decrease. In our sampling exercise, as the sample size increased, the variation of our sample proportions <span class="math inline">\(\widehat{p}\)</span> decreased. You can observe this behavior in Figure <a href="sampling.html#fig:comparing-sampling-distributions-3">6.18</a>. This is also known as having a <em>precise</em> estimate.</p>
-<p>So random sampling ensures our point estimates are <em>accurate</em>, while on the other hand having a large sample size ensures our point estimates are <em>precise</em>. While the terms “accuracy” and “precision” may sound like they mean the same thing, there is a subtle difference. Accuracy describes how “on target” our estimates are, whereas precision describes how “consistent” our estimates are. Figure <a href="sampling.html#fig:accuracy-vs-precision">6.19</a> illustrates the difference.</p>
-<!-- MF: So which one of the simulated sampling activities was most precise & accurate? The 100 shovel performed 1000 times? -->
-<div class="figure">
-<span id="fig:accuracy-vs-precision"></span>
-<p class="caption marginnote shownote">
-FIGURE 6.19: Comparing accuracy and precision.
-</p>
-<img src="06-sampling/images/accuracy_vs_precision.jpg" alt="Comparing accuracy and precision." width="75%" height="75%">
-</div>
-<!-- MF: Maybe apply the sample examples done in this chapter overlayed over the image? For example, under high precision/low accurancy, put "biased sampling with large sample size". Under low precision/low accuracy, put "biased sample with small sample size", etc. -->
 <p>At this point, you might be asking yourself: “If we already knew the true proportion of the urn’s balls that are red was 37.5%, then why did we do any sampling?” You might also be asking: “Why did we take 1,000 repeated samples of various sizes (n = 1 to n = 100)? Shouldn’t we be taking only <em>one</em> sample that’s as large as possible?”. If you did ask yourself these questions, your suspicion is merited!</p>
 <p>The sampling activity involving the urn is merely an <em>idealized version</em> of how sampling is done in real life. We performed this exercise only to study and understand:</p>
 <ol style="list-style-type: decimal">
@@ -1128,22 +1099,22 @@ FIGURE 6.19: Comparing accuracy and precision.
 <p>According to a new Harvard University Institute of Politics poll, just 41 percent of millennials — adults ages 18-29 — approve of Obama’s job performance, his lowest-ever standing among the group and an 11-point drop from April.</p>
 </blockquote>
 <p>Let’s tie elements of the real-life poll in this new article with our “tactile” and “virtual” urn activity from Sections <a href="sampling.html#sampling-activity">6.1</a> and <a href="sampling.html#sampling-simulation">6.2</a> using the terminology, notations, and definitions we learned in Section <a href="sampling.html#sampling-framework">6.3</a>. You’ll see that our sampling activity with the urn is an idealized version of what pollsters are trying to do in real life.</p>
-<p>First, who is the <strong>(Study) Population</strong> of <span class="math inline">\(N\)</span> individuals or observations of interest? </p>
+<p>First, who is the <strong>(Study) Population</strong> of <span class="math inline">\(N\)</span> individuals or observations of interest?</p>
 <ul>
 <li>Urn: <span class="math inline">\(N\)</span> = 2400 identically sized red and white balls</li>
 <li>Obama poll: <span class="math inline">\(N\)</span> = ? young Americans aged 18-29</li>
 </ul>
-<p>Second, what is the <strong>population parameter</strong>? </p>
+<p>Second, what is the <strong>population parameter</strong>?</p>
 <ul>
 <li>Urn: The population proportion <span class="math inline">\(p\)</span> of <em>all</em> the balls in the urn that are red.</li>
 <li>Obama poll: The population proportion <span class="math inline">\(p\)</span> of <em>all</em> young Americans who approve of Obama’s job performance.</li>
 </ul>
-<p>Third, what would a <strong>census</strong> look like? </p>
+<p>Third, what would a <strong>census</strong> look like?</p>
 <ul>
 <li>Urn: Manually going over all <span class="math inline">\(N\)</span> = 2400 balls and exactly computing the population proportion <span class="math inline">\(p\)</span> of the balls that are red.</li>
 <li>Obama poll: Locating all <span class="math inline">\(N\)</span> young Americans and asking them all if they approve of Obama’s job performance. In this case, we don’t even know what the population size <span class="math inline">\(N\)</span> is!</li>
 </ul>
-<p>Fourth, how do you perform <strong>sampling</strong> to obtain a sample of size <span class="math inline">\(n\)</span>? </p>
+<p>Fourth, how do you perform <strong>sampling</strong> to obtain a sample of size <span class="math inline">\(n\)</span>?</p>
 <ul>
 <li>Urn: Using a shovel with <span class="math inline">\(n\)</span> slots.</li>
 <li>Obama poll: One method is to get a list of phone numbers of all young Americans and pick out <span class="math inline">\(n\)</span> phone numbers. In this poll’s case, the sample size of this poll was <span class="math inline">\(n = 2089\)</span> young Americans.</li>
@@ -1151,24 +1122,24 @@ FIGURE 6.19: Comparing accuracy and precision.
 <p>Fifth, what is your <strong>point estimate (AKA sample statistic)</strong> of the unknown population parameter?</p>
 <ul>
 <li>Urn: The sample proportion <span class="math inline">\(\widehat{p}\)</span> of the balls in the shovel that were red.</li>
-<li>Obama poll: The sample proportion <span class="math inline">\(\widehat{p}\)</span> of young Americans in the sample that approve of Obama’s job performance. In this poll’s case, <span class="math inline">\(\widehat{p} = 0.41 = 41\%\)</span>, the quoted percentage in the second paragraph of the article.  </li>
+<li>Obama poll: The sample proportion <span class="math inline">\(\widehat{p}\)</span> of young Americans in the sample that approve of Obama’s job performance. In this poll’s case, <span class="math inline">\(\widehat{p} = 0.41 = 41\%\)</span>, the quoted percentage in the second paragraph of the article.</li>
 </ul>
-<p>Sixth, is the sampling procedure <strong>representative</strong>? </p>
+<p>Sixth, is the sampling procedure <strong>representative</strong>?</p>
 <ul>
 <li>Urn: Are the contents of the shovel representative of the contents of the urn? Because we mixed the urn before sampling, we can feel confident that they are.</li>
 <li>Obama poll: Is the sample of <span class="math inline">\(n = 2089\)</span> young Americans representative of <em>all</em> young Americans aged 18-29? This depends on whether the sampling was random.</li>
 </ul>
-<p>Seventh, are the samples <strong>generalizable</strong> to the greater population? </p>
+<p>Seventh, are the samples <strong>generalizable</strong> to the greater population?</p>
 <ul>
 <li>Urn: Is the sample proportion <span class="math inline">\(\widehat{p}\)</span> of the shovel’s balls that are red a “good guess” of the population proportion <span class="math inline">\(p\)</span> of the urn’s balls that are red? Given that the sample was representative, the answer is yes.</li>
 <li>Obama poll: Is the sample proportion <span class="math inline">\(\widehat{p} = 0.41\)</span> of the sample of young Americans who supported Obama a “good guess” of the population proportion <span class="math inline">\(p\)</span> of all young Americans who supported Obama at this time in 2013? In other words, can we confidently say that roughly 41% of <em>all</em> young Americans approved of Obama at the time of the poll? Again, this depends on whether the sampling was random.</li>
 </ul>
-<p>Eighth, is the sampling procedure <strong>unbiased</strong>? In other words, do all observations have an equal chance of being included in the sample? </p>
+<p>Eighth, is the sampling procedure <strong>unbiased</strong>? In other words, do all observations have an equal chance of being included in the sample?</p>
 <ul>
 <li>Urn: Since each ball was equally sized and we mixed the urn before using the shovel, each ball had an equal chance of being included in a sample and hence the sampling was unbiased.</li>
 <li>Obama poll: Did all young Americans have an equal chance at being represented in this poll? Again, this depends on whether the sampling was random.</li>
 </ul>
-<p>Ninth and lastly, was the sampling done at <strong>random</strong>? </p>
+<p>Ninth and lastly, was the sampling done at <strong>random</strong>?</p>
 <ul>
 <li>Urn: As long as you mixed the urn sufficiently before sampling, your samples would be random.</li>
 <li>Obama poll: Was the sample conducted at random? We can’t answer this question without knowing about the <em>sampling methodology</em> used by Kennedy School’s Institute of Politics at Harvard University. We’ll discuss this more at the end of this section.</li>
@@ -1199,11 +1170,12 @@ FIGURE 6.19: Comparing accuracy and precision.
 <li>the reported sample approval rating of 41% of these 2089 young Americans is a <strong>good guess</strong> of the true approval rating among all young Americans in 2013, thus</li>
 <li>instead of performing an expensive census of all young Americans in 2013, we can <strong>infer</strong> about all young Americans in 2013 using polling.</li>
 </ul>
-<p>So as you can see, it was critical for the sample obtained by Kennedy School’s Institute of Politics at Harvard University to be truly random in order to infer about <em>all</em> young Americans’ opinions about Obama. Was their sample truly random? It’s hard to answer such questions without knowing about the <em>sampling methodology</em> they used. For example, if this poll was conducted using only mobile phone numbers, people without mobile phones would be left out and therefore not represented in the sample. What about if Kennedy School’s Institute of Politics at Harvard University conducted this poll on an internet news site? Then people who don’t read this particular internet news site would be left out. Ensuring that our samples were random was easy to do in our sampling urn exercises; however, in a real-life situation like the Obama poll, this is much harder to do.</p>
+<p>So as you can see, it was critical for the sample obtained by Kennedy School’s Institute of Politics at Harvard University to be truly random in order to infer about <em>all</em> young Americans’ opinions about Obama. Was their sample truly random? It’s hard to answer such questions without knowing about the <em>sampling methodology</em> they used.</p>
+<p>For example, what if Kennedy School’s Institute of Politics at Harvard University conducted this poll using only mobile phone numbers? People without mobile phones would be left out and therefore not represented in the sample. This flaw is an example of <strong>censoring</strong>, the exclusion of certain datapoints due to an issue with data collection. This results in an incomplete observation and increases the prediction uncertainty of the estimand, Obama’s approval rating amount young Americans. Ensuring that our samples were random was easy to do in our sampling urn exercises; however, in a real-life situation like the Obama poll, this is much harder to do.</p>
 <div id="sampling-conclusion-central-limit-theorem" class="section level3">
 <h3>
 <span class="header-section-number">6.4.1</span> Central Limit Theorem</h3>
-<p>What you visualized in Figures <a href="sampling.html#fig:comparing-sampling-distributions">6.12</a> and <a href="sampling.html#fig:comparing-sampling-distributions-2">6.16</a> and summarized in Table <a href="sampling.html#tab:comparing-n">6.1</a> was a demonstration of a famous theorem, or mathematically proven truth, called the  <em>Central Limit Theorem</em>. It loosely states that when sample means are based on larger and larger sample sizes, the sampling distribution of these sample means becomes both more and more normally shaped and more and more narrow.</p>
+<p>What you visualized in Figures <a href="sampling.html#fig:comparing-sampling-distributions">6.12</a> and <a href="sampling.html#fig:comparing-sampling-distributions-2">6.16</a> and summarized in Table <a href="sampling.html#tab:comparing-n">6.1</a> was a demonstration of a famous theorem, or mathematically proven truth, called the <em>Central Limit Theorem</em>. It loosely states that when sample means are based on larger and larger sample sizes, the sampling distribution of these sample means becomes both more and more normally shaped and more and more narrow.</p>
 <p>In other words, their sampling distribution increasingly follows a <em>normal distribution</em> and the variation of these sampling distributions gets smaller, as quantified by their standard errors.</p>
 <p>Shuyi Chiou, Casey Dunn, and Pathikrit Bhattacharyya created a 3-minute and 38-second video at <a href="https://youtu.be/jvoxEYmQHNM" class="uri">https://youtu.be/jvoxEYmQHNM</a> explaining this crucial statistical theorem using the average weight of wild bunny rabbits and the average wingspan of dragons as examples. Figure <a href="sampling.html#fig:CLT-video-preview">6.20</a> shows a preview of this video.</p>
 <div class="figure">
@@ -1218,7 +1190,11 @@ FIGURE 6.20: Preview of Central Limit Theorem video.
 <div id="rubin-causal-model-1" class="section level2">
 <h2>
 <span class="header-section-number">6.5</span> Rubin Causal Model</h2>
-<!-- MF: Here, we are taking the blood pressure example and applying it to sampling/RCM by placing the unknown condition as the population that didn't respond to the query? -->
+<p>Now that we have mastered sampling, let’s consider how these scenarios connect to the Rubin Causal Model (RCM). For the most part, they don’t!</p>
+<p>Remember the RCM’s slogan: <em>No causation without manipulation</em>. In both the urn example and our Obama poll, we are not manipulating our units (the balls and the opinions of the pollees, respectively). There are not a control and treatment condition to compare; there is no causal effect to measure. That must mean that the RCM is completely irrelevant, right?</p>
+<p>Not exactly. Certain elements of the RCM <em>can</em> be applied here.</p>
+<p>In both the RCM and in our exercises, randomization is <em>incredibly important</em> to ensure validity and precision. In the RCM, this randomization exists in the form of <strong>random assignment</strong>, the act of assigning units a condition (control or treatment) randomly. In sampling, this randomization exists in the form of <strong>random sampling</strong>.</p>
+<!-- MF: Still wondering how to incorporate RCM into this chapter, since we are not dealing with assignment & two realities (one observed, one not observed) for each ball. Should this section focus on proving that RCM is still relevant, or explaining that RCM can't be applied perfectly to the urn scenario? -->
 <!-- With a big enough sample, we can probably get a pretty good measure of the average blood pressure for that sample.  Have we solved our problem?  That is, can we now assume that our estimate of the average blood pressure in our sample is a good estimate of the average blood pressure in the U.S. adult population? -->
 <!-- DK: Where should we talk about sampling? Let's put this entire discussion into the . . . sampling chapter. Throughout this chapter we should pretend that we are looking at the entire universe of people we care about. -->
 <!-- Well, let's see how many of the missing values we have filled in to our table of the population: -->
@@ -1262,7 +1238,6 @@ FIGURE 6.20: Preview of Central Limit Theorem video.
 <blockquote>
 <p>The online survey of 2,089 adults was conducted from Oct. 30 to Nov. 11, just weeks after the federal government shutdown ended and the problems surrounding the implementation of the Affordable Care Act began to take center stage. The poll’s margin of error was plus or minus 2.1 percentage points.</p>
 </blockquote>
-<!-- MF: What is the relevance of the above passage, other than the margin of error? To clarify, the shutdown & ACA comment seems irrelevant. -->
 <p>Note the term <em>margin of error</em>, which here is “plus or minus 2.1 percentage points.” Most polls won’t produce an estimate that’s perfectly right; there will always be a certain amount of error caused by <em>sampling variation</em>. The margin of error of plus or minus 2.1 percentage points is saying that a typical range of errors for polls of this type is about <span class="math inline">\(\pm\)</span> 2.1%, in words from about 2.1% too small to about 2.1% too big. We can restate this as the interval of <span class="math inline">\([41\% - 2.1\%, 41\% + 2.1\%] = [37.9\%, 43.1\%]\)</span> (this notation indicates the interval contains all values between 37.9% and 43.1%, including the end points of 37.9% and 43.1%). We’ll see in the next chapter that such intervals are known as <em>confidence intervals</em>.</p>
 
 </div>
@@ -1273,7 +1248,7 @@ FIGURE 6.20: Preview of Central Limit Theorem video.
 <a href="one-parameter.html"><button class="btn btn-default">Next</button></a>
 </p>
 <p class="build-date">Page built: 
-2020-06-28
+2020-07-07
 </p>
 </div>
 </div>
