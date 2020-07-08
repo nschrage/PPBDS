@@ -11,9 +11,7 @@ knitr::opts_chunk$set(echo = TRUE, tidy = FALSE, cache.extra = packageVersion('t
 library(gt)
 library(tidyverse)
 library(tufte)
-library(remotes)
 library(PPBDS.data)
-library(webshot)
 ```
 
 
@@ -23,23 +21,17 @@ library(webshot)
 
 <!-- Second, explore some subtleties of the (allegedly) clear distinction between predictive and causal models. Is race causal? What about sex? What about a genetic condition like color-blindedness? These are hard questions, and politically fraught! We need to be precise in our writing. This all goes back to "no causation with manipulation." Can we manipulate race? (Example of the Black/White sounding names on resumes.) Can we manipulate sex? What about gender? With gene therapy, we will eventually be able to manipulate things like color-blindness. -->
 
-<!-- Third, connect all this to the central theme of 98% of social science research --- using observational data to infer causation by treating the assignment mechanism as being close enough to random. Let's discuss. -->
+<!-- Third, let's do some coding! (Or maybe we don't show the students the code you use to demonstrate these things. I am not sure.) Anyway, start with a simple example (maybe 8 people) in which you know all the values in the RT and in which tau is a constant positive number. (Recall some of the videos about permtutations tests that I made you watch.) Question: Does random assignment guarantee that we get the right answer? NO! This is a point that students often get wrong. Pick one "random" assignment which generates a negative estimate of tau. And that could easily happen. -->
 
-<!-- Experiments in which you know tau is some positive number.
+<!-- But then show what happens for all the 70 (8 choose 4) possible treatment assignments, each one with equal likelihood of happening if assignment is truly random. (Subtle note is that we are requiring that 4 get the treatment and 4 get the control.) Some of these overestimate tau. Some underestimate it. But the average of all possible assignments will be tau, which is why randomization is so cool. But the 70 possible results are really spread out! It would not be surprising if, by chance, you picked one that gave a very wrong answer. Which would make you sad! -->
 
-Experiment with known, constant, positive treatment effect and 6 people. (Or whatever small number you like. ) Does random asignment guarantee that we get a good estimate of the treatment effect? No! Easy to get an "unlucky" assignment. But, cool thing, if you try all posssible assignments, the average result will be the treatment effect. This shows why we say that randomized assignment generates an "unbiased" estimate of the treatment effect. The average answer it gives is good. But it is also variable! -->
+<!-- Then, extend this example to 1000 units. There are 2.702882e+299 possible assignments of 500 to treatment and 500 to control. You can't calculate the (estimated) treatment effect with all of them. But you can sample 1,000 of them. Two things will be true. Average of this sample will be the (true) treatment, just as with the 8 unit case. And it will be much more precisely estimated. Overlap the density estimates. Both will be centered around tau, the value of which you know. Butthe second is much more peaked.  -->
 
-<!-- Now, same thing with 10,000 (same treatment effect size). Can't calculate all possible assignments. But we can sample. Two things will be true. Average of this sample will be the (true) treatment. And it will be much more precisely estimated. -->
+<!-- Fourth, the above provides a natural segue into permutation tests, which are just like these experiments, except you assume tau = 0. That is what a permutation test is.  -->
 
-<!-- Overlap the density estimates, the second is much more peaked. -->
+<!-- Permutation example and code. Biggest current hole is the lack of a permutation test coding example. When we do this, we will want to create the permutations "by hand," rather than relying on an R package for doing so, I think that there are some elegant ways to do this with tidyverse, like crossing() or expand(). Maybe rsample::bootstraps()?  -->
 
-<!-- Experiments in which you assume tau = 0. That is what a permutation test is.  -->
-
-
-
-
-<!-- 2. Permutation example and code. Biggest current hole is the lack of a permutation test coding example. When we do this, we will want to create the permutations "by hand," rather than relying on an R package for doing so, I think that there are some elegant ways to do this with tidyverse, like crossing() or expand(). Maybe rsample::bootstraps()?  -->
-
+<!-- Fifth, connect all this to the central theme of 98% of social science research --- using observational data to infer causation by treating the assignment mechanism as being close enough to random. This is where we can discuss stuff like natural experiments, difference in differences, regression discontinuity and so on. Let's discuss. (Save this for next week.) -->
 
 <!-- # Other Issues -->
 
@@ -52,8 +44,7 @@ Experiment with known, constant, positive treatment effect and 6 people. (Or wha
 <!-- unit/item nonresponse -->
 <!-- ignorability -->
 <!-- treat potential outcomes as fixed (can we do this with regression?) -->
-<!-- difference in differences -->
-<!-- regression discontinuity -->
+
 
 
 ```{r echo=FALSE, fig.cap="[Don Rubin was a professor of Statistics at  Harvard.](https://www.uni-bamberg.de/fileadmin/bagss/Bilder/Editorial/21711197.jpg).", fig.margin = TRUE}
@@ -219,7 +210,7 @@ tibble(subject = "Yao",
             location = cells_body(columns = vars(subject)))
 ```
 
-So far, we have considered a table showing potential outcomes for only Yao. Generally a study would not have just one subject. Instead there would be many individuals in an experiment that would all have their own unique potential outcomes. In that case, it no longer makes sense to have $$Y_t$$ or $$Y_c$$ represent all of the unique potential outcomes in a table. A new variable is needed to differentiate between individuals. 
+So far, we have considered a table showing potential outcomes for only Yao. Generally a study would not have just one subject. Instead there would be many individuals in an experiment that would all have their own unique potential outcomes. In that case, it no longer makes sense to have $Y_t$ or $Y_c$ represent all of the unique potential outcomes in a table. A new variable is needed to differentiate between individuals. 
 
 In other words, there needs to be a distinction between $Y_t$ for Yao, and $Y_t$ for Emma. We could do something like $Y_t(Yao)$ and $Y_t(Emma)$, but that would be an ineffective approach if we wanted to fill out a full Rubin table. Instead, we use the variable $u$ ($u$ for units) to indicate that the treatment effect varies by each individual unit (person) in our study. The $u$ represents all the different individuals in a study without requiring that we create a new variable for each person. Now, instead of $Y_t$, we use $Y_t(u)$ to represent Attitude if Treated. If you want to talk about only Emma, you could say "Emma's Attitude if Treated" or "$Y_t(Emma)$" or "the $Y_t(u)$ for Emma", but not just $Y_t$. That notation is too ambiguous when there is more than one subject you might be talking about.
 
@@ -249,9 +240,10 @@ tibble(subject = c("Yao", "Emma", "Cassidy", "Thamid", "Diego"),
 From this Rubin Table, there are many possible values we might calculate.  Here are just a sampling:
 
 <!-- DK: Need to discuss other estimands, like causal effect on the treated. -->
+
 ::: {.fullwidth} 
 
-- One potential outcome for one person, such as Yao's potential outcome under treatment ($13$).  
+- A potential outcome for one person, e.g., Yao's potential outcome under treatment ($13$).  
 - A causal effect for one person, such as for Emma.  This is the difference between the potential outcomes, which we have provided as its own column ($11 - 11 = 0$).
 - The most positive causal effect.  Here, that is $+4$, from Yao ($13 - 9 = +4$).
 - The most negative causal effect.  Here, that is $-3$, from Thamid ($9 - 12 = -3$).
@@ -411,7 +403,12 @@ tibble(subject = c("Yao", "Emma", "Cassidy", "Thamid", "Diego"),
             location = cells_body(columns = vars(subject)))
 ```
 
+
+<!-- DK: Is this too subtle a point to make here? First, "filling in the same causal effect" is somewhat sloppy. You mean, "assuming the causal effect is identical for everyone". Second, it is unclear (to me) what the relationship is between the estimand I care about and the model that I am using. (There might be such a relationship, but it is too tricky to be discussed here.) In general, we just pick whatever model we think best captures the underlying reality, or at least as much of that reality as we have the data to deal with. So, in this case, we assume that tau is constant. That is not unreasonable! Then, we can fill in the Rubin Table. Then, with the complete RT, we can calculate any estimad we want. -->
+
 Note that for some estimands, filling in the same causal effect for everyone would be nonsensical.  For example, let's say you were interested in the lowest attitude score under treatment.  That's not an unreasonable thing to want to know!  But assuming that everyone has the same causal effect means that your estimate of the lowest potential attitude score is either a) the smallest observed treatment value or b) the smallest observed control value minus your estimate of the ATE, whichever is smaller. This clearly isn't a reasonable estimate of the lowest attitude score under treatment!  Thus, we need a different model if we have a different estimand.
+
+<!-- DK: Why isn't this a reasonable estimate? Because it might be below the lowest possible value of 3? Well, maybe? I think we might just cut this out. -->
 
 ### Constant by Two Parameters
 
