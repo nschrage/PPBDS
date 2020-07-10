@@ -1,0 +1,143 @@
+---
+title: "04-functions-questions"
+author: "Asmer Asrar Safi"
+date: "6/30/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggplot2)
+library(PPBDS.data)
+```
+
+
+# Question 1
+
+### In this question, we're going to look at Asmer's 4 years at Harvard, and the courses he's taken during this time. We're going to use the `qscores` dataset in the *PPBDS.data* package for this question. 
+
+### Q1a) For this first question, we'll be preparing our dataset for use. Remove the `term`, `prof_name`, `course_number` variables from the dataset. Next, we create two more datasets from our parent dataset, `qscores`. Create a separate dataset for 13 Government courses, and another that samples 19 random courses from the parent data. Join these two datasets together, to form a dataset with 32 observations - one for each course. Reorder the data using `sample_n()`, to randomly shuffle the observations. 
+
+```{r, prepping data}
+
+# Eduting dataset to remove irrelevant variables
+
+qscores1 <- qscores %>% 
+  select(-term, -prof_name, -course_number) 
+
+# Creating a dataset for major courses only, by filtering
+# for courses in the government department only. 
+
+gov <- qscores1 %>% 
+  filter(department == "GOV") %>% 
+  head(13)
+
+# Randomly sampling 19 courses from the qscores1 dataset.
+# 19 + 13 is equal to 32. 
+
+qscores2 <- qscores1 %>% 
+  sample_n(19)
+
+# join the qscores2 (the other 19 courses she takes) and 
+# the GOV major courses she takes by other variables, to form 
+# a dataset of 32 courses
+
+joinedgovqs2 <- gov %>% 
+  full_join(qscores2, by = c('department', 
+                             'enrollment', 
+                             'workload',
+                             'overall',
+                             'course_name'))
+
+# More variations can be added, to accommodate for GENEDs,
+# secondaries etc too. 
+
+```
+
+### Q1b) Asmer was a Government major. He wants to create a column called `course_detail` that specifies if the courses he took count for his concentration requirements. Create the column, specifying "Concentration" for Government department courses, and "Other" for the rest. Use `map_chr()`. 
+
+
+```{r, major}
+
+# For major 
+
+get_gov <- function(x) {
+  grepl("GOV", x)
+  
+}
+
+joinedgovqs2 <- joinedgovqs2 %>% 
+  tibble(course_detail = map_chr(department, ~ if_else(get_gov(.), "Concentration", "Other"))) 
+
+```
+
+```{r, reordering data randomly}
+
+# reordering data
+
+j <- sample_n(joinedgovqs2, 32)
+
+
+
+```
+
+
+```{r}
+# Numbered function to number by courses. 
+# Can also be done without a function, this was just me experimenting
+
+numbered <- function(x){
+  x %>% 
+  mutate(year_no = rep(1:8, 4))
+  
+}
+
+j <- numbered(j)
+j
+```
+
+
+```{r}
+# Calculate percentage of workload in each group of numbers.
+# 1s taken one year, 2s in the other. 
+
+
+# First create a column for sum of hours spent a year/week 
+j <- j %>% 
+  group_by(year_no) %>% 
+  mutate(total_hrs = sum(workload))
+
+# Create a function that uses this sum to calculate the workload percentage
+# for each class, in a semester 
+
+
+j <- j %>%
+  mutate(perc_hr = (workload / total_hrs) * 100) %>% 
+  mutate(perc_hr = round(perc_hr, 1))
+
+
+j
+```
+
+```{r}
+
+# Must take courses - ratings over 4
+
+class_rec <- function(x){
+  
+  if_else((x >= 4.2),  "Highly Recommend", "Not important")
+}
+
+j <- j %>% 
+  mutate(take_course = map_chr(overall, ~ class_rec(.))) 
+
+j
+```
+
+
+
+
+
+
+
