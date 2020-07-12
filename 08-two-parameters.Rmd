@@ -84,14 +84,10 @@ ch8 %>%
 
 
 
-## Estimate Age
+## Model `age` as a function of `party`
 
 
-<!-- EM: Lastly, there should also be a Rubin table that is constructed for age ~ party. Ask Preceptor for more detailed instructions regarding this as he does a fantastic job explaining why it's necessary. In summary: age~party instead of income~party, get rid of bootstrapping because it's redundant, and have a Rubin table for age~party (there's already one for att_end~treatment later in the chapter. -->
-
-<!-- EM: I cannot find the document that labels all the different kinds of uncertainty — I'm pretty sure "unknown unknowns" is used incorrectly below.-->
-
-<!-- EM: Small change here -->
+<!--  Speak with Cass about adding a Rubin Table here. -->
 
 
 <!-- All the same tools which we used to estimate a single parameter in the previous chapter apply to estimate two parameters in this chapter. (Not sure what examples we will use in that chapter.) In fact, it is easy! We only need to do the bootstrap once. And, once we have those bootstrap samples, we just calculate mean(income) for treated and mean(income) for control. Key insight is that we don't need to do a bootstrap for each parameter we want to calculate. We do one bootstrap and then calculate as many parameters as we need to. We can also calculate medians or items like 5th highest income, and our uncertainty associated with those items. -->
@@ -99,60 +95,74 @@ ch8 %>%
 <!-- The difference between the means is the same as the mean of the differences, but the ratio of the means is not the same as the mean of the ratios, and the same for confidence intervals. -->
 
 
-```{r, include = FALSE}
+```{r, include=FALSE}
 
-#Just calculating some values here that I need for the bootstrap distributions later on. Will not display to student.
+# Just calculating some values here that I need for the bootstrap distributions
+# later on. Will not display to student. This code should be cleaned up to
+# produce just two tibbles with the needed values which can then be grabbed
+# later.
 
-mean_income_value <- mean(trains %>% pull(income))
+mean_income_value <- trains %>% 
+  pull(income) %>% 
+  mean()
 
-mean_income_value_democrat <- mean(trains %>% filter(party == "Democrat") %>% pull(income))
+mean_income_value_democrat <- trains %>% 
+  filter(party == "Democrat") %>% 
+  pull(income) %>% 
+  mean()
 
-mean_income_value_republican <- mean(trains %>% filter(party == "Republican") %>% pull(income))
+mean_income_value_republican <- trains %>% 
+  filter(party == "Republican") %>% 
+  pull(income) %>% 
+  mean()
 
-median_income_value <- median(trains %>% pull(income))
+median_income_value <- trains %>% 
+  pull(income) %>% 
+  median()
 
-median_income_value_democrat <- median(trains %>% filter(party == "Democrat") %>% pull(income))
+median_income_value_democrat <- trains %>% 
+  filter(party == "Democrat") %>% 
+  pull(income) %>% 
+  median()
 
-median_income_value_republican <- median(trains %>% filter(party == "Republican") %>% pull(income))
+median_income_value_republican <- trains %>% 
+  filter(party == "Republican") %>% 
+  pull(income) %>% 
+  median()
 
 ```
 
-Recall how we constructed bootstrap distributions for select parameters through sampling with replacement in ch7. Through this bootstrapping process, we were able to construct *confidence intervals* for these parameters. Remember, confidence intervals are a tool to help us identify *parameter uncertainty*, which is the degree to which we are confident in these approximations of the *true values*, which are the real-life values we hope to capture through our work. Using the limited data in the `trains` dataset as representative of homogeneous white populations of the United States, bootstrap resampling will allow us to approximate a true value for any statistic with a certain degree of confidence — this could, for example, be the true average income of Boston commuters, or the true percentage of Boston commuters that are Republican (refer back to chapter 7 for a refresher on how this works out mathematically). 
+Recall how we constructed bootstrap distributions for a parameter by sampling with replacement in Chapter \@ref(one-parameter). Through this bootstrapping process, we were able to construct *confidence intervals* for a parameter. Remember, confidence intervals are a tool to help us identify *parameter uncertainty*, which is the degree to which we are confident in these estimates of the *unknown* (and often unknowable) numbers. 
 
 We will once again be using the `bootstraps()` function from the **rsample** package. You might think that since we're shifting to calculating two parameters of comparison, we might need to conduct the entire bootstrapping process twice, once for each parameter. However, it's much, much easier than that! We can actually calculate as many parameters as we need to for each replicate instead of doing a separate bootstrap for each parameter we want to track.
 
-That was a lot of words; the idea is best illustrated for an example. Here is a bootstrap sample of the trains dataset with 1000 replicates, and the data contained in the first of these 1000 replicates (note that we need the `analysis()` function in order to view the data stored within each replicate because of the split data column):
+Let's review the material from  Chapter \@ref(one-parameter) by calculating the confidence interval for 90th percentile of the distribution of age for Boston commuters.
 
+<!-- I should either add a bunch of comments to the R code chunk, or create a margin note. Or maybe this should just be using the mean? -->
 
 ```{r}
-
-x <- bootstraps(trains, 1000)
-
-x$splits[[1]] %>% analysis()
-
+trains %>% 
+  select(age) %>% 
+  bootstraps(1000) %>% 
+  mutate(age_90th = map_dbl(splits, ~ analysis(.) %>% 
+                                      pull(age) %>% 
+                                      quantile(prob = c(0.9)))) %>% 
+  ggplot(aes(x = age_90th)) +
+    geom_histogram(binwidth = .1) +
+    labs(x = "90th Percentile of Age",
+        title = "Posterior Distribution of the 90th Percentile 
+                 of Age for Boston Commuters")
 ```
 
-Now, let's say we're interested in calculating a single parameter across each of these bootstrapped samples: the mean income for each of these replicates. We can achieve this by applying the `mean()` function iteratively across each of the replicates using a mapping function, and adding a column to the condensed "data" tibble, as shown below:
+
+
+
 
 ```{r}
 
-get_mean_income <- function(splits) {
-  x <- analysis(splits)
-  return(mean(x$income))
-}
-
-x$mean_income <- map_dbl(1:1000, ~get_mean_income(x$splits[[.]]))
-
-x
-```
-
-Now we have 1000 replicates and 1000 values of mean_income to work with. If we want to construct a distribution for the bootstrapped values of `mean_income` with a 95 percent confidence interval, we can calculate the bounds of this interval, just as we did in the previous chapter.
-
-<!-- Make sure this is done in previous chapter. I would be very surprised if it isn't-->
-
-```{r}
-
-quantiles <- x %>% pull(mean_income) %>% quantile(c(.025, .975), names = F)
+quantiles <- x %>% 
+  pull(mean_income) %>% 
+  quantile(c(.025, .975), names = FALSE)
 
 ggplot(x, aes(x = mean_income)) + 
   geom_histogram(bins = 20) + 
