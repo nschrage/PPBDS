@@ -11,22 +11,33 @@ library(gt)
 library(tufte)
 ```
 
-<!-- This section is for general author comments and discussion. -->
+<!--
 
-<!-- 0) Make clear the distinction between "modeling for prediction" and "modeling for causation." The first is only about comparisons between categories. The second is stronger, a claim about changing an individual; it is a claim about potential outcomes. Multiple paragraphs throughout the chapter. -->
+Outline
 
-<!-- 1) Do we want to play the prediction game? If so, how? -->
+1) EDA for trains
 
-<!-- 2) How do we connect this to the probability chapter? I am still thinking about this. Basic idea is that, what would we estimate would happen with a new experiment, which might include one or 10 or 1,000 new people? Just like coin-tossing from chapter 5. We need to make this connection very explicit. Read through chapter 5 and discuss.  Posterior distribution, given the data we have, of an unknown parameter. -->
+2) Age by party (modeling for prediction). No use of bootstrap. Make clear the distinction between "modeling for prediction" and "modeling for causation." The first is only about comparisons between categories. The second is stronger, a claim about changing an individual; it is a claim about potential outcomes. Multiple paragraphs throughout the chapter. 
 
-<!-- 3) Should we make an explicit connection to the probability chapter by adding another dimension to that work? We have two coins, each with their own p. Build the joint distribution for them, with one on the x-axis and one on the y-axis. You need a near graphic for each value of the H number of heads total that you get from flipping them each N times. Then, you run the experiment, and you select the correct graphic. That shows you the best guess joint distribution. This is confusing!  -->
+3) att_end by treatment (modeling for causation). No use of bootstrap.
 
+4) Models requiring the bootstrap. Ratio of average age of democrats versus republicans.
+
+5) Prediction. How do we connect this to the probability chapter? I am still thinking about this. Basic idea is that, what would we estimate would happen with a new experiment, which might include one or 10 or 1,000 new people? Just like coin-tossing from chapter 5. We need to make this connection very explicit. Read through chapter 5 and discuss.  Posterior distribution, given the data we have, of an unknown parameter. 
+
+6) Should we make an explicit connection to the probability chapter by adding another dimension to that work? We have two coins, each with their own p. Build the joint distribution for them, with one on the x-axis and one on the y-axis. You need a near graphic for each value of the H number of heads total that you get from flipping them each N times. Then, you run the experiment, and you select the correct graphic. That shows you the best guess joint distribution. This is confusing! 
+
+Do we want to play the prediction game? If so, how?
+
+-->
+
+
+We have now introduced almost all of the key themes in the book. The last five chapters are about increasing the complexity of the models we use. In this chapter, we estimate models which involve two parameters.
 
 ## EDA for `trains`
 
-<!--  Point out that att_start is not something we will use in this chapter, but will use later. This is a brief warm up. Don't need to explore each variable in detail. All we are using is `treatment` and `income`. -->
 
-Let's do some exploratory data analysis (EDA) of the `trains` data set from the **PPBDS.data** package. Enos (2014) randomly placed Spanish-speaking confederates on nine train platforms around Boston, Massachusetts. They examined how exposure to Spanish-speakers -- the `treatment` -- influenced attitudes toward immigration. These reactions were measured through changes in answers to three survey questions. Let's load the libraries we will need in this chapter and look at the data.
+Let's do some exploratory data analysis (EDA) of the `trains` data set from the **PPBDS.data** package. Recall the discussion from Chapter \@ref{rubin-causal-model}. Enos (2014) randomly placed Spanish-speaking confederates on nine train platforms around Boston, Massachusetts. Exposure to Spanish-speakers -- the `treatment` -- influenced attitudes toward immigration. These reactions were measured through changes in answers to three survey questions. Let's load the libraries we will need in this chapter and look at the data.
 
 ```{r, message=FALSE}
 library(PPBDS.data)
@@ -35,24 +46,48 @@ library(rsample)
 library(skimr)
 ```
 
-
-
 ```{r}
 glimpse(trains)
 ```
 
+Here, we can see variables that indicate each respondent's gender, political affiliation, age, and income. Additionally, we have variables that indicate whether a subject was in the control or treatment group, and the attitudes before or after the study in each of these subjects. You can type `?trains` to read the help page with information about each variable. Let's restrict attention to a subset of the variables.
+
+```{r}
+ch8 <- trains %>% 
+  select(age, att_end, party, treatment)
+```
+
+It is always smart to look at a some random samples of the data:
+
+```{r}
+ch8 %>% 
+  sample_n(5)
+```
+
+`att_end` is a measure of person's attitude toward immigration, a higher number means to a more conservative, i.e., a more exclusionary stance on immigration into the United States. Running `glimpse()` is another way of exploring a data set.
+
+```{r}
+ch8 %>% 
+  glimpse()
+```
 
 
-Here, we can see variables that indicate each respondent's gender, political affiliation, age, and income. Additionally, we have variables that indicate whether a subject was in the control or treatment group, and the attitudes before or after the study in each of these subjects. Remember that for the `att_start` and `att_end` variables, a higher number means to a more conservative political standing and, correspondingly, a more exclusionary stance on immigration into the United States.
+
+
+`skim` from the **skimr** package is the best way to get an overview of a tibble.
+
+```{r}
+ch8 %>% 
+  skim()
+```
+
+
 
 Although the `att_start` and `att_end` variables are central to Enos' experiment, we will now focus our attention to the relationship between the `age` and `party` variable. The reason for investigating this instead of att_start and att_end will become clear later in the chapter. Furthermore, instead of investigating a single parameter of comparison like we did in chapter 7, we will incorporate the use of *two parameters* to create a holistic picture of how these two variables are related. How do our estimates and predictions regarding income change when we identify a specific party we want to work with within the data?
 
 
 ## Estimate Age
 
-<!-- EM: We have decided to pivot this section away from income (due to its wonky distribution) and move to estimating AGE as our dependent variable -->
-
-<!-- EM: We are also eliminating the bootstrap portion of this chapter in its entirety, as it was covered in ch7. At the very most, a reiteration of lm()'s validity is acceptable. Otherwise, it takes up too much space. -->
 
 <!-- EM: Lastly, there should also be a Rubin table that is constructed for age ~ party. Ask Preceptor for more detailed instructions regarding this as he does a fantastic job explaining why it's necessary. In summary: age~party instead of income~party, get rid of bootstrapping because it's redundant, and have a Rubin table for age~party (there's already one for att_end~treatment later in the chapter. -->
 
