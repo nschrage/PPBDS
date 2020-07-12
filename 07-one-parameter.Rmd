@@ -22,6 +22,46 @@ Figure out the 5-8 subparts and the sub-subparts within each. This will evolve o
 
 2. height from the 5,000 nhanes observations for 2009. This can go much faster. Two key differences from pennies. First, we know the truth, so we can examine whether or not the bootstrap works. (That is, we pull a sample of 40 and see if the bootstrap confidence interval from that 40 includes the true mean of the 5,000.) Second, we simultaneously calculate two things: mean height and 75th percentile height. The first can also be done with lm(). But the second can not! Which is why we sometimes need the bootstrap.
 
+Cut this from chapter 8. Something like it belongs here
+
+=======
+Consider a bootstrap sample of the trains dataset with 1,000 replicates, and the data contained in the first of these 1000 replicates: 
+
+
+```{r}
+boots <- bootstraps(trains, 1000)
+```
+
+Because bootstrapping can take a lot of time, we often create the bootstrap sample as a new object, and then use this new object as the starting point for later analysis. You would not want to redo the bootstrap every time you made a minor change in a plot later on. The result of running `bootstraps()` is usually a tibble of class "bootstraps," with two colums: `splits`  (a list) and `id` (a character).  
+
+```{r}
+boots
+```
+
+
+Using the `analysis()` function from the **rsample** package is useful in working with the data stored within each replicate in the `splits` column. Let's look at the 9th replicate.
+
+```{r}
+x$boots[[9]] %>% analysis()
+```
+
+Now, let's say we're interested in calculating a single parameter across each of these bootstrapped samples: the mean income for each of these replicates. We use `mutate()` to add a new column to the tibble. We use a map function to accomplish this, as explained in Chapter \@ref(functions).
+
+```{r}
+x <- boots %>% 
+  mutate(mean_income = map_dbl(splits, ~ analysis(.) %>% 
+                              pull(income) %>% 
+                              mean()))
+
+x
+```
+
+
+
+Now we have 1000 replicates and 1000 values of mean_income to work with. If we want to construct a distribution for the bootstrapped values of `mean_income` with a 95 percent confidence interval, we can calculate the bounds of this interval.
+=======
+End of cut section.
+
 3. height in the US, using all 5,000 for 2009. Let's skip the bootstrap here. (We have seen it twice already.) Instead, we just go straight to lm(), tidy() to calculate the mean and its confidence interval. Note that, unlike with 2, we can never know the truth. Then, use this as an example to discuss parameter uncertainty. 
 
 4. Prediction. What can we use this model for? We think we know p(mean height for 2009), call it p(height). So what? What can we do with this and what do we need to be careful about? This is where we can discuss all our other topics from themes.Rmd. Some key topics:
