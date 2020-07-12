@@ -98,30 +98,78 @@ Recall how we constructed bootstrap distributions for a parameter by sampling wi
 
 We will once again be using the `bootstraps()` function from the **rsample** package. You might think that since we're shifting to calculating two parameters of comparison, we might need to conduct the entire bootstrapping process twice, once for each parameter. However, it's much, much easier than that! We can actually calculate as many parameters as we need to for each replicate instead of doing a separate bootstrap for each parameter we want to track.
 
-Let's review the material from  Chapter \@ref(one-parameter) by calculating the confidence interval for 90th percentile of the distribution of age for Boston commuters.
+Let's review the material from  Chapter \@ref(one-parameter) by calculating the confidence interval for both the mean and the 90th percentile of age for Boston commuters. We will build up the code section by section.
 
-<!-- I should either add a bunch of comments to the R code chunk, or create a margin note. Or maybe this should just be using the mean? -->
+First, we select out the only variable we need, with is `age`, and then create an objects of class `bootstraps`.
+
+
+```{r}
+trains %>% 
+  select(age) %>% 
+  bootstraps(1000)
+```
+
+We discussed these objects in Chapter \@ref(one-parameter). The key in working with them is the use of `analysis()` from the **rsample** package to pull out the underlying data.
 
 ```{r}
 trains %>% 
   select(age) %>% 
   bootstraps(1000) %>% 
-  mutate(age_90th = map_dbl(splits, ~ analysis(.) %>% 
-                                      pull(age) %>% 
-                                      quantile(prob = c(0.9)))) %>% 
-  ggplot(aes(x = age_90th)) +
-    geom_histogram(binwidth = .1) +
-    labs(x = "90th Percentile of Age",
-        title = "Posterior Distribution of the 90th Percentile 
-                 of Age for Boston Commuters")
+  mutate(boot = map(splits, ~ analysis(.)))
+```
+
+`boot` is now a list-column in the tibble. This workflow --- keep adding new columns to the tibble created by the initial call to `bootstraps()` --- is common. Let's add three more columns.
+
+```{r}
+trains %>% 
+  select(age) %>% 
+  bootstraps(1000) %>% 
+  mutate(boot = map(splits, ~ analysis(.))) %>%
+  mutate(ages = map(boot, ~ pull(., age))) %>% 
+  mutate(age_mean = map_dbl(ages, ~ mean(.))) %>% 
+  mutate(age_90th = map_dbl(ages, ~ quantile(., probs = 0.9)))
+```
+
+We could simplify this code by combining all the `mutate()` steps into a single line, create one function which does the `analyst()`, `pull()`, `mean()` and `quantile()` steps together. However, when building up code like this, we prefer to go line-by-line, at least until everything is working.
+
+```{r}
+x <- trains %>% 
+  select(age) %>% 
+  bootstraps(1000) %>% 
+  mutate(boot = map(splits, ~ analysis(.))) %>%
+  mutate(ages = map(boot, ~ pull(., age))) %>% 
+  mutate(age_mean = map_dbl(ages, ~ mean(.))) %>% 
+  mutate(age_90th = map_dbl(ages, ~ quantile(., probs = 0.9))) %>% 
+  select(age_mean, age_90th)
 ```
 
 
 
 
+```{r}
+x %>% 
+  ggplot() +
+    geom_histogram(aes(x = age_mean), binwidth = .1, fill = "red") +
+    geom_histogram(aes(x = age_90th), binwidth = .1, fill = "red") +
+    labs(x = "90th Percentile of Age",
+        title = "Posterior Distribution of the 90th Percentile 
+                 of Age for Boston Commuters")
+```
+
+If we were interested in the mean age, and our associated uncertainty, we could use this exact code, except replacing `quantile()` with `mean()`. Yet the mathematical convenience of the mean allows us to avoid the complexity of the bootstrap.
 
 
-We've calculated the mean income for each bootstrapped replicate and constructed a nice distribution graphic for it — and this is all well and good, but it's exactly the same thing that we did back in ch7. Extending our analysis of income to two parameters would allow us to investigate new trends and patterns in the data. 
+But what if, instead of having no other information about our sample beyond their ages, we also knew their political party? How would we make a model which included this other information?
+
+### Two Parameters
+
+Let's begin by using `lm()`, in almost the same was as we did in Chapter \@ref(one-parameter).
+
+```{r}
+lm(data = trains, age ~ party - 1)
+```
+
+
 
 What if we wanted to extend this calculation to distinguish between, say, democratic and republican subjects in Enos' study?
 
@@ -141,6 +189,8 @@ get_mean_income <- function(splits, whichParty) {
 Now that we've rewritten `get_mean_income()`, we can map the function onto each replicate. Here, we create two columns, mean_income_control and mean_income_treated, that distinguish between the mean incomes of the two groups.
 
 ```{r}
+x <- bootstraps(trains, 1000)
+
 
 x$mean_income_democrat <- map_dbl(1:1000, ~get_mean_income(x$splits[[.]], "Democrat"))
 
@@ -184,10 +234,7 @@ ggplot(pivoted_data, aes(x = income, fill = subject_party)) +
   geom_vline(xintercept = democrat_intervals[1], color = "red") + 
   geom_vline(xintercept = democrat_intervals[2], color = "red") + 
   geom_vline(xintercept = republican_intervals[1], color = "turquoise3") + 
-  geom_vline(xintercept = republican_intervals[2], color = "turquoise3") + 
-  geom_vline(xintercept = mean_income_value_democrat, color = "red") + 
-  geom_vline(xintercept = mean_income_value_republican, color = "turquoise3") 
-
+  geom_vline(xintercept = republican_intervals[2], color = "turquoise3") 
 ```
 
 This is a bit messy and difficult to decipher, but there are two observations regarding these distributions that we can make right off the bat:
