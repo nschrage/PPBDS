@@ -270,14 +270,17 @@ The 50 values of `year` in `pennies_resample` represent a resample of size 50 fr
 ```{r, echo=FALSE, fig.cap="50 resampled US pennies labelled."}
 # Need this for ID column
 
+# pennies_resample$mean_year <- map_dbl(1:1, ~get_year(pennies_resample$splits[[.]]))
 
-pennies_resample <- pennies_sample %>% 
-  rep_sample_n(size = 50, replace = TRUE, reps = 1) %>% 
-  ungroup() %>% 
+pennies_resample <- pennies_sample %>%
+  rep_sample_n(size = 50, replace = TRUE, reps = 1) %>%
+  ungroup() %>%
   select(-replicate)
 
 knitr::include_graphics("07-one-parameter/images/4.jpg")
 ```
+
+
 
 Let's compare the distribution of the numerical variable `year` of our 50 resampled pennies with the distribution of the numerical variable `year` of our original sample of 50 pennies in Figure \@ref(fig:origandresample).
 
@@ -429,7 +432,7 @@ The `replicate` variable only takes on the value of 1 corresponding to us only h
 
 ```{r}
 virtual_resample %>% 
-  summarize(resample_mean = mean(year))
+  summarize(resample_mean = mean(year), .groups = 'drop')
 ```
 
 As we saw when we did our tactile resampling exercise, the resulting mean year is different than the mean year of our 50 originally sampled pennies of `r x_bar %>% pull(mean_year) %>% round(2)`.
@@ -500,7 +503,8 @@ virtual_resamples <- pennies_sample %>%
 
 virtual_resampled_means <- virtual_resamples %>% 
   group_by(replicate) %>% 
-  summarize(mean_year = mean(year))
+  summarize(mean_year = mean(year), .groups = 'drop')
+
 ```
 
 However, in the interest of brevity, going forward let's combine these two operations into a single chain of pipe (`%>%`) operators:
@@ -528,6 +532,7 @@ Note here that the bell shape is starting to become much more apparent. We now h
 virtual_resampled_means %>% 
   summarize(mean_of_means = mean(mean_year))
 ```
+
 ```{r, echo=FALSE}
 mean_of_means <- virtual_resampled_means %>% 
   summarize(mean(mean_year)) %>% 
@@ -744,7 +749,7 @@ Now that we have a list column called `boots` for each of our original 10 sample
 ```{r}
 perc_cis_80 <- perc_cis_80 %>%
   mutate(prop_red_results = map(boots, ~ group_by(., replicate) %>%
-                                            summarize(prop_red = mean(color == "red"))),
+                                            summarize(prop_red = mean(color == "red"), .groups = 'drop')),
          prop_red = map(prop_red_results, ~ pull(., prop_red)))
 perc_cis_80
 ```
@@ -776,7 +781,7 @@ perc_cis_95 <- urn %>%
   nest() %>%
   mutate(boots = map(data, ~ rep_sample_n(., size = 50, replace = TRUE, reps = 1000)),
          prop_red_results = map(boots, ~ group_by(., replicate) %>%
-                                  summarize(prop_red = mean(color == "red"))),
+                                  summarize(prop_red = mean(color == "red"), .groups = 'drop')),
          prop_red = map(prop_red_results, ~ pull(., prop_red)),
          lower = map_dbl(prop_red, ~ quantile(., probs = 0.025)),
          upper = map_dbl(prop_red, ~ quantile(., probs = 0.975)),
@@ -797,7 +802,7 @@ perc_cis_99 <- urn %>%
   nest() %>%
   mutate(boots = map(data, ~ rep_sample_n(., size = 50, replace = TRUE, reps = 1000)),
          prop_red_results = map(boots, ~ group_by(., replicate) %>%
-                                  summarize(prop_red = mean(color == "red"))),
+                                  summarize(prop_red = mean(color == "red"), .groups = 'drop')),
          prop_red = map(prop_red_results, ~ pull(., prop_red)),
          lower = map_dbl(prop_red, ~ quantile(., probs = 0.005)),
          upper = map_dbl(prop_red, ~ quantile(., probs = 0.995)),
@@ -852,7 +857,7 @@ urn_confidence <- function(bowl, n = 50, level = 0.95) {
     nest() %>%
     mutate(boots = map(data, ~ rep_sample_n(., size = n, replace = TRUE, reps = 1000)),
            prop_red_results = map(boots, ~ group_by(., replicate) %>%
-                                    summarize(prop_red = mean(color == "red"))),
+                                    summarize(prop_red = mean(color == "red"), .groups = 'drop')),
            prop_red = map(prop_red_results, ~ pull(., prop_red)),
            lower = map_dbl(prop_red, ~ quantile(., probs = lower_prob)),
            upper = map_dbl(prop_red, ~ quantile(., probs = upper_prob)),
@@ -909,7 +914,7 @@ tibble(level = seq(0.50, 0.99, by = 0.01)) %>%
   
   mutate(width = upper - lower) %>%
   group_by(confidence_level) %>%
-  summarize(mean_width = mean(width)) %>%
+  summarize(mean_width = mean(width), .groups = 'drop') %>%
   
   # Plot results
   
@@ -949,7 +954,7 @@ Let's compare the average widths in Table \@ref(tab:perc-cis-average-width-2). O
 percentile_cis_by_n %>% 
   mutate(width = upper - lower) %>% 
   group_by(sample_size) %>% 
-  summarize(`Mean width` = mean(width)) %>% 
+  summarize(`Mean width` = mean(width), .groups = 'drop') %>% 
   rename(`Sample size` = sample_size) %>% 
   gt() %>%
   tab_header("Average width of 95% confidence intervals based on $n = 25, $50, and $100")
@@ -973,7 +978,7 @@ tibble(n = seq(25, 200, by = 5)) %>%
   
   mutate(width = upper - lower) %>%
   group_by(sample_size) %>%
-  summarize(mean_width = mean(width)) %>%
+  summarize(mean_width = mean(width), .groups = 'drop') %>%
   
   # Plot results
   
@@ -1176,7 +1181,7 @@ Let's use some data wrangling to obtain counts of the four possible outcomes:
 ```{r}
 mythbusters_yawn %>% 
   group_by(group, yawn) %>% 
-  summarize(count = n())
+  summarize(count = n(), .groups = 'drop')
 ```
 
 Let's first focus on the `"control"` group participants who were not exposed to yawning. 12 such participants did not yawn, while 4 such participants did. So out of the 16 people who were not exposed to yawning, 4/16 = 0.25 = 25% did yawn. 
@@ -1271,7 +1276,7 @@ After we generate many replicates of bootstrap resampling with replacement, we n
 mythbusters_yawn %>%
   rep_sample_n(size = 50, reps = 1000, replace = TRUE) %>%
   group_by(replicate, group) %>%
-  summarize(prop_yawn = mean(yawn == "yes"))
+  summarize(prop_yawn = mean(yawn == "yes"), .groups = 'drop')
 ```
 
 We now have two rows per `replicate`, the first being `control` and the second being `seed`.  That means we can construct our difference in proportions by `group`ing `by` `replicate` and subtracting one `prop_yawn` from the other:
@@ -1280,10 +1285,10 @@ We now have two rows per `replicate`, the first being `control` and the second b
 mythbusters_yawn %>%
   rep_sample_n(size = 50, reps = 1000, replace = TRUE) %>%
   group_by(replicate, group) %>%
-  summarize(prop_yawn = mean(yawn == "yes")) %>%
+  summarize(prop_yawn = mean(yawn == "yes"), .groups = 'drop') %>%
   pivot_wider(names_from = group, values_from = prop_yawn) %>% 
   group_by(replicate) %>%
-  summarize(diff_prop_yawn = seed - control)
+  summarize(diff_prop_yawn = seed - control, .groups = 'drop')
 ```
 
 There are two important coding tricks. First, we use `group_by()` twice, once to perform a calculation for each `replicate` and `group`, and once to perform a calculation just for each `replicate`. Failure to keep track of exactly what is currently being `group_by()`'d is a common cause of bugs. Second, `pivot_wider()` helps us to bring values into the same row, this making later calculations (like subtraction) easier. 
@@ -1296,10 +1301,10 @@ Next, let's compute the 95% confidence interval for $p_{seed} - p_{control}$ usi
 mythbusters_yawn %>%
   rep_sample_n(size = 50, reps = 1000, replace = TRUE) %>%
   group_by(replicate, group) %>%
-  summarize(prop_yawn = mean(yawn == "yes")) %>%
+  summarize(prop_yawn = mean(yawn == "yes"), .groups = 'drop') %>%
   pivot_wider(names_from = group, values_from = prop_yawn) %>% 
   group_by(replicate) %>%
-  summarize(diff_prop_yawn = seed - control) %>% 
+  summarize(diff_prop_yawn = seed - control, .groups = 'drop') %>% 
   pull(diff_prop_yawn) %>%
   quantile(c(0.025, 0.975))
 ```
@@ -1396,7 +1401,7 @@ virtual_samples <- urn %>%
 
 sampling_distribution <- virtual_samples %>% 
   group_by(replicate) %>% 
-  summarize(red = sum(color == "red")) %>% 
+  summarize(red = sum(color == "red"), .groups = 'drop') %>% 
   mutate(prop_red = red / 50)
 
 # Visualize sampling distribution of p-hat
@@ -1443,7 +1448,7 @@ urn_sample_1 <- urn %>%
 set.seed(14)
 bootstrap_distribution <- urn_sample_1 %>% 
   rep_sample_n(size = 50, reps = 1000, replace = TRUE) %>%
-  summarize(prop_red = mean(color == "red"))
+  summarize(prop_red = mean(color == "red"), .groups = 'drop')
 ```
 
 ```{r, fig.show='hold', fig.cap="Bootstrap distribution of proportion red for $n = 1000$.", purl=FALSE, fig.height=2.5}
@@ -1459,7 +1464,7 @@ bootstrap_distribution %>% summarize(se = sd(prop_red))
 ```
 ```{r, echo=FALSE}
 se_boot <- bootstrap_distribution %>% 
-  summarize(se = sd(prop_red)) %>% 
+  summarize(se = sd(prop_red), .groups = 'drop') %>% 
   pull(se)
 ```
 
