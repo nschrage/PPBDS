@@ -38,6 +38,7 @@ We have now introduced almost all of the key themes in the book. The last five c
 
 ## EDA for `trains`
 
+<!-- DK: Still need to standardize the method we use for providing references. -->
 
 Let's do some exploratory data analysis (EDA) of the `trains` data set from the **PPBDS.data** package. Recall the discussion from Chapter \@ref(rubin-causal-model). Enos (2014) randomly placed Spanish-speaking confederates on nine train platforms around Boston, Massachusetts. Exposure to Spanish-speakers -- the `treatment` -- influenced attitudes toward immigration. These reactions were measured through changes in answers to three survey questions. Let's load the libraries we will need in this chapter and look at the data.
 
@@ -53,7 +54,7 @@ library(skimr)
 glimpse(trains)
 ```
 
-Here, we can see variables that indicate each respondent's gender, political affiliation, age, and income. Additionally, we have variables that indicate whether a subject was in the control or treatment group, and the attitudes before or after the study in each of these subjects. You can type `?trains` to read the help page with information about each variable. Let's restrict attention to a subset of the variables.
+Here, we can see variables that indicate each respondent's gender, political affiliations, age, and income. Additionally, we have variables that indicate whether a subject was in the control or treatment group, and the their attitudes toward immigration both before or after the treatment. You can type `?trains` to read the help page for more information about each variable. Let's restrict attention to a subset of the variables.
 
 ```{r}
 ch8 <- trains %>% 
@@ -74,7 +75,7 @@ ch8 %>%
   glimpse()
 ```
 
-Pay attention to the variable "type." Do they make sense? Perhaps. But there are certainly grounds for suspicion. Why are `age` an `att_end` doubles rather than integers? Looking at the values, it appears that they are not recorded more accurately than simple integers. Why is `party` a character variable and `treament` a factor variable? It could be that these are intentional choices made by the creator of the tibble, i.e., us. These could be mistakes. Or, most likely, these choices are a mixture of sensible and arbitrary. Regardless, it is your responsibility to notice them. You can't make a good model without looking closely at the data which you are using.
+Pay attention to the variable "type." Do they make sense? Perhaps. But there are certainly grounds for suspicion. Why are `age` and `att_end` doubles rather than integers? Looking at the values, it appears that they are not recorded more accurately than simple integers. Why is `party` a character variable and `treament` a factor variable? It could be that these are intentional choices made by the creator of the tibble, i.e., us. These could be mistakes. Or, most likely, these choices are a mixture of sensible and arbitrary. Regardless, it is your responsibility to notice them. You can't make a good model without looking closely at the data which you are using.
 
 `skim` from the **skimr** package is the best way to get an overview of a tibble.
 
@@ -83,19 +84,13 @@ ch8 %>%
   skim()
 ```
 
-`skim()` shows us what the different values of `treatment` are because it is a factor. Unfortunately, it does not do the same for character variables like `party`. The ranges for `age` and `att_end` seem reasonable. Recall that particpants were asked three questions about immigration issues, each of which allowed for an answer which was a strength of agreement between 1 and 5, with higher values indicating more agreement with the conservative position. So, the most liberal possible answer was 3 and the most conservative as 15.
-
+`skim()` shows us what the different values of `treatment` are because it is a factor. Unfortunately, it does not do the same for character variables like `party`. The ranges for `age` and `att_end` seem reasonable. Recall that participants were asked three questions about immigration issues, each of which allowed for an answer which was a strength of agreement between 1 and 5, with higher values indicating more agreement with conservative viewpoints. So, the most liberal possible value is 3 and the most conservative is 15.
 
 
 ## Review of One Parameter Estimation
 
 
 <!--  Speak with Cass about adding a Rubin Table here. -->
-
-
-<!-- All the same tools which we used to estimate a single parameter in the previous chapter apply to estimate two parameters in this chapter. (Not sure what examples we will use in that chapter.) In fact, it is easy! We only need to do the bootstrap once. And, once we have those bootstrap samples, we just calculate mean(income) for treated and mean(income) for control. Key insight is that we don't need to do a bootstrap for each parameter we want to calculate. We do one bootstrap and then calculate as many parameters as we need to. We can also calculate medians or items like 5th highest income, and our uncertainty associated with those items. -->
-
-<!-- The difference between the means is the same as the mean of the differences, but the ratio of the means is not the same as the mean of the ratios, and the same for confidence intervals. -->
 
 Recall how we constructed bootstrap distributions for a parameter by sampling with replacement in Chapter \@ref(one-parameter). Through this bootstrapping process, we were able to construct *confidence intervals* for a parameter. Remember, confidence intervals are a tool to help us identify *parameter uncertainty*, which is the degree to which we are confident in these estimates of the *unknown* (and often unknowable) numbers. 
 
@@ -172,16 +167,46 @@ trains %>%
 
 The 95% confidence interval calculated via `lm()` is, more or less, the same as the one we calculate "by hand" using the bootstrap: `r round(quantile(x$age_mean, probs = c(0.025, 0.975)), 1)`.
 
-<!-- DK: I went fast above, but that is all the key material. -->
+
+
+<!-- DK: Should also add a "validity" or "representativeness" discussion about what population this estimate applies to. All people? All people in Boston? All Boston commuters? -->
 
 ## `age` as a Function of `party`
 
+But what if, instead of having no other information about our sample beyond their ages, we also knew their political party? How would we make a model which included this other information? This is a model for prediction, rather than a model for causal inference, because `age` can not be changed, regardless what happens to `party`. That is, someone's age is the same regardless of the party of which they are a member.
 
-But what if, instead of having no other information about our sample beyond their ages, we also knew their political party? How would we make a model which included this other information?
+The simplest model would be to guess that a person's age, conditional on their party membership, is equal to the mean age of people in that party.
 
-Let's begin by using `lm()`, in almost the exact same was as we did in Chapter \@ref(one-parameter).
+```{r}
+trains %>% 
+  group_by(party) %>% 
+  summarize(age_average = mean(age))
+```
+
+If a new Boston commuter named Jake showed up at the station, what would be a good guess as to their age? If you don't know anything else about this person, then guessing the mean age of the sample, `r round(mean(trains$age), 1)` makes sense, as we learned in Chapter \@ref(one-parameter). But, if we know that the person is a Republican, than this guess would be (slightly) too high. Among the population of Boston commuters, (it seems that) Republican's are younger than average. So, conditional on knowing that Jake is a Republican, we should guess that his age is  `r round(mean(trains$age[trains$party == "Republican"]), 1)`. 
+
+
+Let's begin by using `lm()`, in almost the exact same was as we did in Chapter \@ref(one-parameter). Start by estimating a simple model:
 
 <!-- DK: Would now be a time to start using tidymodels syntax so that we could avoid the horribleness of the dot? -->
+
+```{r}
+trains %>% 
+  lm(data = ., age ~ party - 1)
+```
+
+The initials "lm" stand for "linear model." We are creating a model in which age is a function of party. The "-1" term causes the model to be estimated without an intercept, a concept which will be explained in Chapter \@ref(continuous-i). The coefficient estimates are the same as the mean values for age within each party.
+
+```{r}
+trains %>% 
+  group_by(party) %>% 
+  summarize(age_average = mean(age))
+```
+
+
+
+
+
 
 ```{r}
 trains %>% 
@@ -195,6 +220,8 @@ trains %>%
 
 --------
 
+
+<!-- DK: I went fast above, but that is all the key material. Still need to add a Rubin Table example, highlighting that this is modeling for prediction. There is only one column for Y because it is impossible to change someone's age, whatever manipulations you make to party. -->
 
 
 In the original dataset — and therefore, most likely for the majority of the bootstrapped samples — the number of democratic subjects vastly outnumber the number of republican subjects. Why does this lead to wider confidence intervals?
