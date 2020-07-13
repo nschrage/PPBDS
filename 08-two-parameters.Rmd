@@ -211,8 +211,39 @@ trains %>%
   select(term, conf.low, estimate, conf.high)
 ```
 
-<!-- MB: Please, provide a tour of what this means  -->
+The confidence intervals that we've generated display the upper and lower bounds of the mean age of Democrat and Republican commuters on this train platform. This touches on the idea of **parameter uncertainty**: even if a model is constructed in a logical way, we are unable to know our parameters exactly, the parameters in this case being the mean ages of the two parties. Confidence intervals are one way to capture this uncertainty, so that we don't over-confidently put forward one definitively value. 
 
+```{r}
+trains %>%
+  group_by(party) %>%
+  summarise(n())
+```
+
+You may notice how the range of the confidence interval for Republicans is larger. This may be because far fewer Republicans were surveyed than Democrats -- 19 to 96. Parameter estimates are always exclusively based on the data that the model is fed, so factors like sample size can impact our parameter uncertainty. With more data to work with, we can more accurately capture the true mean age of the Democrat commuters. 
+
+One should also note that this model is predictive rather than causal. Rather than modelling how the explanatory variable will change the outcome variable, we are using the explanatory variable (party) to simply predict the outcome variable (age). The difference between these two model types becomes clear when we try to construct a Rubin's Causal Model Table: 
+
+```{r}
+
+# Using real sampled ages but making my own tibble to add names
+
+tibble(subject = c("Emily", "Dominic", "John", "Cassidy", "Miro"),
+       rep_age = c("34", "53", "22", "36", "30"),
+       dem_age = c("34", "53", "22", "36", "30")) %>%
+  gt() %>%
+  cols_label(subject = md("Name"),
+                rep_age = md("Age (if Republican)"),
+                dem_age = md("Age (if Democrat)")) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(subject))) %>%
+  tab_style(cell_text(weight = "bold"),
+            location = cells_body(columns = vars(subject))) %>%
+  cols_align(align = "center", columns = TRUE) %>%
+  fmt_markdown(columns = TRUE)
+
+```
+
+This table is stupid, which is the point. Obviously, none of the commuters ages change if they switch party affiliation, which is why it is not a causal model but a predictive one. 
 
 <!-- DK: I went fast above, but that is all the key material. Still need to add a Rubin Table example, highlighting that this is modeling for prediction. There is only one column for Y because it is impossible to change someone's age, whatever manipulations you make to party. -->
 
