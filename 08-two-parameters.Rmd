@@ -17,15 +17,17 @@ Outline
 
 1) EDA for trains
 
-2) Age by party (modeling for prediction). No use of bootstrap. Make clear the distinction between "modeling for prediction" and "modeling for causation." The first is only about comparisons between categories. The second is stronger, a claim about changing an individual; it is a claim about potential outcomes. Multiple paragraphs throughout the chapter. 
+2) Review of material from Chapter 7
 
-3) att_end by treatment (modeling for causation). No use of bootstrap.
+3) Age by party (modeling for prediction). No use of bootstrap. Make clear the distinction between "modeling for prediction" and "modeling for causation." The first is only about comparisons between categories. The second is stronger, a claim about changing an individual; it is a claim about potential outcomes. Multiple paragraphs throughout the chapter. 
 
-4) Models requiring the bootstrap. Ratio of average age of democrats versus republicans.
+4) att_end by treatment (modeling for causation). No use of bootstrap.
 
-5) Prediction. How do we connect this to the probability chapter? I am still thinking about this. Basic idea is that, what would we estimate would happen with a new experiment, which might include one or 10 or 1,000 new people? Just like coin-tossing from chapter 5. We need to make this connection very explicit. Read through chapter 5 and discuss.  Posterior distribution, given the data we have, of an unknown parameter. 
+5) Models requiring the bootstrap. Ratio of average age of democrats versus republicans.
 
-6) Should we make an explicit connection to the probability chapter by adding another dimension to that work? We have two coins, each with their own p. Build the joint distribution for them, with one on the x-axis and one on the y-axis. You need a near graphic for each value of the H number of heads total that you get from flipping them each N times. Then, you run the experiment, and you select the correct graphic. That shows you the best guess joint distribution. This is confusing! 
+6) Prediction. How do we connect this to the probability chapter? I am still thinking about this. Basic idea is that, what would we estimate would happen with a new experiment, which might include one or 10 or 1,000 new people? Just like coin-tossing from chapter 5. We need to make this connection very explicit. Read through chapter 5 and discuss.  Posterior distribution, given the data we have, of an unknown parameter. 
+
+Should we make an explicit connection to the probability chapter by adding another dimension to that work? We have two coins, each with their own p. Build the joint distribution for them, with one on the x-axis and one on the y-axis. You need a near graphic for each value of the H number of heads total that you get from flipping them each N times. Then, you run the experiment, and you select the correct graphic. That shows you the best guess joint distribution. This is confusing! 
 
 Do we want to play the prediction game? If so, how?
 
@@ -42,6 +44,7 @@ Let's do some exploratory data analysis (EDA) of the `trains` data set from the 
 ```{r, message=FALSE}
 library(PPBDS.data)
 library(tidyverse)
+library(broom)
 library(rsample)
 library(skimr)
 ```
@@ -84,7 +87,7 @@ ch8 %>%
 
 
 
-## Model `age` as a function of `party`
+## Review of One Parameter Estimation
 
 
 <!--  Speak with Cass about adding a Rubin Table here. -->
@@ -130,112 +133,67 @@ trains %>%
   mutate(age_90th = map_dbl(ages, ~ quantile(., probs = 0.9)))
 ```
 
-We could simplify this code by combining all the `mutate()` steps into a single line, create one function which does the `analyst()`, `pull()`, `mean()` and `quantile()` steps together. However, when building up code like this, we prefer to go line-by-line, at least until everything is working.
+We could simplify this code by combining all the `mutate()` steps into a single line, create one function which does the `analyst()`, `pull()`, `mean()` and `quantile()` steps together. However, when building up code like this, we prefer to go line-by-line, at least until everything is working. We could also "feed" this pipe directly into a call to `ggplot()`. However, it is better practice to save the needed results in an object and then use that object for plotting, especially if creating the data takes some time. For replication purposes, we use `set.seed()`. 
 
 ```{r}
+set.seed(9)
+
 x <- trains %>% 
   select(age) %>% 
   bootstraps(1000) %>% 
-  mutate(boot = map(splits, ~ analysis(.))) %>%
-  mutate(ages = map(boot, ~ pull(., age))) %>% 
+  mutate(ages = map(splits, ~ analysis(.) %>% 
+                              pull(., age))) %>%
   mutate(age_mean = map_dbl(ages, ~ mean(.))) %>% 
   mutate(age_90th = map_dbl(ages, ~ quantile(., probs = 0.9))) %>% 
   select(age_mean, age_90th)
 ```
 
-
+We no longer need to re-run this code each time we adjust the plot.
 
 
 ```{r}
 x %>% 
   ggplot() +
     geom_histogram(aes(x = age_mean), binwidth = .1, fill = "red") +
-    geom_histogram(aes(x = age_90th), binwidth = .1, fill = "red") +
-    labs(x = "90th Percentile of Age",
-        title = "Posterior Distribution of the 90th Percentile 
-                 of Age for Boston Commuters")
+    geom_histogram(aes(x = age_90th), binwidth = .1, fill = "blue") +
+    labs(x = "Estimate in Years",
+        title = "Posterior Distribution for the Mean and the 90th Percentile of 
+         Age for Boston Commuters")
 ```
 
-If we were interested in the mean age, and our associated uncertainty, we could use this exact code, except replacing `quantile()` with `mean()`. Yet the mathematical convenience of the mean allows us to avoid the complexity of the bootstrap.
+Remember that some parameters, like the mean, are easy to calculate with built in functions like `lm()` while others require the use of the bootstrap. Note how similar the `lm()` solution is:
+
+```{r}
+trains %>% 
+  lm(age ~ 1, data = .) %>%
+  tidy(conf.int = TRUE) %>% 
+  select(conf.low, estimate, conf.high)
+```
+
+The 95% confidence interval calculated via `lm()` is, more or less, the same as the one we calculate "by hand" using the bootstrap: `r round(quantile(x$age_mean, probs = c(0.025, 0.975)), 1)`.
+
+<!-- DK: I went fast above, but that is all the key material. -->
+
+## `age` as a Function of `party`
 
 
 But what if, instead of having no other information about our sample beyond their ages, we also knew their political party? How would we make a model which included this other information?
 
-### Two Parameters
+Let's begin by using `lm()`, in almost the exact same was as we did in Chapter \@ref(one-parameter).
 
-Let's begin by using `lm()`, in almost the same was as we did in Chapter \@ref(one-parameter).
-
-```{r}
-lm(data = trains, age ~ party - 1)
-```
-
-
-
-What if we wanted to extend this calculation to distinguish between, say, democratic and republican subjects in Enos' study?
-
-### Two Parameters
-
-Sampling with respect to two parameters will require a bit of additional work but will not require any more bootstrapping. First, we'll slightly modify the `get_mean_income()` function: we'll add an input to the function, `whichParty`, that will allow the function to distinguish between subjects that identified as democrat and those that identified as republican.
+<!-- DK: Would now be a time to start using tidymodels syntax so that we could avoid the horribleness of the dot? -->
 
 ```{r}
-
-get_mean_income <- function(splits, whichParty) {
-  x <- analysis(splits) %>% filter(party == whichParty)
-  return(mean(x$income))
-}
-
+trains %>% 
+  lm(data = ., age ~ party - 1) %>% 
+  tidy(conf.int = TRUE) %>% 
+  select(term, conf.low, estimate, conf.high)
 ```
 
-Now that we've rewritten `get_mean_income()`, we can map the function onto each replicate. Here, we create two columns, mean_income_control and mean_income_treated, that distinguish between the mean incomes of the two groups.
-
-```{r}
-x <- bootstraps(trains, 1000)
+<!-- Provide a tour of what this means -->
 
 
-x$mean_income_democrat <- map_dbl(1:1000, ~get_mean_income(x$splits[[.]], "Democrat"))
-
-x$mean_income_republican <- map_dbl(1:1000, ~get_mean_income(x$splits[[.]], "Republican"))
-
-x %>% select(id, mean_income_democrat, mean_income_republican)
-
-```
-
-If we wanted to construct separate distributions for `mean_income_democrat` and `mean_income_republican`, we would need to be able to distinguish the two columns by a single variable. To do this, we use `pivot_longer()` and combine the two columns under a new column called `subject_party`:
-
-
-```{r}
-
-pivoted_data <- x %>% 
-  pivot_longer(cols = c(mean_income_democrat, mean_income_republican), 
-               names_to = "subject_party",
-               values_to = "income")
-
-pivoted_data
-
-```
-
-Now, if we want to calculate 95 percent confidence intervals for both the democrat and republican subjects, we can calculate these values manually and plot them both on the same graph, distinguishing between the two sets of values and intervals using color:
-
-```{r}
-
-democrat_intervals <- pivoted_data %>% filter(subject_party == "mean_income_democrat") %>% pull(income) %>% quantile(c(.025, .975), names = F)
-
-republican_intervals <- pivoted_data %>% filter(subject_party == "mean_income_republican") %>% pull(income) %>% quantile(c(.025, .975), names = F)
-
-ggplot(pivoted_data, aes(x = income, fill = subject_party)) +
-  geom_histogram(bins = 40) +
-  theme_classic() +
-  labs(x = "Mean Income",
-       y = "Number of Replicates",
-       title = "Mean Income for 1000 Bootstrapped Samples",
-       subtitle = "Bars represent 95 percent confidence intervals and original value",
-       fill = "Subject Party") +
-  scale_fill_discrete(labels = c("Democrat", "Republican")) +
-  geom_vline(xintercept = democrat_intervals[1], color = "red") + 
-  geom_vline(xintercept = democrat_intervals[2], color = "red") + 
-  geom_vline(xintercept = republican_intervals[1], color = "turquoise3") + 
-  geom_vline(xintercept = republican_intervals[2], color = "turquoise3") 
-```
+--------
 
 This is a bit messy and difficult to decipher, but there are two observations regarding these distributions that we can make right off the bat:
 
