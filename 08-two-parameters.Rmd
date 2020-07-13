@@ -169,7 +169,7 @@ The 95% confidence interval calculated via `lm()` is, more or less, the same as 
 
 
 
-<!-- DK: Should also add a "validity" or "representativeness" discussion about what population this estimate applies to. All people? All people in Boston? All Boston commuters? -->
+<!-- DK: Should also add a "validity" or "representativeness" discussion about what population this estimate applies to. All people? All people in Boston? All Boston commuters? Do we need to get into prediction stuff? -->
 
 ## `age` as a Function of `party`
 
@@ -185,8 +185,7 @@ trains %>%
 
 If a new Boston commuter named Jake showed up at the station, what would be a good guess as to their age? If you don't know anything else about this person, then guessing the mean age of the sample, `r round(mean(trains$age), 1)` makes sense, as we learned in Chapter \@ref(one-parameter). But, if we know that the person is a Republican, than this guess would be (slightly) too high. Among the population of Boston commuters, (it seems that) Republican's are younger than average. So, conditional on knowing that Jake is a Republican, we should guess that his age is  `r round(mean(trains$age[trains$party == "Republican"]), 1)`. 
 
-
-Let's begin by using `lm()`, in almost the exact same was as we did in Chapter \@ref(one-parameter). Start by estimating a simple model:
+However, instead of calculating these averages by hand, it is more convenient to use `lm()`, a function for creating linear statistical models. Start by estimating a simple model:
 
 <!-- DK: Would now be a time to start using tidymodels syntax so that we could avoid the horribleness of the dot? -->
 
@@ -195,17 +194,7 @@ trains %>%
   lm(data = ., age ~ party - 1)
 ```
 
-The initials "lm" stand for "linear model." We are creating a model in which age is a function of party. The "-1" term causes the model to be estimated without an intercept, a concept which will be explained in Chapter \@ref(continuous-i). The coefficient estimates are the same as the mean values for age within each party.
-
-```{r}
-trains %>% 
-  group_by(party) %>% 
-  summarize(age_average = mean(age))
-```
-
-
-
-
+The initials "lm" stand for "linear model." We are creating a model in which age is a function of party. The "-1" term causes the model to provide us with the mean for each group. The coefficient estimates are the same as the mean values for age within each party. How uncertain are those estimates? Again, we use the same tools we have used before:
 
 
 ```{r}
@@ -215,62 +204,26 @@ trains %>%
   select(term, conf.low, estimate, conf.high)
 ```
 
-<!-- Provide a tour of what this means -->
-
-
---------
+<!-- Provide a tour of what this means  -->
 
 
 <!-- DK: I went fast above, but that is all the key material. Still need to add a Rubin Table example, highlighting that this is modeling for prediction. There is only one column for Y because it is impossible to change someone's age, whatever manipulations you make to party. -->
 
+<!-- DK: Is the below text from previous versions worth keeping? -->
 
-In the original dataset — and therefore, most likely for the majority of the bootstrapped samples — the number of democratic subjects vastly outnumber the number of republican subjects. Why does this lead to wider confidence intervals?
+<!-- In the original dataset — and therefore, most likely for the majority of the bootstrapped samples — the number of democratic subjects vastly outnumber the number of republican subjects. Why does this lead to wider confidence intervals? -->
 
-Intuitively, we can think about the matter like this: since we have more data to work with for the democratic party, we are more confident that the mean income measurement from each bootstrapped sample is representative of the *true mean income of that sample* — remember, this "true value" is what we're trying to approximate through the bootstrapping process. This idea is more obvious on an extreme scale: if we were given one billion individuals' incomes, we'd feel more comfortable approximating the world's average income from that dataset than if we only had two individual's incomes to work with. These two individuals could be impoverished, or they could be billionaires, and we wouldn't reliably make any conclusions regarding world income based on those two individuals alone. Because there are far more democrats in the original sample than there are republicans, we are therefore more confident that the democrats' true average income is represented by the democratic subset of the data than we are of the republicans' true average income being accurately represented by the republican subset.
+<!-- Intuitively, we can think about the matter like this: since we have more data to work with for the democratic party, we are more confident that the mean income measurement from each bootstrapped sample is representative of the *true mean income of that sample* — remember, this "true value" is what we're trying to approximate through the bootstrapping process. This idea is more obvious on an extreme scale: if we were given one billion individuals' incomes, we'd feel more comfortable approximating the world's average income from that dataset than if we only had two individual's incomes to work with. These two individuals could be impoverished, or they could be billionaires, and we wouldn't reliably make any conclusions regarding world income based on those two individuals alone. Because there are far more democrats in the original sample than there are republicans, we are therefore more confident that the democrats' true average income is represented by the democratic subset of the data than we are of the republicans' true average income being accurately represented by the republican subset. -->
 
-The math behind the confidence INTERVALS specifically is a little more complex, but the premise behind it is simple. First, recall that bootstrapping with replacement creates different assortments of the data due to the possibility of data points being omitted from each sample, or values being included more than once. If I was sampling with replacement from the list of 1, 2, 3, 4, 5, One replicate might include "1" three times, while another might include "1" zero times.
+<!-- The math behind the confidence INTERVALS specifically is a little more complex, but the premise behind it is simple. First, recall that bootstrapping with replacement creates different assortments of the data due to the possibility of data points being omitted from each sample, or values being included more than once. If I was sampling with replacement from the list of 1, 2, 3, 4, 5, One replicate might include "1" three times, while another might include "1" zero times. -->
 
-It is because of this possibility for omission/duplicate inclusion that subsets with small sample sizes are at the mercy of being misrepresented by sampling with replacement. In small sample sizes, individual points carry significant weight. As a result, we are more likely to get extreme values — values that are unreasonably small or large — the smaller the size of the subset.
+<!-- It is because of this possibility for omission/duplicate inclusion that subsets with small sample sizes are at the mercy of being misrepresented by sampling with replacement. In small sample sizes, individual points carry significant weight. As a result, we are more likely to get extreme values — values that are unreasonably small or large — the smaller the size of the subset. -->
 
-As it relates to the `trains` dataset, the subset with the larger sample size, the democrat contingent, is less susceptible from this because each data point carries far less weight — each one gets drowned out by the many other democrats in the dataset, and removing or duplicating a single or even a few data points won't drastically shift measurements, such as mean and median, for most of the bootstrap samples. However, for the smaller republican subset, even a single omission or double inclusion of a data point through bootstrapping with replacement could generate extreme values for these measurements.
-
-
-In short: If we have fewer data points, bootstrap parameter calculations are more likely to be further from the true values, and our confidence intervals will be wider as a result. It's important to understand the mechanics behind these relationships as we continue our work with confidence intervals going forward.
-
-## Calculating a third parameter
-
-Now, the above graph looks a bit messy: trying to graph two distributions on the same graph often can turn out this way. So, how might we go about simplifying the graph but still show the differences in distributions?
-
-Let's say that we are now interested in a more viewable statistic that captures the same information, such as the *average difference* between treated income and control income. How do we go about calculating this kind of statistic? 
-
-Before we dive into the different ways we can calculate this parameter across our bootstrap samples, it is helpful to understand a shortcut we can take due to the nature of mean as a mathematical function. because mean is linear, *the average difference is equivalent to the difference in averages* — so, instead of averaging the difference between every single combination of democrat and republican in each sample, we can simply calculate the average income for democrat subjects, the average income for republican subjects, and take the difference of the two to get the average income difference for democrats and republicans.
-
-Since we've already calculated mean income for republicans and democrat, we can simply create a third column that represents the difference between these two parameters. Note that we subtract `mean_income_democrat` from `mean_income_republican` because the above distribution indicates the latter is larger, and it's convenient to work with positive values. However, we have to keep this ordering constant while we work with this parameter, or our differences might get flipped!
+<!-- As it relates to the `trains` dataset, the subset with the larger sample size, the democrat contingent, is less susceptible from this because each data point carries far less weight — each one gets drowned out by the many other democrats in the dataset, and removing or duplicating a single or even a few data points won't drastically shift measurements, such as mean and median, for most of the bootstrap samples. However, for the smaller republican subset, even a single omission or double inclusion of a data point through bootstrapping with replacement could generate extreme values for these measurements. -->
 
 
-The key insight here is that instead of going through with this messy calculation, we can utilize the two columns we had already created — and, as we can see, we achieve the same result with many less lines of code. It is always important to be wary of the tools you have at your disposal, as well as the calculations you have already made.
+<!-- In short: If we have fewer data points, bootstrap parameter calculations are more likely to be further from the true values, and our confidence intervals will be wider as a result. It's important to understand the mechanics behind these relationships as we continue our work with confidence intervals going forward. -->
 
-
-
-Now, we can plot everything on a nice bootstrap distribution that displays the average difference in income, the new parameter we calculated from our previous two parameters:
-
-
-
-As the distribution shows, the average difference in income of treated subjects and income of control subjects is skewed towards the right of 0, with republicans on average having a higher income than democrats.
-
-Recall that mean is a linear measurement. Let's now say that we're interested a separate parameter that is nonlinear — for example, we could be interested in the ratio of median treated income to median control income. 
-
-
-
-Like we did with mean incomes, let's iteratively calculate the median incomes and their ratio across each bootstrap sample: 
-
-
-
-And now, we'll construct a distribution out of this new parameter, like we did with the average difference in incomes:
-
-
-
-Since there was some degree of rounding done to calculate income in the data, the spreads of median values and the ratio of median values are not that varied. However, we once again see that the data is skewed to the right, and that the republican median income exceeds democrat mean income more often than the other way around.
 
 ## Estimate other things
 
@@ -282,49 +235,9 @@ Since there was some degree of rounding done to calculate income in the data, th
 
 <!-- EM: I feel like having "Estimate other things" and "Estimate trickier things" are redundant as chapter sections because they are mostly addressed through the sections that sandwich them.  -->
 
-## Using `lm()`
 
-The bootstrapping process is a fantastic way to generate confidence intervals, but luckily for us, R has built-in functions that make the process of calculating confidence intervals much quicker. Recall the `lm()` and `tidy()` functions, which were used extensively in ch7.
 
-One trick we can use here that we didn't have the chance to use in chapter 7 is adding a "-1" to the lm expression, as shown below. This allows us to independently investigate regressions for the two separate parameters, `mean_income_democrat` and `mean_income_republican`, by telling `lm()` not to create a general intercept.
 
-```{r}
-
-lm(data = trains, income ~ -1 + party) %>% tidy(conf.int = TRUE) %>% select(term, estimate, conf.low, conf.high)
-
-```
-
-Recall that the third parameter we calculated, `mean_income_difference`, represents the average difference between republican income and democrat income. If we wanted to analyze this difference, which can be modeled as the offset in income that exists specifically due to a subject being a republican instead of a democrat, we can remove the "-1" to get the `partyRepublican` term that demonstrates this difference:
-
-```{r}
-
-lm(data = trains, income ~ party) %>% tidy(conf.int = TRUE) %>% select(term, estimate, conf.low, conf.high)
-
-```
-
-As you can see, the estimates for the mean income values and the mean income difference values generated by `lm()` are the same as those we calculated at the beginning of the chapter, and the confindence intervals generated by the function are virtually identical to those created by conducting bootstrap resampling. So, you might be wondering: why the heck did we make you go through the trouble of bootstrapping when we could've just run `lm()` from the beginning? You probably think we were just having a laugh by making you write hundreds more lines of code.
-
-Although writing code is fun, we didn't make you write out the bootstrap solely for the purpose of fun. It turns out that while `lm()` works spectacularly for linear calculations, such as mean income and the difference of mean incomes, it is useless when it comes to nonlinear measurements such as the ratio of median incomes. We can't even give you an example that throws out an error to demonstrate this, because there's literally no way to write `lm()` to construct non-linear parameters. In those cases, the best tool we have to construct confidence intervals is bootstrapping.
-
-## The prediction game
-
-Let's say that we want to play the "predicton game", so to speak. If we were to take a look at a brand new subject and predict their income based on their party affiliation, what would we guess their income to be, and how confident would we be in this guess?
-
-You might be tempted to say that the best guess for the new subject's income would be the mean income of this new subject's party — this instinct is correct! But if you say the prediction intervals for this new subject's income are the same as the confidence interval for the mean income of that new subject's party, that would be incorrect, although it might not be immediately clear as to why.
-
-Here's why. Take a look at the `summary()` function applied to the linear model we generated previously:
-
-```{r}
-
-lm(data = trains, income ~ party) %>% summary()
-
-```
-
-The residual standard error term corresponds to the variation in individual data — more specifically, it is the average deviation from the true regression line across all the data points in the trains dataset. This variation is omitted when generating confidence intervals for mean income, as those calculations only deal with *averages across and not the range of the data*. 
-
-Therefore, while we are 95% certain that the mean income falls inbetween the confidence intervals we generated, we are less than 95% sure that any given person's income falls within that range. This added uncertainty is called *unmodeled variation*, and it becomes relevant when we use our models to analyze and predict individual data points instead of summary statistics.
-
-<!-- Add a paragraph above about unmodeled variation. -->
 
 ## Using the predict() function
 
@@ -362,15 +275,7 @@ In short, *while we can accept the model as representative of the United States 
 
 It is always important to keep the problem of validity in the back of our minds as we investigate data sets and how the data within these sets are collected. Given the many factors — those we are aware of and those we are not aware of — that go into any kind of data collection, there is no way to guarantee 100 percent validity.
 
-#### Unknown unknowns
 
-Yet another area of uncertainty that might not be immediately obvious is the possibiity of unknown unknowns — that is, all the things that might change with time. How do we know that our model — which relies heavily on figures like income and party affiliation — will still be able to draw conclusions about America 50 years from now? Mass migrations, political revolutions, and world wars are just a few of the things that could render all the conclusions we draw from the `trains` dataset moot. And, other than expanding our confidence intervals to the point of uselessness, there's no way to account for the unknown unknowns. 
-
-In short, *while we can accept the model as representative of the United States at or around 2012 (the year in which Enos conducted his study), we cannot reasonably extrapolate that to the far future*.
-
-<!-- EM: Is the above statement true? --> 
-
-<!-- Will the term "prediction game" be brought up earlier in PPBDS? -->
 
 ## Rubin Causal Model (WILL COME BACK TO THIS LAST)
 
