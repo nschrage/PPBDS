@@ -87,22 +87,45 @@ What affects whether a Democrat or Republican wins a race in the U.S. House of R
 The data on House election results from 1976 to 2018 can be found in the `house_results` data frame in **politicaldata** package.  We'll create a version of this data frame called `house_ch12` that creates a new column `dem_win` that notes for each state if the Democratic candidate in a congressional district received more votes than the other candidates.  We'll also join it with the `state_info` data frame in the **fivethirtyeight** package to add the `region` of each state.
 
 ```{r}
-library(politicaldata)
 
-house_ch12 <- house_results %>%
+library(PPBDS.data)
+
+# house_ch12 <- house_results %>%
   
   # Create dem_win variable
   
-  mutate(dem = ifelse(is.na(dem), 0, dem),
-         other = ifelse(is.na(other), 0, other),
-         rep = ifelse(is.na(rep), 0, rep),
-         dem_win = ifelse(dem > rep & dem > other, 1, 0)) %>%
+#  mutate(dem = ifelse(is.na(dem), 0, dem),
+#         other = ifelse(is.na(other), 0, other),
+#         rep = ifelse(is.na(rep), 0, rep),
+#         dem_win = ifelse(dem > rep & dem > other, 1, 0)) %>%
   
   # Rename to join with state_info
   
-  rename(state_abbrev = state_abb) %>%
-  left_join(state_info) %>%
-  select(region, state, district, year, dem_win)
+#  rename(state_abbrev = state_abb) %>%
+#  left_join(state_info) %>%
+#  select(region, state, district, year, dem_win)
+
+# Creating a binary presidential approval variable
+# Including three as marking approval
+
+cces_ch12 <- cces %>%
+  
+  mutate(pres_approval = as.integer(case_when(
+    approval == 5 ~ 1,
+    approval == 4 ~ 1,
+    approval == 3 ~ 1,
+    approval == 2 ~ 0,
+    approval == 1 ~ 0
+  ))) %>%
+  
+  # Selecting relevant variables
+  
+  select(year, race, ideology, education, pres_approval) %>%
+  
+  # Filtering just for 2018 Trump approvaal
+  
+  filter(year > 2017)
+
 ```
 
 <!-- DK: We use same dataset from other chapter, we need to modify this. But we won't have looked at everything! So, look at other stuff. Some is obvious, especially our new Y variable. But we can also look at stuff like number of elections per state, per year. Which state had the biggest districting rise and when? Indeed, the data exploration section in each chapter provides an occasion to learn more advanced R tricks. -->
@@ -116,36 +139,36 @@ Recall the three common steps in an exploratory data analysis we saw in Subsecti
 Let's first look at the raw data values by either looking at `house_ch12` using RStudio's spreadsheet viewer or by using the `glimpse()` function from the **dplyr** package:
 
 ```{r}
-glimpse(house_ch12)
+glimpse(cces_ch12)
 ```
 
 Let's also display a random sample of 5 rows of the 9,557 rows corresponding to different district-years. Remember due to the random nature of the sampling, you will likely end up with a different subset of 5 rows.
 
 ```{r, eval = FALSE}
-house_ch12 %>% 
+cces_ch12 %>% 
   sample_n(size = 5)
 ```
 
 ```{r, echo = FALSE}
 
-house_ch12 %>%
+cces_ch12 %>%
   sample_n(5) %>%
   gt() %>%
   cols_label(
-    region = md("Region"),
-    state = md("State"),
-    district = md("Distrct"),
     year = md("Year"),
-    dem_win = md("Democrat Win?")) %>%
-  tab_source_note(md("A random sample of 5 out of the 4,201 district-years"))
+    race = md("Race"),
+    ideology = md("Ideology"),
+    education = md("Education"),
+    pres_approval = md("President Approval?")) %>%
+  tab_source_note(md("A random sample of 5 out of the 452,755 individuals surveyed"))
 
 ```
 
 Now that we’ve looked at the raw values in our `house_ch12` data frame and got a sense of the data, let’s compute summary statistics. As we've done in our exploratory data analyses before, let’s use the `skim()` function from the `skimr` package, being sure to only select() the variables of interest in our model:
 
 ```{r}
-house_ch12 %>% 
-  select(dem_win, region, year) %>% 
+cces_ch12 %>% 
+  select(pres_approval, ideology, year) %>% 
   skim()
 ```
 
@@ -156,8 +179,8 @@ Let’s now perform the last of the three common steps in an exploratory data an
 For our categorical variable, we'll look at histograms of `dem_win` faceted by `region`:
 
 ```{r}
-house_ch12 %>%
-  ggplot(aes(x = dem_win)) +
+cces_ch12 %>%
+  ggplot(aes(x = pres_approval)) +
   geom_histogram(bins = 10, color = "white") +
   labs(x = "Democratic victory percentage, 1976-2018", 
        y = "Number of districts",
