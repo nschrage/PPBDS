@@ -195,22 +195,7 @@ trains %>%
 
 --------
 
-This is a bit messy and difficult to decipher, but there are two observations regarding these distributions that we can make right off the bat:
 
-Observation 1: The `mean_income_republican` income distribution is visibly further to the right than the `mean_income_democrat` distribution; this means that the mean incomes for republicans are generally higher than the mean incomes for democrats in our bootstrap samples.
-
-Observation 2: There are wider confidence intervals for `mean_income_republican` than there are for `mean_income_democrat`. This means that we are less confident in our approximation of `mean_income_republican` than we are for `mean_income_democrats`.
-
-Observation 1 is pretty self-explanatory — it is simply a trend in the data that can be explained in a sentence or two — but why is Observation 2 the case? 
-
-This requires a bit more explanation. Let's take a look at the party splits in the train dataset:
-
-```{r}
-
-trains %>% 
-  count(party)
-
-```
 
 In the original dataset — and therefore, most likely for the majority of the bootstrapped samples — the number of democratic subjects vastly outnumber the number of republican subjects. Why does this lead to wider confidence intervals?
 
@@ -222,31 +207,6 @@ It is because of this possibility for omission/duplicate inclusion that subsets 
 
 As it relates to the `trains` dataset, the subset with the larger sample size, the democrat contingent, is less susceptible from this because each data point carries far less weight — each one gets drowned out by the many other democrats in the dataset, and removing or duplicating a single or even a few data points won't drastically shift measurements, such as mean and median, for most of the bootstrap samples. However, for the smaller republican subset, even a single omission or double inclusion of a data point through bootstrapping with replacement could generate extreme values for these measurements.
 
-That's a mouthful, but it's also better illustrated by an extreme example. Let's consider a hypothetical dataset with 3 republican subjects and 112 democrat subjects, with everyone's income falling between 75000 and 150000, and bootstrap this data 10 times:
-
-```{r}
-
-fake_data <- tibble(party = c(rep("Republican", 3), rep("Democrat", 112)),
-                    income = sample(75000:150000, 115, replace = F))
-
-fake_data_bootstrap <- bootstraps(fake_data, 10)
-
-```
-
-Now, let's calculate `mean_income_democrat` and `mean_income_republican` for each of these ten samples:
-
-
-```{r}
-
-fake_data_bootstrap$mean_income_democrat <- map_dbl(1:10, ~get_mean_income(fake_data_bootstrap$splits[[.]], "Democrat"))
-
-fake_data_bootstrap$mean_income_republican <- map_dbl(1:10, ~get_mean_income(fake_data_bootstrap$splits[[.]], "Republican"))
-
-fake_data_bootstrap
-
-```
-
-One thing we can notice right away is the wider spread of `mean_income_republican` in spite of the fact that all the income values were randomly generated within the same number range. Because each of the three republican income values carried so much weight, duplicating one or omitting one in a bootstrap sample more easily led to extreme `mean_income_republican` values.
 
 In short: If we have fewer data points, bootstrap parameter calculations are more likely to be further from the true values, and our confidence intervals will be wider as a result. It's important to understand the mechanics behind these relationships as we continue our work with confidence intervals going forward.
 
@@ -260,92 +220,28 @@ Before we dive into the different ways we can calculate this parameter across ou
 
 Since we've already calculated mean income for republicans and democrat, we can simply create a third column that represents the difference between these two parameters. Note that we subtract `mean_income_democrat` from `mean_income_republican` because the above distribution indicates the latter is larger, and it's convenient to work with positive values. However, we have to keep this ordering constant while we work with this parameter, or our differences might get flipped!
 
-```{r}
-
-x$mean_income_difference <- x$mean_income_republican - x$mean_income_democrat
-
-```
 
 The key insight here is that instead of going through with this messy calculation, we can utilize the two columns we had already created — and, as we can see, we achieve the same result with many less lines of code. It is always important to be wary of the tools you have at your disposal, as well as the calculations you have already made.
 
-```{r, include = FALSE}
 
-#Calculating the mean income difference value in the actual trains dataset based on the figures we calculated at the beginning of the chapter.
-
-mean_income_difference_value <- mean_income_value_republican - mean_income_value_democrat
-
-
-```
 
 Now, we can plot everything on a nice bootstrap distribution that displays the average difference in income, the new parameter we calculated from our previous two parameters:
 
 
-```{r}
-
-difference_intervals <- quantile(x %>% pull(mean_income_difference), 
-                                 c(.025, .975),
-                                 names = FALSE)
-
-
-ggplot(x, aes(x = mean_income_difference)) +
-  geom_histogram(bins = 40) +
-  theme_classic() +
-  labs(x = "Average Differences in Income for Democrats And Republicans",
-       y = "Number of Replicates",
-       title = "Average Differences in Income for 1000 Bootstrapped Samples",
-       subtitle = "Bars represent 95 percent confidence intervals and original value") +
-  geom_vline(xintercept = difference_intervals[1], color = "red") + 
-  geom_vline(xintercept = difference_intervals[2], color = "red") + 
-  geom_vline(xintercept = mean_income_difference_value)
-
-```
 
 As the distribution shows, the average difference in income of treated subjects and income of control subjects is skewed towards the right of 0, with republicans on average having a higher income than democrats.
 
 Recall that mean is a linear measurement. Let's now say that we're interested a separate parameter that is nonlinear — for example, we could be interested in the ratio of median treated income to median control income. 
 
-```{r, include = FALSE}
 
-median_income_ratio_value <- median_income_value_republican/ median_income_value_democrat
-
-```
 
 Like we did with mean incomes, let's iteratively calculate the median incomes and their ratio across each bootstrap sample: 
 
-```{r}
 
-get_median_income <- function(splits, whichParty) {
-  x <- analysis(splits) %>% filter(party == whichParty) %>% pull(income)
-  return(median(x))
-}
-
-x$median_income_democrat <- map_dbl(1:1000, ~get_median_income(x$splits[[.]], "Democrat"))
-
-x$median_income_republican <- map_dbl(1:1000, ~get_median_income(x$splits[[.]], "Republican"))
-
-
-x$median_income_ratio <- x$median_income_republican/x$median_income_democrat
-
-```
 
 And now, we'll construct a distribution out of this new parameter, like we did with the average difference in incomes:
 
-```{r}
 
-ratio_intervals <- quantile(x %>% pull(median_income_ratio), c(.025, .975))
-
-ggplot(x, aes(x = median_income_ratio)) +
-  geom_histogram(bins = 35) +
-  labs(x = "Ratio of Median Incomes",
-       y = "Number of Replicates",
-       title = "Ratio of median incomes across 1000 bootstrapped samples",
-       subtitle = "Bars represent 95% confidence intervals") +
-  geom_vline(xintercept = ratio_intervals[1]) +
-  geom_vline(xintercept = ratio_intervals[2]) +
-  geom_vline(xintercept = median_income_ratio_value, color = "blue") +
-  theme_classic()
-
-```
 
 Since there was some degree of rounding done to calculate income in the data, the spreads of median values and the ratio of median values are not that varied. However, we once again see that the data is skewed to the right, and that the republican median income exceeds democrat mean income more often than the other way around.
 
