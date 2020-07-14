@@ -8,347 +8,448 @@ runtime: shiny_prerendered
 ```{r setup, include=FALSE}
 library(tidyverse)
 library(gradethis)
-library(PPBDS.data)
 library(learnr)
 library(purrr)
 tutorial_options(exercise.checker = gradethis::grade_learnr)
 knitr::opts_chunk$set(echo = FALSE, exercise.checker = grade_learnr)
-options(tutorial.storage="client") 
-
-# checker <- function(label, user_code, check_code, envir_result, evaluate_result, ...) {
-#   list(message = check_code, correct = TRUE, location = "append")
-# }
-# tutorial_options(exercise.timelimit = 60, exercise.checker = checker)
-
 ```
 
 
+##  List columns and `map_*` functions
 
-## Functions
 
-###  
+```{r, quiz-1}
 
-Functions are the verbs of R. When you do something in R, you do it by running a function. For example,
-
-* To take a log, you run a function named log: `log(2.71)`.
-* To fit a linear model, you run a function named lm: `lm(mpg ~ wt, data = mtcars)`.
-* To add two numbers, you run a function named "+": `1 + 2`. 
-
-This last one is an alternative way to call the function `'+'(1, 2)`. In R, even things that do not look like functions are functions. 
-
-###  
-
-But what is a function? 
-
-A function is simply a piece of code that is packaged in a way that makes it easy to reuse.
-
-This short tutorial will show you how R functions are packaged and how you can work with R functions. It is a pre-requisite for the next tutorial, which will show you how to write your own R functions. Let's begin!
-
-### Parts of a function
-
-###  
-
-Every R function has three parts:
-
-1. A body of code
-1. A set of formal arguments
-1. An environment (where the function will look up the values of the objects within it)
-
-###  
-
-You can inspect each part of a function with three helper functions:
-
-1. `body()`
-1. `formals()`
-1. `environment()`
-
-Let's use these helpers to see how the `xor` function works. `xor` is a logical operator that returns `TRUE` if one, but not both, or its arguments evaluates to `TRUE`.
-
-### `body()`
-
-* Run `body(xor)` to see the code body of `xor`. Then click Submit Code.
-
-```{r xor-body, exercise = TRUE, echo = TRUE}
+quiz(
+  question("Which of the following is true about list-columns?",
+             answer("List columns, unlike lists, can contain vectors as elements in the list.",
+                    correct = TRUE),
+             answer("Lists and list columns are synonyms."),
+             answer("List columns can only contain values as elements in the list."),
+             answer("All of the above."),
+             allow_retry = TRUE
+    ),
+  
+  
+  question("Which of the following map functions is not using an anonymous function? ",
+             answer("mutate(new = map_dbl(start, increment()))",
+                    correct = TRUE),
+             answer("mutate(new = map_dbl(start, function(x) x + 1))"),
+             answer("mutate(new = map_dbl(start, ~ . + 1))"),
+             answer("mutate(new = map_dbl(start, ~ (. + 1)))"),
+             allow_retry = TRUE), 
+  
+   question("What is true about an atomic vector? Check all that apply.",
+             answer("Each element of the atomic vector has more than one value."),
+             answer("Each element of the atomic vector can take the form of a list."),
+             answer("Each element of the atomic vector has one value.", correct = TRUE),
+             answer("if an atomic vector is a column in your dataset, each observation gets a single value", correct = TRUE),
+             allow_retry = TRUE, 
+           type = "multiple"), 
+  
+    question("What will the following function do: `tibble(new_col = list(1:19, 23:25, 3:5))`. Check all that apply.",
+             answer("Create a column variable with values starting from 1, and ending at 25."),
+             answer("Create a tibble with one variable and two observations"),
+             answer("Create a tibble with one variable and one observation.", correct = TRUE),
+             answer("Produce a list with three elements", correct = TRUE),
+             allow_retry = TRUE, 
+            type = "multiple"),
+  
+     question("Which of the following is true about list columns? Check all that apply.",
+             answer("We use `str_split()` to remove list columns."),
+             answer("We use `mutate()` to create list columns.", correct = TRUE),
+             answer("Each element of a list can only have one kind of data type."),
+             answer("Each element of a list can only have multiple data types.", correct = TRUE),
+             allow_retry = TRUE, 
+             type = "multiple")
+  
+)
 
 ```
 
-```{r xor-body-solution}
-body(xor)
+## Anonymous Functions
+
+Let's test our knowledge of anonymous functions. 
+
+```{r, quiz-2}
+
+quiz(
+  question("What are anonymous functions?",
+             answer("A built-in function in R."),
+             answer("Functions without arguments."),
+             answer("Functions with more than three arguments."),
+             answer("Functions without names.", correct = TRUE),
+             allow_retry = TRUE, 
+             message = "Correct! An anonymous function in R is one without a name. We can create a function “on the fly”, especially for use within `map*()` functions, without bothering to give it a name."
+    ),
+  
+  question("Which of the following map functions is not using an anonymous function? ",
+             answer("mutate(new = map_dbl(start, increment()))",
+                    correct = TRUE),
+             answer("mutate(new = map_dbl(start, function(x) x + 1))"),
+             answer("mutate(new = map_dbl(start, ~ . + 1))"),
+             answer("mutate(new = map_dbl(start, ~ (. + 1)))"),
+             allow_retry = TRUE
+    ),
+  
+   question("Which of the following can be classified as an anonymous function? ",
+             answer("`(function(x) x * 10)(10)`",
+                    correct = TRUE),
+             answer("`fun <- function(x) x * 10`"),
+             answer("`function(x * 10)`"),
+             answer("`x * 10`"),
+             allow_retry = TRUE
+    )
+  
+  
+)
+
 ```
 
-```{r xor-body-check}
-grade_code("`xor` contains one line of code in its body (you can ignore the braces). This isn't always the case. A function can have as many lines of code as it needs in its body. If you don't believe me check out the body for lm. R will run the code in a function's code body each time you call the function; but as you can see, the code in a function's body may not be self-contained. What is x? What is y?")
-```
+Let's look at the following dataframe to see anonymous functions in action: 
 
-###  
-
-`xor()` contains one line of code in its body (you can ignore the braces). This isn't always the case. A function can have as many lines of code as it needs in its body. For example, `as.list.data.frame` has three lines (most R functions have much more).
+###
 
 ```{r, echo = TRUE}
-body(as.list.data.frame)
+
+# Create a dataset
+df <- data.frame(
+  col1 = c("element1", "element2"),
+  col2 = c("element1", "element2"), 
+  stringsAsFactors = FALSE
+)
 ```
 
-When a function contains more than one line of code in its body, R will run the entire body and return the result of the **last** line.
+Use `lapply()` to apply the function `function(x) paste(x, "doing stuff")` on the dataframe `df` we've created. Two arguments are relevant when using `lapply()`. The first is `x`, which is a vector (atomic or list) or an expression object. In our case, it will be our dataframe `df`. The second argument is `FUN`, the function to be applied to each element of `x`. 
 
-###  
+```{r anon, exercise = TRUE}
 
-R will run the code in a function's code body each time you call the function; but as you can see with `xor`, the code in a function's body may not be self-contained. 
+# lapply an anonymous function to the columns of the dataset
 
-```{r, echo = TRUE}
-xor
-```
-
-What is `x`? What is `y`? Let's find out.
-
-### `formals()`
-
-Often times, a function will need one or more named values to do its job. These values are the _formal arguments_ of the function. The formal arguments of `xor` are `x` and `y`.
-
-`formals()` returns a list of the formal arguments of a function. If an argument in the list does not come with a value, you will need to supply a value when you call the function. If a function does not have any formal arguments (always possible), `formals()` will return `NULL`.
-
-* Use `formals()` to see the formal arguments of `xor` (hint: they are `x` and `y`). Then click Submit Answer.
-
-```{r xor-formals, exercise = TRUE, eval = TRUE}
+lapply(--, -------------)
 
 ```
 
-```{r xor-formals-solution, echo = FALSE}
-formals(xor)
+```{r anon-hint}
+
+"The first argument of the `lapply()` function will be the dataframe, `df`."
 ```
 
-```{r xor-formals-check}
-grade_code(A function can have zero, one, or many many formal arguments. Do not be distracted by the $'s that appear before the argument names. Those are an artifact of how R displays lists.)
-```
+```{r anon-solution}
 
-### `environment()`
+# lapply an anonymous function to the columns of the dataset
 
-Each function is associated with an R environment. The association tells R how to look up any objects that are used by a function, but not defined in its arguments. We'll learn more about environments later, so you do not need to worry about them now. However, looking up a function's environment is a handy way to tell which package the function comes in.
-
-* Use `environment()` to see the environment associated with the `gather` function.
-
-```{r gather-env, exercise = TRUE}
+lapply(df, function(x) paste(x, "doing stuff"))
 
 ```
 
-```{r gather-env-solution}
-environment(gather)
-```
 
-```{r gather-env-check}
-grade_code("The `gather()` function comes in the tidyr package. If a function's environment is namespace:base, that is a good sign that the function comes in base R, the part of R that loads before you load any optional packages.")
-```
+```{r anon-check}
 
-### names
-
-You can look up all three parts of a function at once by typing the name of the object that the function is stored in. This is what you think of as the "name of the function." (In reality, functions do not have names, but they are stored in objects that have names.)
-
-For example, the `xor` function is a nameless function stored in the object named `xor`. To see the function in full, type `xor`.
-
-```{r name, exercise = TRUE}
-xor
-```
-
-### Help pages
-
-And _never_ forget: you can learn more about any R function by looking up its help page. To do this, type the "function's name" preceded by a question mark, e.g.
-
-```{r eval = FALSE, echo = TRUE}
-?xor
-```
-
-When you type this into an R IDE, such as the R console, a help page will open in a separate tab.
-
-### Quiz
-
-```{r q1, echo = FALSE}
-question("Which of the following is not a part of a function?",
-         allow_retry = TRUE,
-         random_answer_order = TRUE,
-         answer("A name", correct = TRUE, message = "That's right, functions contain a code body, a set of formal arguments, and an environment, but not a name. They just happen to inherit a name from the object they are stored in."),
-         answer("A code body"),
-         answer("A (potentially empty) set of formal arguments"),
-         answer("An environment"))
-```
-
-### Primitives
-
-You should also know about an important class of R functions called _primitives_. Most R functions call other R functions in their code body, but primitives do not. Instead primitives call internally implemented algorithms that are written in a lower level programming language (i.e. a more primitive programming language) like C, C++, or FORTRAN. 
-
-R's primitive functions are designed to be very fast, but you won't be able to inspect their components. See what happens if you inspect the contents of `log`, which is a primitive function.
-
-```{r log, exercise = TRUE, eval = FALSE}
-body(log)
-formals(log)
-environment(log)
-```
-
-That's enough minutiae! Now, how do you _run_ a function?
-
-### Calling functions
-
-###  
-
-To call an R function, type its name followed immediately by an open parenthesis and eventually by a closed parenthesis. The parentheses act as a "trigger" that causes R to run the code in the function's code body. Note the difference:
-
-```{r sysdate, exercise = TRUE, eval = FALSE}
-Sys.Date
-Sys.Date()
-```
-
-If you ever try to run a function and nothing happens, double check to see if you included the closing parenthesis.
-
-###  
-
-If a function requires you to provide values for formal arguments, provide the values between the parentheses. 
-
-```{r xoragain, exercise = TRUE, eval = FALSE}
-xor(x = TRUE, y = FALSE)
-```
-
-The best practice is to explicitly write out each argument name followed by an equals sign and then a value. If you leave out the argument names, R will match your values to arguments in the order that they are listed. It is common practice among R users to skip the first one or two argument names and then write out the rest.
-
-### Default values
-
-Some R functions will provide a default value for one or more of arguments. In this case, you do not need to pass a value to the argument when you call the function. If you do not provide a value, the function will use the default value. 
-
-You will know that an argument comes with a default value, if the argument appears with a value in the `formals()` list.
-
-* `rnorm` generates n random values from a normal distribution. When you call `rnorm` you can supply the mean and standard deviation of the distribution to draw the values from. Check to see if `rnorm` uses any default values. For which arguments? What are the values? Click Submit Answer to see if you are right.
-
-```{r rnorm, exercise = TRUE}
+grade_code()
 
 ```
 
-```{r rnorm-solution, echo = FALSE}
-formals(rnorm)
+Excellent!
+
+Note that instead of defining the function with a name, we resorted to using the complete code for the function to be applied to the data frame. Anonymous functions are commonly used with `lapply()` or `map*()` functions in this way. 
+
+```{r, quiz-3}
+
+quiz(
+  question("Which of the following are using anonymous functions?",
+             answer("`lapply(mtcars, function(x) length(unique(x)))`"),
+             answer("`filter(function(x) !is.numeric(x), mtcars)`"),
+             answer("`integrate(function(x) sin(x) ^ 2, 0, pi)`"),
+             answer("All of the above", correct = TRUE),
+             allow_retry = TRUE, 
+             message = "Correct! All of the functions used above are anonymous functions!"
+    )
+  
+)
+
 ```
 
-```{r rnorm-check}
-grade_code("rnorm provides a default value of zero for the mean argument and a default argument of one for the sd argument. In other words, if you do not supply a mean and sd value when you call rnorm, rnorm will randomly generate results from a standard normal distribution. Default values can be very handy!")
+
+### Let's practice!
+
+Let's create a simple tibble. At a race at the Olympics, a racer ran 4 laps. The time it took the racer to run each lap , in minutes, is to be fed into the tibble column, `mins`. 
+
+The times are as follow: `c(10.3, 14.56, 17.9, 8.34)`. 
+
+Create a tibble using the `tibble()` function, with the column variable `mins`.
+
+
+```{r, map1, exercise = TRUE}
+
+tibble(--------------)
+
 ```
 
-###  
 
-You can also spot a function's default values by examining the function itself. Run the code below to see them. 
+```{r map1-solution, echo = TRUE, eval = TRUE}
 
-```{r rnormname, exercise = TRUE}
-rnorm
+tibble(mins = c(10.3, 14.56, 17.9, 8.34))
+
 ```
 
-###  
+```{r map1-check}
 
-There is one last thing you should know about functions: functions are like Las Vegas:
+grade_code(correct = "Great work!")
 
-> What happens in a function stays in the function.
-For example, suppose I've saved values as `x` and `y`. 
-
-```{r}
-x <- 1
-y <- FALSE
 ```
 
-###  
+Let's now use this data to practice using the `map*()` function. Because we're dealing with numeric values here, we're going to use the `map_dbl()` function. Let's say we want to convert the time for each lap into seconds. How do we go about doing that? 
 
-Calling `xor` will not change those values, even though I'm defining new values for `x` and `y` in the function.
 
-```{r}
-xor(x = TRUE, y = TRUE)
-x
-y
+Let's name our new column `seconds`. We will use `mutate()` in conjunction with  `map_dbl()` to create a new column. 
+
+Remember, the `map_dbl()` function applies the same function to every row in a tibble. Let's first use an anonymous function to do our job for us. 
+
+```{r, map2, exercise = TRUE}
+
+tibble(mins = c(10.3, 14.56, 17.9, 8.34)) %>% 
+  mutate(seconds = map_dbl(----, ------------))
+
 ```
 
-###   
+```{r map2-hint}
+"Use `function(x) x * 60`."
 
-Moreover, `xor` won't remember which values I've used in the past. If I forget to define `x` and `y` the next time I call `xor`, `xor` will return an error. `xor` won't even be able to look up the values that I assigned to `x` and `y` outside of the function.
-
-```{r ex4, exercise = TRUE}
-xor()
 ```
 
-_What happens in a function stays in the function._ 
 
-So don't worry about using functions. (Ahem, technically you _could_ write a function that would change things outside of the function, but that would be a bad idea, and you would have to try to do it on purpose, and it would be rather hard at that. So don't worry.)
+```{r, map2-solution, echo = TRUE, eval = TRUE}
 
-### Quiz
+tibble(mins = c(10.3, 14.56, 17.9, 8.34)) %>% 
+  mutate(seconds = map_dbl(mins, function(x) x * 60))
 
-#### Exercise 1
-
-```{r ex1, echo = FALSE}
-question("Which of these will run the `Sys.time` function?",
-         answer("Sys.time"),
-         answer("Sys.time()", correct = TRUE, 
-         message = "The open and closed parentheses tell R to execute the code in the code body of the function stored in the object names Sys.time."))
 ```
 
-#### Exercise 2
+```{r map2-check}
 
-* Find the code body of `foo`
-
-```{r foo, exercise = TRUE}
+grade_code(correct = "You have successfully created a new column for the same time, in seconds. Note that this could have also been achieved using a named function. Let's see how we can do that.")
 ```
 
-```{r foo-setup}
-foo <- function() {
-  a <- 10
-  a
-}
+Create a simple function called `convert` to change time in minutes to seconds. 
+
+```{r, map3, exercise = TRUE}
+
+convert <- -------------
+
 ```
 
-```{r foo-solution}
-body(foo)
+
+```{r, map3-solution}
+
+# Use code from the previous exercise question
+convert <- function(x) x * 60
+
 ```
 
-```{r foo-check}
-""
+```{r map3-check}
+
+grade_code(correct = "Amazing!")
 ```
 
-#### Exercise 3
+Now use this function in tandem with the `map_dbl()` function to convert times from seconds, to minutes. 
 
-Recall the code in `foo`:
+```{r make-map4, echo = FALSE}
+convert <- function(x) x * 60
 
-```{r echo = FALSE}
-foo <- function() {
-  a <- 10
-  a
-}
 ```
 
-```{r}
-body(foo)
+```{r map4, exercise = TRUE}
+
+# Use the `convert()` function
+
+tibble(mins = c(10.3, 14.56, 17.9, 8.34)) %>% 
+  mutate(seconds = map_dbl(mins, ------))
+
 ```
 
-What will be the final value of `a` if I run the following three lines of code in order?
+```{r map4-hint}
+"Use `convert` without the parantheses that normally follow a function. This is a standard rule for all `map*()` functions."
 
-```{r eval = FALSE}
-a <- 1
-foo()
-a
 ```
 
-```{r ex3, echo = FALSE}
-question("",
-         answer("1", correct = TRUE, message = "What happens in a function, stays in the function. foo() will not change the value of a outside of foo()."),
-         answer("10"),
-         answer("Running a will return an error."),
-         allow_retry = TRUE)
+```{r, map4-solution}
+# Use the `convert()` function
+
+tibble(mins = c(10.3, 14.56, 17.9, 8.34)) %>% 
+  mutate(seconds = map_dbl(mins, convert))
 ```
 
-#### Congratulations!
+```{r map4-check}
 
-You have finished the tutorial.
-
-
-*Let's start off by recapping what we learnt at the beginning of our section on writing functions. Recall that we used a variety of different ways to calculate the same output - the range of a numeric variable*
-=======
+grade_code(correct = "Amazing!")
 ```
+
+You have successfully used the `map_dbl()` function for converting minutes to seconds for the racer's four laps. An alternative way to write an anonymous function for the same purpose would be by using the `purrr` package (from where we get `map_dbl()`). This second way uses the ~ operator and then uses . to represent the current element.
+
+For example, instead of using `map_dbl(mins, function(x) x * 60))`, we could have used `map_dbl(mins, ~ (. * 60)). 
+
+Try this in the section below. You should obtain the same results. 
+
+```{r map5, eval=TRUE, echo=TRUE, exercise = TRUE}
+
+tibble(mins = c(10.3, 14.56, 17.9, 8.34)) %>% 
+  mutate(seconds = map_dbl(mins, ~ (. * 60)))
+
+
+```
+
+For our last exercise, let's revert back to our `midwest` data. For each of the counties in the data, we are aware of the percentage of people that are living below the poverty line (`midwest$percbelowpoverty`).
+
+We will use this to calculate the percentage of people above poverty line, for conties Wexford and Waupaca. 
+
+```{r make-map6}
+
+midwest_data <- ggplot2::midwest
+
+
+```
+
+```{r map6,eval=TRUE, echo = TRUE}
+
+midwest_data <- midwest_data %>% 
+  
+  # Selecting for relevant variables
+  
+  select(county, percbelowpoverty) %>% 
+  
+  # Filtering for the relevant counties.
+  
+  filter(county %in% c("WEXFORD", "WAUPACA")) %>% 
+  
+  # grouping by county.
+  
+  group_by(county)
+ 
+midwest_data
+
+```
+
+Now, use summarize to create a list column, `pov` for the `percbelowpoverty` variable. 
+
+```{r make-map7}
+
+midwest_data <- ggplot2::midwest
+
+
+midwest_data <- midwest_data %>% 
+  
+  # Selecting for relevant variables
+  
+  select(county, percbelowpoverty) %>% 
+  
+  # Filtering for the relevant counties.
+  
+  filter(county %in% c("WEXFORD", "WAUPACA")) %>% 
+  
+  # grouping by county.
+  
+  group_by(county)
+ 
+```
+
+```{r map7, exercise = TRUE, eval = TRUE, echo = TRUE}
+
+midwest_data <- midwest_data %>% 
+   
+  # Use summarize to create a list column, `pov` for the `percbelowpoverty` variable.
+  
+  ---------------------
+
+midwest_data
+```
+
+```{r map7-solution}
+
+midwest_data <- midwest_data %>% 
+   
+  # Use summarize to create a list column, `pov` for the `percbelowpoverty` variable.
+  
+  summarize(pov = list(c(percbelowpoverty)))
+
+midwest_data
+
+```
+
+
+```{r map7-check}
+
+grade_code("Great, you have created a list column!")
+
+```
+
+Now use `map_dbl()` to calculate the percentage of people above poverty, using an anonymous function. Name this variable `abovepov`. Use `100 - x` to calculate the remaining percentage. 
+
+```{r make-map8}
+midwest_data <- ggplot2::midwest
+
+
+midwest_data <- midwest_data %>% 
+  
+  # Selecting for relevant variables
+  
+  select(county, percbelowpoverty) %>% 
+  
+  # Filtering for the relevant counties.
+  
+  filter(county %in% c("WEXFORD", "WAUPACA")) %>% 
+  
+  # Grouping by county.
+  
+  group_by(county) %>% 
+  
+  
+ summarize(pov = list(c(percbelowpoverty)))
+
+
+```
+
+
+```{r map8, exercise = TRUE, echo = TRUE, eval=TRUE}
+
+midwest_data %>% 
+  mutate(abovpov = ------------------------------)
+
+```
+
+```{r map8-hint-1}
+"Use `100 - x` to calculate the remaining percentage"
+```
+
+```{r map8-hint-2}
+"Use `map_dbl(pov, ~ 100 - .)` to calculate the remaining percentage"
+```
+
+
+```{r map8-solution}
+
+midwest_data %>% 
+  mutate(abovpov = map_dbl(pov, ~ 100 - .))
+
+```
+
+```{r map8-check}
+
+grade_code("Great, you've calculated the percentage of population above the poverty line in Wexford and Waupaca!")
+
+```
+
+Congratulations! This brings the section to an end.
+
+
+
 
 
 ## Building your first function 
 
 *Let's start off by recapping what we learnt at the beginning of the chapter on Functions. Recall that we used a variety of different ways to calculate the same output - the range of a numeric variable*
->>>>>>> master
 
-```{r quiz-1}
+```{r quiz-4}
 
 
 
@@ -406,7 +507,7 @@ grade_code()
 
 *Congratulations! You've written your first, simple R function! Note that this function can apply to _any_ numeric variable, not just the `popadults` variable in the midwest dataset. We say that this function is generalized.*
 
-```{r, quiz-2}
+```{r, quiz-5}
 
 quiz(
   question("What is not a benefit of writing a function?",
@@ -804,7 +905,7 @@ l2 <- function(x) {
 
 Let's go back to our `range_function` for a bit, and test it with varying inputs. Remember, we built the range_function to help us calculate the range of a numeric variable, popadults.
 
-```{r, quiz-3}
+```{r, quiz-6}
 
 quiz(
   question("If we ran the following lines of code, which of the options will not yield errors?",
@@ -893,7 +994,7 @@ Recall that R tries to compute our input arguments, even though the outputs prod
 
 ## Check the validity of arguments
 
-```{r, quiz-6}
+```{r, quiz-7}
 
 quiz(
   question("What is a function's argument?",
@@ -1552,943 +1653,4 @@ quiz(
 
 <!-- Not following the order of the book here - ... arguments were incorporated in the previous section of the tutorial. -->
 
-
-## Anonymous Functions
-
-Let's test our knowledge of anonymous functions. 
-
-```{r, quiz-11}
-
-quiz(
-  question("What are anonymous functions?",
-             answer("A built-in function in R."),
-             answer("Functions without arguments."),
-             answer("Functions with more than three arguments."),
-             answer("Functions without names.", correct = TRUE),
-             allow_retry = TRUE, 
-             message = "Correct! An anonymous function in R is one without a name. We can create a function “on the fly”, especially for use within `map*()` functions, without bothering to give it a name."
-    ),
-  
-  question("Which of the following map functions is not using an anonymous function? ",
-             answer("`mutate(new = map_dbl(start, increment()))`",
-                    correct = TRUE),
-             answer("`mutate(new = map_dbl(start, function(x) x + 1))`"),
-             answer("`mutate`(new = map_dbl(start, function(x) x + 1))`"),
-             answer("`mutate(new = map_dbl(start, ~ . + 1))`"),
-             answer("`mutate(new = map_dbl(start, ~ (. + 1)))`"),
-             allow_retry = TRUE
-    ),
-  
-   question("Which of the following can be classified as an anonymous function? ",
-             answer("`(function(x) x * 10)(10)`",
-                    correct = TRUE),
-             answer("`fun <- function(x) x * 10`"),
-             answer("`function(x * 10)`"),
-             answer("`x * 10`"),
-             allow_retry = TRUE
-    )
-  
-  
-)
-
-```
-
-Let's look at the following dataframe to see anonymous functions in action: 
-
-###
-
-```{r, echo = TRUE}
-
-# Create a dataset
-df <- data.frame(
-  col1 = c("element1", "element2"),
-  col2 = c("element1", "element2"), 
-  stringsAsFactors = FALSE
-)
-```
-
-Use `lapply()` to apply the function `function(x) paste(x, "doing stuff")` on the dataframe `df` we've created. Two arguments are relevant when using `lapply()`. The first is `x`, which is a vector (atomic or list) or an expression object. In our case, it will be our dataframe `df`. The second argument is `FUN`, the function to be applied to each element of `x`. 
-
-```{r anon, exercise = TRUE}
-
-# lapply an anonymous function to the columns of the dataset
-
-lapply(--, -------------)
-
-```
-
-```{r anon-hint}
-
-"The first argument of the `lapply()` function will be the dataframe, `df`."
-```
-
-```{r anon-solution}
-
-# lapply an anonymous function to the columns of the dataset
-
-lapply(df, function(x) paste(x, "doing stuff"))
-
-```
-
-
-```{r anon-check}
-
-grade_code()
-
-```
-
-Excellent!
-
-Note that instead of defining the function with a name, we resorted to using the complete code for the function to be applied to the data frame. Anonymous functions are commonly used with `lapply()` or `map*()` functions in this way. 
-
-```{r, quiz-12}
-
-quiz(
-  question("Which of the following are using anonymous functions?",
-             answer("`lapply(mtcars, function(x) length(unique(x)))`"),
-             answer("`filter(function(x) !is.numeric(x), mtcars)`"),
-             answer("`integrate(function(x) sin(x) ^ 2, 0, pi)`"),
-             answer("All of the above", correct = TRUE),
-             allow_retry = TRUE, 
-             message = "Correct! All of the functions used above are anonymous functions!"
-    )
-  
-)
-
-```
-
-
-##  List columns and `map_*()` functions
-
-
-```{r, quiz-13}
-
-quiz(
-  question("Which of the following is true about list-columns?",
-             answer("List columns, unlike lists, can contain vectors as elements in the list.",
-                    correct = TRUE),
-             answer("Lists and list columns are synonyms."),
-             answer("List columns can only contain values as elements in the list."),
-             answer("All of the above."),
-             allow_retry = TRUE
-    ),
-  
-  
-  question("Which of the following map functions is not using an anonymous function? ",
-             answer("`mutate(new = map_dbl(start, increment()))`",
-                    correct = TRUE),
-             answer("`mutate(new = map_dbl(start, function(x) x + 1))`"),
-             answer("`mutate(new = map_dbl(start, ~ . + 1))`"),
-             answer("`mutate(new = map_dbl(start, ~ (. + 1)))`"),
-             allow_retry = TRUE), 
-  
-   question("What is true about an atomic vector? Check all that apply.",
-             answer("Each element of the atomic vector has more than one value."),
-             answer("Each element of the atomic vector can take the form of a list."),
-             answer("Each element of the atomic vector has one value.", correct = TRUE),
-             answer("if an atomic vector is a column in your dataset, each observation gets a single value", correct = TRUE),
-             allow_retry = TRUE, 
-           type = "multiple"), 
-  
-    question("What will the following function do: `tibble(new_col = list(1:19, 23:25, 3:5))`. Check all that apply.",
-             answer("Create a column variable with values starting from 1, and ending at 25."),
-             answer("Create a tibble with one variable and two observations"),
-             answer("Create a tibble with one variable and one observation.", correct = TRUE),
-             answer("Produce a list with three elements", correct = TRUE),
-             allow_retry = TRUE, 
-            type = "multiple"),
-  
-     question("Which of the following is true about list columns? Check all that apply.",
-             answer("We use `str_split()` to remove list columns."),
-             answer("We use `mutate()` to create list columns.", correct = TRUE),
-             answer("Each element of a list can only have one kind of data type."),
-             answer("Each element of a list can only have multiple data types.", correct = TRUE),
-             allow_retry = TRUE, 
-             type = "multiple")
-  
-)
-
-```
-
-### Let's practice!
-
-Let's create a simple tibble. At a race at the Olympics, a racer ran 4 laps. The time it took the racer to run each lap , in minutes, is to be fed into the tibble column, `mins`. 
-
-The times are as follow: `c(10.3, 14.56, 17.9, 8.34)`. 
-
-Create a tibble using the `tibble()` function, with the column variable `mins`.
-
-
-```{r, map1, exercise = TRUE}
-
-tibble(--------------)
-
-```
-
-
-```{r map1-solution, echo = TRUE, eval = TRUE}
-
-tibble(mins = c(10.3, 14.56, 17.9, 8.34))
-
-```
-
-```{r map1-check}
-
-grade_code(correct = "Great work!")
-
-```
-
-Let's now use this data to practice using the `map*()` function. Because we're dealing with numeric values here, we're going to use the `map_dbl()` function. Let's say we want to convert the time for each lap into seconds. How do we go about doing that? 
-
-
-Let's name our new column `seconds`. We will use `mutate()` in conjunction with  `map_dbl()` to create a new column. 
-
-Remember, the `map_dbl()` function applies the same function to every row in a tibble. Let's first use an anonymous function to do our job for us. 
-
-```{r, map2, exercise = TRUE}
-
-tibble(mins = c(10.3, 14.56, 17.9, 8.34)) %>% 
-  mutate(seconds = map_dbl(----, ------------))
-
-```
-
-```{r map2-hint}
-"Use `function(x) x * 60`."
-
-```
-
-
-```{r, map2-solution, echo = TRUE, eval = TRUE}
-
-tibble(mins = c(10.3, 14.56, 17.9, 8.34)) %>% 
-  mutate(seconds = map_dbl(mins, function(x) x * 60))
-
-```
-
-```{r map2-check}
-
-grade_code(correct = "You have successfully created a new column for the same time, in seconds. Note that this could have also been achieved using a named function. Let's see how we can do that.")
-```
-
-Create a simple function called `convert` to change time in minutes to seconds. 
-
-```{r, map3, exercise = TRUE}
-
-convert <- -------------
-
-```
-
-
-```{r, map3-solution}
-
-# Use code from the previous exercise question
-convert <- function(x) x * 60
-
-```
-
-```{r map3-check}
-
-grade_code(correct = "Amazing!")
-```
-
-Now use this function in tandem with the `map_dbl()` function to convert times from seconds, to minutes. 
-
-```{r make-map4, echo = FALSE}
-convert <- function(x) x * 60
-
-```
-
-```{r map4, exercise = TRUE}
-
-# Use the `convert()` function
-
-tibble(mins = c(10.3, 14.56, 17.9, 8.34)) %>% 
-  mutate(seconds = map_dbl(mins, ------))
-
-```
-
-```{r map4-hint}
-"Use `convert` without the parantheses that normally follow a function. This is a standard rule for all `map*()` functions."
-
-```
-
-```{r, map4-solution}
-# Use the `convert()` function
-
-tibble(mins = c(10.3, 14.56, 17.9, 8.34)) %>% 
-  mutate(seconds = map_dbl(mins, convert))
-```
-
-```{r map4-check}
-
-grade_code(correct = "Amazing!")
-```
-
-You have successfully used the `map_dbl()` function for converting minutes to seconds for the racer's four laps. An alternative way to write an anonymous function for the same purpose would be by using the `purrr` package (from where we get `map_dbl()`). This second way uses the ~ operator and then uses . to represent the current element.
-
-For example, instead of using `map_dbl(mins, function(x) x * 60))`, we could have used `map_dbl(mins, ~ (. * 60))`. 
-
-Try this in the section below. You should obtain the same results. 
-
-```{r map5, eval=TRUE, echo=TRUE, exercise = TRUE}
-
-tibble(mins = c(10.3, 14.56, 17.9, 8.34)) %>% 
-  mutate(seconds = map_dbl(mins, ~ (. * 60)))
-
-
-```
-
-For our last exercise, let's revert back to our `midwest` data. For each of the counties in the data, we are aware of the percentage of people that are living below the poverty line (`midwest$percbelowpoverty`).
-
-We will use this to calculate the percentage of people above poverty line, for conties Wexford and Waupaca. 
-
-```{r make-map6}
-
-midwest_data <- ggplot2::midwest
-
-
-```
-
-```{r map6,eval=TRUE, echo = TRUE}
-
-midwest_data <- midwest_data %>% 
-  
-  # Selecting for relevant variables
-  
-  select(county, percbelowpoverty) %>% 
-  
-  # Filtering for the relevant counties.
-  
-  filter(county %in% c("WEXFORD", "WAUPACA")) %>% 
-  
-  # grouping by county.
-  
-  group_by(county)
- 
-midwest_data
-
-```
-
-Now, use summarize to create a list column, `pov` for the `percbelowpoverty` variable. 
-
-```{r make-map7}
-
-midwest_data <- ggplot2::midwest
-
-
-midwest_data <- midwest_data %>% 
-  
-  # Selecting for relevant variables
-  
-  select(county, percbelowpoverty) %>% 
-  
-  # Filtering for the relevant counties.
-  
-  filter(county %in% c("WEXFORD", "WAUPACA")) %>% 
-  
-  # grouping by county.
-  
-  group_by(county)
- 
-```
-
-```{r map7, exercise = TRUE, eval = TRUE, echo = TRUE}
-
-midwest_data <- midwest_data %>% 
-   
-  # Use summarize to create a list column, `pov` for the `percbelowpoverty` variable.
-  
-  ---------------------
-
-midwest_data
-```
-
-```{r map7-solution}
-
-midwest_data <- midwest_data %>% 
-   
-  # Use summarize to create a list column, `pov` for the `percbelowpoverty` variable.
-  
-  summarize(pov = list(c(percbelowpoverty)))
-
-midwest_data
-
-```
-
-
-```{r map7-check}
-
-grade_code("Great, you have created a list column!")
-
-```
-
-Now use `map_dbl()` to calculate the percentage of people above poverty, using an anonymous function. Name this variable `abovepov`. Use `100 - x` to calculate the remaining percentage. 
-
-```{r make-map8}
-midwest_data <- ggplot2::midwest
-
-
-midwest_data <- midwest_data %>% 
-  
-  # Selecting for relevant variables
-  
-  select(county, percbelowpoverty) %>% 
-  
-  # Filtering for the relevant counties.
-  
-  filter(county %in% c("WEXFORD", "WAUPACA")) %>% 
-  
-  # Grouping by county.
-  
-  group_by(county) %>% 
-  
-  
- summarize(pov = list(c(percbelowpoverty)))
-
-
-```
-
-
-```{r map8, exercise = TRUE, echo = TRUE, eval=TRUE}
-
-midwest_data %>% 
-  mutate(abovpov = ------------------------------)
-
-```
-
-```{r map8-hint-1}
-"Use `100 - x` to calculate the remaining percentage"
-```
-
-```{r map8-hint-2}
-"Use `map_dbl(pov, ~ 100 - .)` to calculate the remaining percentage"
-```
-
-
-```{r map8-solution}
-
-midwest_data %>% 
-  mutate(abovpov = map_dbl(pov, ~ 100 - .))
-
-```
-
-```{r map8-check}
-
-grade_code("Great, you've calculated the percentage of population above the poverty line in Wexford and Waupaca!")
-
-```
-
-Congratulations! This brings the tutorial to an end. You have mastered functions. 
-
-##  Using built in functions with list columbs and `map_*()` functions. 
-
-1) Let's now introduce you to a series of questions that help you get the hang of using list columns and `map_*()` functions in conjunction with built-in R functions. 
-
-Create a tibble called `firstib`. Within the tibble, create a list column called `new_col` with values `345:500` and `693:1200`. 
-
-```{r, A1, exercise = TRUE, echo=TRUE, eval=TRUE}
-
-firstib <- tibble(---- = -----------------) 
-
-```
-
-```{r A1-hint-1}
-"Use `new_col = list(345:500, 693:1200)` to create the list column"
-```
-
-```{r, A1-solution}
-
-firstib <- tibble(new_col = list(345:500, 693:1200)) 
-```
-
-```{r A1-check}
-
-grade_code("Great!")
-
-```
-
-Now, create a `mean_col` that uses `map_dbl()` to calculate the mean of the two elements of the list column. Type `firstib` to view the contents of the tibble. 
-
-```{r, A2, exercise = TRUE, echo=TRUE, eval=TRUE}
-
-firstib <- tibble(new_col = list(345:500, 693:1200)) %>% 
-  mutate(mean_col = --------------))
-  
-------
-
-```
-
-```{r A2-hint-1}
-"Use `(new_col, mean)` within `map_dbl()`  to create the mean column"
-```
-
-```{r, A2-solution}
-
-firstib <- tibble(new_col = list(345:500, 693:1200)) %>% 
-   mutate(mean_col = map_dbl(new_col, mean))
-
-firstib 
-
-```
-
-```{r A2-check}
-
-grade_code("Great work!")
-
-```
-
-Let's now use `map_dbl()` to map the maximum values of these two vector elements as a new column, `max_col` within the tibble. We'll be using the `max()` function for this purpose. The tibble has been created for you, for the purposes of this exercise. 
-
-
-```{r, echo=FALSE}
-
-firstib <- tibble(new_col = list(345:500, 693:1200)) %>% 
-   mutate(mean_col = map_dbl(new_col, mean))
-
-```
-
-```{r, A3, exercise=TRUE, eval = TRUE, echo = TRUE}
-
-firstib %>% 
-  mutate(---- = ------------------)
-
-```
-
-```{r A3-hint-1}
-"Use `(new_col, max)` within `map_dbl()`  to create the `max_col` column"
-```
-
-```{r, A3-solution}
-
-firstib %>% 
-  mutate(max_col = map_dbl(new_col, max))
-
-
-```
-
-```{r A3-check}
-
-grade_code("Great work! You're getting the hang of this!")
-
-```
-
-2) Let's now use another tibble that we've created for you, called `sectib`. View it in the space below by running the code `sectib`, followed by `str()` to view its contents.  
-
-```{r}
-
-sectib <- tibble(list_col = list(c(1, 5, 7), 
-                       5, 
-                       c(10, 10, 11)))
-
-```
-
-```{r, B1, echo = TRUE, exercise = TRUE}
-
-
-# Use `str()` with `sectib` to view the tibble. 
-
-sectib %>% 
-  ---()
-
-```
-
-Now use the `sum()` function to create the column `list_sum`. This column uses the `map_dbl()` on the `list_col` column. 
-
-Then use `pull()` on `list_sum` to obtain the values of the `list_sum` column. 
-
-
-```{r, B2, exercise=TRUE, eval = TRUE, echo = TRUE}
-
-sectib %>% 
-  mutate(----------------------------) %>% 
-  pull(-----)
-
-```
-
-```{r B2-hint-1}
-"Use `mutate()` to create the `list_sum` column."
-```
-
-```{r B2-hint-2}
-"Use `(list_col, sum)` within `map_dbl()`  to create the `list_sum` column"
-```
-
-```{r, B2-solution}
-
-sectib %>% 
-  mutate(list_sum = map(list_col, sum)) %>% 
-  pull(list_sum)
-
-
-```
-
-```{r B2-check}
-
-grade_code()
-
-```
-
-
-3) Let's now turn our attention towards the `qscores` data from the `PPBDS.data` package. This data set contains course evaluation data on all courses taught at Harvard in the last two years. The data to be used has already been prepared for you. View it below by running `qscores`. 
-
-```{r, echo = FALSE}
-
-qscores1 <- PPBDS.data::qscores%>% 
-
-  select(course_name, department, hours, rating) %>% 
-  sample_n(100) %>% 
-  group_by(department) %>% 
-  nest() 
-
-
-```
-
-```{r, C0, echo=TRUE, exercise = TRUE}
-
-qscores1
-
-```
-
-Note that the data has been grouped by department, with all other information nested together, much like in the form of a list column. We will now use `map_dbl()` to calculate the `mean()` of each of the department's overall scores. We do this by wrapping `(data$overall)` in the `mean()` function. 
-
-In the following exercise, create a new column called `mean_overall` for this purpose. 
-
-```{r, C1, exercise = TRUE, eval = TRUE, echo = TRUE}
-
-qscores1 %>% 
-  mutate(---- = --------------------)
-
-```
-
-```{r C1-hint-1}
-"Wrap `(.$overall)` in the `mean()` function to create the `mean_overall` column variable."
-```
-
-```{r, C1-solution}
-
-
-qscores1 %>% 
-  mutate(mean_overall = map_dbl(data, ~ mean(.$overall))) 
-
-
-```
-
-```{r C1-check}
-
-grade_code()
-
-```
-
-This exercise allowed us to use a `map_*()` function to get access to a particular column of the data frames stored in the data list, after it had been nested. Additionally, it allowed us to perform operations on that column, and use it to create a new one altogether - one that successfully computed the mean of `overall` scores for each departments' courses. 
-
-4) I now want to round the overall mean scores to the nearest whole number. Once more, create a column called `rounded_means` that utilizes the `map_dbl()` function in conjunction with the `round()` function for this particular purpose. The data has been prepared for you. 
-
-
-```{r, echo = FALSE}
-qscores1 <- qscores1 %>% 
-  mutate(mean_overall = map_dbl(data, ~ mean(.$overall))) 
-
-```
-
-
-```{r, C2, exercise = TRUE, eval = TRUE, echo = TRUE}
-
-# Round the values of the overall means to the nearest whole
-# number. 
-
-qscores1 %>% 
-  mutate(rounded_means = ----------------------)
-
-```
-
-```{r C2-hint-1}
-"Wrap the `round` function in the `map_dbl()` function to create the `rounded_means` column."
-```
-
-```{r, C2-solution}
-
-qscores1 %>% 
-  mutate(rounded_means = map_dbl(mean_overall, round)) 
-
-
-```
-
-```{r C2-check}
-
-grade_code("Good job!")
-
-```
-
-
-5) Let's now turn towards using `map_lgl()`. We want to use `map_lgl()` to create a condition that reports `TRUE` if the `mean_overall` score for each department is greater than 4. We will name this logical column `gthan4`. 
-
-Use the condition `mean_overall > 4` within a `map_lgl()` function to compute the output column `gthan4`. 
-
-
-```{r, setup2, echo = FALSE, eval = FALSE}
-qscores1
-```
-
-
-```{r, C3, exercise = TRUE, eval = TRUE, echo = TRUE}
-
-# Round the values of the overall means to the nearest whole
-# number. 
-
-qscores1 %>% 
-  mutate(gthan4 = ----------------------)
-
-```
-
-```{r C3-hint-1}
-"Use `~ mean_overall > 4` to create the relevant condition. Note that you're using an anonymous function for this process!"
-```
-
-```{r, C3-solution}
-
-qscores1 %>% 
-  mutate(gthan4 = map_lgl(mean_overall, ~ mean_overall > 4)) 
-
-
-```
-
-```{r C3-check}
-
-grade_code("Good job!")
-
-```
-
-Notice that you could have also used `~ . mean_overall > 4` for the same outcome. Try it in the section above, and run your answer to see the results you obtain!
-
-6) Now, lets replace `map_lgl()` with `map_dbl()`, maintaining the same condition. What do we expect to see? 
-
-```{r, setup3, echo = FALSE, eval = FALSE}
-
-qscores1
-
-```
-
-```{r, C4, exercise = TRUE, eval = TRUE, echo = TRUE}
-
-qscores1 %>% 
-  mutate(gthan4 = -----(mean_overall, ~ mean_overall > 4)) 
-
-```
-
-```{r C4-hint-1}
-"Use `~ mean_overall > 4` to create the relevant condition. Note that you're using an anonymous function for this process!"
-```
-
-```{r, C4-solution}
-
-qscores1 %>% 
-  mutate(gthan4 = map_dbl(mean_overall, ~ mean_overall > 4)) 
-
-
-```
-
-```{r C4-check}
-
-grade_code("Correct! Instead of giving you a response in `TRUE` and `FALSE`, we now compute logical values in the form of 1s and 0s, given that we're still mapping results using a condition.")
-
-```
-
-7) What if we wanted to use `map_chr()` to use the same condition, but give us different character outputs? Let's say we want the `gthan4` column to report `I do not like this dept.` for every department  that has an overall mean q score rating of below 4, and `I love this dept` for every department with an overall mean q score rating of above 4. 
-
-We will employ `if_else()` for this purpose.
-
-
-```{r, setup4, echo = FALSE, eval = FALSE}
-
-qscores1 
-
-```
-
-```{r, C5, exercise = TRUE, eval = TRUE, echo = TRUE}
-
-qscores1 %>% 
-  mutate(gthan4 = -----(mean_overall, ~ --------------------------------------------)) 
-
-```
-
-```{r C5-hint-1}
-"You might want to look up documentation for `if_else()` for this question. To make life easier for you, use the condition `(mean_overall > 4)` within an `if_else()`, followed by the character outputs we want separated by commas."
-```
-
-```{r C5-hint-2}
-"Use this within a `map_chr()`: `if_else((mean_overall > 4), 'I love this dept.', 'I do not like this dept.')`"
-```
-
-
-```{r, C5-solution}
-
-qscores1 %>% 
-  mutate(gthan4 = map_chr(mean_overall, ~ if_else((mean_overall > 4), 'I love this dept.', 'I do not like this dept.')))
-
-
-```
-
-```{r C5-check}
-
-grade_code("Great.")
-
-```
-
-8) Next, let's turn our attention towards the `trains` dataset from the `PPBDS.data` package. The data set carries information regarding the preferences and characteristics of each voter involved in the survey. 
-
-First, lets `group_by()` by the genders mentioned in the survey, and then proceed to calculate the median income for each gender. 
-
-```{r, D1, eval = TRUE, echo = TRUE, exercise = TRUE}
-
-x <- trains %>%
-  
-  # Use `group_by() on the gender variable`
-  
-  group_by(-----) %>% 
-  
-  # `nest()` the data. 
-  
-  ---()
-
-# View the tibble x. 
-
-x
-
-```
-
-
-```{r, D1-solution}
-
-
-x <- trains %>%
-  
-  # Use `group_by() on the gender variable`
-  
-  group_by(gender) %>% 
-  
-  # `nest()` the data. 
-  
-  nest()
-
-# View the tibble x. 
-
-x
-
-
-```
-
-```{r D1-check}
-
-grade_code()
-
-```
-
-9) Now, let's once more use `map_dbl` to calculate the mean of the `income` variable for each gender. Call this column the `mean_income` column. 
-
-```{r, setup5, eval = FALSE, echo = FALSE}
-x
-```
-
-```{r, D2, eval=TRUE, echo=TRUE, exercise = TRUE}
-
-x %>% 
-  mutate(mean_income = ------------------------)
-
-```
-
-```{r D2-hint-1}
-
-"Use `~ mean(.$income)` inside the `map_dbl()` function, taking values from the `data` tibble."
-
-```
-
-```{r D2-solution}
-
-x %>% 
-  mutate(mean_income = map_dbl(data, ~ mean(.$income)))
-
-```
-
-
-```{r D2-check}
-
-grade_code("Amazing!")
-
-```
-
-9) Let's now employ anonymous functions to convert the mean incomes for the two groups from USD to Pound sterling. The conversion is as follows: $1 USD = £0.79 Pound Sterling.  
-
-The data from the previous question has been prepared for you. Name the new column `pound`, and use the following anonymous function `. * 0.79` following a tilda (`~`). 
-
-```{r, setup5_5, echo = FALSE, eval = FALSE}
-
-x 
-
-```
-
-Use `map_dbl()` for this purpose.
-
-```{r, D2_5, exercise = TRUE, echo = FALSE, eval = TRUE}
-
-x %>% 
-  mutate(mean_income = map_dbl(data, ~ mean(.$income))) %>% 
-  mutate(pound = --------------------------------------)
-
-```
-
-
-```{r D2_5-solution}
-
-x %>% 
-  mutate(mean_income = map_dbl(data, ~ mean(.$income))) %>% 
-  mutate(pound = map_dbl(mean_income, ~ . * 0.79))
-
-```
-
-```{r D2_5-check}
-
-grade_code()
-
-```
-
-10) Let's now use the same dataset for the purposes of calculating the range of ages for groups that identify as `Democrats` or `Republicans`. We have grouped and nested the data for you.
-
-```{r, setup6, echo = FALSE, eval=FALSE}
-
-trains <- PPBDS.data::trains %>% 
-  group_by(party) %>% 
-  nest()
-
-```
-
-Use the the anonymous function `(max() - min())` along with `map_dbl()` to construct the column `range_ages`. 
-
-```{r, D3, exercise = TRUE, eval=TRUE, echo=TRUE}
-
-trains %>% 
-  mutate(range_ages = -------------------------)
-
-```
-
-```{r, D3-hint}
-
-"(max(.$age) - min(.$age)) - wrap the `map_dbl() function around this anonymous function to compute the range. Obtain values from the `data` tibble."
-```
-
-
-```{r, D3-solution}
-
-# Use `(.$age)` inside the `max()` and `min()` function calculate the range of the ages
-# for groups identifying with either party.
-
-trains %>% 
-  mutate(range_ages = map_dbl(data, ~ (max(.$age) - min(.$age))))
-
-```
-
-```{r, D3-check}
-
-grade_code()
-
-```
 
