@@ -14,8 +14,6 @@ library(tufte)
 
 <!-- Priorities: -->
 
-<!-- 0) Add plots to EDA for trains. -->
-
 <!-- 1) Fix Rubin Table. Show at least Actual Rubin Table. Show Reduced Rubin Table. -->
 
 <!-- 2) Start on att_end section, including two Rubin Tables.  -->
@@ -90,7 +88,26 @@ ch8 %>%
 
 `skim()` shows us what the different values of `treatment` are because it is a factor. Unfortunately, it does not do the same for character variables like `party`. The ranges for `age` and `att_end` seem reasonable. Recall that participants were asked three questions about immigration issues, each of which allowed for an answer which was a strength of agreement between 1 and 5, with higher values indicating more agreement with conservative viewpoints. So, the most liberal possible value is 3 and the most conservative is 15.
 
-<!-- add a plot -->
+Plotting some variables from the dataset is another important tool in exploratory data analysis:
+
+```{r}
+
+ch8 %>%
+  ggplot(aes(x = party)) + 
+  geom_bar() + 
+  labs(x = "Party",
+       y = "Number of individuals",
+       title = "Distribution of Political Affiliations")
+
+ch8 %>%
+  ggplot(aes(x = age)) + 
+  geom_bar() + 
+  labs(x = "Age",
+       y = "Number of individuals",
+       title = "Distribution of Ages")
+
+```
+
 
 
 ## Review of One Parameter Estimation
@@ -217,17 +234,19 @@ trains %>%
 
 The initials "lm" stand for "linear model." We are creating a model in which age is a function of party. The "-1" term causes the model to provide us with the mean for each group. The coefficient estimates are the same as the mean values for age within each party. 
 
-There are three parts of understanding any model structure: whether it is causal or predictive, the mathematical formula, and realism. This model is predictive and has nothing to do with causality. Rather than modelling how the explanatory variable will change the outcome variable, we are using the explanatory variable (party) to simply predict the outcome variable (age). The difference between these two model types becomes clear when we construct a Rubin's Causal Model Table: 
+There are three parts of understanding any model structure: whether it is causal or predictive, the mathematical formula, and realism. This model is predictive and has nothing to do with causality. Rather than modelling how the explanatory variable will change the outcome variable, we are using the explanatory variable (party) to simply predict the outcome variable (age). The difference between these two model types becomes clear when we construct a Rubin Table: 
 
 ```{r}
 
-# Using real sampled ages but making my own tibble to add names
+# Using real sampled ages but making my own tibble
 
-tibble(subject = c("Emily", "Dominic", "John", "Cassidy", "Miro"),
-       age = c("34", "53", "22", "36", "30")) %>%
+tibble(subject = c("1", "2", "...", "56", "...", "115", "... 10,000"),
+       age = c("34", "53", "...", "36", "...", "44", "?"),
+       party = c("Republican", "Democrat", "...", "Democrat", "...", "Democrat", "?")) %>%
   gt() %>%
-  cols_label(subject = md("Name"),
-             age = md("Age")) %>%
+  cols_label(subject = md("ID"),
+             age = md("Age"),
+             party = md("Party")) %>%
   tab_style(cell_borders(sides = "right"),
             location = cells_body(columns = vars(subject))) %>%
   tab_style(cell_text(weight = "bold"),
@@ -237,7 +256,9 @@ tibble(subject = c("Emily", "Dominic", "John", "Cassidy", "Miro"),
 
 ```
 
-This table is very simple, which is the point. There is no causal effect as we are simply trying to predict the immutable variable of age.
+The rows in this Rubin Table represent the 115 commuters for whom data was gathered and the remainder of the (roughly) 10,000 commuters that our model is extrapolating on. The purpose of a Rubin Table is to capture all of the data such that if the question marks were filled out, one wouldn't need to construct a model.
+
+This table is very simple, which is the point. There is no causal effect as we are simply trying to predict the immutable variable of age. Rather than representing unknown causal effects as they may in other Rubin Tables, the question marks in a Rubin Table like this simply denote missing data, as this is a predictive model. 
 
 This mathematical formula will also help us better understand the model:
 $$ y = b_0 + b_1 x $$
@@ -278,6 +299,8 @@ If a new Democrat entered the train station, how easy would it be to guess their
 
 $$ y_i = b_0 + b_1 x_i + \epsilon_i $$
 One shouldn't be too confident in that prediction. The new Democrat's age comes in two parts: the beta (determined by their political party) and their epsilon/residual (how much noise there is in this observation that offsets it from the beta prediction). While the beta values have been determined by our model, the epsilon value represents *unmodeled variation* that could likely put the value outside of these bounds. 
+
+### Rubin Table
 
 <!-- DK: I went fast above, but that is all the key material. Still need to add a Rubin Table example, highlighting that this is modeling for prediction. There is only one column for Y because it is impossible to change someone's age, whatever manipulations you make to party. -->
 
@@ -389,6 +412,8 @@ lm(data = trains, att_end ~-1 + treatment) %>%
 ```
 
 The confidence intervals represent our confidence in the average treatment effect of the `trains` dataset being representative of the true average treatment effect on Boston commuters.
+
+### Rubin Table
 
 Now, we'll create the RCM table of possible outcomes, as we did back in ch3:
 
