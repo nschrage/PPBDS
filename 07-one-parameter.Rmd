@@ -353,9 +353,17 @@ set.seed(9)
 ```
 
 
+```{r}
+set.seed(9)
+  lm(year_mean ~ 1, data = virtual_resamples) %>%
+  tidy(conf.int = TRUE) %>% 
+  select(conf.low, estimate, conf.high)
+```
+
+
 ## Measuring uncertainty with confidence intervals {#ci-build-up}
 
-Let's start this section with an analogy involving fishing. Say you are trying to catch a fish. On the one hand, you could use a spear, while on the other you could use a net. Using the net will probably allow you to catch more fish! 
+Let's start this section with an analogy involving fishing. Say you are trying to catch a fish. On the one hand, you could use a spear, while on the other you could use a net. Using the net will probably allow you to catch more fish!
 
 Now think back to our pennies exercise where you are trying to estimate the true population mean year $\mu$ of *all* US pennies. \index{confidence interval!analogy to fishing} Think of the value of $\mu$ as a fish.
 
@@ -363,7 +371,7 @@ On the one hand, we could use the appropriate *point estimate/sample statistic* 
 
 What would "fishing with a net" correspond to? Look at the bootstrap distribution in Figure \@ref(fig:one-thousand-sample-means) once more. Between which two years would you say that "most" sample means lie?  While this question is somewhat subjective, saying that most sample means lie between 1992 and 2000 would not be unreasonable. Think of this interval as the "net."
 
-What we've just illustrated is the concept of a *confidence interval*, which we'll abbreviate with "CI" throughout this book. As opposed to a point estimate/sample statistic that estimates the value of an unknown population parameter with a single value, a *confidence interval* \index{confidence interval} gives what can be interpreted as a range of plausible values. Going back to our analogy, point estimates/sample statistics can be thought of as spears, whereas confidence intervals can be thought of as nets. 
+What we've just illustrated is the concept of a *confidence interval*, which we'll abbreviate with "CI" throughout this book. As opposed to a point estimate/sample statistic that estimates the value of an unknown population parameter with a single value, a *confidence interval* \index{confidence interval} gives what can be interpreted as a range of plausible values. Going back to our analogy, point estimates/sample statistics can be thought of as spears, whereas confidence intervals can be thought of as nets.
 
 
 ```{r, echo=FALSE, fig.align='center', fig.cap="Analogy of difference between point estimates and confidence intervals."}
@@ -376,181 +384,6 @@ Both methods for confidence interval construction share some commonalities. Firs
 
 Second, they both require you to specify the \index{confidence interval!confidence level} *confidence level*. Commonly used confidence levels include 90%, 95%, and 99%.  All other things being equal, higher confidence levels correspond to wider confidence intervals, and lower confidence levels correspond to narrower confidence intervals. In this book, we'll be mostly using 95% and hence constructing "95% confidence intervals for $\mu$" for our pennies activity.
 
-
-### Percentile method {#percentile-method}
-
-```{r, echo=FALSE}
-# Can also use conf_int() and get_confidence_interval() instead of get_ci(),
-# as they are aliases that work the exact same way.
-library(infer)
-percentile_ci <- virtual_resampled_means %>% 
-  rename(stat = mean_year) %>% 
-  get_ci(level = 0.95, type = "percentile")
-```
-
-One method to construct a confidence interval is to use the middle 95% of values of the bootstrap distribution. We can do this by computing the 2.5th and 97.5th percentiles, which are `r percentile_ci[["2.5%"]]` and `r percentile_ci[["97.5%"]]`, respectively. This is known as the *percentile method* for constructing confidence intervals. You can get these values using the `quantile()` function on the `mean_year` column of `virtual_resampled_means`:
-
-```{r}
-virtual_resampled_means %>%
-  pull(mean_year) %>%
-  quantile(c(0.025, 0.975))
-```
-
-Let's mark these percentiles on the bootstrap distribution with vertical lines in Figure \@ref(fig:percentile-method). About 95% of the `mean_year` variable values in `virtual_resampled_means` fall between `r percentile_ci[["2.5%"]]` and `r percentile_ci[["97.5%"]]`, with 2.5% to the left of the leftmost line and 2.5% to the right of the rightmost line. 
-
-(ref:perc-method) Percentile method 95% confidence interval. Interval endpoints marked by vertical lines.
-
-```{r, echo=FALSE, message=FALSE, fig.cap='(ref:perc-method)', fig.height=3.4}
-ggplot(virtual_resampled_means, aes(x = mean_year)) +
-  geom_histogram(binwidth = 1, color = "white", boundary = 1988) +
-  labs(x = "Resample sample mean") +
-  scale_x_continuous(breaks = seq(1988, 2006, 2)) +
-  geom_vline(xintercept = percentile_ci[[1, 1]], size = 1) +
-  geom_vline(xintercept = percentile_ci[[1, 2]], size = 1)
-```
-
-
-### Standard error method {#se-method}
-
-```{r, echo=FALSE}
-# Can also use get_confidence_interval() instead of get_ci(),
-# as it is an alias that works the exact same way.
-standard_error_ci <- virtual_resampled_means %>% 
-  rename(stat = mean_year) %>% 
-  get_ci(type = "se", point_estimate = x_bar)
-
-# bootstrap SE value as scalar
-bootstrap_se <- virtual_resampled_means %>% 
-  summarize(se = sd(mean_year)) %>% 
-  pull(se)
-```
-
-If a numerical variable follows a normal distribution, or, in other words, the histogram of this variable is bell-shaped, then roughly 95% of values fall between $\pm$ 1.96 standard deviations of the mean. Given that our bootstrap distribution based on 1,000 resamples with replacement in Figure \@ref(fig:one-thousand-sample-means) is normally shaped, let's use this fact about normal distributions to construct a confidence interval in a different way.
-
-First, recall the bootstrap distribution has a mean equal to `r mean_of_means`. This value almost coincides exactly with the value of the sample mean $\overline{x}$ of our original 50 pennies of `r x_bar %>% pull(mean_year) %>% round(2)`. Second, let's compute the standard deviation of the bootstrap distribution using the values of `mean_year` in the `virtual_resampled_means` data frame:
-
-```{r}
-virtual_resampled_means %>% 
-  summarize(SE = sd(mean_year))
-```
-
-What is this value? Recall that the bootstrap distribution is an approximation to the sampling distribution. Recall also that the standard deviation of a sampling distribution has a special name: the *standard error*. Putting these two facts together, we can say that `r bootstrap_se %>% round(5)` is an approximation of the standard error of $\overline{x}$.  
-
-Thus, using our 95% rule of thumb about normal distributions, we can use the following formula to determine the lower and upper endpoints of a 95% confidence interval for $\mu$:
-
-$$
-\begin{aligned}
-\overline{x} \pm 1.96 \cdot SE &= (\overline{x} - 1.96 \cdot SE, \overline{x} + 1.96 \cdot SE)\\
-&= (`r x_bar %>% pull(mean_year) %>% round(2)` - 1.96 \cdot `r bootstrap_se %>% round(2)`, `r x_bar %>% pull(mean_year) %>% round(2)` + 1.96 \cdot `r bootstrap_se %>% round(2)`)\\
-&= (1991.15, 1999.73)
-\end{aligned}
-$$
-
-Let's now add the SE method confidence interval with dashed lines in Figure \@ref(fig:percentile-and-se-method).
-
-(ref:both-methods) Comparing two 95% confidence interval methods.
-
-```{r, echo=FALSE, message=FALSE, fig.cap='(ref:both-methods)', fig.height=5.2}
-both_CI <- bind_rows(
-  percentile_ci %>% gather(endpoint, value) %>% mutate(type = "percentile"),
-  standard_error_ci %>% gather(endpoint, value) %>% mutate(type = "SE")
-)
-ggplot(virtual_resampled_means, aes(x = mean_year)) +
-  geom_histogram(binwidth = 1, color = "white", boundary = 1988) +
-  labs(x = "sample mean", title = "Percentile method CI (solid lines), SE method CI (dashed lines)") +
-  scale_x_continuous(breaks = seq(1988, 2006, 2)) +
-  geom_vline(xintercept = percentile_ci[[1, 1]], size = 1) +
-  geom_vline(xintercept = percentile_ci[[1, 2]], size = 1) + 
-  geom_vline(xintercept = standard_error_ci[[1, 1]], linetype = "dashed", size = 1) +
-  geom_vline(xintercept = standard_error_ci[[1, 2]], linetype = "dashed", size = 1)
-```
-
-We see that both methods produce nearly identical 95% confidence intervals for $\mu$ with the percentile method yielding $(`r round(percentile_ci[["2.5%"]], 2)`, `r round(percentile_ci[["97.5%"]], 2)`)$ while the standard error method produces $(`r round(standard_error_ci[["lower"]], 2)`, `r round(standard_error_ci[["upper"]],2)`)$. Thus, the standard error method can be a good quick way to construct confidence intervals when you already have an estimate of the standard error and don't want to go through the steps to obtain a confidence interval by the percentile method.  It is particularly handy since $1.96 \approx 2$, and thus it is easy to calculate in one's head.  However, recall that we can only use the standard error rule when the bootstrap distribution is roughly normally shaped. If you have an unusually shaped distribution, it is better to use the percentile method.
-
-### Interpreting confidence intervals {#one-prop-ci}
-
-Now that we've shown you how to construct confidence intervals using a sample drawn from a population, let's now focus on how to interpret them. 
-
-The traditional approach is referred to as either "Frequentist" or "Classical." In this interpretation,  95\% of the time that you perform this exercise, the *intervals* constructed will contain the true but unknown population parameter. You are making a claim about how well this approach --- bootstrap resampling --- works if you do it many, many times. You do not know anything about how well it worked this time.
-
-In this book, we use a "Bayesian" interpretation. There is a true, but unknown, average year of minting for all the pennies in the world. In theory, we could find all those pennies and then calculate this number. The Bayesian interpretation of a 95% confidence interval is that we are 95% certain that the true value is within the CI limits. It would be a fair wager to bet, at 19:1 odds, that the true value is outside those limits because there is a 5% chance that it is. 
-
-Note that these are just *interpretations*. The reality of what we did is the same in both cases. The computer code is the same. This Bayesian interpretation of the bootstrap confidence interval is often called a [credible interval](https://en.wikipedia.org/wiki/Credible_interval) in the academic literature. You may find yourself in a statistics class that uses the phrase "confidence interval" to refer only to the [frequentist](https://en.wikipedia.org/wiki/Frequentist_inference) concept.   
-
-Does our percentile-based confidence interval of (`r percentile_ci[["2.5%"]] %>% round(2)`, `r percentile_ci[["97.5%"]] %>% round(2)`) "capture" the true mean year $\mu$ of *all* US pennies? Alas, we'll never know, because we don't know what the true value of $\mu$ is. After all, we're sampling to estimate it!
-
-However, we can answer a different question.  Given that we've observed the 50 pennies that we did, what's the *chance* that the true value falls within (`r percentile_ci[["2.5%"]] %>% round(2)`, `r percentile_ci[["97.5%"]] %>% round(2)`)?  If the answer is 95%, then we can call this a 95% interval.
-
-This is a statement about *probability*.  We thus can think of the mean year of the pennies as a random variable that has its own *probability distribution*.  Of course, we don't know exactly what that distribution is.  The bootstrap resampling procedure, however, generates a distribution of values for the mean.  Since the bootstrap distribution is a good approximation of the *sampling* distribution we learned about in the last chapter (see Subsection \@ref(bootstrap-vs-sampling)), this is a reasonable thing to do. Then, if we take the bootstrap distribution as our "best guess" of the probability distribution of the variable we are interested in, we can guess that the variable has a 95% chance of lying between the 2.5th and 97.5th percentiles of the bootstrap distribution.
-
-<!-- AR: took this language from the regression chapter.  Maybe OK to repeat it
--->
-
-Instead of looking at confidence intervals, a common alternative approach is to conduct *hypothesis tests*, where one hypothesis is called the "null hypothesis" (often that a value, such as a mean, is equal to zero) and the result of the test is either *rejecting* the null hypothesis (so you'd conclude that the mean is not zero) or *failing to reject* the null hypothesis.  The decision whether to reject the null hypothesis is generally made with reference to a *p-value*, a measure of how likely one would be, if the null hypothesis were true, to observe results at least as extreme as the results actually observed.  A *p*-value cutoff, often 0.05, is employed: if the *p*-value is lower, the null hypothesis is rejected, otherwise the hypothesis is not rejected.
-
-We think this is a bad way to make decisions.  Two very similar datasets could produce *p*-values of $p = 0.04$ and $p = 0.06$ for a quantity of interest. If you would make one decision in the former case and a totally different decision in the latter case, then there's something wrong with your decision-making process!  Rather, we think it is more sensible to look at the data, construct models to summarize important features of the data, and make decisions based on those models that take into account the uncertainty in the models' estimates.
-
-<!-- The above is not bad, but we need more, more, more. Every chapter should repeat this and provide examples. Maybe, each chapter, we need a specific example of the stupidity of NHST. (And maybe an actual decision problem.) And then show how a model summary helps us. -->
-
-## Width of confidence intervals {#ci-width}
-
-
-
-
-
-<!-- 
-A good Learning check might be to have the readers calculate confidence intervals when n = 1000, 2000, 2400. To their astonishment (maybe), they'll see that the size of the confidence interval is 0 when they get to 2400. 
--->
-
-<!-- DK: None of the above is bad, but it is all based on the urn. Why not do the same thing for the mean year of pennies? Could be quicker. Maybe with all the analysis combined. Or mayube that is what is about to happen now. -->
-
-## Using `lm()` and `tidy()` as a shortcut
-
-Recall the confidence interval we constructed for the mean year of the pennies using the percentile method:
-
-```{r}
-virtual_resampled_means %>%
-  pull(mean_year) %>%
-  quantile(c(0.025, 0.975))
-```
-
-Is there a way to construct that interval *without* engaging in the bootstrap resampling?  That is, can we approximate this by using the `pennies_sample` tibble directly?
-
-It turns out that we can, using the `lm()` function.  `lm()` stands for `l`inear `m`odel, and we will be using it in the next two chapters.  This function can get the mean of a variable using the following syntax:
-
-```{r}
-lm(year ~ 1, data = pennies_sample)
-```
-
-<!-- DK: Do we explain this later? If so, provide a link here. -->
-
-<!-- TA: Like link to the chapter? -->
-
-Once we learn about regression, we'll learn why this is labeled the "intercept."  The key thing to note right now is that `lm()` takes two main arguments, `formula` and `data`.  The notation `year ~ 1` will get the mean of `year`.
-
-The **broom** package makes it easier to work with `lm()` model objects.  In particular, the function `tidy()` has the option `conf.int = TRUE`, which we can use to get a confidence interval:
-
-```{r}
-library(broom)
-
-lm(year ~ 1, data = pennies_sample) %>%
-  tidy(conf.int = TRUE)
-```
-
-This presents a lot of columns that we don't care about, so we will `select()` the relevant ones:
-
-```{r}
-library(broom)
-lm(year ~ 1, data = pennies_sample) %>%
-  tidy(conf.int = TRUE) %>%
-  select(estimate, conf.low, conf.high)
-```
-
-<!-- DK: Do we need more discussion here? In what sense is this approximation "close enough?" -->
-<!-- TA: Is it because there were many bootstrap CI but only one is used with lm? -->
-
-
-These are not identical to our bootstrap confidence interval estimates, but they are close enough.  Thus, if you are interested in constructing a confidence interval for a mean, you can use `lm()` and `tidy()` as a shortcut. `tidy()` also has an argument, `conf.level`, which allows us to specify the confidence level. By default, it is 0.95.
 
 ## Income from trains using Bootstrap
 
