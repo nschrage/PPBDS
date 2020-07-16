@@ -7,8 +7,12 @@ output_yaml:
 # Two Parameters {#two-parameters}
 
 ```{r, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, tidy = FALSE, cache.extra = packageVersion('tufte'))
+
 library(gt)
+library(tidyverse)
 library(tufte)
+library(PPBDS.data)
 ```
 
 
@@ -77,7 +81,7 @@ ch8 %>%
   glimpse()
 ```
 
-Pay attention to the variable "type." Do they make sense? Perhaps. But there are certainly grounds for suspicion. Why are `age` and `att_end` doubles rather than integers? Looking at the values, it appears that they are not recorded more accurately than simple integers. Why is `party` a character variable and `treament` a factor variable? It could be that these are intentional choices made by the creator of the tibble, i.e., us. These could be mistakes. Or, most likely, these choices are a mixture of sensible and arbitrary. Regardless, it is your responsibility to notice them. You can't make a good model without looking closely at the data which you are using.
+Pay attention to the variable "type." Do they make sense? Perhaps. But there are certainly grounds for suspicion. Why are `age` and `att_end` doubles rather than integers? Why is `party` a character variable and `treament` a factor variable? It could be that these are intentional choices made by the creator of the tibble, i.e., us. These could be mistakes. Or, most likely, these choices are a mixture of sensible and arbitrary. Regardless, it is your responsibility to notice them. You can't make a good model without looking closely at the data which you are using.
 
 `skim` from the **skimr** package is the best way to get an overview of a tibble.
 
@@ -88,26 +92,31 @@ ch8 %>%
 
 `skim()` shows us what the different values of `treatment` are because it is a factor. Unfortunately, it does not do the same for character variables like `party`. The ranges for `age` and `att_end` seem reasonable. Recall that participants were asked three questions about immigration issues, each of which allowed for an answer which was a strength of agreement between 1 and 5, with higher values indicating more agreement with conservative viewpoints. So, the most liberal possible value is 3 and the most conservative is 15.
 
-Plotting some variables from the dataset is another important tool in exploratory data analysis:
+Plotting some variables from the dataset is another important practice in exploratory data analysis:
 
 ```{r}
 
 ch8 %>%
-  ggplot(aes(x = party)) + 
-  geom_bar() + 
+  ggplot(aes(x = party, y = age)) + 
+  geom_jitter(width = 0.1, height = 0) + 
   labs(x = "Party",
-       y = "Number of individuals",
-       title = "Distribution of Political Affiliations")
+       y = "Age",
+       title = "Age by Party Affiliation in Trains Dataset")
+```
 
+From this plot, we can gather that Democrats in this dataset are on average older than the Republicans, with their mode age being 50.
+
+```{r}
 ch8 %>%
-  ggplot(aes(x = age)) + 
-  geom_bar() + 
-  labs(x = "Age",
-       y = "Number of individuals",
-       title = "Distribution of Ages")
+  ggplot(aes(x = treatment, y = att_end)) + 
+  geom_boxplot() + 
+  labs(x = "Treatment",
+       y = "Attitude End",
+       title = "Attutide End by Treatment in Trains Dataset")
 
 ```
 
+Treated individuals have a higher average att_end than the control group. The control group seems to have an high outlier for attitude end. 
 
 
 ## Review of One Parameter Estimation
@@ -198,18 +207,7 @@ The 95% confidence interval calculated via `lm()` is, more or less, the same as 
 
 <!-- No use of bootstrap. Make clear the distinction between "modeling for prediction" and "modeling for causation." The first is only about comparisons between categories. The second is stronger, a claim about changing an individual; it is a claim about potential outcomes. -->
 
-But what if, instead of having no other information about our sample beyond their ages, we also knew their political party? How would we make a model which included this other information? This is a model for prediction, rather than a model for causal inference, because `age` can not be changed, regardless what happens to `party`. That is, someone's age is the same regardless of the party of which they are a member.
-
-```{r}
-
-trains %>%
-  ggplot(aes(x = party, y = age)) + 
-  geom_jitter(width = 0.2) + 
-  labs(x = "Party",
-       y = "Age",
-       title = "Age by Party Affiliation in Trains Dataset")
-
-```
+But what if, instead of having no other information about our sample beyond their ages, we also knew their political party? How would we make a model which included this other information? This is a model for prediction, rather than a model for causal inference, because `age` can not be changed regardless what happens to `party`. That is, someone's age is the same regardless of the party of which they are a member.
 
 The simplest model would be to guess that a person's age, conditional on their party membership, is equal to the mean age of people in that party.
 
@@ -234,39 +232,56 @@ trains %>%
 
 The initials "lm" stand for "linear model." We are creating a model in which age is a function of party. The "-1" term causes the model to provide us with the mean for each group. The coefficient estimates are the same as the mean values for age within each party. 
 
-There are three parts of understanding any model structure: whether it is causal or predictive, the mathematical formula, and realism. This model is predictive and has nothing to do with causality. Rather than modelling how the explanatory variable will change the outcome variable, we are using the explanatory variable (party) to simply predict the outcome variable (age). The difference between these two model types becomes clear when we construct a Rubin Table: 
+There are three parts of understanding any model structure: whether it is causal or predictive, the mathematical formula, and realism. This model is predictive and has nothing to do with causality. Rather than modelling how the explanatory variable will change the outcome variable, we are using the explanatory variable (party) to simply predict the outcome variable (age). The difference between these two model types becomes clear when we construct a Preceptor Table: 
 
-```{r}
+```{r, echo = FALSE}
 
 # Using real sampled ages but making my own tibble
 
-tibble(subject = c("1", "2", "...", "56", "...", "115", "... 10,000"),
-       age = c("34", "53", "...", "36", "...", "44", "?"),
-       party = c("Republican", "Democrat", "...", "Democrat", "...", "Democrat", "?")) %>%
+tibble(subject = c("1", "2", "...", "55", "...", "204", "205", "...", "1,000", "...", "100,000"),
+       age = c("34", "?", "...", "36", "...", "44", "?",  "...", "50", "...", "?"),
+       party = c("Republican", "?", "...", "Democrat", "...", "Democrat", "?",  "...", "Republican", "...", "?")) %>%
   gt() %>%
-  cols_label(subject = md("ID"),
-             age = md("Age"),
-             party = md("Party")) %>%
+  cols_label(subject = md("**ID**"),
+             age = md("**Age**"),
+             party = md("**Party**")) %>%
   tab_style(cell_borders(sides = "right"),
-            location = cells_body(columns = vars(subject))) %>%
-  tab_style(cell_text(weight = "bold"),
             location = cells_body(columns = vars(subject))) %>%
   cols_align(align = "center", columns = TRUE) %>%
   fmt_markdown(columns = TRUE)
 
 ```
 
-The rows in this Rubin Table represent the 115 commuters for whom data was gathered and the remainder of the (roughly) 10,000 commuters that our model is extrapolating on. The purpose of a Rubin Table is to capture all of the data such that if the question marks were filled out, one wouldn't need to construct a model.
+The purpose of a Preceptor Table is to capture all of the data such that if the question marks were filled out, one wouldn't need to construct a model. The rows in this Preceptor Table represent the (roughly) 100,000 commuters on which our model is extrapolating. Only 115 of these commuters had their data recorded in the experiment, which is why most observations lack data. 
 
-This table is very simple, which is the point. There is no causal effect as we are simply trying to predict the immutable variable of age. Rather than representing unknown causal effects as they may in other Rubin Tables, the question marks in a Rubin Table like this simply denote missing data, as this is a predictive model. 
+This table is very simple, which is the point. There is no causal effect as we are simply trying to predict the immutable variable of age. Rather than representing unknown causal effects as they may in other Preceptor Tables, the question marks in this table simply denote missing data. 
 
 This mathematical formula will also help us better understand the model:
-$$ y = b_0 + b_1 x $$
-$$ y = (41.16) + (42.6 - 41.16) x $$
-When the individual is a Republican (x=0), their age is predicted to be 41.16. When the individual is a Republican (x=1), their age is predicted to be 42.6. 
 
-$$ y_i = b_0 + b_1 x_i + \epsilon_i $$
-If you know the age and party affiliation of any single individual, you can solve for the epsilson, or the residual, of that observation. This is how much the individual's age varies from the prediction of their age in the model. The age of any single observation is known as the *fitted value*. 
+$$ y_i = b_1 x_r + b_2 x_d $$
+
+You couldn't know the true value of our parameters ($b_1$ and $b_2$) unless you surveyed every single commuter in the station. This is why we use models to give us estimates. A hat denotes a number that is constant and no longer variable. Because we have estimates for our parameters, $\hat{b_1}$ and $\hat{b_1}$, are denoted by hats. With these numbers plugged in, you determine a singular y value (age) for each observation, thus the denotation  $\hat{y_i}$. This is called the *fitted value*. 
+
+$$ \hat{y_i} = \hat{b_1} x_r + \hat{b_2} x_d  $$
+$$ \hat{y_i} = (41.16)x_r + (42.6)x_d $$
+When the individual is a Republican ($x_r$=1 and $x_d$=0), their fitted value is 41.16. When the individual is a Democrat ($x_r$=0 and $x_d$=1), their fiited value is 42.6. 
+
+The equation is not finished yet! 
+
+$$\epsilon_i = y_i - \hat{y_i}$$
+In order to calculate each observation's residual, you subtract the observation's age by their fitted value. 
+
+```{r, include = FALSE}
+
+library(tufte)
+
+margin_note("The residual or epsilon value is also known as the 'noise'. The number represents the real world variability of any singular observation that offsets it from the model's prediction.")
+
+```
+
+$$ y_i = \hat{b_1}x_r + \hat{b_2} x_d + \epsilon_i $$
+Once you do this, you have a complete equation. 
+
 
 The final aspect of model structure is realism. Does this model reflect the real world accurately?
 
@@ -298,9 +313,75 @@ You may notice how the range of the confidence interval for Republicans is large
 If a new Democrat entered the train station, how easy would it be to guess their age with our model? Could you confidently say that they would be within the Democrat interval bounds of 40 and 45?
 
 $$ y_i = b_0 + b_1 x_i + \epsilon_i $$
+
 One shouldn't be too confident in that prediction. The new Democrat's age comes in two parts: the beta (determined by their political party) and their epsilon/residual (how much noise there is in this observation that offsets it from the beta prediction). While the beta values have been determined by our model, the epsilon value represents *unmodeled variation* that could likely put the value outside of these bounds. 
 
-### Rubin Table
+### Preceptor Table
+
+To continue our discussion of unmodeled variation, we'll bring back our Preceptor Table. This time, it will be a reduced table for just a few observations with data: 
+
+```{r, echo = FALSE}
+
+tibble(subject = c("Sam", "Darren", "Achele", "Anwar", "David", "Declan", "Adele"),
+       age = c("31", "34", "63", "45", "55", "53", "24"),
+       party = c("Democrat", "Republican", "Democrat", "Democrat", "Republican", "Democrat", "Republican")) %>%
+  gt() %>%
+  cols_label(subject = md("**ID**"),
+             age = md("**Age**"),
+             party = md("**Party**")) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(subject))) %>%
+  cols_align(align = "center", columns = TRUE) %>%
+  fmt_markdown(columns = TRUE)
+
+```
+
+Let's begin by adding each individual's fitted value for age from our model. 
+
+```{r, echo = FALSE}
+
+tibble(subject = c("Sam", "Darren", "Achele", "Anwar", "David", "Declan", "Adele"),
+       age = c("31", "34", "63", "45", "55", "53", "24"),
+       party = c("Democrat", "Republican", "Democrat", "Democrat", "Republican", "Democrat", "Republican"),
+       fitted = c("42.6", "41.1", "42.6", "42.6", "41.1", "42.6", "41.1")) %>%
+  gt() %>%
+  cols_label(subject = md("**ID**"),
+             age = md("**Age**"),
+             fitted = md("**fitted**"),
+             party = md("**Party**")) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(subject))) %>%
+  cols_align(align = "center", columns = TRUE) %>%
+  fmt_markdown(columns = TRUE)
+
+```
+
+The fitted values are the same for all Republicans and for all Democrats. Remember that the actual age of each observation is the addition of the model and noise (or the residual). The fitted value represents the "model" part of that equation, which is why each value is one of the two coefficients outputted by our model. 
+
+```{r, echo = FALSE}
+
+tibble(subject = c("Sam", "Darren", "Achele", "Anwar", "David", "Declan", "Adele"),
+       age = c(31, 34, 63, 45, 55, 53, 24),
+       party = c("Democrat", "Republican", "Democrat", "Democrat", "Republican", "Democrat", "Republican"),
+       fitted = c(42.6, 41.1, 42.6, 42.6, 41.1, 42.6, 41.1)) %>%
+  mutate(noise = fitted - age) %>%
+  gt() %>%
+  cols_label(subject = md("**ID**"),
+             age = md("**$$y_i$$**"),
+             party = md("**Party**"),
+             fitted = md("**fitted**"),
+             noise = md("**residual**")) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(subject))) %>%
+  cols_align(align = "center", columns = TRUE) %>%
+  fmt_markdown(columns = TRUE)
+
+```
+
+The other half of the equation is the residual, which accounts for the difference between each individual's age from its fitted value. Note the new column name for age: $y_i$ is the sum of the fitted and epilson value. 
+Recall our discussion of unmodeled variation. This Preceptor table shows how just a sample of 7 individuals captures a wide range of residuals, making it difficult to predict the age of a new individual who walks in the room even using our model.
+
+
 
 <!-- DK: I went fast above, but that is all the key material. Still need to add a Rubin Table example, highlighting that this is modeling for prediction. There is only one column for Y because it is impossible to change someone's age, whatever manipulations you make to party. -->
 
@@ -374,15 +455,25 @@ It is always important to keep the problem of validity in the back of our minds 
 
 ## `att_end` as a function of `treatment`
 
-Let's establish the two types of models we've studied thus far. What we explored above was a predictive model: with someone's party affiliation, we can make a better guess as to what their age is. 
+Let's establish the two types of models we've studied thus far. What we explored above was a predictive model: with someone's party affiliation, we can make a better guess as to what their age is. In this example, we'll explore a causal model, looking for the casual effect of randomly assigned treatments on att_end. 
 
-However, that's just about all we can do with this relationship. Recall that the trains dataset was originally introduced in the context of the Rubin Causal Model back in Chapter \@ref(rubin-causal-model). That model cannot be applied to the relationship between party and income because these values were independently decided outside the experiment — although we were able to identify correlations between those two variables, the combinations of party and income were predetermined and not randomly assigned in a way that allows us to establish a causal relationship.
+Here's the model using lm():
 
-If that's difficult to wrap your head around, here's big-idea reason for why we wouldn't look at the party-income relationship as causal: if an individual suddenly decided to change party affiliations — say, he or she decided to vote for Biden in the 2020 election despite having voted for Trump in 2016 — we wouldn't suddenly expect his or her income to, solely because of this change in party affiliation, spike or plummet. There are many other factors at play when determining these two variables that make identifying a causal relationship impossible.
+```{r}
+
+lm(data = trains, att_end ~ treatment - 1, )
+
+```
+
+The *fitted value* of att_end was 8.45 for the control group and 10 for the treated group. Because a higher att_end means more conservative towards stances on immigration, it seems that treated individuals ended up more conservative on this issue than the control group. 
+
+### Model Structure
+
+Our predictive model helped us make guesses as to what an individual's age is. However, that's just about all we can do with this relationship. Recall that the trains dataset was originally introduced in the context of the Rubin Causal Model back in Chapter \@ref(rubin-causal-model). That model cannot be applied to the relationship between party and income because these values were independently decided outside the experiment — although we were able to identify correlations between those two variables, the combinations of party and income were predetermined and not randomly assigned in a way that allows us to establish a causal relationship. If an individual suddenly decided to change party affiliations, we wouldn't suddenly expect his or her income to spike or plummet. 
 
 In conclusion, while we can explore correlations or trends between party and income, we cannot label these correlations or trends as causal. However, `treatment` was a variable that was randomly assigned to subjects, and we have a variable that was measured after this random assignment, `att_end`. With this setup, we can calculate the Average Treatment Effect, or the average difference in `att_end` for treated subjects and control subjects. 
 
-```{r}
+```{r, warning = FALSE, message = FALSE}
 
 mean_ends <- trains %>% 
   group_by(treatment) %>% 
@@ -396,28 +487,46 @@ ATE <- mean_ends$mean_att_end[2] - mean_ends$mean_att_end[1]
 
 ```
 
-Here, we see that the average treatment effect is `r ATE`; this is the average change in att_end caused by treatment (if this statistic looks unfamiliar, refer back to chapter 3 for a refresher on ATE). But how confident are we in this ATE? We can use `lm()` again to generate confidence intervals for this parameter (note that, as mean is a linear measure, we can use `lm()` no problem!):
+Next, the second part of model structure, the formula. 
+
+$$ y_i = b_1 x_t + b_2 x_c$$
+Once again, we start here. We can make our parameters constants, $\hat{b_1}$ and $\hat{b_1}$, by assigning them to the estimates of the model. Plugging in these numbers outputs an estimated att_end for the observation, or our *fitted value*   $\hat{y_i}$. 
+
+$$ \hat{y_i} = \hat{b_1} x_t + \hat{b_2} x_c  $$
+$$ \hat{y_i} = (8.45)x_t + (10)x_c $$
+When the individual is treated ($x_t$=1 and $x_c$=0), their fitted value is 8.45. When the individual is a control ($x_d$=0), their fiited value is 42.6. 
+
+Subtract the recorded att_end by fitted value for the epsilon value...
+$$\epsilon_i = y_i - \hat{y_i}$$
+...And you can now complete your equation.
+$$ y_i = \hat{b_1}x_r + \hat{b_2} x_d + \epsilon_i $$
+<!-- MB: Realism -->
+
+### Parameter Uncertainty
+
+Here, we see that the average treatment effect is `r ATE`; this is the average change in att_end caused by treatment (if this statistic looks unfamiliar, refer back to chapter 3 for a refresher on ATE). But how confident are we in this ATE? We can use `lm()` again to generate confidence intervals for our parameters and this value:
 
 ```{r}
 #This is necessary so we can see the offset as caused by treatmentTreated, not treatmentControl.
 
 trains$treatment <-fct_relevel(trains$treatment, "Control", "Treated")
 
-lm(data = trains, att_end ~-1 + treatment) %>% 
+x <- lm(data = trains, att_end ~ treatment - 1) %>% 
   tidy(conf.int = TRUE) %>%
-  select(term, estimate, conf.low, conf.high)
-
-#To do: add row numbers, figure out a way to mutate columns as to include both values — maybe a function could be useful here?)
+  select(term, estimate, conf.low, conf.high) %>%
+  as_tibble()
 
 ```
 
-The confidence intervals represent our confidence in the average treatment effect of the `trains` dataset being representative of the true average treatment effect on Boston commuters.
+<!-- MB: How do I calculate the confidence interval for ATE  -->
 
-### Rubin Table
+The confidence intervals show our confidence in the average treatment effect of the `trains` dataset being representative of the true average treatment effect on Boston commuters.
 
-Now, we'll create the RCM table of possible outcomes, as we did back in ch3:
+### Unmodeled Variation
 
-<!-- EM: The Rubin tables below should be structurally different from the ones you constructed for age and party affiliation because age~party is merely predictive while att_end~treatment is CAUSAL. This explains there being TWO outcome columns for the att_end~treament model instead of only ONE outcome column, like we have for the age~party Rubin Table. Make sure that this distinction is clear — burn it into the reader's mind. -->
+### Preceptor Table
+
+Now, we'll create the Preceptor table -- a RCM table in this case -- of possible outcomes, as we did back in ch3:
 
 ```{r}
 
@@ -438,8 +547,6 @@ trains_RCM %>%
                 Control = md("$$Y_c(u)$$"),
                 Treated = md("$$Y_t(u)$$")) %>%
   tab_style(cell_borders(sides = "right"),
-            location = cells_body(columns = vars(subject))) %>%
-  tab_style(cell_text(weight = "bold"),
             location = cells_body(columns = vars(subject))) %>%
   cols_align(align = "center", columns = TRUE) %>%
   tab_header(title = "Att_end of First Ten Respondents of Train Dataset")
@@ -463,14 +570,12 @@ tibble(subject = 1:7,
                 Treated = md("$$Y_t(u)$$")) %>%
   tab_style(cell_borders(sides = "right"),
             location = cells_body(columns = vars(subject))) %>%
-  tab_style(cell_text(weight = "bold"),
-            location = cells_body(columns = vars(subject))) %>%
   cols_align(align = "center", columns = TRUE) %>%
   tab_header(title = "Att_end of First Ten Respondents of Train Dataset")
 
 ```
 
-Recall our earlier conversation regarding the difference between confidence intervals; an argument could be made that, taking individual variation into account, prediction intervals would be more accurate indicators of uncertainty than confidence intervals. We can construct the above table using prediction intervals instead, generated using the `predict()` function:
+Recall our earlier conversation regarding the difference between confidence intervals. An argument could be made that, taking individual variation into account, prediction intervals would be more accurate indicators of uncertainty than confidence intervals. We can construct the above table using prediction intervals instead, generated using the `predict()` function:
 
 ```{r}
 
@@ -508,13 +613,19 @@ tibble(subject = 1:7,
                 Treated = md("$$Y_t(u)$$")) %>%
   tab_style(cell_borders(sides = "right"),
             location = cells_body(columns = vars(subject))) %>%
-  tab_style(cell_text(weight = "bold"),
-            location = cells_body(columns = vars(subject))) %>%
   cols_align(align = "center", columns = TRUE) %>%
   tab_header(title = "Att_end of First Ten Respondents of Train Dataset") %>%
-  tab_footnote(footnote = "Note: minimum att_end is 3 and maximum att_end is 15",
+  tab_footnote(footnote = "Note: ",
                locations = cells_column_labels(
       columns = T))
+```
+
+```{r, include = FALSE}
+
+library(tufte)
+
+margin_note("The minimum att_end is 3 and maximum att_end is 15.")
+
 ```
 
 Regardless of whether we use confidence or prediction intervals for these unknowns, however, the table looks a bit funky: take a look at subject 3. According to this model, subject 3's attitude under control would be HIGHER than his/her attitude under treatment, which corresponds to a negative treatment effect. This would mean that he/she would become more LIBERAL after undergoing treatment, which flies in the face of the ATE we calculated earlier. Another example of this can be seen with subject 7, whose predicted `att_end` under treatment is lower than his/her `att_end` under control (also signifying a shift towards liberal attitudes regarding immigration). 
@@ -542,8 +653,6 @@ tibble(subject = 1:7,
                 Control = md("$$Y_c(u)$$"),
                 Treated = md("$$Y_t(u)$$")) %>%
   tab_style(cell_borders(sides = "right"),
-            location = cells_body(columns = vars(subject))) %>%
-  tab_style(cell_text(weight = "bold"),
             location = cells_body(columns = vars(subject))) %>%
   cols_align(align = "center", columns = TRUE) %>%
   tab_header(title = "Att_end of First Ten Respondents of Train Dataset")
