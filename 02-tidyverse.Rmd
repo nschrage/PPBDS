@@ -42,32 +42,65 @@ nesting(...)
 
 <!-- EWF: should I discuss tibbles vs. dataframes? parse_* functions? --> 
 
-Recall from the previous chapter the `dem_score` dataset. Let's load it again
+Recall the `read_csv()` function from chapter 1 of this textbook. In a previous exercise, we ran the following code chunk:
 ```{r}
 library(readr)
-dem_score <- read_csv("https://moderndive.com/data/dem_score.csv")
+dem_score <- read_csv(file = "https://moderndive.com/data/dem_score.csv")
+```
+The result of this code chunk is pretty tame. It tells us that each comma from the .csv file corresponds to a column, and the column names are taken from the first line of the file. Then, the function "guesses" an appropriate data type for each of the columns it creates. Sometimes .csv files are a lot dirtier and require significant wrangling before you can explore the data and create usable graphics. 
+
+Let's try to run `read_csv()` on another dataset. This is a link to a file containing the faculty's gender data across departments at Harvard University.
+```{r}
+url <- "https://raw.githubusercontent.com/davidkane9/PPBDS/master/02-tidyverse/data/harvard-faculty-gender-final.csv"
+gender_data <- read_csv(file = url)
 ```
 
-Again recall the `View()` and `glimpse()` functions  and the `$` from the previous chapter. These were useful tools to explore a new dataset. Let's use these functions to explore the demo_score dataset. 
+Now, call `gender_data`.
+```{r}
+gender_data
+```
 
-```{r eval=FALSE}
-View(dem_score)
+As you can see, the second row was likely meant to contain the column names. You can run `?read_csv()` in your console to see the additional arguments that the `read_csv()` function may contain to make the new dataframe easier to work with.
+
+```{r}
+gender_data <- read_csv(file = url, skip = 1)
+gender_data
+```
+
+Now suppose we want to change the data type of one of more of the columns. The `col_type` argument allows us to do this. Without the `col_type` argument, the `division` column is read in as a character column. Instead, we want it to be read in as a factor.  
+
+```{r}
+gender_data <- read_csv(file = url, skip = 1, col_type = cols(division = col_factor()))
+```
+
+Now that the new dataset has been read in, explore it using the `View()` and `glimpse()` functions and the `$` operator from the previous chapter. 
+```{r}
+View(gender_data)
 ```
 
 ```{r}
-glimpse(dem_score)
+glimpse(gender_data)
 
-dem_score$country
+gender_data$division
 ```
 
+Run the `summary()` function on the `gender_data` dataframe.
+```{r}
+summary(gender_data)
+```
+You may notice that something appears to be wrong with this dataset. Which department could have employed 644 male full professors. Let's explore what is going wrong here. 
+```{r}
+gender_data %>% filter(full_profs_m == 644)
+```
 ## `summarize` variables {#summarize}
-<!-- EF: Add across(), rownumber(), and rowwise() --> 
+<!-- EF: Add across() and rowwise() --> 
 
 The next common task when working with data frames is to compute *summary statistics*. \index{summary statistics}Summary statistics are single numerical values that summarize a large number of values. Commonly known examples of summary statistics include the mean (also called the average) and the median (the middle value). Other examples of summary statistics that might not immediately come to mind include the *sum*, the smallest value also called the *minimum*, the largest value also called the *maximum*, and the *standard deviation*. See Appendix \@ref(appendix-stat-terms) for a glossary of such summary statistics.
 
 ```{r, echo=FALSE, fig.cap="Diagram of summarize() rows."}
 knitr::include_graphics("02-tidyverse/images/summarize1.png")
 ```
+
 
 Let's calculate two summary statistics of the `temp` temperature variable in the `weather` data frame: the mean and standard deviation (recall from Section \@ref(nycflights13) that the `weather` data frame is included in the `nycflights13` package). To compute these summary statistics, we need the `mean()` and `sd()` *summary functions* in R. Summary functions in R take in many values and return a single value.
 
@@ -100,7 +133,7 @@ Notice how the `na.rm = TRUE` \index{functions!na.rm argument} are used as argum
 
 However, one needs to be cautious whenever ignoring missing values as we've just done. There are possible ramifications of blindly sweeping rows with missing values "under the rug." This is in fact why the `na.rm` argument to any summary statistic function in R is set to `FALSE` by default. In other words, R does not ignore rows with missing values by default. R is alerting you to the presence of missing data and you should be mindful of this missingness and any potential causes of this missingness throughout your analysis.
 
-<!-- EwF: I think here might be a good moment to take a slightly longer detour and discuss a few other 
+<!-- EWF: I think here might be a good moment to take a slightly longer detour and discuss a few other 
 items like is.na() while thinking about NA values in this section --> 
 
 What are other summary functions we can use inside the `summarize()` verb to compute summary statistics? As seen in the diagram in Figure \@ref(fig:summary-function), you can use any function in R that takes many values and returns just one. Here are just a few:
@@ -149,7 +182,6 @@ Here we discuss common remedial tasks for cleaning and transforming character da
 Here are some resources:
 
 ### Manipulating character vectors
-<!-- EWF: Add str_view(), regex() --> 
 
 * [stringr package][stringr-web].
   - A core package in the `tidyverse.` It is installed via `install.packages("tidyverse")` and also loaded via `library(tidyverse)`. Of course, you can also install or load it individually.
@@ -226,6 +258,19 @@ What's the easiest way to get the actual fruits that match? Use `str_subset()` t
 
 ```{r}
 (my_fruit <- str_subset(fruit, pattern = "fruit"))
+```
+
+### View a specific string
+Use `stringr::str_view()` to create a window in your viewer that highlights a specified pattern for any and all instances within the list. Below we look at a subset of fruit and highlight the pattern "berry" within items in that list. 
+
+```{r}
+str_view(fruit[5:10], pattern = "berry")
+```
+
+This can be helpful when you want to check that you are highlighting the correct pattern (especially when using regex). What do you think the following regex means? (This will be explained in more depth later)
+
+```{r}
+str_view(fruit[1:5], pattern = "^a.*o")
 ```
 
 ### String splitting by delimiter
