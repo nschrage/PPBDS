@@ -11,21 +11,10 @@ knitr::opts_chunk$set(echo = TRUE, tidy = FALSE, cache.extra = packageVersion('t
 library(gt)
 library(tidyverse)
 library(tufte)
-library(remotes)
 library(PPBDS.data)
-library(webshot)
-library(infer)
 ```
 
-<!-- Why is this not working? -->
 
-<!-- 1. Table centering. Set up time with Yao. -->
-
-
-<!-- 2. Permutation example and code. Biggest current hole is the lack of a permutation test coding example. When we do this, we will want to create the permutations "by hand," rather than relying on an R package for doing so, I think that there are some elegant ways to do this with tidyverse, like crossing() or expand(). Maybe rsample::bootstraps()?  -->
-
-<!-- 3. Read about estrogen case. https://www.teachepi.org/wp-content/uploads/OldTE/documents/courses/bfiles/The%20B%20Files_File1_HRT_Final_Complete.pdf CB: Done. -->
-=======
 <!-- 0) Read chapter 5. And set up PPBDS.data. Submit pull request with a tutorial.Rmd for your chapter with a few questions in it. -->
 
 <!-- 1) Zoom with Tahmid. Add Rubin Table discussion to chapter 7, in a couple of places. The only things that belong in a Rubin Table are numbers, or posterior distributions of those numbers. -->
@@ -44,11 +33,18 @@ Go back to basic case. Key is coming up with a model and filling in the question
 <!-- Another aspect of the Governor's paper that I like is that it highlights that, often, we can only (plausibly) estimate tau for a subset of the data.  -->
 
 
-<!-- 4. Explain *heterogenous treatment effects*. Tie that concept to interaction terms. Discussing that now sets the stage for more concrete discussion in the regression chapters. CB: Done. -->
 
-<!-- We should have a whole section devoted to bias/confounding, centered around the simple example of college attendance which I added at the end. Mention natural experiments and maybe other stuff. Highlight some examples, like the estrogen treatments which gave women cancer, where the assignment mechanism was not random. In the train example, what if we allowed the Spanish-speakers to select which platform they went on to? What if they were guided, subconsiously, to more or less crowded platforms? What if they sought to have an effect, like the perfect doctor? CB: Done -->
+<!-- Third, let's do some coding! (Or maybe we don't show the students the code you use to demonstrate these things. I am not sure.) Anyway, start with a simple example (maybe 8 people) in which you know all the values in the RT and in which tau is a constant positive number. (Recall some of the videos about permtutations tests that I made you watch.) Question: Does random assignment guarantee that we get the right answer? NO! This is a point that students often get wrong. Pick one "random" assignment which generates a negative estimate of tau. And that could easily happen. -->
 
-<!-- The second biggest hole is the lack of an example somewhere between random assignment and the perfect doctor. This is where the bias/confounding example belongs (college attendance), not at the end. It is core to what we are doing. That is, the assignment mechanism is a complex and subtle beast. It will fool us if we let it. CB: Done -->
+<!-- But then show what happens for all the 70 (8 choose 4) possible treatment assignments, each one with equal likelihood of happening if assignment is truly random. (Subtle note is that we are requiring that 4 get the treatment and 4 get the control.) Some of these overestimate tau. Some underestimate it. But the average of all possible assignments will be tau, which is why randomization is so cool. But the 70 possible results are really spread out! It would not be surprising if, by chance, you picked one that gave a very wrong answer. Which would make you sad! -->
+
+<!-- Then, extend this example to 1000 units. There are 2.702882e+299 possible assignments of 500 to treatment and 500 to control. You can't calculate the (estimated) treatment effect with all of them. But you can sample 1,000 of them. Two things will be true. Average of this sample will be the (true) treatment, just as with the 8 unit case. And it will be much more precisely estimated. Overlap the density estimates. Both will be centered around tau, the value of which you know. Butthe second is much more peaked.  -->
+
+<!-- Fourth, the above provides a natural segue into permutation tests, which are just like these experiments, except you assume tau = 0. That is what a permutation test is.  -->
+
+<!-- Permutation example and code. Biggest current hole is the lack of a permutation test coding example. When we do this, we will want to create the permutations "by hand," rather than relying on an R package for doing so, I think that there are some elegant ways to do this with tidyverse, like crossing() or expand(). Maybe rsample::bootstraps()?  -->
+
+<!-- Fifth, connect all this to the central theme of 98% of social science research --- using observational data to infer causation by treating the assignment mechanism as being close enough to random. This is where we can discuss stuff like natural experiments, difference in differences, regression discontinuity and so on. Let's discuss. (Save this for next week.) -->
 
 <!-- DK: Consider the governors paper from PPBDS.data. This is a great, concrete example which might serve as the second key data set in the chapter. It provides a structure to discuss all the issues which make it hard --- but sometimes still possible! --- to use observational data to estimate causal effects. Let's outline some of the things we might discuss: -->
 
@@ -58,25 +54,17 @@ Go back to basic case. Key is coming up with a model and filling in the question
 
 <!-- Lots of useful material here: https://chabefer.github.io/STCI/ -->
 
-
 <!-- Other potential topics -->
 
 <!-- unit/item nonresponse -->
 <!-- ignorability -->
 <!-- treat potential outcomes as fixed (can we do this with regression?) -->
-<!-- difference in differences -->
-<!-- regression discontinuity -->
-
-
-<!-- DK: Make an appointment to talk with Yao about how we should do references in the book. -->
-
 
 ```{r echo=FALSE, fig.cap="[Don Rubin was a professor of Statistics at  Harvard.](https://www.uni-bamberg.de/fileadmin/bagss/Bilder/Editorial/21711197.jpg).", fig.margin = TRUE}
 knitr::include_graphics("03-rubin-causal-model/images/don_rubin.jpg")
 ```
 
-
-The Rubin Causal Model (RCM) is an approach to the statistical analysis of cause and effect based on the framework of potential outcomes, created by Donald Rubin. The name "Rubin Causal Model" was first coined in Holland (1986).  
+The Rubin Causal Model (RCM) is an approach to the statistical analysis of cause and effect based on the framework of potential outcomes, created by Donald Rubin. The name "Rubin Causal Model" was first coined in Holland (1986). 
 
 ## What is a causal effect?
 
@@ -86,14 +74,13 @@ knitr::include_graphics("03-rubin-causal-model/images/enos_seal.png")
 
 The Rubin Causal Model (RCM) is based on the idea of **potential outcomes.** For example, let's use a social experiment that looked at exclusionary attitudes of commuters on a train platform. The commuters were exposed to one of two possible conditions, and then their attitudes towards immigrants were measured. One condition was being on a train platform near individuals speaking Spanish. The other was being on a train platform with no one in the vicinity. To calculate the causal effect of having Spanish speakers nearby, we need to compare the outcome for an individual in one alternative future (with Spanish speakers) to another (without Spanish speakers). Since it is impossible to observe both potential outcomes at once, one of the potential outcomes is always missing. This dilemma is the *Fundamental Problem of Causal Inference*. (If you are confused on why it is impossible to observe both potential outcomes, reference section 3.5.2 under 'Other issues with causal inference'.)
 
-In most circumstances, we are interested in comparing two futures, one generally termed "treatment" and the other "control." These labels are somewhat arbitrary. The difference between the potential outcome under treatment and the potential outcome under control is called a "causal effect" or a "treatment effect."  The scenario that didn't actually happen, and thus that we didn't observe, is called a "counterfactual."
+In most circumstances, we are interested in comparing two futures, one generally termed "treatment" and the other "control." These labels are somewhat arbitrary. The difference between the potential outcome under treatment and the potential outcome under control is called a "causal effect" or a "treatment effect."  The scenario that didn't actually happen, and thus that we didn't observe, is called a "counterfactual." 
 
-<!-- EC: The relationship between the counterfactual and the fundamental problem of causal inference could be made more clear here -->
+Thus, according to the RCM, the **causal effect** of being on the platform with Spanish speakers is the *difference* between what your attitude would have been under "treatment" (with Spanish speakers) and "control" (no Spanish speakers).
 
-<!-- MB: What do you mean when you call the labels arbitrary? Doesn't relate in context to rest of paragraph as stands -->
+Low numbers indicate liberal attitudes towards immigrants and high numbers indicate more conservative attitudes. If your attitude towards immigrants would have been a 13 with Spanish speakers and a 9 without Spanish speakers, then the causal effect of being on a platform with Spanish speakers is a 4-point increase in your attitude.
 
-Thus, according to the RCM, the **causal effect** of being on the platform with Spanish-speaking people is the *difference* between what your attitude would have been under "treatment" (with Spanish-speaking people) and "control" (no Spanish-speaking people).
-Low numbers indicate liberal attitudes towards immigrants and high numbers indicate more conservative attitudes. If your attitude towards immigrants would have been a 13 with Spanish-speaking people and a 9 without Spanish-speaking people, then the causal effect of being on a platform with Spanish-speaking people is a 4-point increase in your attitude.
+We will use the variable $Y$ to represent values we are interested in understanding (potential outcomes). $Y$ is called the *response variable* because it is the variable we want to explain in the context of an experiment. In our case this would be the attitude score. If we are trying to understand a causal effect however, we need two variables to work with: something that represents control and treated values separately. In order to do that, we will use the variables $Y_t$ and $Y_c$. That gives us two response variables to work with that vary on their treatment status.
 
 ### Potential outcomes: introduction to the Rubin Table
 
@@ -102,7 +89,7 @@ Suppose that Yao is one of the commuters surveyed in this social experiment. If 
 ```{r, echo = FALSE, fig.align = 'left'}
 # First, we create a tibble with the values we want for the table
 
-tibble(subject = "Joe",
+tibble(subject = "Yao",
        ytreat = "13",
        ycontrol = "9",
        ydiff = "+4") %>%
@@ -121,30 +108,24 @@ tibble(subject = "Joe",
   cols_align(align = "center", columns = TRUE)
 ```
 
-```{r echo=FALSE, fig.align = 'center'}
-
-# CB: This works to center a gt table but have to do it individually for every
-# gt table in the book
-
-knitr::include_graphics(tempdir("gt1.png"))
-```
+<!-- SJ: Something that is a bit unclear to me is the phrasing "Attitude if Treated" it seems when reading this that the patients are being treated even though I know you are talking about the treatment group. Is there a way you could explain why it is worded this way before using it? -->
 
 From this table we only know the causal effect on Yao. Everyone else in the study might have their attitude score go down if treated (more liberal). However, regardless of what the causal effect is for the other subjects, the causal effect for Yao is a shift towards a more conservative attitude relative to what his attitude would have been had Spanish speakers *not* been on his platform.
 
-
 In a Rubin Table, mathematical notation can also be used to describe potential outcomes.
 
-`r margin_note("$Y_{t}(u)$ is the same as 'Attitude if Treated'")`
-$Y_{t}(u)$ is Joe's attitude toward immigrants if there are Spanish-speaking people on his platform (treated). In general, this notation expresses the potential outcome which results from a treatment, $t$, on a unit, $u$.
+`r margin_note("$Y_{t}$ is the same as 'Attitude if Treated'")`
+$Y_{t}$ is Yao's attitude toward immigrants if there are Spanish speakers on his platform (treated). In general, this notation expresses the potential outcome which results from a treatment, $t$, on a unit, $u$.
 
-`r margin_note("$Y_{c}(u)$ is the same as 'Attitude if Control'")`
-Similarly, $Y_{c}(u)$ is the effect of a different treatment, $c$ or control, on a unit, $u$. In this case, $Y_{c}(u)$ is Joe's attitude if there were no Spanish-speaking people on his platform.
+`r margin_note("$Y_{c}$ is the same as 'Attitude if Control'")`
+Similarly, $Y_{c}$ is the effect of a different treatment, $c$ or control, on a unit, $u$. In this case, $Y_{c}$ is Yao's attitude if there were no Spanish speakers on his platform.
 
-`r margin_note("$Y_{t}(u)-Y_{c}(u)$ is the same as 'Treatment Effect'")`
-$Y_{t}(u)-Y_{c}(u)$ is the causal effect pf there being Spanish-speaking people on the platform.  Thus, Joe would have an attitude score of $13$ if there were Spanish-speaking people and $9$ if there were not; the causal effect of the presence of Spanish-speaking people is is $4$.
+`r margin_note("$Y_{t}-Y_{c}$ is the same as 'Treatment Effect'")`
+$Y_{t}-Y_{c}$ is the causal effect pf there being Spanish speakers on the platform.  Thus, Yao would have an attitude score of $13$ if there were Spanish speakers and $9$ if there were not; the causal effect of the presence of Spanish speakers is is $4$.
 
 ```{r, echo = FALSE}
 # First, we create a tibble with the values we want for the table
+
 tibble(subject = "Yao",
        ytreat = "13",
        ycontrol = "9",
@@ -154,9 +135,9 @@ tibble(subject = "Yao",
   
 gt() %>%
   cols_label(subject = md("$$\\mathbf{Subject}$$"),
-                ytreat = md("$$Y_t(u)$$"),
-                ycontrol = md("$$Y_c(u)$$"),
-                ydiff = md("$$Y_t(u) - Y_c(u)$$")) %>%
+                ytreat = md("$$Y_t$$"),
+                ycontrol = md("$$Y_c$$"),
+                ydiff = md("$$Y_t - Y_c$$")) %>%
   tab_style(cell_borders(sides = "right"),
             location = cells_body(columns = vars(subject))) %>%
   tab_style(cell_text(weight = "bold"),
@@ -167,12 +148,12 @@ gt() %>%
 
 ### Estimands
 
-Let's look again at our basic Rubin Table for Joe:
+In order to get an idea of an Estimand, let's look again at our basic Rubin Table for Yao:
 
 ```{r, echo = FALSE}
 # First, we create a tibble with the values we want for the table
 
-tibble(subject = "Joe",
+tibble(subject = "Yao",
        ytreat = "13",
        ycontrol = "9",
        ydiff = "+4") %>%
@@ -181,9 +162,9 @@ tibble(subject = "Joe",
   
   gt() %>%
   cols_label(subject = md("$$\\mathbf{Subject}$$"),
-                ytreat = md("$$Y_t(u)$$"),
-                ycontrol = md("$$Y_c(u)$$"),
-                ydiff = md("$$Y_t(u) - Y_c(u)$$")) %>%
+                ytreat = md("$$Y_t$$"),
+                ycontrol = md("$$Y_c$$"),
+                ydiff = md("$$Y_t - Y_c$$")) %>%
   tab_style(cell_borders(sides = "right"),
             location = cells_body(columns = vars(subject))) %>%
   tab_style(cell_text(weight = "bold"),
@@ -197,7 +178,7 @@ We have Yao's potential outcome under treatment, Yao's potential outcome under c
 ```{r, echo = FALSE}
 # First, we create a tibble with the values we want for the table
 
-tibble(subject = "Joe",
+tibble(subject = "Yao",
        ytreat = "13",
        ycontrol = "9",
        yratio = "13/9") %>%
@@ -206,9 +187,9 @@ tibble(subject = "Joe",
   
   gt() %>%
   cols_label(subject = md("$$\\mathbf{Subject}$$"),
-                ytreat = md("$$Y_t(u)$$"),
-                ycontrol = md("$$Y_c(u)$$"),
-                yratio = md("$$Y_t(u) / Y_c(u)$$")) %>%
+                ytreat = md("$$Y_t$$"),
+                ycontrol = md("$$Y_c$$"),
+                yratio = md("$$Y_t / Y_c$$")) %>%
   tab_style(cell_borders(sides = "right"),
             location = cells_body(columns = vars(subject))) %>%
   tab_style(cell_text(weight = "bold"),
@@ -222,7 +203,7 @@ Or the percentage change in his potential outcomes:
 ```{r, echo = FALSE}
 # First, we create a tibble with the values we want for the table
 
-tibble(subject = "Joe",
+tibble(subject = "Yao",
        ytreat = "13",
        ycontrol = "9",
        yperc = "+44.4%") %>%
@@ -231,9 +212,9 @@ tibble(subject = "Joe",
   
   gt() %>%
   cols_label(subject = md("$$\\mathbf{Subject}$$"),
-                ytreat = md("$$Y_t(u)$$"),
-                ycontrol = md("$$Y_c(u)$$"),
-                yperc = md("$$(Y_t(u) - Y_c(u)) / Y_c(u) \\times 100$$")) %>%
+                ytreat = md("$$Y_t$$"),
+                ycontrol = md("$$Y_c$$"),
+                yperc = md("$$(Y_t - Y_c / Y_c) \\times 100$$")) %>%
   tab_style(cell_borders(sides = "right"),
             location = cells_body(columns = vars(subject))) %>%
   tab_style(cell_text(weight = "bold"),
@@ -242,7 +223,11 @@ tibble(subject = "Joe",
   fmt_markdown(columns = TRUE)
 ```
 
-Now, let's consider a larger sample of patients: 
+So far, we have considered a table showing potential outcomes for only Yao. Generally a study would not have just one subject. Instead there would be many individuals in an experiment that would all have their own unique potential outcomes. In that case, it no longer makes sense to have $Y_t$ or $Y_c$ represent all of the unique potential outcomes in a table. A new variable is needed to differentiate between individuals. 
+
+In other words, there needs to be a distinction between $Y_t$ for Yao, and $Y_t$ for Emma. We could do something like $Y_t(Yao)$ and $Y_t(Emma)$, but that would be an ineffective approach if we wanted to fill out a full Rubin table. Instead, we use the variable $u$ ($u$ for units) to indicate that the treatment effect varies by each individual unit (person) in our study. The $u$ represents all the different individuals in a study without requiring that we create a new variable for each person. Now, instead of $Y_t$, we use $Y_t(u)$ to represent Attitude if Treated. If you want to talk about only Emma, you could say "Emma's Attitude if Treated" or "$Y_t(Emma)$" or "the $Y_t(u)$ for Emma", but not just $Y_t$. That notation is too ambiguous when there is more than one subject you might be talking about.
+
+Now, let's consider a larger sample of subjects using our new notation: 
 
 ```{r, echo = FALSE}
 # First, we create a tibble with the values we want for the table
@@ -267,11 +252,10 @@ tibble(subject = c("Yao", "Emma", "Cassidy", "Tahmid", "Diego"),
   fmt_markdown(columns = TRUE)
 ```
 
-<!-- Would it be appropriate to include any of the mean values as an example of an estimand? As they are no longer in the table what would be the best way to present them? -->
-
 From this Rubin Table, there are many possible values we might calculate.  Here are just a sampling:
 
 <!-- DK: Need to discuss other estimands, like causal effect on the treated. -->
+
 ::: {.fullwidth} 
 
 - A potential outcome for one person, e.g., Yao's potential outcome under treatment ($13$).  
@@ -297,6 +281,43 @@ So far, we have been able to calculate all of these different values through sim
 
 Remember, the data we actually observe looks something like this:
 
+```{r, echo = FALSE}
+# First, we create a tibble with the values we want for the table
+
+tibble(subject = c("Yao", "Emma", "Cassidy", "Tahmid", "Diego"),
+       ytreat = c("13", "11", "?", "?", "5"),
+       ycontrol = c("?", "?", "10", "12", "?"),
+       ydiff = c("?", "?", "?", "?", "?")) %>%
+  
+  # Then, we use the gt function to make it pretty
+  
+  gt() %>%
+  cols_label(subject = md("$$\\mathbf{Subject}$$"),
+                ytreat = md("$$Y_t(u)$$"),
+                ycontrol = md("$$Y_c(u)$$"),
+                ydiff = md("$$Y_t(u) - Y_c(u)$$")) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(subject))) %>%
+  tab_style(cell_text(weight = "bold"),
+            location = cells_body(columns = vars(subject))) %>%
+  cols_align(align = "center", columns = TRUE) %>%
+  fmt_markdown(columns = TRUE)
+```
+
+Question marks are responses that could not be observed. The Fundamental Problem of Causal Inference^[Holland 1986.] is that directly observing unit-level causal effects is impossible. If we don't have all the values in our table, how do we calculate anything?
+
+> "We should start the inferential process with clear statements of scientific objectives and associated estimands, and a precise description of the hypothetical data set from which we would simply calculate the estimands. Such a data set could be composed mostly of unobserved or even unobservable values, but it defines the objects of inference." ^[Rubin 2011]
+`r tufte::quote_footer('--- Don Rubin')`
+
+## How do we fill in the missing values?
+
+How can we fill in the question marks?  Because of the fundamental problem of causal inference, we can never *know* the missing values. Because we can never know the missing values, we must make assumptions. "Assumption" just means that we need a "model," and all models have parameters.
+
+### Constant Treatment Effect
+
+One model might be that the causal effect is the same for everyone. There is a single parameter, $\tau$, which we then estimate. Once we have an estimate, we can fill in the Rubin Table because, knowing it, we know what the unseen potential outcome is for each person. Now our estimand is $\tau$; whether this is a sensible estimand depends on how close the real world conforms to our assumption that the causal effect is the same for everyone.
+
+Remember what our Rubin Table looks like with all of the missing data: 
 
 ```{r, echo = FALSE}
 # First, we create a tibble with the values we want for the table
@@ -321,33 +342,6 @@ tibble(subject = c("Yao", "Emma", "Cassidy", "Tahmid", "Diego"),
   fmt_markdown(columns = TRUE)
 ```
 
-Question marks are responses that could not be observed. The **Fundamental Problem of Causal Inference**^[Holland 1986.] is that directly observing unit-level causal effects is impossible. If we don't have all the values in our table, how do we calculate anything?
-
-## How do we fill in the missing values?
-
-How can we fill in the question marks?  Because of the fundamental problem of causal inference, we can never *know* the missing values. Because we can never know the missing values, we must make assumptions. "Assumption" just means that we need a "model," and all models have parameters.
-
-One model might be that the causal effect is the same for everyone. There is a single parameter, $\tau$, which we then estimate. Once we have an estimate, we can fill in the Rubin Table because, knowing it, we know what the unseen potential outcome is for each person. Now our estimand is $\tau$; whether this is a sensible estimand depends on how close the real world conforms to our assumption that the causal effect is the same for everyone.
-
-We'll talk more about how you might calculate $\tau$ later.  Right now, just know that if you had an estimate for $\tau$, you could add it to the observed value of every observation in the control group (or subtract it from the observed value of every observation in the treatment group), and thus fill in all the missing values.
-
-Remember what our Rubin Table looks like with all of the missing data: 
-
-```{r, echo = FALSE}
-# First, we create a tibble with the values we want for the table
-
-tibble(subject = c("Yao", "Emma", "Cassidy", "Tahmid", "Diego"),
-       ytreat = c("13", "11", "?", "?", "5"),
-       ycontrol = c("?", "?", "10", "12", "?"),
-       ydiff = c("?", "?", "?", "?", "?")) %>%
-  
-A second model might be that the causal effect is the same within categories. For example, perhaps it is $\tau_1$ for Democrats and $\tau_2$ for Republicans.  A third model might be that the causal effect is a number $\tau$ multiplied by age: $\tau \times age$. The key concept is that we can't make any progress unless we make some assumptions. That is an inescapable result of the fundamental problem of causal inference. So we make some assumptions, which give us some models.
-
-Note that *some* estimands may not require filling in all the question marks in the Rubin Table.  For example, we'll see that with randomized assignment to treatment, we can get a good estimate of the *average* treatment effect even without filling in every question mark---the average treatment effect is just a single number.  
-<!-- EC: One more sentence here about how randomized assignments could be extrapolated to reflect the population would be great -->
-If you wanted, however, to use your estimate of the average treatment effect to fill in the missing *individual* treatment effects, you would need an additional assumption, such as that the treatment effect is constant $\tau$ for everyone.
-
-### Average treatment effect
 
 If we assume $\tau$ is the treatment effect for everyone, how do we fill in the table? We are using $\tau$ as an estimate for causal effect. It therefore has to be true that $Y_t(u) - Y_c(u) = \tau$ if $\tau$ is our estimate of the constant treatment effect. Using simple algebra, it is then clear that $Y_t(u) = Y_c(u) + \tau$ and $Y_c(u) = Y_t(u) - \tau$. In other words, you could add it to the observed value of every observation in the control group (or subtract it from the observed value of every observation in the treatment group), and thus fill in all the missing values.
 
@@ -377,16 +371,13 @@ tibble(subject = c("Yao", "Emma", "Cassidy", "Tahmid", "Diego"),
   fmt_markdown(columns = TRUE)
 ```
 
+Now we need to find an estimate for $\tau$ in order to fill in our table with numbers that we can begin to understand. Again, we are assuming $Y_t(u) - Y_c(u) = \tau$. 
 
-The average treatment effect is the average difference in *potential* outcomes between the treated group and the control group.  As we noted before, this is a popular estimand.  Why?
+<!-- CB: Should I be explaining how to find average treatment effect in this section? No! Because it will be the same as the average treatment effect later on with the only difference being that we are emphasizing in the later section that we aren't trying to understand individuals and fill in the table but rather just want to know the average more generally. But I also feel like it is necessary to set up the two parameters section. --> 
 
-1. There's an obvious *estimator* for this estimand: the difference in *observed* outcomes between the treated group and the control group.
-2. If treatment is *randomly assigned*, the estimator is *unbiased*: you can be pretty confident in the estimate if you have a large enough treatment and control group.
-3. If you are willing to assume that the causal effect is the same for everyone (a big assumption!), you can use your estimate of the ATE to fill in the missing individual values in your Rubin Table.
+That equation outlines a clear way in which we can estimate $\tau$. We can subtract the average of the observed control values from the observed treated values. $$((13 + 11 + 5) / 3) - ((10 + 12) /  2)$$ $$9.67 - 11 = -1.33$$
+This gives us an estimate of $-1.33$ for $\tau$. Let's fill in our missing values is by adding $\tau$ to the observed value under control (for units in the control group) or by subtracting $\tau$ from the observed value under treatment (for units in the treatment group), like so:
 
-Note that just because the ATE is a convenient estimand doesn't necessarily mean that it is a useful one.  In particular, consider point #3. For example, let's say the treatment effect varies dependent on party. For Democrats there is a strong negative effect, but for Republicans there is a small positive effect.  However, the average treatment effect for the whole sample, even if you estimate it correctly, will be a single negative number (since the negative effect for Democrats is larger than the positive effect for Republicans).  So while our model to estimate the ATE is simple and thus alluring---with randomized treatment assignment, a difference in means will do the trick---don't assume that it's always the right model for your problem.
-
-Let's now walk through how we would estimate the ATE in our train example.
 ```{r, echo = FALSE}
 # First, we create a tibble with the values we want for the table
 
@@ -430,9 +421,9 @@ tibble(subject = c("Yao", "Emma", "Cassidy", "Tahmid", "Diego"),
   tab_style(cell_borders(sides = "right"),
             location = cells_body(columns = vars(subject))) %>%
   tab_style(cell_text(weight = "bold"),
-
-            location = cells_body(columns = vars(subject)))
-
+            location = cells_body(columns = vars(subject))) %>%
+  cols_align(align = "center", columns = TRUE) %>%
+  fmt_markdown(columns = TRUE)
 ```
 
 
@@ -440,9 +431,9 @@ tibble(subject = c("Yao", "Emma", "Cassidy", "Tahmid", "Diego"),
 
 ### Constant by Two Parameters
 
-The simplest way to estimate the ATE is to take the mean of the treated group ($9.67$) and the mean of the control group ($11.0$) and then take the difference in those means ($-1.33$).  We'll call this estimate of the ATE $\widehat{ATE}$, pronounced "ATE-hat."
+A second model might be that the causal effect is constant within some other categories, and not across the entire sample. Maybe one of those categories is sex? Perhaps it is $\tau_1$ for females and $\tau_2$ for males. We are making this assumption to give us a different model with which to fill in the missing values in our table. The key concept is that we can't make any progress unless we make some assumptions. That is an inescapable result of the Fundamental Problem of Causal Inference. So we make some assumptions, which gives us some models.
 
-So estimating the ATE is easy.  But is our $\widehat{ATE}$ a good estimate of the actual ATE?  After all, if we knew all the missing values in the Rubin Table, we could calculate the ATE perfectly.  But those missing values may be wildly different from the observed values.  Consider this unobservable true Rubin Table:
+Let's look at this particular model in which we think sex has an impact on treatment effect:
 
 ```{r, echo = FALSE}
 # First, we create a tibble with the values we want for the table
@@ -477,10 +468,9 @@ $\tau_M$ would be $$(13+5)/2 - 12 = -3$$
 $\tau_F$ would be $$(11-10 = +1)$$ 
 Using those values, we would fill out our new table like this: 
 
-We'll consider in a little bit when it is reasonable to assume that our estimate of the ATE is a good one.  (The best way, as we'll see, is randomized assignment to treatment.)
+```{r, echo = FALSE}
+# First, we create a tibble with the values we want for the table
 
-But for now, let's assume we have a good estimate.  How can we use that to fill in the missing values in the Rubin Table?  Well, we'll need another assumption: that there's one treatment effect, $\tau$, that is the same for everyone.  Let's fill in our missing values is by adding $\widehat{ATE}$ to the observed value under control (for units in the control group) or by subtracting $\widehat{ATE}$ from the observed value under treatment (for units in the treatment group), like so:
-```{r}
 tibble(subject = c("Yao", "Emma", "Cassidy", "Tahmid", "Diego"),
        ytreat = c("13", "11", "$$10 + (+1)$$", "$$12 + (-3)$$", "5"),
        ycontrol = c("$$13 - (-3)$$", "$$11 - (+1)$$", "10", "12", "$$5 - (-3)$$"),
@@ -526,8 +516,6 @@ tibble(subject = c("Yao", "Emma", "Cassidy", "Tahmid", "Diego"),
   fmt_markdown(columns = TRUE)
 ```
 
-Note that for some estimands, filling in the same causal effect for everyone would be nonsensical.  For example, let's say you were interested in the lowest attitude score under treatment.  That's not an unreasonable thing to want to know!  But assuming that everyone has the same causal effect means that your estimate of the lowest potential attitude score is either a) the smallest observed treatment value or b) the smallest observed control value minus your estimate of the ATE, whichever is smaller. This clearly isn't a reasonable estimate of the lowest attitude score under treatment!  Thus, we need a different model if we have a different estimand.
-
 We now have two different estimates for Emma. When we estimate her Attitude if Control using an assumption of constant treatment effect, we estimate $Y_c(Emma)$ to be 12.33. When we estimate assuming treatment effect is constant across sexes, we get $Y_c(Emma)$ to be 10. This difference between our estimates for Emma is the heart of inference. 
 
 <!-- I am confused now because thinking about no causation without manipulation. Is it possible to say that gender does not "cause" the effect, but rather treatment effect just varies by gender? Or no? -->
@@ -552,21 +540,14 @@ Note that *some* estimands may not require filling in all the question marks in 
 
 As we noted before, this is a popular estimand.  Why?
 
-In general, do we think that if Joe wasn't on the platform with Spanish-speaking people, his attitude toward immigrants would be exactly $14.33$? Of course not! We have some uncertainty around these numbers.  There are two main sources of uncertainty we have to take into account when making a prediction for Joe:
+1. There's an obvious *estimator* for this estimand: the difference in *observed* outcomes between the treated group and the control group. ($Y_t(u) = Y_c(u)$)
+2. If treatment is *randomly assigned*, the estimator is *unbiased*: you can be pretty confident in the estimate if you have a large enough treatment and control group.
+3. As we did earlier, if you are willing to assume that the causal effect is the same for everyone (a big assumption!), you can use your estimate of the ATE to fill in the missing individual values in your Rubin Table.
 
-1. `r newthought("Uncertainty in estimating the ATE.")` Even if treatment is randomly assigned, and thus $\widehat{ATE}$ is an unbiased estimate of ATE, we still may not have a very precise estimate if our sample is small. With this miniscule sample (five subjects!), the uncertainty might be gigantic, perhaps something like $(-3, 2)$, which would lead to a prediction for Joe of $(10, 15)$. As we get a larger sample size, this uncertainty decreases. 
+Just because the ATE is often a useful estimand doesn't mean that it *always* is. 
 
-<!-- EC: Could you specify what exactly is the "true ATE"? -->
+Consider point #3. For example, let's say the treatment effect varies dependent on party. For Democrats there is a strong negative effect, but for Republicans there is a small positive effect.  However, the average treatment effect for the whole sample, even if you estimate it correctly, will be a single negative number (since the negative effect for Democrats is larger than the positive effect for Republicans).  So while our model to estimate the ATE is simple and thus alluring---with randomized treatment assignment, a difference in means will do the trick---don't assume that it's always the right model for your problem.
 
-2. `r newthought("Individual Variation.")` Even if we have a perfect estimate of the *average* treatment effect, it still may be the case that the effect *for Joe* is higher or lower than the average. We can assume this away if we say that the treatment effect is a constant $τ$ for everyone, but that is not likely to be true in the real world -- and this source of uncertainty does not go away simply by collecting more observations. So with a large sample, let's say that we calculated a confidence interval around $\widehat{ATE}$ of $(-1.66, -1)$, leading to an interval for Joe's outcome under control of $(14.66, 14)$. The uncertainty due to individual variation may still be a great deal greater -- say $(13, 15)$. These numbers are simply illustrative, but they highlight an important point: even if you have a good estimate of the ATE, you should still be much more uncertain about the causal effect for any *particular individual*. 
-
-The main takeaway is that we can get rid of #1 by collecting more data, but the only way to get rid of #2 is through making assumptions, potentially very strong ones. 
-
-We may not just be interested in the effect on Joe, a person in our sample, but on Tyrone, for whom we observe neither potential outcome.  Even if we have a good estimate of the ATE for *this sample*, it may be a bad estimate of the ATE for the *population* if not all people have the same chance of being included in our sample.  So reducing our uncertainty about Joe may still not answer the question we really care about. There is still a lot of missing data.
-
-### Heterogenous Treatment Effects
-
-Let's consider the second main source of uncertainty which we describe as individual variation. In the train study, all of the individuals surveyed are different in many different ways, for example gender, income, and age. Therefore, our study population is heterogeneous, because all of the subjects are not the same. When we estimate ATE, we are making assumptions that there is a similar treatment effect for all subjects in the study despite the heterogeneity of our sample. 
 
 So estimating the ATE is easy ($Y_c(u) = Y_t(u)$).  But is our $\widehat{ATE}$ a good estimate of the actual ATE?  After all, if we knew all the missing values in the Rubin Table, we could calculate the ATE perfectly.  But those missing values may be wildly different from the observed values.  Consider this unobservable true Rubin Table:
 
@@ -611,11 +592,10 @@ So, a heterogeneous treatment effect can both explain individual variation, as w
 
 <!-- CB: Again, does this section make sense given that we can't manipulate age/sex?  -->
 
-There will inevitably be some random variation of treatment effect for individuals in a study. The effect on an individual, like Joe, may be different than the treatment effect on another individual that is seemingly very similar to Joe. This is one example of a *heterogeneous treatment effect*. 
+> "This inferential process is most directly conceptualized as finding the probability distribution of missing values given observed values and scientific assumptions, i.e., formally, finding the posterior predictive distribution of the missing values, whence the posterior distribution of the estimands can be calculated. ...
+The approach of distributionally filling in (or multiply imputing) the missing values is intuitive and reveals the natural uncertainty of inference." ^[Rubin 2011]
+`r tufte::quote_footer('--- Don Rubin')`
 
-Another example of a *heterogeneous treatment effect* is when the variation in individual treatments are non-random and correlated with some factor. For example, maybe we think that the treatment effect varies depending on the gender of an individual. In this case, gender and treatment status are two variables which both have impact on the treatment effect. The two variables interact, influencing the treatment effect. In other words, the interaction effect of these two variables gives us a heterogeneous treatment effect. 
-
-So, a heterogeneous treatment effect can both explain individual variation, as well as variation between groups determined by some other variable. We will learn to deal with heterogeneous treatment effects in later chapters, however it is worth keeping in mind how assumptions of homogeneity can impact our understanding of treatment effect.
 
 <!-- We may not just be interested in the effect on Yao, a person in our sample, but on Eliot, for whom we observe neither potential outcome.  Even if we have a good estimate of the ATE for *this sample*, it may be a bad estimate of the ATE for the *population* if not all people have the same chance of being included in our sample.  So reducing our uncertainty about Yao may still not answer the question we really care about. There is still a lot of missing data. -->
 
@@ -688,12 +668,14 @@ tibble(subject = c("Respondent 1", "Respondent 2", "Respondent 3", "...", "Respo
 
 By surveying 1,000 people on their attitudes towards immigrants we now have some values to work with. This, however, does not solve the missing data problem. We are likely interested in the causal effect *in general*, not just for our 1,000 person sample. We'll need to think about whether our *sample* is representative of the full population. For the vast majority of US adults we still have no value. This is the second of the two most common sources of missing data: 
 
+<!-- SJ: Confused here, I thought you just said in line chunk 447 that this data doesn't have a causal effect because it is the average US citizen's attitude towards immigrants in general but now it is saying that there is a causal effect that we are likely interested in -->
+
 1. For the units in our sample, we only see *one* potential outcome
 2. For the units outside our sample, we see *no* potential outcomes
 
-### The infinite Rubin Table: many kinds of missing data
+<!-- SJ: what is the purpose of having these two bullet points here about how we see only one potential outcome versus none? It seems a little redundant if all it is meant to explain is that we don't know the data for people we haven't surveyed, maybe a little more explanation is needed here to justify what you are explaining or the point you are making. I am assuming (no pun intended) it is because there is no way to make assumptions here?  -->
 
-<!-- DK: This transition is a bit awkward. And it needs to be brought back to assumptions we make. That is, the true Rubin Table has an infinite number of rows, even if all we care about is Joe! But such a reality is unworkable. So, we make assumptions! We *assume* that the causal effect for Joe is the same a minute from now as it is now, and a day from now, and . . . probably not 30 years from, now, but for some period of time. So, we can reduce the true problem to the problem we were dealing with before. -->
+### The infinite Rubin Table: many kinds of missing data
 
 A true Rubin Table has an infinite number of rows, and therefore an infinite amount of missing data. Such a reality is unworkable, so we make assumptions to reduce the true problem to something more manageable.
 
@@ -706,7 +688,7 @@ So our full Rubin Table includes people we know (Yao) and people we don't (for e
 ```{r, echo = FALSE}
 # First, we create a tibble with the values we want for the table
 
-tibble(subject = c("Joe this year", "Joe next year", "Joe two years from now", "Tyrone this year", "Tyrone next year", "Tyrone two years from now", "...", "Person n at time t"),
+tibble(subject = c("Yao this year", "Yao next year", "Yao two years from now", "Eliot this year", "Eliot next year", "Eliot two years from now", "...", "Person n at time t"),
        ytreat = c("13", "?", "?", "?", "?", "?", "?", "?"),
        ycontrol = c("?", "?", "?", "?", "?", "?", "?", "?"),
        ydiff = c("?", "?", "?", "?", "?", "?", "?", "?")) %>%
@@ -725,11 +707,14 @@ tibble(subject = c("Joe this year", "Joe next year", "Joe two years from now", "
   cols_align(align = "center", columns = TRUE)
 ```
 
-In fact, because time is continuous, there is a row for Joe now, Joe one second from now, Joe one day from now and so on. The Rubin Table extends downward forever. Thus, in order to estimate any causal effect, we need *assumptions*, so we aren't dealing with an infinite table. 
+In fact, because time is continuous, there is a row for Yao now, Yao one second from now, Yao one day from now and so on. The Rubin Table extends downward forever. Thus, in order to estimate any causal effect, we need *assumptions*, so we aren't dealing with an infinite table. 
 
-The most obvious way to eliminate some rows from the table is to assume the causal effect for Joe now is the same as all the ones for Joe in the future. Is that plausible? Sort of. Joe now and Joe in one second are pretty similar! Joe now and Joe in 30 years are less so.  Unfortunately, there's no magic way to get a good estimate of every missing value in the infinite Rubin Table! But through some assumptions, we can reduce the true problem to the problem we were dealing with before. 
+The most obvious way to eliminate some rows from the table is to assume the causal effect for Yao now is the same as all the ones for Yao in the future. Is that plausible? Sort of. Yao now and Yao in one second are pretty similar! Yao now and Yao in 30 years are less so.  Unfortunately, there's no magic way to get a good estimate of every missing value in the infinite Rubin Table! But through some assumptions, we can reduce the true problem to the problem we were dealing with before. 
+
+<!--SJ: Maybe a visual representation of what you are trying to say here? It could be helpful to show how the values might not change for Yao in one second but maybe they would a year from now and two years from now etc. and maybe sauce in a plausible reason as to why? ie: Yao lost his job and his political preferences are shifting -->
 
 Not only can we extend the Rubin Table by adding people not in our sample to the rows, but we can also add additional treatments to the columns.  Let's go back to the original five people in our sample. What if we also wanted to test the causal effect of another language being spoken on the platform?  We'll call the original treatment $t$ and the new treatment $t'$.
+
 
 <!-- SJ: Maybe add a sentence quickly re explaining what was going on in the train sample with the five people, you made a pretty quick shift in topics and right now the readers head is all wrapped up in focusing on Yao and time being continuous and Yao one second from now versus 30 years from now. Like possibly clarifying that new treatment is the new language being spoken on the train would be helpful as well. -->
 
@@ -756,9 +741,9 @@ tibble(subject = c("Yao", "Emma", "Cassidy", "Tahmid", "Diego"),
   fmt_markdown(columns = TRUE)
 ```
 
-Note that for Joe, we now have three causal effects we can estimate: the difference between the original treatment and the new treatment, the difference between the original treatment and control, and the difference between the new treatment and control.  And that's just when looking at differences!  Recall there are many other potential estimands we could be interested in, such as ratios, percent changes, and so on.
+Note that for Yao, we now have three causal effects we can estimate: the difference between the original treatment and the new treatment, the difference between the original treatment and control, and the difference between the new treatment and control.  And that's just when looking at differences!  Recall there are many other potential estimands we could be interested in, such as ratios, percent changes, and so on.
 
-Even if you have just one language you are testing, there still could be multiple treatments.  For example, the duration the commuter is on the platform with the Spanish-speaking people:
+Even if you have just one language you are testing, there still could be multiple treatments.  For example, the duration the commuter is on the platform with the Spanish speakers:
 
 ```{r, echo = FALSE}
 # First, we create a tibble with the values we want for the table
@@ -826,7 +811,7 @@ tibble(subject = c("Yao", "Emma", "Cassidy", "Tahmid", "Diego"),
   fmt_markdown(columns = TRUE)
 ```
 
-Indeed, there are an infinite number of possible treatments. The Rubin Table extends to the right forever. Again, assumptions come to our rescue. Or rather, we just throw up our hands and only try to estimate a few things.  This is why it is crucial to define one's estimand precisely: if we are interested in the difference in potential outcomes between Spanish being spoken for 10 minutes at a volume level 3 versus control, we can ignore all the other possible columns in the infinite Rubin Table.
+Indeed, there are an infinite number of possible treatments. The Rubin Table extends to the right forever. Again, assumptions come to our rescue. Or rather, we just throw up our hands and only try to estimate a few things. This is why it is crucial to define one's estimand precisely: if we are interested in the difference in potential outcomes between Spanish being spoken for 10 minutes at a volume level 3 versus control, we can ignore all the other possible columns in the infinite Rubin Table.
 
 `r margin_note("A true Rubin Table has an infinite number of rows and columns. Assumptions are what reduce the true problem to a workable problem.")`
 
@@ -865,7 +850,11 @@ In general, do we think that if Yao wasn't on the platform with Spanish speakers
 
 1. `r newthought("Uncertainty in estimating the ATE.")` Even if treatment is randomly assigned, and thus $\widehat{ATE}$ is an unbiased estimate of ATE, we still may not have a very precise estimate if our sample is small. With this miniscule sample (five subjects!), the uncertainty might be gigantic, perhaps something like $(-3, 2)$, which would lead to a prediction for Yao of $(10, 15)$. As we get a larger sample size, this uncertainty decreases.  -->
 
-## Confounding
+2. `r newthought("Individual Variation.")` Even if we have a perfect estimate of the *average* treatment effect, it still may be the case that the effect *for Yao* is higher or lower than the average. We can assume this away if we say that the treatment effect is a constant $τ$ for everyone, but that is not likely to be true in the real world -- and this source of uncertainty does not go away simply by collecting more observations. So with a large sample, let's say that we calculated a confidence interval around $\widehat{ATE}$ of $(-1.66, -1)$, leading to an interval for Yao's outcome under control of $(14.66, 14)$. The uncertainty due to individual variation may still be a great deal greater -- say $(13, 15)$. These numbers are simply illustrative, but they highlight an important point: even if you have a good estimate of the ATE, you should still be much more uncertain about the causal effect for any *particular individual*. 
+
+ <!-- SJ: A bit unnatural to read this phrase: "We can assume this away if we say that the treatment effect is a constant τ for everyone" linechunk 423 -->
+
+The main takeaway is that we can get rid of #1 by collecting more data, but the only way to get rid of #2 is through making assumptions, potentially very strong ones. Later in the book we will look at ways to estimate parameter uncertainty more closely, but for now it is worth keeping different sources of uncertainty in mind. 
 
 ### The assignment mechanism
 
@@ -873,7 +862,7 @@ Remember that *everything is a missing data problem*.   We sidestepped the follo
 
 As we discussed earlier, this already comes up in non-causal context when considering *sampling*.  If we are trying to estimate the average attitude towards immigrants in the U.S., we usually do so by taking a sample.  If the process by which people enter our sample is related to their attitude, even indirectly, then estimates from our sample won't be good estimates for the population.  We called this the *sampling mechanism*.
 
-The sampling mechanism still matters in causal inference.  You may want to estimate the causal effect for Tyrone, for example, rather than Joe.  But before you even get to the sampling mechanism, there is another missing data problem that can affect causal inference.  That is the *assignment mechanism*, the process by which some units receive treatment and others do not. It will soon be clear why randomization is the ideal assignment mechanism. Whenever the assignment mechanism is correlated with the potential outcomes, we say that there is **confounding**. Confounding is a problem, since it means that our simple estimate of the ATE is biased.
+The sampling mechanism still matters in causal inference.  You may want to estimate the causal effect for Eliot, for example, rather than Yao.  But before you even get to the sampling mechanism, there is another missing data problem that can affect causal inference.  That is the *assignment mechanism*, the process by which some units receive treatment and others do not. It will soon be clear why randomization is the ideal assignment mechanism. Whenever the assignment mechanism is correlated with the potential outcomes, we say that there is **confounding**. Confounding is a problem, since it means that our simple estimate of the ATE is biased.
 
 If you are interested in causal inference, randomized trials are the best approach. In many circumstances, however, randomized trials are not possible due to ethical or practical concerns. In such scenarios there is by necessity a non-random assignment mechanism. The following example of a non-random assignment mechanism illustrates potential problems.
 
@@ -884,7 +873,7 @@ Let's look at this idea of a non-random assignment mechanism through a version o
 
 Assignment mechanisms can also intentionally be biased in order to manufacture desired outcomes.
 `r margin_note("Consider the case of a 'perfect doctor', who knows exactly how a certain drug will impact his patients. He would only give the drug to patients who benefit from the it. This would make the drug seem very beneficial. In reality half of his patients who never took the drug (control group) would have been harmed by taking it.")`
-Let's consider a scenario where once again an entire platform is either treated or a control. In this case the assignment mechanism is the choice of the Spanish-speaking people; they are allowed to choose which platform they want to stand on. Let's also say that they can *perfectly* predict the attitude of people on each platform. The Spanish-speaking people know that a platform with more liberal attitudes towards immigrants will be more friendly, and therefore always choose to stand on those platforms. In this case, the assignment mechanism of platforms is not random. The Spanish-speaking people know these averages for the various platforms in the experiment: 
+Let's consider a scenario where once again an entire platform is either treated or a control. In this case the assignment mechanism is the choice of the Spanish speakers; they are allowed to choose which platform they want to stand on. Let's also say that they can *perfectly* predict the attitude of people on each platform. The Spanish speakers know that a platform with more liberal attitudes towards immigrants will be more friendly, and therefore always choose to stand on those platforms. In this case, the assignment mechanism of platforms is not random. The Spanish speakers know these averages for the various platforms in the experiment: 
 
 `r margin_note("The ATE in this case is +0.5.")`
 ```{r, echo = FALSE}
@@ -909,8 +898,8 @@ tibble(subject = c("Platform 1", "Platform 2", "Platform 3", "Platform 4", "Plat
   cols_align(align = "center", columns = TRUE)
 ```
 
-`r margin_note("The Spanish-speaking people in the experiment will choose to stand on the more liberal platforms because they know those platforms are friendlier on average. This assigns the more liberal platforms as 'treated' in this scenario.")`
-Based on this knowledge the Spanish-speaking people in the experiment would choose the following treatment assignments: 
+`r margin_note("The Spanish speakers in the experiment will choose to stand on the more liberal platforms because they know those platforms are friendlier on average. This assigns the more liberal platforms as 'treated' in this scenario.")`
+Based on this knowledge the Spanish speakers in the experiment would choose the following treatment assignments: 
 `r margin_note("The estimated ATE in this example would be -5.67.")`
 
 ```{r, echo = FALSE}
@@ -943,15 +932,12 @@ Therefore, the difference in means is no longer a good estimate of the ATE. In f
 
 <!-- EC: Could be a good place to introduce type S errors to tie in to a future chapter on Type M/S errors (unsure which this would be) -->
 
-<!-- Discuss block designs, as an example of how their are many ways to do random assignment. Selection bias is when the person doing the assignments chooses on the basis of the potential outcomes. Confounding does not require selection bias. But selection bias is always an example of confounding. CB: done. -->
 
-This is an extreme example of a problem called **selection bias**. `r margin_note("Selection bias is when the person who is assigning treatment chooses on the basis of potential outcomes.")` The Spanish-speaking people are not choosing platforms to stand on randomly. Rather, they are making treatment decisions based directly on the potential outcomes of each platform. Remember, whenever the assignment mechanism is correlated with the potential outcomes there is confounding, which is a problem because it means that our estimand is biased. Not all examples of confounding are caused by selection bias, but when there is selection bias there is *always* confounding
+This is an extreme example of a problem called **selection bias**. `r margin_note("Selection bias is when the person who is assigning treatment chooses on the basis of potential outcomes.")` The Spanish speakers are not choosing platforms to stand on randomly. Rather, they are making treatment decisions based directly on the potential outcomes of each platform. Remember, whenever the assignment mechanism is correlated with the potential outcomes there is confounding, which is a problem because it means that our estimand is biased. Not all examples of confounding are caused by selection bias, but when there is selection bias there is *always* confounding
 
 Much like how the best way to avoid making poor inferences from a sample to a population is to take a random sample of the population, the best assignment mechanism for avoiding confounding is **randomization**. For each platform we could flip a coin to determine if it is in the treatment or control group.
 
 Randomized assignment is the best assignment mechanism for inferring the average treatment effect because if the sample is large enough, the difference in sample means between treated and control units ($\widehat{ATE}$) will be very close to the actual ATE from that sample. `r margin_note("'Actual ATE' in this case would be the ATE you could calculate if you were omniscient and knew all potential outcomes, which is of course impossible.")` (You still can't know *individual* treatment effects without more assumptions, because of the fundamental problem of causal inference.)
-
-Thus, if you are interested in causal inference, randomized trials are the best approach. In many circumstances, however, randomized trials are not possible due to ethical or practical concerns. In such scenarios there is by necessity a non-random assignment mechanism.
 
 Randomized assignments don't all look the same. For example, randomized block assignment is a method of random assignment that can be useful in further reducing potential confounding, making it an even better estimator than pure random assignment. In random block assignment, subjects in an experiment are subdivided into blocks. The assignment into blocks is not random, instead there is intentionally less variation within blocks than there is between them. Within those blocks subjects are randomly assigned to treatment or control. 
 
@@ -981,7 +967,7 @@ Block random assignment ensures that both treated and control groups have an equ
 
 If you are interested in causal inference, randomized trials are the best approach. In many circumstances, however, randomized trials are not possible due to ethical or practical concerns. In such scenarios there is by necessity a non-random assignment mechanism.
 
-For example, let's say some of the train platforms in the experiment are so loud the Spanish-speaking people might not be heard by anyone nearby. Therefore by necessity, only quieter platforms can be assigned to the treatment group. This non-random assignment may introduce confounding. `r margin_note("Maybe the louder platforms have people that are generally more friendly and social. This might be correlated with more liberal attitudes towards immigrants.")` Say there is some systematic difference between the people on quieter platforms compared with the people on the louder platforms. In that case, the assignment mechanism is correlated with potential outcomes, so there is confounding. This means even a simple estimand like ATE would be biased. 
+For example, let's say some of the train platforms in the experiment are so loud the Spanish speakers might not be heard by anyone nearby. Therefore by necessity, only quieter platforms can be assigned to the treatment group. This non-random assignment may introduce confounding. `r margin_note("Maybe the louder platforms have people that are generally more friendly and social. This might be correlated with more liberal attitudes towards immigrants.")` Say there is some systematic difference between the people on quieter platforms compared with the people on the louder platforms. In that case, the assignment mechanism is correlated with potential outcomes, so there is confounding. This means even a simple estimand like ATE would be biased. 
 
 Many statistical methods have been developed for causal inference when there is a non-random assignment mechanism, such as propensity score matching. These methods attempt to correct for the assignment mechanism by finding control units similar to treatment units.  What you should not do is naively compare the sample means under treatment and control and assume that is a good estimate of the ATE.  Without randomization, this could be very misleading!
 
@@ -1016,7 +1002,7 @@ Let's say random assignment into treatment was used to get these values.  If tha
 
 <!-- Do we keep this section? I think Yes. Permutation tests are cool! And we have room to do them. And they provide a nice excuse to do some R coding! But we can't do any uncertainty here. Need to show Rubin Table for it, with the null hypothesis filling in all equal (in each row) potential outcomes, and then showing what we observe depending on the assignment mechanism. -->
 
-Even with randomized assignment, when the sample size is small, our estimate $\widehat{ATE}$ may deviate considerably from the actual ATE.  For example, we've considered just one possible random assignment in our train example, where Joe, Mary and James receive the treatment.  Here's another possible random assignment, where Joe, Mary and Sally receive the treatment:
+Even with randomized assignment, when the sample size is small, our estimate $\widehat{ATE}$ may deviate considerably from the actual ATE.  For example, we've considered just one possible random assignment in our train example, where Yao, Emma and Diego receive the treatment.  Here's another possible random assignment, where Yao, Emma and Cassidy receive the treatment:
 
 ```{r, echo = FALSE}
 # First, we create a tibble with the values we want for the table
@@ -1072,7 +1058,7 @@ Thus, the true average treatment effect is $+0.6$.  However, our estimates of th
 way; thus, there are no references to a "test statistic" or to the "sharp null." Worth keeping?
 -->
 
-How can we estimate this uncertainty?  To make things simple, we'll consider a dataset with four patients.  Let's say we observed the following results, which we know came from a random treatment assignment:
+How can we estimate this uncertainty?  To make things simple, we'll consider a dataset with four subjects.  Let's say we observed the following results, which we know came from a random treatment assignment:
 
 ```{r, echo = FALSE}
 # First, we create a tibble with the values we want for the table
@@ -1125,7 +1111,7 @@ tibble(Permutation = c("#1", "#2", "#3", "#4", "#5", "#6"),
   cols_align(align = "center", columns = TRUE)
 ```
 
-Here, permutation #1 is what we actually observed, and permutations #2-6 are all the possible rearrangement of the two "treatment" labels and the two "control" labels.  What do we see?  4/6 (67%) of the permutations produce calculated ATEs are smaller than the effect we actually observed ($+1$), and two of them are the opposite sign!  We therefore should not have much confidence from this data alone that the treatment effect on attitude of being on a platform with Spanish-speaking people is actually positive.  The moral of the story?  Don't conduct an experiment on only four people!
+Here, permutation #1 is what we actually observed, and permutations #2-6 are all the possible rearrangement of the two "treatment" labels and the two "control" labels.  What do we see?  4/6 (67%) of the permutations produce calculated ATEs are smaller than the effect we actually observed ($+1$), and two of them are the opposite sign!  We therefore should not have much confidence from this data alone that the treatment effect on attitude of being on a platform with Spanish speakers is actually positive.  The moral of the story?  Don't conduct an experiment on only four people!
 
 ```{r, echo = FALSE, fig.fullwidth = TRUE}
 knitr::include_graphics("03-rubin-causal-model/animations/permutation_4.gif")
@@ -1154,7 +1140,7 @@ The answer to that question depends in part on the **external validity** of the 
 
 Note that this concern can be expressed in terms of the assignment mechanism.  People who don't ride the train have a 0% chance of receiving the treatment.  Thus, the study *can't* directly speak to how the treatment would impact their attitudes towards immigrants. The only way we can make such claims is by making additional assumptions, such as that train-riders reflect the same makeup of political beliefs as people who don't ride trains.
 
-The circumstances of the experiment may also affect the external validity of the study. Perhaps the train study was conducted during the middle of the summer when platforms are uncomfortably hot. Then, while we have variation in one aspect of the treatment (whether there were Spanish-speaking people nearby), we don't have variation in another (temperature of train platform). It may be that attitude towards immigrants is impacted when the train platform is uncomfortably hot, but the treatment has no impact on attitude otherwise.
+The circumstances of the experiment may also affect the external validity of the study. Perhaps the train study was conducted during the middle of the summer when platforms are uncomfortably hot. Then, while we have variation in one aspect of the treatment (whether there were Spanish speakers nearby), we don't have variation in another (temperature of train platform). It may be that attitude towards immigrants is impacted when the train platform is uncomfortably hot, but the treatment has no impact on attitude otherwise.
 
 When dealing with human subjects, there is a particular concern regarding external validity: the [**Hawthorne effect**](https://en.wikipedia.org/wiki/Hawthorne_effect).  When human subjects know that they are part of an experiment, they may change their behavior.
 
@@ -1253,13 +1239,13 @@ With a predictive model we cannot infer what would happen to the outcome $Y(u)$ 
 
 ### No causation without manipulation
 
-In order for a potential outcome to make sense, it must be possible, at least *a priori*. For example, if there is no way for Joe, under any circumstance, to ever be in the train study, then $Y_{t}(u)$ is impossible for him. It can never happen. And if $Y_{t}(u)$ can never be observed, even in theory, then the causal effect of treatment on Joe's attitude is undefined. 
+In order for a potential outcome to make sense, it must be possible, at least *a priori*. For example, if there is no way for Yao, under any circumstance, to ever be in the train study, then $Y_{t}(u)$ is impossible for him. It can never happen. And if $Y_{t}(u)$ can never be observed, even in theory, then the causal effect of treatment on Yao's attitude is undefined. 
 
 The causal effect of the train study is well defined because it is the simple difference of two potential outcomes, both of which might happen. In this case, we (or something else) can manipulate the world, at least conceptually, so that it is possible that one thing or a different thing might happen.
 
-This definition of causal effects becomes much more problematic if there is no way for one of the potential outcomes to happen, ever. For example, what is the causal effect of Joe's height on his weight? It might seem we would just need to compare two potential outcomes: what would Joe's weight be under the treatment (where treatment is defined as being 3 inches taller) and what would Joe's weight be under the control (where control is defined as his current height).
+This definition of causal effects becomes much more problematic if there is no way for one of the potential outcomes to happen, ever. For example, what is the causal effect of Yao's height on his weight? It might seem we would just need to compare two potential outcomes: what would Yao's weight be under the treatment (where treatment is defined as being 3 inches taller) and what would Yao's weight be under the control (where control is defined as his current height).
 
-A moment's reflection highlights the problem: we can't increase Joe's height. There is no way to observe, even conceptually, what Joe's weight would be if he were taller because there is no way to make him taller. We can't manipulate Joe's height, so it makes no sense to investigate the causal effect of height on weight. Hence the slogan: *No causation without manipulation.*
+A moment's reflection highlights the problem: we can't increase Yao's height. There is no way to observe, even conceptually, what Yao's weight would be if he were taller because there is no way to make him taller. We can't manipulate Yao's height, so it makes no sense to investigate the causal effect of height on weight. Hence the slogan: *No causation without manipulation.*
 
 This then raises the question of what can and cannot be manipulated. If something cannot be manipulated, we can't consider it causal. So can race ever be considered causal? What about sex? A genetic condition like color-blindness? Can we manipulate these characteristics? In the modern world these questions are not simple. 
 
@@ -1289,14 +1275,14 @@ The Fundamental Problem of Causal Inference is the idea that we cannot observe m
 
 One important assumption for causal inference is that "the [potential outcome] observation on one unit should be unaffected by the particular assignment of treatments to the other units."^[Cox 1958, §2.4.] This is called the **Stable Unit Treatment Value Assumption** (**SUTVA**). 
 
-In the context of our example, Joe's attitude should not depend on Mary's. But what if it does? Suppose that upon hearing Spanish on the platform, Mary makes a comment to Joe about immigration which shifts his opinion. Joe might not have thought anything of the Spanish being spoken nearby, but Mary's comment changes his individual survey answers. Therefore, his outcome will depend on both which treatment he received and which treatment Mary receives.
+In the context of our example, Yao's attitude should not depend on Emma's. But what if it does? Suppose that upon hearing Spanish on the platform, Emma makes a comment to Yao about immigration which shifts his opinion. Yao might not have thought anything of the Spanish being spoken nearby, but Emma's comment changes his individual survey answers. Therefore, his outcome will depend on both which treatment he received and which treatment Emma receives.
 
-SUTVA violation makes causal inference more difficult. We can account for dependent observations by considering more treatments. We create 4 treatments by taking into account whether or not Mary receives treatment:
+SUTVA violation makes causal inference more difficult. We can account for dependent observations by considering more treatments. We create 4 treatments by taking into account whether or not Emma receives treatment:
 
 ```{r, echo = FALSE}
 # First, we create a tibble with the values we want for the table
 
-tibble(subject = c("Joe"),
+tibble(subject = c("Yao"),
        ct = "10",
        tt = "9",
        cc = "13",
@@ -1306,10 +1292,10 @@ tibble(subject = c("Joe"),
   
   gt() %>%
   cols_label(subject = md("**Subject**"),
-             ct = md("Joe = c,<br />Mary = t"),
-             tt = md("Joe = t,<br />Mary = t"),
-             cc = md("Joe = c,<br />Mary = c"),
-             tc = md("Joe = t,<br />Mary = c")) %>%
+             ct = md("Yao = c,<br />Emma = t"),
+             tt = md("Yao = t,<br />Emma = t"),
+             cc = md("Yao = c,<br />Emma = c"),
+             tc = md("Yao = t,<br />Emma = c")) %>%
   tab_style(cell_borders(sides = "right"),
             location = cells_body(columns = vars(subject))) %>%
   tab_style(cell_text(weight = "bold"),
@@ -1319,20 +1305,20 @@ tibble(subject = c("Joe"),
 
 Recall that a causal effect is defined as the difference between two potential outcomes. In this case, there are multiple causal effects because there are more than two potential outcomes:
 
-`r margin_note("(Joe = t & Mary = t) - (Joe = c & Mary = t)")`
-- One is the causal effect on Joe when Mary receives treatment ($9-10$).
-`r margin_note("(Joe = t & Mary = c) - (Joe = c & Mary = c)")`
-- Another is the causal effect  on Joe when Mary does not receive treatment ($12-13$).
-`r margin_note("(Joe = c & Mary = t) - (Joe = c & Mary = c)")`
-- A third is the causal effect of Mary's treatment on Joe when Joe is not treated ($10-12$). In other words, we can define a causal effect on Joe even in situation in which Joe's treatment is identical in both situations.
+`r margin_note("(Yao = t & Emma = t) - (Yao = c & Emma = t)")`
+- One is the causal effect on Yao when Emma receives treatment ($9-10$).
+`r margin_note("(Yao = t & Emma = c) - (Yao = c & Emma = c)")`
+- Another is the causal effect  on Yao when Emma does not receive treatment ($12-13$).
+`r margin_note("(Yao = c & Emma = t) - (Yao = c & Emma = c)")`
+- A third is the causal effect of Emma's treatment on Yao when Yao is not treated ($10-12$). In other words, we can define a causal effect on Yao even in situation in which Yao's treatment is identical in both situations.
 
 Note that Emma being treated has a larger causal effect on Yao than Yao himself being treated!
 
-By considering more potential outcomes in this way, we can cause SUTVA to hold. However, if any units other than Joe are dependent on Mary (like someone overhears Mary), then we must consider further potential outcomes. The greater the number of dependent units, the more potential outcomes we must consider and the more complex the calculations become (consider an experiment with 20 different people, each of whose treatment status can affect outcomes for every one else). In order (easily) to estimate the causal effect of a single treatment relative to a control, SUTVA should hold. 
+By considering more potential outcomes in this way, we can cause SUTVA to hold. However, if any units other than Yao are dependent on Emma (like someone overhears Emma), then we must consider further potential outcomes. The greater the number of dependent units, the more potential outcomes we must consider and the more complex the calculations become (consider an experiment with 20 different people, each of whose treatment status can affect outcomes for every one else). In order (easily) to estimate the causal effect of a single treatment relative to a control, SUTVA should hold. 
 
 ### Correlation with Potenial Outcomes
 
-When considering the relationship between a treatment and an outcome, one of the most important assumptions is a lack of correlation between treatment assignment and the potential outcomes. Consider a version of the train experiment. Assume that, if a Republican is not on the platform with Spanish-speaking people, they will have an attitude value of X. If they were on a platform where they could hear Spanish, their attitude would have been X + 2. A Democrat would have an attitude X regardless of whether or not they are on the platform with Spanish-speaking people. In other words, the causal effect of being in the treatment group is +2 for Republicans, and 0 for Democrats. If we could run an experiment with random assignment, we would discover that the average causal effect is somewhere between 0 and 2, depending on the relative proportion of the Republicans and Democrats.
+When considering the relationship between a treatment and an outcome, one of the most important assumptions is a lack of correlation between treatment assignment and the potential outcomes. Consider a version of the train experiment. Assume that, if a Republican is not on the platform with Spanish speakers, they will have an attitude value of X. If they were on a platform where they could hear Spanish, their attitude would have been X + 2. A Democrat would have an attitude X regardless of whether or not they are on the platform with Spanish speakers. In other words, the causal effect of being in the treatment group is +2 for Republicans, and 0 for Democrats. If we could run an experiment with random assignment, we would discover that the average causal effect is somewhere between 0 and 2, depending on the relative proportion of the Republicans and Democrats.
 
 `r margin_note("Let's say here attitude X is 9.")`
 ```{r, echo = FALSE}
@@ -1358,7 +1344,7 @@ tibble(subject = c("R", "R", "D", "R", "D"),
   fmt_markdown(columns = TRUE)
 ```
 
-Unfortunately (?), people do not choose to ride certain trains randomly. We might assume/hope that there is no correlation between which train you ride and potential outcomes. If this is true, then we would still be able to estimate the causal effect. Yet that is rarely true in general. What if, instead, all the Republicans are in the control group, and all the Democrats are in the treated? In that case, everyone has an attidue of X! And it appears that the presence of Spanish-speaking people on the platform "does not matter". The correlation between treatment and potential outcomes invalidates the naive estimate of the average treatment effect.
+Unfortunately (?), people do not choose to ride certain trains randomly. We might assume/hope that there is no correlation between which train you ride and potential outcomes. If this is true, then we would still be able to estimate the causal effect. Yet that is rarely true in general. What if, instead, all the Republicans are in the control group, and all the Democrats are in the treated? In that case, everyone has an attidue of X! And it appears that the presence of Spanish speakers on the platform "does not matter". The correlation between treatment and potential outcomes invalidates the naive estimate of the average treatment effect.
 
 `r margin_note("Say all the Republicans ride trains from Platform 1 (control), and all Democrats ride Platform 2 (treated). Here we find an estimated ATE of 0.")`
 ```{r, echo = FALSE}
@@ -1388,6 +1374,11 @@ Keep in mind that the problem arises when there is a correlation between treatme
 
 ### Natural Experiments: Hormone Replacement Therapy
 
+Remember - 
+
+> "We should not avoid discussing the scientific context of any statistical problem, because this can greatly affect the resulting inference." ^[Rubin 2011]
+`r tufte::quote_footer('--- Don Rubin')`
+
 ```{r echo=FALSE, fig.margin = TRUE}
 knitr::include_graphics("03-rubin-causal-model/images/HRT.png")
 ```
@@ -1402,6 +1393,26 @@ Randomized trials rapidly proved HRT to be harmful rather than beneficial. Women
 
 The causal effect of a treatment on a single unit at a point in time is the difference between the outcome variable with the treatment and without the treatment. The fundamental problem of causal inference is that it is impossible to observe the causal effect on a single unit. As a consequence, assumptions---models---must be used in order to estimate the missing data.
 
+`r margin_note("We start with the Enos train study, which aims to understand how proximity to people speaking Spanish might impact peoples attitudes towards immigrants. Our data is based off of a survey that gives a numerical representation of attitude. We want to understand treatment effect, so our estimand of focus is ATE. We have discussed the fundamental problem of causal inference, and the concept that ev erything is a missing data problem.")`
+
+> "We should start the inferential process with clear statements of scientific objectives and associated estimands, and a precise description of the hypothetical data set from which we would simply calculate the estimands. Such a data set could be composed mostly of unobserved or even unobservable values, but it defines the objects of inference. 
+
+`r margin_note("We have considered the assignment mechanism, and different ways confounding can be introduced in our data.")`
+
+> "Then we should think about the mechanism that led to observed values being observed and unobserved values being missing. To me, statistical inference concerns estimating missing values from observed values rather than pondering p-values, and one cannot even begin to do this without assuming something about the process that created the missing values: was it, for example, simple random sampling or was it a censoring mechanism?
+
+`r margin_note("We have also discussed some ways in which we can fill the missing values in our data.")`
+
+> "This inferential process is most directly conceptualized as finding the probability distribution of missing values given observed values and scientific assumptions, i.e., formally, finding the posterior predictive distribution of the missing values, whence the posterior distribution of the estimands can be calculated.
+
+`r margin_note("Models require assumptions. The assumptions we make should not be taken lightly, as they can have real world impacts, as we saw in the hormonal replacement therapy example.")`
+
+> "There is no need to teach technical details of this Bayesian approach; instead we can use ideas based on simulating the unknowns under scientifically motivated models. We should not avoid discussing the scientific context of any statistical problem, because this can greatly affect the resulting inference. The approach of distributionally filling in (or multiply imputing) the missing values is intuitive and reveals the natural uncertainty of inference. ... 
+
+> "After understanding this natural approach to access uncertainty of inference, then we can teach the importance of evaluating operating characteristics of such procedures." ^[Rubin 2011]
+
+`r tufte::quote_footer('--- Don Rubin')`
+
 ## References
 
 <!-- AR: Need to integrate this with the rest of the book -->
@@ -1409,4 +1420,6 @@ The causal effect of a treatment on a single unit at a point in time is the diff
 Cox, D. R. (1958). *Planning of Experiments.* Wiley.
 
 Holland, Paul W. (1986). "Statistics and Causal Inference." *J. Amer. Statist. Assoc.* 81 (396): 945–960. doi:10.1080/01621459.1986.10478354.
+
+Rubin (2011, page 288), Discussion of “Towards more accessible conceptions of statistical inferences” by C. J. Wild, M. Pfannkuch, M. Regan and N. J. Horton, Journal of the Royal Statistical Society. Series A (Statistics in Society), Vol. 174, No. 2 (APRIL 2011), pp. 247-295.
 
