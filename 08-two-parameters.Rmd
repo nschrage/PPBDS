@@ -6,19 +6,6 @@ output_yaml:
 
 # Two Parameters {#two-parameters}
 
-```{r, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, tidy = FALSE, cache.extra = packageVersion('tufte'))
-
-library(gt)
-library(tidyverse)
-library(tufte)
-library(PPBDS.data)
-```
-
-
-<!-- Priorities: -->
-
-
 <!-- Outline of the chapter -->
 
 <!-- 0) Open with a question. -->
@@ -35,8 +22,6 @@ library(PPBDS.data)
 
 <!-- 6) Prediction. Use the models to answer your question. -->
 
-
-
 We have now introduced almost all of the key themes in the book. The last five chapters are about increasing the complexity of the models we use. In this chapter, we estimate models which involve two parameters.
 
 ## EDA for `trains`
@@ -46,11 +31,18 @@ We have now introduced almost all of the key themes in the book. The last five c
 Let's do some exploratory data analysis (EDA) of the `trains` data set from the **PPBDS.data** package. Recall the discussion from Chapter \@ref(rubin-causal-model). Enos (2014) randomly placed Spanish-speaking confederates on nine train platforms around Boston, Massachusetts. Exposure to Spanish-speakers -- the `treatment` -- influenced attitudes toward immigration. These reactions were measured through changes in answers to three survey questions. Let's load the libraries we will need in this chapter and look at the data.
 
 ```{r, message=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE, tidy = FALSE, cache.extra = packageVersion('tufte'))
+
 library(PPBDS.data)
 library(tidyverse)
 library(broom)
 library(rsample)
 library(skimr)
+library(gt)
+library(tidyverse)
+library(tufte)
+
 ```
 
 ```{r}
@@ -99,21 +91,23 @@ ch8 %>%
   labs(x = "Party",
        y = "Age",
        title = "Age by Party Affiliation in Trains Dataset")
+
 ```
 
-From this plot, we can gather that Democrats in this dataset are on average older than the Republicans, with their mode age being 50.
+From this plot, we can gather that there are many more Democrats in this dataset than Republicans. Democrats also span a wider range of ages than Republicans. The mode age for Democrats appears to be 50.
 
 ```{r}
+
 ch8 %>%
   ggplot(aes(x = treatment, y = att_end)) + 
   geom_boxplot() + 
   labs(x = "Treatment",
        y = "Attitude End",
-       title = "Attutide End by Treatment in Trains Dataset")
+       title = "Attitude End by Treatment in Trains Dataset")
 
 ```
 
-Treated individuals have a higher average att_end than the control group. The control group seems to have an high outlier for attitude end. 
+On a boxplot, the top and bottom borders of the box denotes the 75th and 25th percentiles, respectively. The line inside the box denotes the mean of the data. Treated individuals have a higher mean att_end than the control group, and a higher distribution in general, with its 25th percentile lining up with the mean of the control group. The control group has an outlier, while the treatment group does not. 
 
 
 ## Review of One Parameter Estimation
@@ -202,28 +196,30 @@ The 95% confidence interval calculated via `lm()` is, more or less, the same as 
 
 ## `age` as a function of `party`
 
-<!-- No use of bootstrap. Make clear the distinction between "modeling for prediction" and "modeling for causation." The first is only about comparisons between categories. The second is stronger, a claim about changing an individual; it is a claim about potential outcomes. -->
-
 But what if, instead of having no other information about our sample beyond their ages, we also knew their political party? How would we make a model which included this other information? This is a model for prediction, rather than a model for causal inference, because `age` can not be changed regardless what happens to `party`. That is, someone's age is the same regardless of the party of which they are a member.
 
 The simplest model would be to guess that a person's age, conditional on their party membership, is equal to the mean age of people in that party.
 
 ```{r}
+
 trains %>% 
   group_by(party) %>% 
   summarize(age_average = mean(age))
+
 ```
 
 If a new Boston commuter named Jake showed up at the station, what would be a good guess as to their age? If you don't know anything else about this person, then guessing the mean age of the sample, `r round(mean(trains$age), 1)` makes sense, as we learned in Chapter \@ref(one-parameter). But, if we know that the person is a Republican, than this guess would be (slightly) too high. Among the population of Boston commuters, (it seems that) Republican's are younger than average. So, conditional on knowing that Jake is a Republican, we should guess that his age is  `r round(mean(trains$age[trains$party == "Republican"]), 1)`. 
 
 However, instead of calculating these averages by hand, it is more convenient to use `lm()`, a function for creating linear statistical models. Start by estimating a simple model:
 
-<!-- DK: Would now be a time to start using tidymodels syntax so that we could avoid the horribleness of the dot? -->
-
 ```{r}
+
 trains %>% 
   lm(data = ., age ~ party - 1)
+
 ```
+
+Our predictive model's estimates are the same as the averages we calculated because that's most helpful number in estimating the age of an individual in the dataset knowing only their party, at least with our current set of tools. 
 
 ### Model Structure
 
@@ -231,11 +227,13 @@ The initials "lm" stand for "linear model." We are creating a model in which age
 
 There are three parts of understanding any model structure: whether it is causal or predictive, the mathematical formula, and realism. This model is predictive and has nothing to do with causality. Rather than modelling how the explanatory variable will change the outcome variable, we are using the explanatory variable (party) to simply predict the outcome variable (age). The difference between these two model types becomes clear when we construct a Preceptor Table: 
 
+<!-- MB: The table is centered here but not in the html ... -->
+
 ```{r, echo = FALSE}
 
 # Using real sampled ages but making my own tibble
 
-tibble(subject = c("1", "2", "...", "55", "...", "204", "205", "...", "1,000", "...", "100,000"),
+tibble(subject = c("1", "2", "...", "55", "...", "204", "205", "...", "1,627", "...", "N"),
        age = c("34", "?", "...", "36", "...", "44", "?",  "...", "50", "...", "?"),
        party = c("Republican", "?", "...", "Democrat", "...", "Democrat", "?",  "...", "Republican", "...", "?")) %>%
   gt() %>%
@@ -245,11 +243,12 @@ tibble(subject = c("1", "2", "...", "55", "...", "204", "205", "...", "1,000", "
   tab_style(cell_borders(sides = "right"),
             location = cells_body(columns = vars(subject))) %>%
   cols_align(align = "center", columns = TRUE) %>%
+  tab_header("Preceptor Table of age ~ party") %>%
   fmt_markdown(columns = TRUE)
 
 ```
 
-The purpose of a Preceptor Table is to capture all of the data such that if the question marks were filled out, one wouldn't need to construct a model. The rows in this Preceptor Table represent the (roughly) 100,000 commuters on which our model is extrapolating. Only 115 of these commuters had their data recorded in the experiment, which is why most observations lack data. 
+The purpose of a Preceptor Table is to capture all of the data such that if the question marks were filled out, one wouldn't need to construct a model. The rows in this Preceptor Table represent the N commuters on which our model is extrapolating, with N being the population of commuters using Boston public transportation. Only 115 of these commuters had their data recorded in the experiment, which is why most observations lack data. 
 
 This table is very simple, which is the point. There is no causal effect as we are simply trying to predict the immutable variable of age. Rather than representing unknown causal effects as they may in other Preceptor Tables, the question marks in this table simply denote missing data. 
 
@@ -260,7 +259,7 @@ $$ y_i = b_1 x_r + b_2 x_d $$
 You couldn't know the true value of our parameters ($b_1$ and $b_2$) unless you surveyed every single commuter in the station. This is why we use models to give us estimates. A hat denotes a number that is constant and no longer variable. Because we have estimates for our parameters, $\hat{b_1}$ and $\hat{b_1}$ are denoted by hats. With these numbers plugged in, you determine a singular y value (age) for each observation, thus the denotation  $\hat{y_i}$. This is called the *fitted value*. 
 
 $$ \hat{y_i} = \hat{b_1} x_r + \hat{b_2} x_d  $$
-$$ \hat{y_i} = (41.16)x_r + (42.6)x_d $$
+$$ \hat{y_i} = 41.16 x_r + 42.6x_d $$
 When the individual is a Republican ($x_r$=1 and $x_d$=0), their fitted value is 41.16. When the individual is a Democrat ($x_r$=0 and $x_d$=1), their fiited value is 42.6. 
 
 The equation is not finished yet! 
@@ -279,10 +278,42 @@ margin_note("The residual or epsilon value is also known as the 'noise'. The num
 $$ y_i = \hat{b_1}x_r + \hat{b_2} x_d + \epsilon_i $$
 Once you do this, you have a complete equation. 
 
+To continue our discussion of these values, we'll bring back our table. We'll display a few specific observations (all of which had their data recorded) rather than representing all N commuters.
 
-The final aspect of model structure is realism. Does this model reflect the real world accurately?
+```{r, include = FALSE}
 
-<!-- More to say about realism? -->
+library(tufte)
+
+margin_note("Note that this is no longer considered a Preceptor Table by our terminology. A Preceptor Table must account for all of the observations in the real-world population that the model is.")
+
+```
+
+This time, we'll include each individual's fitted value for age from our model. We'll also include their residual.  Remember that the actual age of each observation, $y_i$, is the addition of the model's prediction (the fitted value) and real-world noise (the residual). 
+
+```{r, echo = FALSE}
+
+tibble(subject = c("4", "5,051", "76", "80,050", "578", "23", "9,088", "888"),
+       party = c("Democrat", "Republican", "Democrat", "Democrat", "Republican", "Democrat", "Republican", "Democrat"),
+       age = c(31, 34, 63, 45, 55, 53, 24, 45),
+       fitted = c(42.6, 41.1, 42.6, 42.6, 41.1, 42.6, 41.1, 42.6)) %>%
+  mutate(noise = fitted - age) %>%
+  gt() %>%
+  cols_label(subject = md("**ID**"),
+             age = md("**$$y_i$$**"),
+             party = md("**Party**"),
+             fitted = md("**fitted**"),
+             noise = md("**residual**")) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(subject))) %>%
+  tab_header("8 Observations from Trains Dataset") %>%
+  cols_align(align = "center", columns = TRUE) %>%
+  fmt_markdown(columns = TRUE)
+
+```
+
+The fitted values are the same for all Republicans and for all Democrats, as the fitted value is one of the two estimates output by our model. However, almost all of the residuals are different due to each observation's own variation from the fitted value estimate. The only observations with the same residual are 80,050 and 888. This is because they are both Democrats that are the same age: with the same $y_i$ and $\hat{y_i}$, the calculation of their epsilon values are identical. This table shows how just a sample of 8 individuals captures a wide range of residuals, making it difficult to predict the age of a new individual who walks in the room even using our model.
+
+The final aspect of model structure is realism. Ask yourself, does this model reflect the real world accurately? What are its advantages and disadvantages?
 
 ### Parameter Uncertainty
 
@@ -311,74 +342,7 @@ If a new Democrat entered the train station, how easy would it be to guess their
 
 $$ y_i = b_0 + b_1 x_i + \epsilon_i $$
 
-One shouldn't be too confident in that prediction. The new Democrat's age comes in two parts: the beta (determined by their political party) and their epsilon/residual (how much noise there is in this observation that offsets it from the beta prediction). While the beta values have been determined by our model, the epsilon value represents *unmodeled variation* that could likely put the value outside of these bounds. 
-
-### Preceptor Table
-
-To continue our discussion of unmodeled variation, we'll bring back our Preceptor Table. This time, it will be a reduced table for just a few observations with data: 
-
-```{r, echo = FALSE}
-
-tibble(subject = c("Sam", "Darren", "Achele", "Anwar", "David", "Declan", "Adele"),
-       age = c("31", "34", "63", "45", "55", "53", "24"),
-       party = c("Democrat", "Republican", "Democrat", "Democrat", "Republican", "Democrat", "Republican")) %>%
-  gt() %>%
-  cols_label(subject = md("**ID**"),
-             age = md("**Age**"),
-             party = md("**Party**")) %>%
-  tab_style(cell_borders(sides = "right"),
-            location = cells_body(columns = vars(subject))) %>%
-  cols_align(align = "center", columns = TRUE) %>%
-  fmt_markdown(columns = TRUE)
-
-```
-
-Let's begin by adding each individual's fitted value for age from our model. 
-
-```{r, echo = FALSE}
-
-tibble(subject = c("Sam", "Darren", "Achele", "Anwar", "David", "Declan", "Adele"),
-       age = c("31", "34", "63", "45", "55", "53", "24"),
-       party = c("Democrat", "Republican", "Democrat", "Democrat", "Republican", "Democrat", "Republican"),
-       fitted = c("42.6", "41.1", "42.6", "42.6", "41.1", "42.6", "41.1")) %>%
-  gt() %>%
-  cols_label(subject = md("**ID**"),
-             age = md("**Age**"),
-             fitted = md("**fitted**"),
-             party = md("**Party**")) %>%
-  tab_style(cell_borders(sides = "right"),
-            location = cells_body(columns = vars(subject))) %>%
-  cols_align(align = "center", columns = TRUE) %>%
-  fmt_markdown(columns = TRUE)
-
-```
-
-The fitted values are the same for all Republicans and for all Democrats. Remember that the actual age of each observation is the addition of the model and noise (or the residual). The fitted value represents the "model" part of that equation, which is why each value is one of the two coefficients outputted by our model. 
-
-```{r, echo = FALSE}
-
-tibble(subject = c("Sam", "Darren", "Achele", "Anwar", "David", "Declan", "Adele"),
-       age = c(31, 34, 63, 45, 55, 53, 24),
-       party = c("Democrat", "Republican", "Democrat", "Democrat", "Republican", "Democrat", "Republican"),
-       fitted = c(42.6, 41.1, 42.6, 42.6, 41.1, 42.6, 41.1)) %>%
-  mutate(noise = fitted - age) %>%
-  gt() %>%
-  cols_label(subject = md("**ID**"),
-             age = md("**$$y_i$$**"),
-             party = md("**Party**"),
-             fitted = md("**fitted**"),
-             noise = md("**residual**")) %>%
-  tab_style(cell_borders(sides = "right"),
-            location = cells_body(columns = vars(subject))) %>%
-  cols_align(align = "center", columns = TRUE) %>%
-  fmt_markdown(columns = TRUE)
-
-```
-
-The other half of the equation is the residual, which accounts for the difference between each individual's age from its fitted value. Note the new column name for age: $y_i$ is the sum of the fitted and epilson value. 
-Recall our discussion of unmodeled variation. This Preceptor table shows how just a sample of 7 individuals captures a wide range of residuals, making it difficult to predict the age of a new individual who walks in the room even using our model.
-
-
+One shouldn't be too confident in that prediction. As discussed, the new Democrat's age comes in two parts: the beta (determined by their political party) and their residual (how much noise there is in this observation that offsets it from the beta prediction). While the beta values have been determined by our model, the epsilon value represents *unmodeled variation* that could likely put the value outside of these bounds. Our previous example showed us how just a randomly selected handful can have greatly varying residuals due to the real-world variation that is not captured by the model.
 
 <!-- DK: I went fast above, but that is all the key material. Still need to add a Rubin Table example, highlighting that this is modeling for prediction. There is only one column for Y because it is impossible to change someone's age, whatever manipulations you make to party. -->
 
@@ -407,27 +371,6 @@ Recall our discussion of unmodeled variation. This Preceptor table shows how jus
 <!-- Explain how the above is a bit of a cheat since linear functions are special: the average difference is the same as the difference between the averages. This is an important point. But there are lots of things which are not like that! Consider the income ratio between the median treated and median control. This is something which, a priori, I might be as interested in as the difference in means. But the ratio of the medians is not the same thing as the median of the ratios! This is a key point. In order to calculate this, we need to, again, take the bootstrap and, in each bootstrap sample, calculate the median income of the treated, the median income of the controls, and record that ratio. We then save that ratio and look at its bootstrap distribution at the end of the exercise. -->
 
 <!-- EM: I feel like having "Estimate other things" and "Estimate trickier things" are redundant as chapter sections because they are mostly addressed through the sections that sandwich them.  -->
-
-
-
-
-
-## Using the predict() function
-
-We will introduce a new function here, `predict()`, which takes in a model as input and, given a specified parameter, will predict the value and confidence intervals of any given data point:
-
-```{r}
-
-trains.lm <- lm(data = trains, income ~ party)
-newdata <- tibble(party = c("Republican", "Democrat"))
-
-predict(trains.lm, newdata, interval = "prediction")
-
-```
-
-Note that for both democrats and republicans, the prediction interval is significantly wider than the confidence interval. This discrepancy illustrates the *unmodeled variation* of the dataset: while the mean values, as indicated by the "fit" column, are still the best guess you can make for any given subject, we are less confident in the value range of that individual subject than we are of the value range of the mean. *The unmodeled variation widens the prediction intervals relative to the confidence intervals.*
-
-Recall our discussion regarding the wider confidence intervals for republican subjects than democrat subjects (*would like to attach a link here that takes reader up to that part of the chapter*). Although the republican and democrat average incomes had vastly different confidence intervals — the republican convidence intervals were much wider — they have very similar prediction intervals. Although the *parameter uncertainty* of these two parameters were very different, the *unmodeled variation* for both parameters was roughly the same. Even though the data points were equally spread out for both democrat and republican income, were were able to more confidently pinpoint a true value for democrat income because we had more data to work with.
 
 #### Validity
 
@@ -462,7 +405,7 @@ lm(data = trains, att_end ~ treatment - 1, )
 
 ```
 
-The *fitted value* of att_end was 8.45 for the control group and 10 for the treated group. Because a higher att_end means more conservative towards stances on immigration, it seems that treated individuals ended up more conservative on this issue than the control group. 
+The *fitted value* of att_end is 8.45 for the control group and 10 for the treated group. Because a higher att_end means more conservative towards stances on immigration, it seems that treated individuals had more conservative stances on this issue than the control group by the end of the study. 
 
 ### Model Structure
 
@@ -478,11 +421,32 @@ mean_ends <- trains %>%
 
 ```
 
-```{r, include = FALSE}
+```{r}
 
 ATE <- mean_ends$mean_att_end[2] - mean_ends$mean_att_end[1]
 
 ```
+
+Now, let's make a Preceptor Table for this data:
+
+```{r, echo = FALSE}
+
+tibble(subject = c("1", "2", "...", "75", "...", "564", "565", "...", "10,627", "...", "N"),
+       treatment = c("treated", "?", "...", "control", "...", "control", "?",  "...", "treated", "...", "?"),
+       att_end = c("11", "?", "...", "5", "...", "13", "?",  "...", "11", "...", "?")) %>%
+  gt() %>%
+  cols_label(subject = md("**ID**"),
+             att_end = md("**att_end**"),
+             treatment = md("**treatment**")) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(subject))) %>%
+  cols_align(align = "center", columns = TRUE) %>%
+  tab_header("Preceptor Table of att_end ~ treatment") %>%
+  fmt_markdown(columns = TRUE)
+
+```
+
+Preceptor Tables aim to capture all of the data such that if the question marks were filled out, one wouldn't need to construct a model. The rows in this Preceptor Table represent the N commuters on which our model is extrapolating, with N being the population of commuters using Boston public transportation. However, we're going to need a different kind of table if we want to display the causal effect of being treated -- more with this soon. 
 
 Next, the second part of model structure, the formula. 
 
@@ -490,37 +454,16 @@ $$ y_i = b_1 x_t + b_2 x_c$$
 Once again, we start here. We can make our parameters constants, $\hat{b_1}$ and $\hat{b_1}$, by assigning them to the estimates of the model. Plugging in these numbers outputs an estimated att_end for the observation, or our *fitted value*   $\hat{y_i}$. 
 
 $$ \hat{y_i} = \hat{b_1} x_t + \hat{b_2} x_c  $$
-$$ \hat{y_i} = (8.45)x_t + (10)x_c $$
-When the individual is treated ($x_t$=1 and $x_c$=0), their fitted value is 8.45. When the individual is a control ($x_d$=0), their fiited value is 42.6. 
+$$ \hat{y_i} = 8.45x_t + 10x_c $$
+When the individual is treated ($x_t$=1 and $x_c$=0), their fitted value is 8.45. When the individual is a control ($x_t$=0 and $x_c$=1), their fiited value is 42.6. 
 
 Subtract the recorded att_end by fitted value for the epsilon value...
 $$\epsilon_i = y_i - \hat{y_i}$$
 ...And you can now complete your equation.
 $$ y_i = \hat{b_1}x_r + \hat{b_2} x_d + \epsilon_i $$
+Note that the math for both the predictive model we worked on earlier and this model is *identical*. It is not the calculations for the residual, fitted value, or parameter estimates that differ between these two model types; rather, it is how one uses and interprets these numbers. While predictive models are simply used for predicting another variable's value (in the previous case, age), we can use these numbers to calculate the effect of one variable (treatment) on another (att_end) for each individual observation. 
 
-### Parameter Uncertainty
-
-Here, we see that the average treatment effect is `r ATE`; this is the average change in att_end caused by treatment (if this statistic looks unfamiliar, refer back to chapter 3 for a refresher on ATE). But how confident are we in this ATE? We can use `lm()` again to generate confidence intervals for our parameters and this value:
-
-```{r}
-#This is necessary so we can see the offset as caused by treatmentTreated, not treatmentControl.
-
-trains$treatment <-fct_relevel(trains$treatment, "Control", "Treated")
-
-x <- lm(data = trains, att_end ~ treatment - 1) %>% 
-  tidy(conf.int = TRUE) %>%
-  select(term, estimate, conf.low, conf.high) %>%
-  as_tibble()
-
-```
-
-The confidence intervals show our confidence in the average treatment effect of the `trains` dataset being representative of the true average treatment effect on Boston commuters.
-
-### Unmodeled Variation
-
-### Preceptor Table
-
-Now, we'll create the Preceptor table -- a RCM table in this case -- of possible outcomes, as we did back in ch3:
+Now, we'll create a Rubin Causal Model table of possible outcomes, as we did back in ch3. We'll do this using 7 random observations from the trains dataset. 
 
 ```{r}
 
@@ -533,85 +476,40 @@ trains_RCM <- trains %>%
   replace_na(list(Treated = "?", Control = "?")) %>% 
   select(subject, Control, Treated)
 
+trains_RCM$subject <- c("7", "6,041", "67", "40,080", "758", "32", "8,809")
+
 #Mathematical notation
 
 trains_RCM %>%
   gt() %>%
-  cols_label(subject = md("$$\\mathbf{Subject}$$"),
-                Control = md("$$Y_c(u)$$"),
-                Treated = md("$$Y_t(u)$$")) %>%
+  cols_label(subject = md("**Subject**"),
+                Control = md("**$$Y_c(u)$$**"),
+                Treated = md("**$$Y_t(u)$$**")) %>%
   tab_style(cell_borders(sides = "right"),
             location = cells_body(columns = vars(subject))) %>%
   cols_align(align = "center", columns = TRUE) %>%
-  tab_header(title = "Att_end of First Ten Respondents of Train Dataset")
+  tab_header(title = "Ending Attitudes on Immigration of 7 Random Respondents")
 
 
 ```
 
-Recall that the Rubin Causal Model centers on filling in the unknowns, which are indicated by the "?"s in the table. There's one way we could fill in the missing values — we could use our approximations we generated with our `lm()` model: that is, for each unknown Treated value, we use 10, and for each unknown Control value, we use 8.45. This is certainly a reasonable prediction.
-
-There's one way we could fill in the missing values — we could use our approximations we generated with our `lm()` model: that is, for each unknown Treated value, we use 10, and for each unknown Control value, we use 8.45. We also attach the uncertainty attached for these predictions.
+Recall that the Rubin Causal Model centers on filling in the unknowns, which are indicated by the "?"s in the table. There's one way we could fill in the missing values — we could use our approximations we generated with our `lm()` model: that is, for each unknown Treated value, we use 10, and for each unknown Control value, we use 8.45. 
 
 ```{r, echo = FALSE}
 
-tibble(subject = 1:7,
-       Control = c("8.45 (7.76-9.14)", "8.45 (7.76-9.14)", "8.45 (7.76-9.14)", "8.45 (7.76-9.14)", "5", "8.45 (7.76-9.14)", "13"),
-       Treated = c("11", "10", "5", "11", "10 (9.2-10.8)", "13", "10 (9.2-10.8)")) %>% 
+tibble(subject = c("7", "6,041", "67", "40,080", "758", "32", "8,809"),
+       Control = c("8.45", "8.45", "8.45", "8.45", "5", "8.45", "13"),
+       Treated = c("11", "10", "5", "11", "10", "13", "10")) %>% 
   
   gt() %>%
-  cols_label(subject = md("$$\\mathbf{Subject}$$"),
-                Control = md("$$Y_c(u)$$"),
-                Treated = md("$$Y_t(u)$$")) %>%
+  cols_label(subject = md("**Subject**"),
+                Control = md("**$$Y_c(u)$$**"),
+                Treated = md("**$$Y_t(u)$$**")) %>%
   tab_style(cell_borders(sides = "right"),
             location = cells_body(columns = vars(subject))) %>%
   cols_align(align = "center", columns = TRUE) %>%
-  tab_header(title = "Att_end of First Ten Respondents of Train Dataset")
+  tab_header(title = "Ending Attitudes on Immigration of 7 Random Respondents")
 
-```
-
-Recall our earlier conversation regarding the difference between confidence intervals. An argument could be made that, taking individual variation into account, prediction intervals would be more accurate indicators of uncertainty than confidence intervals. We can construct the above table using prediction intervals instead, generated using the `predict()` function:
-
-```{r}
-
-
-lm(data = trains, att_end ~ treatment) %>%
-predict(tibble(treatment = c("Treated", "Control")), 
-        interval = "prediction")
-
-```
-
-And we can reconstruct the table by filling in the unknowns with the predictions (note that these are unchanged) and their associated levels of uncertainty (which HAVE changed to accomodate for individual variation within the data):
-
-<!-- EM: Note that some of the uncertainty boundaries exceed 3 or 15, which were the minimum and maximum values for att_end, respectively. This should be made apparent in a margin note for the tables that have uncertainty bounds below 3 or above 15. -->
-
-``` {r}
-
-trains.lm <- lm(data = trains, att_end ~ treatment)
-newdata <- tibble(treatment = c("Treated", "Control"))
-
-predict(trains.lm, newdata, interval = "prediction")
-
-```
-
-And we can reconstruct the table by filling in the unknowns with the predictions (note that these are unchanged) and their associated levels of uncertainty (which HAVE changed to accomodate for individual variation within the data):
-
-```{r, echo = FALSE}
-
-tibble(subject = 1:7,
-       Control = c("8.45 (2.9-14.0)", "8.45 (2.9-14.0)", "8.45 (2.9-14.0)", "8.45 (2.9-14.0)", "5", "8.45 (2.9-14.0)", "13"),
-       Treated = c("11", "10", "5", "11", "10 (4.4-15.6)", "13", "10 (4.4-15.6)")) %>% 
-  
-  gt() %>%
-  cols_label(subject = md("$$\\mathbf{Subject}$$"),
-                Control = md("$$Y_c(u)$$"),
-                Treated = md("$$Y_t(u)$$")) %>%
-  tab_style(cell_borders(sides = "right"),
-            location = cells_body(columns = vars(subject))) %>%
-  cols_align(align = "center", columns = TRUE) %>%
-  tab_header(title = "Att_end of First Ten Respondents of Train Dataset") %>%
-  tab_footnote(footnote = "Note: ",
-               locations = cells_column_labels(
-      columns = T))
 ```
 
 ```{r, include = FALSE}
@@ -622,11 +520,11 @@ margin_note("The minimum att_end is 3 and maximum att_end is 15.")
 
 ```
 
-Regardless of whether we use confidence or prediction intervals for these unknowns, however, the table looks a bit funky: take a look at subject 3. According to this model, subject 3's attitude under control would be HIGHER than his/her attitude under treatment, which corresponds to a negative treatment effect. This would mean that he/she would become more LIBERAL after undergoing treatment, which flies in the face of the ATE we calculated earlier. Another example of this can be seen with subject 7, whose predicted `att_end` under treatment is lower than his/her `att_end` under control (also signifying a shift towards liberal attitudes regarding immigration). 
+This table looks a bit funky: take a look at subject 67. According to this model, subject 67's attitude under control would be HIGHER than his/her attitude under treatment, which corresponds to a negative treatment effect. This would mean that he/she would become more LIBERAL after undergoing treatment, which flies in the face of the ATE we calculated earlier. Another example of this can be seen with subject 32, whose predicted `att_end` under treatment is lower than his/her `att_end` under control (also signifying a shift towards liberal attitudes regarding immigration). 
 
-Clearly, using the same control and treatment values to fill in the unknowns doesn't capture the entire picture. While using `lm()` to fill in the `att_end` unknowns towards the center of the distribution, it makes less sense for values towards the outskirts of the dataset. So, how can we predict outcomes in a way that equally addresses data towards the center of the distribution, and data that isn't?
+Clearly, using the same control and treatment values to fill in the unknowns doesn't capture the entire picture as it does with a predictive model. While using `lm()` to fill in the `att_end` unknowns towards the center of the distribution, it makes less sense for values towards the outskirts of the dataset. So, how can we predict outcomes in a way that equally addresses data towards the center of the distribution, and data that isn't?
 
-One such way is by attaching the ATE in the appropriate direction to fill in the unknowns. Here, we use lm() to calculate confidence intervals for the ATE, which we previously calculated to be `r ATE`, and add and subtract those from the known values to fill in the unknown values:
+One such way is by attaching the ATE, which we previously calculated to be `r ATE`, in the appropriate direction to fill in the unknowns:
 
 ```{r, echo = FALSE}
 
@@ -639,21 +537,42 @@ lm(data = trains, att_end ~ treatment) %>%
   select(term, estimate, conf.low, conf.high)
 
 
-tibble(subject = 1:7,
-       Control = c("9.45 (8.42, 10.48)", "8.45 (7.42, 9.48)", "3.45 (2.42, 4.48)", "9.45 (8.42, 10.48)", "5", "11.45 (10.42, 12.48)", "13"),
-       Treated = c("11", "10", "5", "11", "6.55 (5.52, 7.58)", "13", "14.55 (13.52, 15.58)")) %>%
+tibble(subject = c("7", "6,041", "67", "40,080", "758", "32", "8,809"),
+       Control = c("9.45", "8.45", "3.45", "9.45", "5", "11.45", "13"),
+       Treated = c("11", "10", "5", "11", "6.55", "13", "14.55")) %>%
   gt() %>%
-  cols_label(subject = md("$$\\mathbf{Subject}$$"),
-                Control = md("$$Y_c(u)$$"),
-                Treated = md("$$Y_t(u)$$")) %>%
+  cols_label(subject = md("**Subject**"),
+                Control = md("**$$Y_c(u)$$**"),
+                Treated = md("**$$Y_t(u)$$**")) %>%
   tab_style(cell_borders(sides = "right"),
             location = cells_body(columns = vars(subject))) %>%
   cols_align(align = "center", columns = TRUE) %>%
-  tab_header(title = "Att_end of First Ten Respondents of Train Dataset")
+  tab_header(title = "Ending Attitudes on Immigration of 7 Random Respondents")
 
 ```
 
-<!-- EM: Unsure how to tie in probability -->
+The usage of this table shows how a causal model is used differently than a predictive model. Unlike before, it wasn't enough to fill in our unknowns with the parameter estimates. This is because we aren't merely predicting their att_end, a variable that, unlike age, could be changed by exposure to a treatment variable. By using the ATE, we were able to make a more informed prediction on any individual's att_end had they been placed in the other group. 
+
+### Parameter Uncertainty
+
+Here, we see that the average treatment effect is `r ATE`; this is the average change in att_end caused by treatment (if this statistic looks unfamiliar, refer back to chapter 3 for a refresher on ATE). But how confident are we in this ATE? We can use `lm()` again to generate confidence intervals for our parameters and for this value:
+
+```{r}
+#This is necessary so we can see the offset as caused by treatmentTreated, not treatmentControl.
+
+trains$treatment <-fct_relevel(trains$treatment, "Control", "Treated")
+
+lm(data = trains, att_end ~ treatment - 1) %>% 
+  tidy(conf.int = TRUE) %>%
+  select(term, estimate, conf.low, conf.high)
+
+summary(lm(data = trains, att_end ~ treatment - 1))
+
+```
+
+<!-- MB: Is this true  -->
+
+Our measure of confidence for the ATE is known as the residual standard error, which in this case is 2.78. The residual standard error show our confidence in the average treatment effect of the `trains` dataset being representative of the true average treatment effect on Boston commuters.
 
 ### Uncertainties
 
@@ -678,7 +597,62 @@ There are various sources of uncertainties and problems that have addressed in p
 
 <!-- Do we want to play the prediction game? If so, how? -->
 
-So far, we have not clearly discussed what we are using these models for. Why bother to create these models? What is their *purpose*? In many cases, the most important use of a model is for prediction. We use them to make predictions about data which we have not yet seen.
+We will introduce a new function here, `predict()`, which takes in a model as input and, given a specified parameter, will predict the value and confidence intervals of any given data point:
+
+```{r}
+
+trains.lm <- lm(data = trains, income ~ party)
+newdata <- tibble(party = c("Republican", "Democrat"))
+
+predict(trains.lm, newdata, interval = "prediction")
+
+```
+
+Note that for both Democrats and Republicans, the prediction interval is significantly wider than the confidence interval. This discrepancy illustrates the *unmodeled variation* of the dataset: while the mean values, as indicated by the "fit" column, are still the best guess you can make for any given subject, we are less confident in the value range of that individual subject than we are of the value range of the mean. *The unmodeled variation widens the prediction intervals relative to the confidence intervals.*
+
+Recall our discussion regarding the wider confidence intervals for Republican subjects than Democrat subjects (*would like to attach a link here that takes reader up to that part of the chapter*). Although the Republican and Democrat average incomes had vastly different confidence intervals — the Republican convidence intervals were much wider — they have very similar prediction intervals. Although the *parameter uncertainty* of these two parameters were very different, the *unmodeled variation* for both parameters was roughly the same. Even though the data points were equally spread out for both Democrat and Republican income, were were able to more confidently pinpoint a true value for democrat income because we had more data to work with.
+
+In many cases, the most important use of a model is for prediction. We use them to make predictions about data which we have not yet seen.
+
+Recall our earlier conversation regarding the difference between confidence intervals. An argument could be made that, taking individual variation into account, prediction intervals would be more accurate indicators of uncertainty than confidence intervals. We can construct the above table using prediction intervals instead, generated using the `predict()` function:
+
+```{r}
+
+
+lm(data = trains, att_end ~ treatment) %>%
+predict(tibble(treatment = c("Treated", "Control")), 
+        interval = "prediction")
+
+```
+
+And we can reconstruct the table by filling in the unknowns with the predictions (note that these are unchanged) and their associated levels of uncertainty (which HAVE changed to accomodate for individual variation within the data):
+
+``` {r}
+
+trains.lm <- lm(data = trains, att_end ~ treatment)
+newdata <- tibble(treatment = c("Treated", "Control"))
+
+predict(trains.lm, newdata, interval = "prediction")
+
+```
+
+And we can reconstruct the table by filling in the unknowns with the predictions (note that these are unchanged) and their associated levels of uncertainty (which HAVE changed to accomodate for individual variation within the data):
+
+```{r, echo = FALSE}
+
+tibble(subject = c("7", "6,041", "67", "40,080", "758", "32", "8,809"),
+       Control = c("8.45 (2.9-14.0)", "8.45 (2.9-14.0)", "8.45 (2.9-14.0)", "8.45 (2.9-14.0)", "5", "8.45 (2.9-14.0)", "13"),
+       Treated = c("11", "10", "5", "11", "10 (4.4-15.6)", "13", "10 (4.4-15.6)")) %>% 
+  
+  gt() %>%
+  cols_label(subject = md("**Subject**"),
+                Control = md("**$$Y_c(u)$$**"),
+                Treated = md("**$$Y_t(u)$$**")) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(subject))) %>%
+  cols_align(align = "center", columns = TRUE) %>%
+  tab_header(title = "Ending Attitudes on Immigration of 7 Random Respondents")
+```
 
 
 
