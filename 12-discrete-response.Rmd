@@ -26,15 +26,7 @@ In this chapter, we will look at three common techniques of **classification** o
 
 ### Needed packages {-}
 
-Recall from our discussion in Section \@ref(tidyverse-package) that loading the **tidyverse** package by running `library(tidyverse)` loads the following commonly used data science packages all at once:
-
-* **ggplot2** for data visualization
-* **dplyr** for data wrangling
-* **tidyr** for converting data to "tidy" format
-* **readr** for importing spreadsheet data into R
-* As well as the more advanced **purrr**, **tibble**, **stringr**, and **forcats** packages
-
-Read Section \@ref(packages) for information on how to install and load R packages. 
+Start with the **tidyverse** as usual. 
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 library(tidyverse)
@@ -429,14 +421,14 @@ We obtained these values and other values using the `augment()` function from th
 
 ```{r, eval=FALSE}
 regression_points <- house_region_model %>%
-  augment() %>%
+  augment(se_fit = TRUE) %>%
   mutate(conf.low = .fitted - 2 * .se.fit,
          conf.high = .fitted + 2 * .se.fit) %>%
   select(dem_win, region, .fitted, conf.low, conf.high, .resid)
 regression_points
 ```
 ```{r, echo=FALSE}
-regression_points <- augment(house_region_model) %>%
+regression_points <- augment(house_region_model, se_fit = TRUE) %>%
   mutate(conf.low = .fitted - 2 * .se.fit,
          conf.high = .fitted + 2 * .se.fit) %>%
   select(dem_win, region, .fitted, conf.low, conf.high, .resid)
@@ -450,7 +442,7 @@ The syntax is the same, but the interpretation has to change, since the `.fitted
 
 ```{r, eval=FALSE}
 regression_points <- house_region_model %>%
-  augment(type.predict = "response") %>%
+  augment(type.predict = "response", se_fit = TRUE) %>%
   mutate(conf.low = .fitted - 2 * .se.fit,
          conf.high = .fitted + 2 * .se.fit) %>%
   select(dem_win, region, .fitted, conf.low, conf.high, .resid)
@@ -458,6 +450,7 @@ regression_points
 ```
 ```{r, echo=FALSE}
 regression_points <- augment(house_region_model,
+                             se_fit = TRUE,
                              type.predict = "response") %>%
   mutate(conf.low = .fitted - 2 * .se.fit,
          conf.high = .fitted + 2 * .se.fit) %>%
@@ -481,12 +474,13 @@ where $Y_i$ is the actual outcome and $p_i$ is the predicted probability from th
 
 The sum of the individual deviance residuals is referred to as the **deviance** or **residual deviance**. The deviance is used to assess the model. As the name suggests, a model with a small deviance is preferred.
 
-However, you can also have `augment()` report residuals as differences between the observed outcome and the predicted probabilities by using `type.residuals = "response"`:
+However, you can also have `augment()` report residuals as differences between the observed outcome and the predicted probabilities by using `type.residuals = "pearson"`:
 
 ```{r, eval=FALSE}
 regression_points <- house_region_model %>%
-  augment(type.predict = "response",
-          type.residuals = "response") %>%
+  augment(se_fit = TRUE,
+          type.predict = "response",
+          type.residuals = "pearson") %>%
   mutate(conf.low = .fitted - 2 * .se.fit,
          conf.high = .fitted + 2 * .se.fit) %>%
   select(dem_win, region, .fitted, conf.low, conf.high, .resid)
@@ -494,8 +488,9 @@ regression_points
 ```
 ```{r, echo=FALSE}
 regression_points <- augment(house_region_model,
+                             se_fit = TRUE,
                              type.predict = "response",
-                             type.residuals = "response") %>%
+                             type.residuals = "pearson") %>%
   mutate(conf.low = .fitted - 2 * .se.fit,
          conf.high = .fitted + 2 * .se.fit) %>%
   select(dem_win, region, .fitted, conf.low, conf.high, .resid)
@@ -591,12 +586,13 @@ tidy(house_interact_model,
 
 Now we can see how the effect of `year` varies by `region`.  While the passage of time is associated with more Democratic victories in the Northeast and the West, `year` is associated with declining Democratic fortunes in the Midwest (`year`) and the South (`regionSouth:year`).
 
-Looking at predicted probabilities can also put this model in perspective.  Let's use `augment()` to generate the predictions.  Remember that `type.predict = "response"` and `type.residuals = "response"` put the fitted values and the residuals on the probability scale.
+Looking at predicted probabilities can also put this model in perspective.  Let's use `augment()` to generate the predictions.  Remember that `type.predict = "response"` and `type.residuals = "pearson"` put the fitted values and the residuals on the probability scale.
 
 ```{r, eval=FALSE}
 regression_points <- house_interact_model %>%
-  augment(type.predict = "response",
-          type.residuals = "response") %>%
+  augment(se_fit = TRUE,
+          type.predict = "response",
+          type.residuals = "pearson") %>%
   mutate(conf.low = .fitted - 2 * .se.fit,
          conf.high = .fitted + 2 * .se.fit) %>%
   select(dem_win, region, .fitted, conf.low, conf.high, .resid)
@@ -604,8 +600,9 @@ regression_points
 ```
 ```{r, echo=FALSE}
 regression_points <- augment(house_interact_model,
+                             se_fit = TRUE,
                              type.predict = "response",
-                             type.residuals = "response") %>%
+                             type.residuals = "pearson") %>%
   mutate(conf.low = .fitted - 2 * .se.fit,
          conf.high = .fitted + 2 * .se.fit) %>%
   select(dem_win, region, .fitted, conf.low, conf.high, .resid)
@@ -627,6 +624,7 @@ We can also use `augment` to make predictions for years that aren't in our data.
 house_interact_model %>%
   augment(newdata = tibble(year = rep(2020, 4),
                            region = c("Midwest", "Northeast", "South", "West")),
+          se_fit = TRUE,
           type.predict = "response") %>%
   mutate(conf.low = .fitted - 2 * .se.fit,
          conf.high = .fitted + 2 * .se.fit)
@@ -638,6 +636,7 @@ These can easily be plotted using `ggplot()`:
 house_interact_model %>%
   augment(newdata = tibble(year = rep(2020, 4),
                            region = c("Midwest", "Northeast", "South", "West")),
+          se_fit = TRUE,
           type.predict = "response") %>%
   mutate(conf.low = .fitted - 2 * .se.fit,
          conf.high = .fitted + 2 * .se.fit) %>%
