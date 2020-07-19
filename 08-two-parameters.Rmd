@@ -113,11 +113,11 @@ On a boxplot, the top and bottom borders of the box denotes the 75th and 25th pe
 ## Review of One Parameter Estimation
 
 
-<!--  Speak with Cass about adding a Rubin Table here. -->
+<!--  Speak with Cass about adding a Preceptor Table here. -->
 
 Recall how we constructed bootstrap distributions for a parameter by sampling with replacement in Chapter \@ref(one-parameter). Through this bootstrapping process, we were able to construct *confidence intervals* for a parameter. Remember, confidence intervals are a tool to help us identify *parameter uncertainty*, which is the degree to which we are confident in these estimates of the *unknown* (and often unknowable) numbers. 
 
-We will once again be using the `bootstraps()` function from the **rsample** package. You might think that since we're shifting to calculating two parameters of comparison, we might need to conduct the entire bootstrapping process twice, once for each parameter. However, it's much, much easier than that! We can actually calculate as many parameters as we need to for each replicate instead of doing a separate bootstrap for each parameter we want to track.
+We will once again be using the `bootstraps()` function from the **rsample** package. You might think that since we're shifting to calculating two parameters, we might need to conduct the entire bootstrapping process twice, once for each parameter. However, it's much, much easier than that. We can actually calculate as many parameters as we need to for each bootstrap sample instead of doing a separate bootstrap for each parameter we want to estimate.
 
 Let's review the material from  Chapter \@ref(one-parameter) by calculating the confidence interval for both the mean and the 90th percentile of age for Boston commuters. We will build up the code section by section.
 
@@ -130,7 +130,7 @@ trains %>%
   bootstraps(1000)
 ```
 
-We discussed these objects in Chapter \@ref(one-parameter). The key in working with them is the use of `analysis()` from the **rsample** package to pull out the underlying data.
+We discussed these objects in Chapter \@ref(one-parameter). The key trick in working with them is the use of `analysis()` from the **rsample** package to pull out the underlying data.
 
 ```{r}
 trains %>% 
@@ -139,7 +139,7 @@ trains %>%
   mutate(boot = map(splits, ~ analysis(.)))
 ```
 
-`boot` is now a list-column in the tibble. This workflow --- keep adding new columns to the tibble created by the initial call to `bootstraps()` --- is common. Let's add three more columns.
+`boot` is now a list-column in the tibble. This workflow --- keep adding new columns to the tibble created after the initial call to `bootstraps()` --- is common. Let's add three more columns.
 
 ```{r}
 trains %>% 
@@ -151,12 +151,12 @@ trains %>%
   mutate(age_90th = map_dbl(ages, ~ quantile(., probs = 0.9)))
 ```
 
-We could simplify this code by combining all the `mutate()` steps into a single line, create one function which does the `analyst()`, `pull()`, `mean()` and `quantile()` steps together. However, when building up code like this, we prefer to go line-by-line, at least until everything is working. We could also "feed" this pipe directly into a call to `ggplot()`. However, it is better practice to save the needed results in an object and then use that object for plotting, especially if creating the data takes some time. For replication purposes, we use `set.seed()`. 
+We could simplify this code by combining all the `mutate()` steps into a single line, create one function which does the `analyst()`, `pull()`, `mean()` and `quantile()` steps together. However, when building up an analysis like this, we prefer to go line-by-line, at least until everything is working. We could also "feed" this pipe directly into a call to `ggplot()`. However, it is better practice to save the needed results in an object and then use that object for plotting, especially if creating the data takes some time. For replication purposes, we use `set.seed()`. We only keep the variables we need.
 
 ```{r}
 set.seed(9)
 
-x <- trains %>% 
+boot_results <- trains %>% 
   select(age) %>% 
   bootstraps(1000) %>% 
   mutate(ages = map(splits, ~ analysis(.) %>% 
@@ -170,7 +170,7 @@ We no longer need to re-run this code each time we adjust the plot.
 
 
 ```{r}
-x %>% 
+boot_results %>% 
   ggplot() +
     geom_histogram(aes(x = age_mean), binwidth = .1, fill = "red") +
     geom_histogram(aes(x = age_90th), binwidth = .1, fill = "blue") +
@@ -188,11 +188,56 @@ trains %>%
   select(conf.low, estimate, conf.high)
 ```
 
-The 95% confidence interval calculated via `lm()` is, more or less, the same as the one we calculate "by hand" using the bootstrap: `r round(quantile(x$age_mean, probs = c(0.025, 0.975)), 1)`.
+The 95% confidence interval calculated via `lm()` is, more or less, the same as the one we calculate "by hand" using the bootstrap: `r quantile(boot_results$age_mean, probs = c(0.025, 0.975))`. Of course, there is no built-in function for calculating the confidence interval for the 90th percentile, so there is nothing against which to compare the bootstrap calculation of `r quantile(boot_results$age_90th, probs = c(0.025, 0.975))`. Note, however, how the most likely value for the 90th percentile, 60, is also at the end of the confidence interval. 
+
+### Prediction
+
+Before considering the questions we want to answer with our model of mean height, let's step back and look at the big picture. All modeling problems look the same:
+
+$$outcome = model + stuff$$
+There is an outcome we care about. In this case, it is heights. But it could be anything. This is the thing that we are trying to understand. In order to understand it, we build a model. That takes time and trouble, so much so that we will sometimes forget that no model explains every outcome. There will always be other "stuff" which affects outcomes, influences that our model does not account for, *unmodeled variation*. Consider a sample from our dataset, augmented with other variables:
+
+```{r}
+trains %>% 
+  lm(age ~ 1, data = .) %>%
+  augment() %>% 
+  select(age, .fitted, .resid)
+```
+
+These three columns capture the three key components of any approach: the outcome (`age`), the model (`.fitted`) and the stuff (`.resid`). The residual is often referred to as the error term, although calling everything we don't understand an "error" is the height of hubris, as if the fault might in the world, rather than in our own ignorance.
+
+Graphically, we have:
+
+```{r}
+trains %>% 
+  lm(age ~ 1, data = .) %>%
+  augment() %>% 
+  select(age, .fitted, .resid) %>% 
+  pivot_longer(cols = everything()) %>% 
+  mutate(panels = factor(name, levels = c("age", ".fitted", ".resid"))) %>% 
+  ggplot() +
+    geom_histogram(aes(x = value), bins = 30) +
+    facet_grid(cols = vars(panels))
+```
+
+<!-- DK: Clean up this plot and make it much prettier. Add labels to connect with both the outcome, model, stuff formulation above and with the $y$, $\hat{u}$, $\epsilon$ notation. Should also add a nice caption explaining it all again.  -->
+
+In order to answer questions with this model, we need to use the `simulate()` function.
+
+```{r}
+lm.obj <- trains %>% 
+  lm(age ~ 1, data = .) 
+
+simulate(lm.obj, seed = 9)
+```
 
 
 
-<!-- DK: Should also add a "validity" or "representativeness" discussion about what population this estimate applies to. All people? All people in Boston? All Boston commuters? Do we need to get into prediction stuff? -->
+
+
+<!-- DK: Should also add a "validity" or "representativeness" discussion about what population this estimate applies to. All people? All people in Boston? All Boston commuters? Do we need to get into prediction stuff? Discuss the weird appearance of the plot for the 90th percentile? -->
+
+
 
 ## `age` as a function of `party`
 
