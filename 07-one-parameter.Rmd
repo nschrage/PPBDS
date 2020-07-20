@@ -10,9 +10,10 @@ library(tufte)
 library(gt) 
 library(patchwork)
 library(rsample)
+library(skimr)
 ```
 
-<!-- DK: Key question is: How do we include forecasts in this process? -->
+
 
 <!-- Explain PPBDS.data and how to install it at start of chapter. Just a sentence or two, with `remotes::install_github("davidkane9/PPBDS.data")` in the sentence, along with note that, obviously, one needs to `library(remotes)` first. This would make for a good margin note. -->
 
@@ -24,6 +25,11 @@ $$ \hat{y_i} = \beta  $$
 
 
 Read Chapter 5 and zoom with Vivian about the connection between the two chapters
+the probability part is just what i have right now where you flip a coin but there is no number of calculation. Talk about the reservations of 5% from Vivina Zhang
+
+there a are a lot of conditions to make when finding the average height for nhanes and this conditions are gender and age. we need to take into account these conditions to make posterior predictions. bayesian statistics.
+
+might briefly say why testing does not matter when we do bootstrap sampling. 
 
 Figure out the 5-8 subparts and the sub-subparts within each. This will evolve over time, of course.
 
@@ -334,22 +340,42 @@ Going back to our 50 sampled pennies in Figure \@ref(fig:resampling-exercise-c),
 
 Recall that we also saw in Chapter \@ref(sampling) that such estimates are prone to *sampling variation*. For example, in this particular sample in Figure \@ref(fig:resampling-exercise-c), we observed three pennies with the year 1999. If we sampled another 50 pennies, would we observe exactly three pennies with the year 1999 again? More than likely not. We might observe none, one, two, or maybe even all 50! The same can be said for the other 26 unique years that are represented in our sample of 50 pennies.
 
-Let's now perform the virtual analog for 1000 resamples. Using these results, we'll be able to study the variability in the sample means from 1000 resamples of size 50. Let's first add a `times = 1000` argument to `bootstraps()` \index{rsample!bootstraps()} to indicate we would like 1000 replicates. Remember that we must use the `rsample` library to use bootstraps. Thus, we want to repeat the resampling with the replacement of 50 pennies 1000 times. We will also select the variable we care concerned with, which is `year`.
+So what do we do about this sampling variation? One solution is that we create bootstrap samples! As you already know that resampling is a significant tool in data science, bootstrapping is one such resampling method that many data scientists use today. Bootstrapping essentially repeatedly draws independent samples from our data set with replacement. By sampling with replacement, the same observation can be sampled multiple times and each bootstrap sample will have the same number of observations as the original data set. 
+
+`r margin_note("To conduct bootstraps, make sure your dowload both rsample and tidyverse libraries")`
+Before the computer age, scientists would use direct standard error formulas and complex Taylor Series to compute confidence intervals for an estimate. However, the bootstrap was developed as an alternative to compute standard errors and confidence intervals for any statistic in a much faster and easier way. 
+
+The intuition with bootstrapping is that we can model an inference about the population from resampling our sample data and then performing an inference about a sample from each resample. It will look something like this: resampled → sample → population. 
+
+The first thing we want to do when bootstrapping is creating our bootstrap samples.Since we are concerned with the `year` of pennies in 2019, let's select `year` in our data set before we create our bootstraps. Let's now perform the virtual analog for 1000 resamples. Using these results, we'll be able to study the variability in the sample means from 1000 resamples of size 50. Let's first add a `times = 1000` argument to `bootstraps()` \index{rsample!bootstraps()} to indicate we would like 1000 replicates. Remember that we must use the `rsample` library to use bootstraps. 
 
 ```{r}
+set.seed(9)
 virtual_resamples <- pennies_sample %>%
   select(year) %>%
   bootstraps(times = 1000)
 virtual_resamples
 ```
+So we have now created our bootstrap samples, which are stored in a tibble-like object, and each bootstrap sample is nested in the splits column. This means that each `rsplit` row is a different bootstrap sample and the `id` column is used to identify each bootstrap sample. 
 
-So we have now created bootstrap samples, which are stored in a tibble-like object, and each bootstrap sample is nested in the splits column. If you are interested to view a specific bootstrap sample, you can use the `analysis()` function from the `rsample` package, which basically allows you to view a specific bootstrap sample as a data frame. To do so, type `analysis(virtual_resamples$splits[[n]]) %>% as_tibble()` where n represents the nth bootstrap sample. We will be looking at the first bootstrap sample in this case. 
+Furthermore, if you want to check out the details of a specific bootstrap sample, we can run the command, `virtual_resamples$splits[[n]]` where n represents the nth row bootstrap sample. We will be looking at the first resample. 
+
+```{r}
+virtual_resamples$splits[[1]]
+```
+`r margin_note("It is important to remember that a bootstrap sample will have the same number of observations as the original data set")`
+The `<50/19/50>` means that 50 observations are in the first bootstrap sample, while 19 observations were not sampled in this resample. Thus, 50 - 19 = 31 observations were sampled more than once to complete the 50 observations in this bootstrap sample. The last 50 represents the total number of observations in the original data set. 
+
+`r margin_note("Check out ?analysis in console to get an even more comprehensive review of what analysis() does")`
+Now if you are interested to view a specific bootstrap sample, you can use the `analysis()` function from the `rsample` package, which basically allows you to view a specific bootstrap sample as a data frame. To do so, type `analysis(virtual_resamples$splits[[n]]) %>% as_tibble()` where n represents the nth row bootstrap sample. We will be looking at the first bootstrap sample in this case. 
 
 ```{r}
 analysis(virtual_resamples$splits[[1]]) %>% as_tibble()
 ```
+As you can see, we were able to view the data in first bootstrap sample. Noticed how it has 50 rows, which is the same as our `pennies_sample`. Now that we know how to create bootstrap samples and view them, we can apply more code to our bootstraps to find our desired statistic, which is the average year of pennies in 2019. 
 
-Using `analysis` is a very significant function for bootstrapping, because it allows us to pull out necessary data. 
+`r margin_note("In this chapter, bootstrap samples and resamples mean the same thing")`
+To compute our desired statistics, we now create the column `boot` by `mutate(boot = map(splits, ~ analysis(.)))`. What we are doing here is that we are iterating an analysis over each bootstrap sample in a new sample. We want to iterate an analysis over each bootstrap sample, because analysis allows us to extract the mean year for each resample. 
 
 ```{r}
 virtual_resamples <- pennies_sample %>%
@@ -359,7 +385,7 @@ virtual_resamples <- pennies_sample %>%
 virtual_resamples
 ```
 
-`boot` is now a list-column in the tibble, which we can use if we want to find a specific characteristic of each sample like the average year or median year. Let's add more columns for our tibble to find the average year of each bootstrap sample.
+`boot` is now a list-column in the tibble, which we can use if we want to find a specific characteristic of each sample like the average year. Given that `boot` is a list column and we want to pull out the mean year as we are interested in this, we can create two more columns: `years` and year_mean`, respectively.  To create our `years` column, we run `mutate(years = map(boot, ~ pull(., year)))` after creating our `boot` column. What this does is that we are now pulling the year column of each bootstrap sample, which will evidently be nested in a list. Finally, we can create the column `year_mean` to extract the mean of each bootstrap sample by now running `mutate(year_mean = map_dbl(years, ~ mean(.)))`. This command line essentially calculates the mean year from the `years` list nested column. 
 
 ```{r}
 set.seed(9)
@@ -368,11 +394,11 @@ virtual_resamples <- pennies_sample %>%
   bootstraps(times = 1000) %>%
   mutate(boot = map(splits, ~ analysis(.))) %>%
   mutate(years = map(boot, ~ pull(., year))) %>% 
-  mutate(year_mean = map_dbl(years, ~ mean(.))) 
+  mutate(year_mean = map_dbl(years, ~ mean(.)))
 virtual_resamples
 ```
 
-Great! We were able to create a thousand bootstrap samples and calculate the mean year for each resample. Let's now create a plot to visualize the distribution of the average year for each resample.
+Voila! We were able to create a thousand bootstrap samples and calculate the mean year for each resample. Let's now create a plot to visualize the distribution of the average year for each resample.
 
 ```{r}
 virtual_resamples %>% 
@@ -401,7 +427,7 @@ Congratulations! You've just constructed your first bootstrap distribution! In t
 
 ```{r}
 set.seed(9)
-  lm(year_mean ~ 1, data = virtual_resamples) %>%
+  lm(year ~ 1, data = pennies_sample) %>%
   tidy(conf.int = TRUE) %>% 
   select(conf.low, estimate, conf.high)
 ```
@@ -461,51 +487,56 @@ pennies_sample %>%
   cols_align(align = "center", columns = TRUE)
 ```
 
+## EDA for nhanes
 
-## Income from trains using Bootstrap
-
-In addition to using `lm()`, we can also use bootsrapping to extract confidence intervals. Bootstrapping is a significant tool used in statistics. Bootstrapping repeatedly draws samples from a data set and derives standard errors and confidence intervals for any statistic. While using `lm()` can produce confidence intervals for the mean of a data set or the coefficient in a regression, bootstrapping can produce confidence intervals for any statistics, such as median, 3rd highest value, etc. 
-
-To use bootstrapping, we will need the **tidyverse** and **rsample** packages. The **rsample** package gives us commands to use for bootstrapping. For the purpose of this example, let's try to find the confidence interval for the mean income in our trains dataset from Chapter 3. 
+Let’s perform an exploratory data analysis (EDA) of the nhanes data set from the PPBDS.data package. The nhanes data  Let’s load the libraries we will need in this chapter and look at the data.
 
 ```{r}
-
-library(tidyverse)
-library(rsample)
-library(PPBDS.data)
-
-train_samples <- bootstraps(trains, times = 1000)
-
-derive_mean_income <- function(splits) {
- x <- analysis(splits)
- return(mean(x$income))
-}
-
-train_samples$mean_income <- map_dbl(train_samples$splits, derive_mean_income)
-quantile(train_samples$mean_income, probs = c(.025, .975))
-
+glimpse(nhanes)
+ch7 <- nhanes %>% 
+  select(height, age, gender) %>%
+  drop_na()
+#call this nahnes40 and use this for nahnes sample of 40
+sample_n(ch7, 40, replace = FALSE)
 ```
 
-To find the confidence interval for the mean income in our train dataset, we first create our bootstrap samples using `bootstraps()`, where the times argument represents the number of bootstrap samples you want. Bootstrap samples are stored in a tibble and each bootstrap sample is nested in a split column. We then create a function for the statistic we are looking at; in this case, we want to focus on the mean income. Once we create our function, we can apply our statistic, the mean income, to each of our bootstrap samples by using map_dbl. Finally, we use quantile to extract our confidence intervals. 
+Here, we can see variables that indicate each respondent’s gender, political affiliations, age, and income. Additionally, we have variables that indicate whether a subject was in the control or treatment group, and the their attitudes toward immigration both before or after the treatment. You can type ?trains to read the help page for more information about each variable. Let’s restrict attention to a subset of the variables.
 
 
-If we want to find a different statistic like the median income, we can essentially do the same thing but edit the function to derive the median income. 
+It is always smart to look at a some random samples of the data:
 
 ```{r}
-library(tidyverse)
-library(rsample)
-library(PPBDS.data)
+ch7 %>%
+  sample_n(5)
+```
 
-train_samples <- bootstraps(trains, times = 1000)
+att_end is a measure of person’s attitude toward immigration, a higher number means to a more conservative, i.e., a more exclusionary stance on immigration into the United States. Running glimpse() is another way of exploring a data set.
 
-derive_median_income <- function(splits) {
- x <- analysis(splits)
- return(median(x$income))
-}
+```{r}
+ch7 %>%
+  glimpse()
+```
 
-train_samples$median_income <- map_dbl(train_samples$splits, derive_median_income)
-quantile(train_samples$median_income, probs = c(.025, .975))
+Pay attention to the variable “type.” Do they make sense? Perhaps. But there are certainly grounds for suspicion. Why are age and att_end doubles rather than integers? Why is party a character variable and treament a factor variable? It could be that these are intentional choices made by the creator of the tibble, i.e., us. These could be mistakes. Or, most likely, these choices are a mixture of sensible and arbitrary. Regardless, it is your responsibility to notice them. You can’t make a good model without looking closely at the data which you are using.
 
+skim from the skimr package is the best way to get an overview of a tibble.
+
+```{r}
+ch7 %>%
+  skim()
+```
+
+skim() shows us what the different values of treatment are because it is a factor. Unfortunately, it does not do the same for character variables like party. The ranges for age and att_end seem reasonable. Recall that participants were asked three questions about immigration issues, each of which allowed for an answer which was a strength of agreement between 1 and 5, with higher values indicating more agreement with conservative viewpoints. So, the most liberal possible value is 3 and the most conservative is 15.
+
+Plotting some variables from the dataset is another important practice in exploratory data analysis:
+
+```{r}
+ch7 %>%
+  ggplot(aes(x = age, y = height)) + 
+  geom_jitter(width = 0.1, height = 0) + 
+  labs(x = "Age",
+       y = "Height",
+       title = "Height by Age in Nhanes Dataset")
 ```
 
 
@@ -521,10 +552,10 @@ Although, we have used bootstrap to predict what we think the mean or a paramete
 
 Furthermore, it is important that we understand what a residual is. The residual in data science is the error that results. In simple terms, it is the observed value minus the predicted value. So, for example, let's say that the actual mean income is 140,000 but the predicted mean income we got was 130,000. That means the residual in our estimation is 10,000. 
 
-But the reason why residuals are so important is that they help explain why we can't make perfect predictions, especially for an individual. In our experiments, there is a lot of unmodeled variation, or residual variation. Residual variance refers to the variance of residuals, and occurs because randomness in our data is inherently intrinsic. There will be randomness in our data even if we have full knowldge of our data. This thus implies that we cannot really make fully accurate predictions of the future; we can only make probabilistic predictions. It is essentially difficult to control for residual variation, and predictions we get from methods like bootstrapping should not be taken as the final concensus. 
+But the reason why residuals are so important is that they help explain why we can't make perfect predictions, especially for an individual. In our experiments, there is a lot of unmodeled variation, or residual variation. Residual variance refers to the variance of residuals, and occurs because randomness in our data is inherently intrinsic. There will be randomness in our data even if we have full knowledge of our data. This thus implies that we cannot really make fully accurate predictions of the future; we can only make probabilistic predictions. It is essentially difficult to control for residual variation, and predictions we get from methods like bootstrapping should not be taken as the final consensus. 
 
 I might need to talk more about unmodeled variation here.
-
+reference chapter 5: even if something is fari, we still cant make accurate predictions, only probabilistic predictions.
 
 ## Case study: Looking at 2018 Qscore data
 
