@@ -44,6 +44,10 @@ We are now going to learn about [**list columns**](https://r4ds.had.co.nz/many-m
 
 <!-- DK: maybe start with "What are lists?" The chapter from R4DS with the pepper shaker pictures is excellent. -->
 
+<!--EC: Should we take the pepper shaker analogy directly or find a similar analogy (a jar of individually wrapped Fruit Gushers -- I love those -- or a hotel safe with a passport inside in which you'd need to "iterate" to the photo identification page)?-->
+
+First, we need to know: What are lists? 
+
 A list column is a column of your data which is a [list](https://adv-r.hadley.nz/vectors-chap.html#lists) rather than an atomic vector. Atomic vectors are familiar to us: each element of the vector has one value, and thus if an atomic vector is a column in your dataset, each observation gets a single value.  Lists, however, can contain vectors as elements. The best way to understand this is by creating a list column yourself and inspecting the results.  `str()` is a helpful function for looking at the contents of a tibble with list columns:
 
 ```{r simple_list_col, message = FALSE}
@@ -125,57 +129,34 @@ gapminder %>%
 
 What can we do with a list column? That is tricky! Lists are hard to work with. But the most natural thing to do with a list is to feed it to a `map_*` function.  What are these functions?
 
-Let's say that you want to add 1 to row of a variable in a tibble, storing the result in `x`.  You could accomplish this with `mutate`:
+Let's say that you want to find the square root of a variable in a tibble, storing the result in `x`.  You could accomplish this with `mutate`:
 
 ```{r for_loop_example}
 tibble(start = c(3, 2.5, 6)) %>% 
-  mutate(new = start + 1)
+  mutate(new = sqrt(start))
 
 ```
 
-We could instead create a function that adds 1 to a number.  Then, we can use `map_dbl()` to apply this to our input variable.  `map_dbl()` --- pronounced "map double" --- comes from the **purrr** package, which you will have loaded if you have loaded **tidyverse**.  `map_dbl()` is just one member of a family of `map_*` functions which applies the same function to every row in a tibble. The "dbl" suffix indicates that the function returns a "double," meaning a numeric value.
+Or, we can use `map_dbl()` to apply this to our input variable.  `map_dbl()` --- pronounced "map double" --- comes from the **purrr** package, which you will have loaded if you have loaded **tidyverse**.  `map_dbl()` is just one member of a family of `map_*` functions which applies the same function to every row in a tibble. The "dbl" suffix indicates that the function returns a "double," meaning a numeric value.
 
 
 ```{r map_simple}
-increment <- function(x) return(x + 1)
-
 tibble(start = c(3, 2.5, 6)) %>% 
-  mutate(new = map_dbl(start, increment))
+  mutate(new = map_dbl(start, sqrt))
 ```
 
-`map_dbl()` took the function `increment` and applied it to each element of `start`. Note that, when we passed the function `increment` to `map_dbl()`, we passed in just its name, without the closing parentheses. This code fails:
+`map_dbl()` took the function `sqrt()` and applied it to each element of `start`. Note that, when we passed the function `sqrt()` to `map_dbl()`, we passed in just its name, without the closing parentheses. This code fails:
 
 ```{r, error=TRUE}
 tibble(start = c(3, 2.5, 6)) %>% 
-  mutate(new = map_dbl(start, increment()))
+  mutate(new = map_dbl(start, sqrt()))
 ```
 
-`increment()` with the parantheses is a call to the function. So, the first thing R tries to do is to run the function. Doing so fails because `increment()` requires an argument `x`, which is not present. Lesson: When passing a function in to `map_*` functions, pass just the name.
+`sqrt()` with the parentheses is a call to the function. So, the first thing R tries to do is to run the function. Doing so fails because `sqrt()` requires an argument `x`, which is empty. 
 
-The syntax can get even simpler than this if we use [anonymous functions.](https://coolbutuseless.github.io/2019/03/13/anonymous-functions-in-r-part-1/)  An anonymous function in R is one without a name. The function `increment()` has a name, obviously. But we can create a function which does the same thing "on the fly" without bothering to give it a name. 
-
-There are two ways to create anonymous functions.  The first one, using base R, uses `function()` to create a function within `map_dbl()`.  
-
-```{r}
-tibble(start = c(3, 2.5, 6)) %>% 
-  mutate(new = map_dbl(start, function(x) x + 1))
+```{marginfigure, echo = TRUE}
+Lesson: When passing a function in to `map_*` functions, pass just the name.
 ```
-
-The second, using the **purrr** package (from where we get `map_dbl()`), starts with the `~` operator and then uses `.` to represent the current element.
-
-```{r}
-tibble(start = c(3, 2.5, 6)) %>% 
-  mutate(new = map_dbl(start, ~ (. + 1)))
-```
-
-Note that the parantheses are not necessary. As long as everything after the `~` works as R code, the anonymous function should work, each time replace the `.` with the value of the `.x` variable --- which is `start` in this case --- with its value in that row.
-
-```{r}
-tibble(start = c(3, 2.5, 6)) %>% 
-  mutate(new = map_dbl(start, ~ . + 1))
-```
-
-The `~ ` shorthand is very convenient once you get used to it.  
 
 We called these `map_*` *functions* (plural) before.  If you know the expected output of your function, you can specify that kind of vector:
 
@@ -188,68 +169,73 @@ We called these `map_*` *functions* (plural) before.  If you know the expected o
 
 So, since our example produces numeric output, we use `map_dbl()` instead of `map()`.
 
-### Using `map_*` functions to create list columns
+Now, you may be wondering, what's the difference between using `mutate()` and `map_*` functions? After all, the example above demonstrated a use case in which both were used interchangeably. The answer lies in iteration, which is the specialization of the **purrr** package. `map_*` functions are powerful because of their ability to create list-columns and to apply functions to every single element of a list, which `mutate()` cannot handle. We'll show you exactly what we mean in the next example.
 
-We can use `map_*` functions to create list columns.  We'll use the `weather` dataset in the `nycflights13` package.
+### Using `map_*` functions to create list-columns
 
-First, let's wrangle the data so each observation is a day rather than an hour.  We'll create a list column `temps_F` that consists of all the temperatures recorded that day at a particular origin.
+For this example, we will use the `nhanes` dataset from the `PPBDS.data` package to demonstrate how to use `map_*` functions to create list columns.
 
-```{r weather_temps, eval = FALSE}
-weather %>%
-  group_by(origin, year, month, day) %>%
-  summarize(temps_F = list(c(temp)))
+First, let's wrangle the data so each observation is grouped by age and gender.  We'll create a list column `all_weights` that consists of every subject's weight, grouped by age and gender.
+
+```{r eval = FALSE, message=FALSE}
+nhanes %>%
+  group_by(age, gender) %>%
+  summarize(all_weights = list(c(weight)))
 ```
 
-Now that we have a list column, we can use it as the input to `map()`, outputting another list column.  Let's say we wanted a new list column, `temps_C`, which records the temperature in Celsius:
+Now that we have a list column, we can use it as the input to `map()`, outputting another list column.  Let's say we wanted a new list column, `log_weights`, which takes the logarithmic value of each weight observation.
 
-```{r temps_C, eval = FALSE}
-weather %>%
-  group_by(origin, year, month, day) %>%
-  summarize(temps_F = list(c(temp))) %>%
-  mutate(temps_C = map(temps_F, ~ (. - 32) * 5/9))
+```{r eval = FALSE, message=FALSE}
+nhanes %>%
+  group_by(age, gender) %>%
+  summarize(all_weights = list(c(weight))) %>%
+  mutate(log_weights = map(all_weights, log))
 ```
 
-Note that we took the list column `temps_F` and, by applying an anonymous function to it with `map()`, created another list column `temps_C`.  This is a very common process.  It is similar to taking a tibble and piping it into a `dplyr` function (such as `mutate()`) which gives you a new tibble that you can work with.
+Note that we took the list column `all_weights` and, by applying an anonymous function to it with `map()`, created another list column `log_weights`.  This is a very common process.  It is similar to taking a tibble and piping it into a `dplyr` function (such as `mutate()`) which gives you a new tibble that you can work with.
 
-You can also use `map_*` functions to take a list column as an input and return an atomic vector -- a column with a single value per observation -- as an output.  For instance, let's say we now wanted the mean of the recorded temperatures per day in Celsius:
+If we try to replace the `map()` function in the last line with a simple `mutate()`, we will get an error.
 
-```{r temps_C_mean, eval = FALSE}
-weather %>%
-  group_by(origin, year, month, day) %>%
-  summarize(temps_F = list(c(temp))) %>%
-  mutate(temps_C = map(temps_F, ~ (. - 32) * 5/9),
-         mean_C = map_dbl(temps_C, mean, na.rm = TRUE))
+```{r echo=FALSE, error=TRUE}
+nhanes %>%
+  group_by(age, gender) %>%
+  summarize(all_weights = list(c(weight))) %>%
+  mutate(log_weights = log(all_weights))
+```
+
+Again, this is because the `mutate()` function is ill-equipped to handle lists. We could have avoided creating the list-columns in the first place and found the log weight of each observation, but then we would be losing out on the grouping ability of lists. Do you see how `map_*` functions are equipped to handle inputs different from `mutate()`?
+
+You can also use `map_*` functions to take a list column as an input and return an atomic vector -- a column with a single value per observation -- as an output.  For instance, let's say we now wanted the mean of the log weights:
+
+```{r eval = FALSE, message=FALSE}
+nhanes %>%
+  group_by(age, gender) %>%
+  summarize(all_weights = list(c(weight))) %>%
+  mutate(log_weights = map(all_weights, log),
+         mean_log_weights = map_dbl(log_weights, mean, na.rm = TRUE))
 ```
 
 Here, we also see that the `map_*` functions have the `...` argument, which allows `na.rm = TRUE` to be passed along to `mean()`.
 
-What if we wanted to know the proportion of temperatures recorded per day per airport that were below freezing?
+What if we wanted to extract the top five log weights per row?
 
-```{r prop_freezing, eval = FALSE}
-weather %>%
-  group_by(origin, year, month, day) %>%
-  summarize(temps_F = list(c(temp))) %>%
-  mutate(temps_C = map(temps_F, ~ (. - 32) * 5/9),
-         is_freezing = map(temps_C, ~ . < 0),
-         prop_freezing = map_dbl(is_freezing, mean, na.rm = TRUE))
+```{r top_5, eval = FALSE}
+nhanes %>%
+  group_by(age, gender) %>%
+  summarize(all_weights = list(c(weight))) %>%
+  mutate(log_weights = map(all_weights, log),
+         sorted_log_weights = map(log_weights, ~ sort(., decreasing = TRUE)),
+         top5_log_weights = map(sorted_log_weights, ~ .[1:5]))
 ```
 
 See how we chained the `map_*` functions:
 
-1) `temps_F` was used as the input to `map()` to create `temps_C`
-2) `temps_C` was used as the input to `map()` to create `is_freezing`
-3) `is_freezing` was used as the input to `map_dbl()` to create `prop_freezing`
+1) `all_weights` was used as the input to `map()` to create `log_weights`
+2) `log_weights` was used as the input to `map()` to create `sorted_log_weights`
+3) `sorted_log_weights` was used as the input to `map()` to create `top5_log_weights`
 
-Or let's say we wanted to know the top 5 temperatures recorded at each airport each day:
+Later on, we will practice using map functions to create list columns with custom functions, not just built-in R functions. You will see that `map_*` functions are highly versatile!
 
-```{r top_5, eval = FALSE}
-weather %>%
-  group_by(origin, year, month, day) %>%
-  summarize(temps_F = list(c(temp))) %>%
-  mutate(temps_C = map(temps_F, ~ (. - 32) * 5/9),
-         sorted_C = map(temps_C, ~ sort(., decreasing = TRUE)),
-         top5_C = map(temps_C, ~ .[1:5]))
-```
 
 <!-- This is where we need to fill in the gap between map functions and functions in general -->
 
@@ -734,9 +720,9 @@ test_that('NA handling works', {
 
 Similar to the advice to use assertions in data analytical scripts, I recommend you use unit tests to monitor the behavior of functions you (or others) will use often. If your tests cover the function's important behavior, then you can edit the internals freely. You'll rest easy in the knowledge that, if you broke anything important, the tests will fail and alert you to the problem. A function that is important enough for unit tests probably also belongs in a package, where there are obvious mechanisms for running the tests as part of overall package checks.
 
-### Practice with `map_*` functions and list columns
+### Practice list columns with custom and anonymous functions using `map_*` functions
 
-Let’s practice `map_*` functions and list columns! We will give step by step instructions; we recommend that you follow along so that you understand how each part works.  We'll also be introducing some important conditional functions (`ifelse()`, `any()`, `all()`, and `case_when()`).
+Let’s practice `map_*` functions and list columns! We will give step by step instructions; we recommend that you follow along so that you understand how each part works.  We will introduce writing anonymous functions in this section. We'll also be introducing some important conditional functions (`ifelse()`, `any()`, `all()`, and `case_when()`). 
 
 a. Write a function called `roll_dice()`, which will throw a pair of dice as many times as the user specifies.
 
@@ -832,3 +818,45 @@ You can think of `case_when()` as a generalized `ifelse()`.  The syntax is a lit
 Side B is more likely to win.
 
 The chance of a tie is approximately 11%.
+
+The syntax can get even simpler than this if we use [anonymous functions.](https://coolbutuseless.github.io/2019/03/13/anonymous-functions-in-r-part-1/)  An anonymous function in R is one without a name. The function `increment()` has a name, obviously. But we can create a function which does the same thing "on the fly" without bothering to give it a name. 
+
+There are two ways to create anonymous functions.  The first one, using base R, uses `function()` to create a function within `map_dbl()`.  
+
+```{r}
+tibble(start = c(3, 2.5, 6)) %>% 
+  mutate(new = map_dbl(start, function(x) x + 1))
+```
+
+The second, using the **purrr** package (from where we get `map_dbl()`), starts with the `~` operator and then uses `.` to represent the current element.
+
+```{r}
+tibble(start = c(3, 2.5, 6)) %>% 
+  mutate(new = map_dbl(start, ~ (. + 1)))
+```
+
+Note that the parantheses are not necessary. As long as everything after the `~` works as R code, the anonymous function should work, each time replace the `.` with the value of the `.x` variable --- which is `start` in this case --- with its value in that row.
+
+```{r}
+tibble(start = c(3, 2.5, 6)) %>% 
+  mutate(new = map_dbl(start, ~ . + 1))
+```
+
+The `~ ` shorthand is very convenient once you get used to it.  Let's see it in an example. We'll use the `weather` dataset in the `nycflights13` package. Let's say that we want to return a list-column with all the recorded temperatures in a day in Celsius.
+
+First, let's wrangle the data so each observation is a day rather than an hour.  We'll create a list column `temps_F` that consists of all the temperatures recorded that day at a particular origin.
+
+```{r weather_temps, eval = FALSE}
+weather %>%
+  group_by(origin, year, month, day) %>%
+  summarize(temps_F = list(c(temp)))
+```
+
+Now that we have a list column, we can use it as the input to `map()`, outputting another list column.  Let's say we wanted a new list column, `temps_C`, which records the temperature in Celsius:
+
+```{r temps_C, eval = FALSE}
+weather %>%
+  group_by(origin, year, month, day) %>%
+  summarize(temps_F = list(c(temp))) %>%
+  mutate(temps_C = map(temps_F, ~ (. - 32) * 5/9))
+```
