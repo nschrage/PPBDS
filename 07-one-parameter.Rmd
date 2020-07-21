@@ -11,27 +11,27 @@ library(gt)
 library(patchwork)
 ```
 
+<!-- TO-DO: -->
 
-<!-- Outline: -->
+
+
+
+<!-- Outline of the Chapter -->
 
 <!-- 0. Question about male height in America in 2009. Ask some questions. -->
 
-<!-- 1. Pennies. Explain how lm(year ~ 1) %>% tidy(conf.int = TRUE) produces the same confidence intervals for the mean as the bootstrap does. We don't explain the math. Just show the trick. Note that this only works for a very small subset of problems. If we were curious about the median or the 90th percentile, we would have no choice but to use the bootstrap. -->
+<!-- 1. Pennies. Calculate the estimate of the mean year and the confidence interval via bootstrap. Explain how lm(year ~ 1) %>% tidy(conf.int = TRUE) produces the same confidence intervals for the mean as the bootstrap does. We don't explain the math. Just show the trick. Note that this only works for a very small subset of problems. If we were curious about the median or the 90th percentile, we would have no choice but to use the bootstrap. -->
 
-<!-- 2. Exploratory Data Analysis of nhanes. ch7 <- nhanes %>% drop_na() %>% select(year, gender, height) -->
+<!-- 2. Exploratory Data Analysis of nhanes. temp <- nhanes %>% select(year, gender, height). Explore all three variables. Note that there are NAs. Then restrict for our use in the models like: ch7 <- %>% drop_na() %>% filter(gender == "male", year == 2009) %>% select(height). In other words, the final data set just has one variable in it. Since we are only estimating a model with one parameter, we can't make use of richer data. -->
 
-<!-- 3. height from the 2,475 men in nhanes in 2009. Pick one sample of size 40, without placement. This can go much faster. Two key differences from pennies. First, we know the truth, so we can examine whether or not the bootstrap works. (That is, we pull a sample of 40 and see if the bootstrap confidence interval from that 40 includes the true 75th percentile of the 2,475.) Second, note that only the bootstrap will allow us to do this. We can't use the lm() trick we learned about for pennies. -->
+<!-- 3. height from the 2,475 men in nhanes in 2009. Pick one sample of size 40, without placement. This can go much faster. Two key differences from pennies. First, we know the truth, so we can examine whether or not the bootstrap works. (That is, we pull a sample of 40 and see if the bootstrap confidence interval from that 40 includes the true 75th percentile of the 2,475.) Second, note that only the bootstrap will allow us to do this. We can't use the lm() trick we learned about for pennies.-->
 
 <!-- 4. Prove that the bootstrap works, that our 95% confidence intervals provide correct coverage. We make a game and I give you a sample of like 40. Here's the 40, and you give me a 95% CI using the bootstrap tools we learned. Then I give you another 40. And another. If we do this 1,00 times, and we use the same procedure for calculating a confidence interval each time, then 950 should include the truth. That's how we know bootstraps is correct and I could only demonstrate this to you if we know what the truth is.  -->
 
-<!-- 5. height in the US, using all 5,000 for 2009. Let's skip the bootstrap here. (We have seen it twice already.) Instead, we just go straight to lm(), tidy() to calculate the mean and its confidence interval. Note that, unlike with 2, we can never know the truth. Then, use this as an example to discuss parameter uncertainty.  -->
+<!-- 5. height in the US, using all 2,475 men for 2009. Let's skip the bootstrap here. (We have seen it twice already.) Instead, we just go straight to lm(), tidy() to calculate the mean and its confidence interval. Note that, unlike with 2, we can never know the truth. Then, use this as an example to discuss parameter uncertainty.  -->
 
+<!-- 6. Prediction. What can we use this model for? We think we know p(mean height for 2009), call it p(height). So what? What can we do with this and what do we need to be careful about? This is where we can discuss all our other topics from themes.Rmd. Build a data generating mechanism. With it, we can answer any question we like!  -->
 
-
-<!-- want to estimate the height for the all US women. and i give you 2500. We don't need to do bootstraps, we could just run lm and tidy for the CI. We don't really have the true value in this case, but we can talk about the parameter uncertainty in this case. Want a plot that shows the thousand diff runs in the y axis and x axis is the different cI. check chapter 8 for the plot.  -->
-
-<!-- 4. Prediction. What can we use this model for? We think we know p(mean height for 2009), call it p(height). So what? What can we do with this and what do we need to be careful about? This is where we can discuss all our other topics from themes.Rmd. -->
- 
 <!-- 
 
 Read Chapter 5 and zoom with Vivian about the connection between the two chapters
@@ -168,7 +168,7 @@ possibly make them sub sub section based on themes
 
 
 
-In Chapter \@ref(sampling), we studied sampling. We started with a "tactile" exercise where we wanted to know the proportion of balls in the urn in Figure \@ref(fig:sampling-exercise-1) that are red. While we could have performed an exhaustive count, this would have been a tedious process. So instead, we used a shovel to extract a sample of 50 balls and used the resulting proportion that were red as an *estimate*. Furthermore, we made sure to mix the urn's contents before every use of the shovel. Because of the randomness created by the mixing, different uses of the shovel yielded different proportions red and hence different estimates of the proportion of the urn's balls that are red. 
+In Chapter \@ref(sampling), we studied sampling. We started with a "tactile" exercise where we wanted to know the proportion of balls in the urn that are red. While we could have performed an exhaustive count, this would have been a tedious process. So instead, we used a shovel to extract a sample of 50 balls and used the resulting proportion that were red as an *estimate*. Furthermore, we made sure to mix the urn's contents before every use of the shovel. Because of the randomness created by the mixing, different uses of the shovel yielded different proportions red and hence different estimates of the proportion of the urn's balls that are red. 
 
 Remember: There is a *truth* here. There is an urn. It has red and white balls in it. An exact, but unknown, number of the balls are red. An exact, but unknown, number of the balls are white. An exact, but unknown, percentage of the balls are red -- defined as the number red divided by the sum of the number red and the number white. Our goal was to estimate that unknown percentage. We wanted to make statements about the world, even if we can never be certain that those statements are *true*. We will never have the time or inclination to actually count all the balls. We use the term *parameter* for things that exist but which are unknown. We use statistics to estimate the true values of parameters.
 
@@ -201,8 +201,45 @@ Create graphic illustrating two-step process of 1) construct bootstrap distribut
 and then 2) based on bootstrap dist'n create CI?
 -->
 
+What is the average height of an American male? What is the 75th percentile of the distribution of height for American men? How certain are you are your estimates? If we past 5 men walking down the street, what are the odds that the tallest will be at least 5 centimeters taller than the shortest?
+
 
 ## Pennies activity {#resampling-tactile}
+
+In Chapter \@ref(sampling), we studied sampling. We started with a "tactile" exercise where we wanted to know the proportion of balls in the urn that are red. While we could have performed an exhaustive count, this would have been a tedious process. So instead, we used a shovel to extract a sample of 50 balls and used the resulting proportion that were red as an *estimate*. Furthermore, we made sure to mix the urn's contents before every use of the shovel. Because of the randomness created by the mixing, different uses of the shovel yielded different proportions red and hence different estimates of the proportion of the urn's balls that are red. 
+
+Remember: There is a *truth* here. There is an urn. It has red and white balls in it. An exact, but unknown, number of the balls are red. An exact, but unknown, number of the balls are white. An exact, but unknown, percentage of the balls are red -- defined as the number red divided by the sum of the number red and the number white. Our goal was to estimate that unknown percentage. We wanted to make statements about the world, even if we can never be certain that those statements are *true*. We will never have the time or inclination to actually count all the balls. We use the term *parameter* for things that exist but which are unknown. We use statistics to estimate the true values of parameters.
+
+<!-- Reinforce the last two sentences as the topic sentences for the Remember paragraph. -->
+
+
+We then mimicked this *physical* sampling exercise with an equivalent *virtual* sampling exercise using the computer. In Subsection \@ref(different-shovels), we repeated this sampling procedure 1,000 times, using three different virtual shovels with 25, 50, and 100 slots. We visualized these three sets of 1,000 estimates in Figure \@ref(fig:comparing-sampling-distributions-3) and saw that as the sample size increased, the variation in the estimates decreased.  We then expanded this for all sample sizes from 1 to 100.
+
+In doing so, we constructed *sampling distributions*. The motivation for taking a 1,000 repeated samples and visualizing the resulting estimates was to study how these estimates varied from one sample to another; in other words, we wanted to study the effect of *sampling variation*. We quantified the variation of these estimates using their standard deviation, which has a special name: the *standard error*. In particular, we saw that as the sample size increased from 1 to 100, the standard error decreased and thus the sampling distributions narrowed. Larger sample sizes led to more *precise* estimates that varied less around the center. 
+
+<!-- Distinguish further the difference between standard deviation and standard error in the above paragraph. Readers can confuse the two. -->
+
+
+We then tied these sampling exercises to terminology and mathematical notation related to sampling in Subsection \@ref(terminology-and-notation). Our *study population* was the large urn with $N$ = 2,400 balls, while the *population parameter*, the unknown quantity of interest, was the population proportion $p$ of the urn's balls that were red. Since performing a *census* would be expensive in terms of time and energy, we instead extracted a *sample* of size $n$ = 50. The *point estimate*, also known as a *sample statistic*, used to estimate $p$ was the sample proportion $\widehat{p}$ of these 50 sampled balls that were red. Furthermore, since the sample was obtained at *random*, it can be considered as *unbiased* and as *representative* of the population. Thus any results based on the sample could be *generalized* to the population. Therefore, the proportion of the shovel's balls that were red was a "good guess" of the proportion of the urn's balls that are red. In other words, we used the sample to draw *inferences* about the population.
+
+However, as described in Section \@ref(sampling-simulation), both the physical and virtual sampling exercises are not what one would do in real life. This was merely an activity used to study the effects of sampling variation. In a real life situation, we would not take 1,000 samples of size $n$, but rather take a *single* representative sample that's as large as possible. Additionally, we knew that the true proportion of the urn's balls that were red was 37.5%. In a real-life situation, we will not know what this value is. Because if we did, then why would we take a sample to estimate it? 
+
+An example of a realistic sampling situation would be a poll, like the [Obama poll](https://www.npr.org/sections/itsallpolitics/2013/12/04/248793753/poll-support-for-obama-among-young-americans-eroding) you saw in Section \@ref(sampling-case-study). Pollsters did not know the true proportion of *all* young Americans who supported President Obama in 2013, and thus they took a single sample of size $n$ = 2,089 young Americans to estimate this value.
+
+So how does one quantify the effects of sampling variation when you only have a *single sample* to work with? You cannot directly study the effects of sampling variation when you only have one sample. One common method to study this is *bootstrapping resampling*.
+
+What if we would like, not only a single estimate of the unknown population parameter, but also a *range of highly plausible* values? Going back to the Obama poll article, it stated that the pollsters' estimate of the proportion of all young Americans who supported President Obama was 41%. But in addition it stated that the poll's "margin of error was plus or minus 2.1 percentage points." This "plausible range" was [41% - 2.1%, 41% + 2.1%] = [38.9%, 43.1%]. This range of plausible values is what's known as a *confidence interval*, which will be the focus of the later sections of this chapter. 
+
+For concreteness, let's consider two simple tasks. First, predict the height of a random person you have not met. Second, predict the height of the second tallest person in a group of ten random people. What are you predictions and how certain are you of them?
+
+<!-- Problem of predicting someone's height or of predicting the tallest person in a group of 10. And how uncertain are you about those predictions? -->
+
+<!--
+Create graphic illustrating two-step process of 1) construct bootstrap distribution
+and then 2) based on bootstrap dist'n create CI?
+-->
+
+### To the Bank
 
 As we did in Chapter \@ref(sampling), we'll begin with a hands-on tactile activity. We almost always need the **tidyverse** package.
 
@@ -215,7 +252,7 @@ library(tidyverse)
 library(skimr)
 ```
 
-**PPBDS.data** includes the data sets for this book. **rsample** includes functions for bootstraping, the main statistical tool which will we use here.
+**PPBDS.data** includes the data sets for this book. **rsample** includes functions for bootstrapping, the main statistical tool which will we use in this chapter
 
 ### What is the average year on US pennies in 2019?
 
