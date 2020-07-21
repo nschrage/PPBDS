@@ -1,0 +1,86 @@
+---
+title: "scratch"
+author: "Cassidy Bargell"
+date: "7/21/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(gt)
+library(PPBDS.data)
+library(randomNames)
+library(rsample)
+```
+
+<!-- CB: This is me trying to figure out simple permutation code without the package. I am struggling and have asked a lot of people. I don't want to get rid of this but don't want it in the book code right now because its obviously not done and doesn't make sense.--> 
+
+```{r permutation, include = FALSE}
+
+# First make a tibble with the data we collected (focus on treatment
+# effect for this example)
+
+y <- tibble(subject = c("Joe", "Mary", "Sally", "Bob"),
+       attitude = c("13", "11", "10", "12"),
+       status = c("T", "T", "C", "C"))
+
+# They aren't all unique samples with the rep_sample_n
+
+sample_reps <- rep_sample_n(y, size = 4, replace = FALSE, reps = 20)
+
+slice_sample(y, n = 4, replace = FALSE, with_ties = TRUE)
+
+# Use expand() and nesting() to find all combinations of this data
+
+combo <- expand(y, nesting(subject, attitude), status)
+
+# This is a very inefficient way to go about it
+
+com <- tibble(T1 = c(13, 11, 10, 12),
+       T2 = c(13, 11, 10, 12),
+       C1 = c(13, 11, 10, 12), 
+       C2 = c(13, 11, 10, 12)) %>%
+  expand(T1, T2, C1, C2)
+
+
+
+no_same_combo <- expand(c, T1, T2, C1, C2) %>%
+  mutate(notcombo = ifelse((C1 - C2 == 0) | 
+                             (T1 - T2 == 0) | 
+                             (C2 - T1 == 0) | 
+                             (C1- T1 == 0) | 
+                             (T2 - C1 == 0) | 
+                             (T2 - C2 == 0), 0, "yes")) %>%
+  filter(notcombo == "yes")
+```
+
+
+basically resample with no replacement to get all the unique combos. 
+
+```{r}
+x <-
+
+  ## Takes one iteration of 4 names and replicates it 6 times
+  tibble(subject = rep(c("Joe", "Mary", "Sally", "Bob"),6),
+
+         ## Takes one iteration of att_end and replicates it 6 times
+         att_end = rep(c(13,11,10,12),6),
+
+         ## Saves initial configuration of Treatment and Control, then randomly generates new configuration 5 times
+         control = c(c("Treat", "Treat", "Control", "Control"), replicate(5,sample(c("Treat", "Treat", "Control", "Control")))),
+
+         ## Each permutation is a new trial
+         trial = rep(1:6, each=4))
+```
+
+```{r}
+w <- tibble(status = c("C1", "C2", "T1", "T2"),
+       subject = c("Joe", "Mary", "Sally", "Bob"),
+       attitude = c("13", "11", "10", "12"))
+
+combo2 <- expand(w, nesting(subject, attitude), status)
+
+slice_sample(combo2, n = 4, replace = FALSE, with_ties = TRUE)
+```
+
