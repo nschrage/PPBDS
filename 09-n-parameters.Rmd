@@ -9,9 +9,59 @@ output_yaml:
 
 <!-- The goal of this chapter is to replicate all of the things we have learned in chapter 8, except with models that allow for more than two parameters, which mostly involves have more than one right-hand side variable. We are also going to explicitly avoid discussing some common pitfalls in these problems, saving those pitfalls for chapter 10. So, nothing about overfitting. Nothing about rstanarm. Just two more examples which go through themes.Rmd with more complex models. But nothing fundamentally new or different. -->
 
-<!-- 0) Start with a problem: You are running for Governor and want to do a better job of getting your voters to vote. You are considering sending out a "shaming" voting reminder. What will happen if you do? -->
+<!-- 0) Start with a problem-->
 
-<!-- 1) EDA of `shaming`. I have cleaned up the data, so you need to re-install PPBDS.data. I think that hh_size is a good variable to check for interactions with, especially with Control. One approach: Create a new variable called `solo` which is TRUE if the `hh_size` is equal to 1 and FALSE otherwise. In other words, does the state of living alone tell us anything? We will interact this term with treatment in our model. It is cool that the p value for the interaction with Self is 0.06. A perfect example for the evils of testing!  -->
+Imagine you are running for Governor and want to do a better job of getting your voters to vote. You recently read about a large-scale experiment showing the effect of sending out a voting reminder that "shames" citizens who do not vote. You are considering sending out a "shaming" voting reminder yourself. What will happen if you do? Will more voters show up to the polls? Additionally, on the day of the election a female citizen is randomly selected. What is the probability she will vote?
+
+In this chapter, we will consider models with multiple parameters and the complexities that arise from these additions. We will also learn how to make more accurate predictions using Bayesian methods that will provide us with answers to the questions posed above.
+
+<!-- 1) EDA of `shaming`. I think that hh_size is a good variable to check for interactions with, especially with Control. One approach: Create a new variable called `solo` which is TRUE if the `hh_size` is equal to 1 and FALSE otherwise. In other words, does the state of living alone tell us anything? We will interact this term with treatment in our model. It is cool that the p value for the interaction with Self is 0.06. A perfect example for the evils of testing!  -->
+
+## Explorator Data Analysis of `shaming`
+
+Begin by loading packages which we have used in previous chapters.
+
+```{r include=FALSE}
+knitr::opts_chunk$set(echo=FALSE, tidy=FALSE)
+library(PPBDS.data)
+library(skimr)
+library(broom)
+library(tidyverse)
+```
+
+We will start off this chapter introducing a new data set from the **PPBDS.data** package: shaming. This data set corresponds to an experiment carried out by Gerber, Green, and Larimer (2008) titled "Social Pressure and Voter Turnout: Evidence from a Large-Scale Field Experiment". This experiment used several hundred thousand registered voters and a series of mailings to determine the effect of social pressure on voter turnout. Four types of treatments were used in the experiment, with voters receiving one type of mailing. All of the mailing treatments carried the message, "DO YOUR CIVIC DUTY - VOTE!". 
+
+The first treatment, Civic Duty, also read, “Remember your rights and responsibilities as a citizen. Remember to vote." This message acted as a baseline for the other treatments, since it carried a message very similar to the one displayed on all the mailings.
+
+In the second type of treatment, households received a mailing called the Hawthorne effect that told the voters that they were being studied and their voting behavior would be examined through public records. This adds a small amount of social pressure to the households receiving this mailing.
+
+The third type of treatment is Self, in which the mailing includes the recent voting record of each member of the household, placing the word "Voted" next to their name if they did in fact vote in the 2004 election or places a blank space next to the name if they did not. In this mailing, the households were also told, “we intend to mail an updated chart" with the voting record of the members after the 2006 election. By emphasizing the public nature of voting records, this type of mailing exerts more social pressure on voting than the Hawthorne treatment.
+
+The final type of mailing is the Neighbors treatment, which follows the Self mailing by listing the household members' voting records, as well as the voting records of those who live nearby. This mailing also told recipients, "we intend to mail an updated chart" of who voted in the 2006 election. This "shaming" treatment exerts the most social pressure of all the treatments and broadcasts individuals' voting habits. 
+
+
+Having created models with one parameter in Chapter \@ref(#one-parameter) and two parameters in Chapter \@ref(#two-parameters), you are now ready to make the jump to $N$ parameters. 
+
+Consider the `shaming` tibble from **PPBDS.data**.
+
+
+<!-- Provide a EDA of the shaming tibble, perhaps restricting it to a subset of the provided columns. Follow the lead of chapter 10. Make sure to use `glimpse()`, `sample_n()` and `skim()`. Readers need to know understand what the dependent variable means, along with left-hand side variables like treatment. -->
+
+```{r}
+glimpse(shaming)
+```
+
+```{r}
+shaming %>% 
+  sample_n(5)
+```
+
+```{r}
+shaming %>% 
+  select(primary_06, treatment, sex) %>% 
+  skim()
+```
+
 
 
 <!-- It may be worth mentioning that general_04 is always "yes", unlike all the other voting history variables which have values of "yes" and "no". Why is that? I *think* that this is caused by their sampling plan. They found all the people who voted in the 2004 general election. Then, the authors found their history. As we would expect, those people had sometimes voted in the past and sometime not. Then, the authors sent the mailing. The key dependent variable, primary_06, is coding 0/1, since that makes doing the statistics easier. -->
@@ -30,36 +80,6 @@ output_yaml:
 
 Having created models with one parameter in Chapter \@ref(#one-parameter) and two parameters in Chapter \@ref(#two-parameters), you are now ready to make the jump to $N$ parameters.  The more parameters we include in our models, the more flexible they can become. But we must be careful of *overfitting*, of making models which are inaccurate because they don't use enough data to accurately estimate those parameters. The tension between overfitting and underfitting is central to the practice of data science.
 
-## Explorator Data Analysis of `shaming`
-
-Begin by loading packages which we have used in previous chapters.
-
-```{r include=FALSE}
-knitr::opts_chunk$set(echo=FALSE, tidy=FALSE)
-library(PPBDS.data)
-library(skimr)
-library(broom)
-library(tidyverse)
-```
-
-Consider the `shaming` tibble from **PPBDS.data**.
-
-<!-- Provide a EDA of the shaming tibble, perhaps restricting it to a subset of the provided columns. Follow the lead of chapter 10. Make sure to use `glimpse()`, `sample_n()` and `skim()`. Readers need to know understand what the dependent variable means, along with left-hand side variables like treatment. -->
-
-```{r}
-glimpse(shaming)
-```
-
-```{r}
-shaming %>% 
-  sample_n(5)
-```
-
-```{r}
-shaming %>% 
-  select(primary_06, treatment, sex) %>% 
-  skim()
-```
 
 
 
@@ -114,6 +134,7 @@ shaming %>%
 
 2) Estimate support for the president among small demographic. How do female, Hispanics in Alabama feel about Obama? You don't want to just use the overall mean, which would underfitting. You don't want to use the mean for just that small group, which would be overfitting.  Using nes data, for 2012, approval for Obama and stan_glm().  -->
 
+
 <!-- 
 intercept
 
@@ -138,6 +159,7 @@ What problems do we face? All the things that make modeling difficult. Why is th
 <!-- cces looks perfect for this project. There are 400,000 rows, so it seems like you ought to have plenty of data for anything you want, but once you realize there are 51 states and 10 years, things get sparse fast. We only have 15 observations, for example, for Wyoming in 2007. Once you start subsetting by race and education, you have no choice but to start borrowing strength.  -->
 
 <!-- So, just what will we use? rstanarm(). If so (and if we have not introduced it earlier), we can begin with seeing how it is similar to lm() and then expand. This means that, in one paramter chapter, we should be doing lm( ~ 1). In two parameter, lm( ~ treatment) --- if treatment is zero one --- or, perhaps better, lm( ~ -1 + treatment) if treatment is a factor/character with two levels. We might also have introduced  -->
+
 
 ## Formatting Linear Models in R
 In the previous chapter, linear models were created using the general format of `dependent variable ~ -1 + independent variable`. After running the regression on a model of this type, the resulting table would show coefficients for both parameters of the independent variable, for example Democrat and Republican. This method works fine when there are only one or two parameters in consideration, however now we will be moving onto *n* parameters and we will have to change the formula we use; specifically, we will be removing the -1 from the lm formula.
@@ -234,10 +256,7 @@ ch9 <- PPBDS.data::cces
 
 
 ```
-<!-- HV: How do I add these new variables to the data set for everyone to use? Do I include the code for that in the Markdown or do I instruct the readers how to create these variables themselves with the cces data they are given? 
 
-DK: I have updated cces so that "approval" is presidential approval
--->
 
 Other variables in the cces data include state, race, age, education level, gender, and ideology. The data taken spans from 2006 to 2018, although it should be noted that there are more observations in years with general elections.
 
