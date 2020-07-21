@@ -9,3 +9,12 @@
 # before_chapter_script: "common.R"
 
 options(digits = 2)
+
+# Without this, the cache is created --- in book_temp_cache, since
+# `book_filename` is set to "book_temp" in _bookdown.yml --- and then
+# automatically deleted by bookdown after knitting is complete. We want the
+# cache to persist, at least in the book-builders home directory. I don't think
+# that using a common directory will cause conflicts across chapters . . .
+
+knitr::opts_chunk$set(cache.path = "cache-directory/")
+
