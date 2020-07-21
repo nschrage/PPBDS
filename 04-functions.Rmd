@@ -35,7 +35,41 @@ output_yaml:
 
 The goal of this chapter is to reveal the __process__ a long-time useR employs for writing functions. We also want to illustrate why the process is the way it is. Merely looking at the finished product, e.g. source code for R packages, can be extremely deceiving. Reality is generally much uglier ... but more interesting! Powerful packages like **dplyr** and **purrr** are ready and waiting to apply your purpose-built functions to various bits of your data. If you can express your analytic wishes in a function, these tools will give you great power.
 
-Before introducing the concept of functions, we will first discuss of list-columns and `map_*` functions. 
+## Introduction to Functions
+
+First, let's introduce the concept of functions. A function is a piece of code that is packaged in a way that makes it easy to reuse. Functions make it easy for you to `filter()`, `sort()`, `select()`, and create a `data.frame()`, as you have seen in the last few chapters. Functions also allow you to transform variables and perform a bunch of useful mathematical calculations, such as finding the `min()`, `max()`, and `quantile()`s of a dataset. Functions are also important in generating data and values, such as using `rnorm()` to randomly generate a normal distribution.
+
+Note that every time we mention a function, we include the parentheses. This is because you call a function by including its parentheses and any necessary arguments in those parentheses. If you run the function name without its parentheses, R will return the code that makes up the function. 
+
+```{r echo = TRUE}
+Sys.Date
+```
+
+```{r echo = TRUE}
+Sys.Date()
+```
+
+Every R function has three parts:
+
+* A body of code
+* A set of formal arguments
+* An environment (where the function will look up the values of the objects within it)
+
+There are plenty of built-in functions in R, such as the ones mentioned baove. You can also create your own custom functions, which may look something like this:
+
+```{r eval=FALSE}
+my_function <- function(x) x + 1
+```
+
+This code creates a function named `my_function()` that takes in in a value `x` and return a value `x + 1`. Alternatively, you could leave the function unnamed, as such:
+
+```{r eval=FALSE}
+function(x) x + 1
+```
+
+These nameless functions are called [anonymous functions.](https://coolbutuseless.github.io/2019/03/13/anonymous-functions-in-r-part-1/) We can create functions that do operations "on the fly" without bothering to give them a name.
+
+We will dive into functions more in depth soon, but next we will discuss of list-columns and `map_*` functions. 
 
 ## List-columns and `map_*` functions
 
@@ -46,15 +80,13 @@ We are now going to learn about [**list columns**](https://r4ds.had.co.nz/many-m
 
 <!-- DK: maybe start with "What are lists?" The chapter from R4DS with the pepper shaker pictures is excellent. -->
 
-First, we need to know: What are lists? Imagine a `jar` full of 10 individually wrapped candies, with a number on each wrapper representing its candy number.^[This example is directly inspired by R for Data Science's pepper shaker example, found \[here\](https://r4ds.had.co.nz/vectors.html)] In order to obtain the `jar` with the first individually wrapped candy inside, you would need `jar[1]`. Similarly, `jar[2]` will return the jar with only the second individually wrapped candy inside. 
+First, we need to know: What are lists? Imagine a `jar` full of 10 individually wrapped candies, with a number on each wrapper representing its candy number.^[This example is directly inspired by R for Data Science's pepper shaker example, found [here](https://r4ds.had.co.nz/vectors.html)] In order to obtain the `jar` with the first individually wrapped candy inside, you would need `jar[1]`. Similarly, `jar[2]` will return the jar with only the second individually wrapped candy inside. Whenever you are "reaching" into the jar to grab one certain candy, that is called indexing. In R, you can use square brackets to index through lists.
 
-What if you wanted the second individually wrapped candy, but without the jar? Then you would need `jar[[2]]`. And lastly, in order to obtain the second candy itself without its wrapped, you would need `jar[[2]][[1]]`, where the second set of square brackets, or the second *index*, "reaches" inside the jar and the wrapper to extract the candy.
+What if you wanted the second individually wrapped candy, but without the jar? Then you would need `jar[[2]]`. And lastly, in order to obtain the second candy itself without its wrapped, you would need `jar[[2]][[1]]`, where the second set of square brackets, or the second *index*, "reaches" inside the jar and the wrapper to extract the candy. This unwrapped and extracted candy is called a list *element*.
 
-<!-- More fluid paragraph transition -->
+Now that we understand what a list is, what is a list-column? A list column is a column of your data which is a [list](https://adv-r.hadley.nz/vectors-chap.html#lists) rather than an atomic vector. Atomic vectors are familiar to us: each element of the vector has one value, and thus if an atomic vector is a column in your dataset, each observation gets a single value.  Lists, however, can contain vectors as elements. The best way to understand this is by creating a list column yourself and inspecting the results.  `str()` is a helpful function for looking at the contents of a tibble with list columns:
 
-A list column is a column of your data which is a [list](https://adv-r.hadley.nz/vectors-chap.html#lists) rather than an atomic vector. Atomic vectors are familiar to us: each element of the vector has one value, and thus if an atomic vector is a column in your dataset, each observation gets a single value.  Lists, however, can contain vectors as elements. The best way to understand this is by creating a list column yourself and inspecting the results.  `str()` is a helpful function for looking at the contents of a tibble with list columns:
-
-```{r simple_list_col, message = FALSE}
+```{r simple_list_col, message=FALSE}
 library(tidyverse)
 library(gapminder)
 
@@ -242,6 +274,10 @@ Later on, we will practice using map functions to create list columns with custo
 
 
 <!-- This is where we need to fill in the gap between map functions and functions in general -->
+
+## Using functions to generate data
+
+<!-- EC:  Use rnorm(), sample(), and replicate()-->
 
 ## Built-In Functions and Custom Functions
 
@@ -743,13 +779,71 @@ test_that('NA handling works', {
 
 Similar to the advice to use assertions in data analytical scripts, I recommend you use unit tests to monitor the behavior of functions you (or others) will use often. If your tests cover the function's important behavior, then you can edit the internals freely. You'll rest easy in the knowledge that, if you broke anything important, the tests will fail and alert you to the problem. A function that is important enough for unit tests probably also belongs in a package, where there are obvious mechanisms for running the tests as part of overall package checks.
 
-### Practice list columns with custom and anonymous functions using `map_*` functions
+## Using custom and anonymous functions with `map_*` functions and list-columns
+
+### Anonymous functions using `map_*` functions
+
+There are two ways to create anonymous functions.  The first one, using base R, uses `function()` to create a function within `map_dbl()`.  
+
+```{r}
+tibble(start = c(3, 2.5, 6)) %>% 
+  mutate(new = map_dbl(start, function(x) x + 1))
+```
+
+The second, using the **purrr** package (from where we get `map_dbl()`), starts with the `~` operator and then uses `.` to represent the current element.
+
+```{r}
+tibble(start = c(3, 2.5, 6)) %>% 
+  mutate(new = map_dbl(start, ~ (. + 1)))
+```
+
+Note that the parantheses are not necessary. As long as everything after the `~` works as R code, the anonymous function should work, each time replace the `.` with the value of the `.x` variable --- which is `start` in this case --- with its value in that row.
+
+```{r}
+tibble(start = c(3, 2.5, 6)) %>% 
+  mutate(new = map_dbl(start, ~ . + 1))
+```
+
+The `~ ` shorthand is very convenient once you get used to it.  Let's see it in an example. We'll use the `weather` dataset in the `nycflights13` package. Let's say that we want to return a list-column with all the recorded temperatures in a day in Celsius.
+
+First, let's wrangle the data so each observation is a day rather than an hour.  We'll create a list column `temps_F` that consists of all the temperatures recorded that day at a particular origin.
+
+```{r weather_temps, eval = FALSE}
+weather %>%
+  group_by(origin, year, month, day) %>%
+  summarize(temps_F = list(c(temp)))
+```
+
+Now that we have a list column, we can use it as the input to `map()`, outputting another list column.  Let's say we wanted a new list column, `temps_C`, which records the temperature in Celsius:
+
+```{r temps_C, eval = FALSE}
+weather %>%
+  group_by(origin, year, month, day) %>%
+  summarize(temps_F = list(c(temp))) %>%
+  mutate(temps_C = map(temps_F, ~ (. - 32) * 5/9))
+```
+
+### Custom functions using `map_*` functions
 
 Let’s practice `map_*` functions and list columns! We will give step by step instructions; we recommend that you follow along so that you understand how each part works.  We will introduce writing anonymous functions in this section. We'll also be introducing some important conditional functions (`ifelse()`, `any()`, `all()`, and `case_when()`). 
 
 a. Write a function called `roll_dice()`, which will throw a pair of dice as many times as the user specifies.
 
-For clarity, we will begin by creating an intermediate function `add_dice()` which throws n dice and adds the results:
+<!-- EC: Added a few more intermediate steps in creating roll_dice() -->
+
+We will begin by creating a minimally viable function, `starter_dice()`, which throws one die one time. 
+
+```{r starter_dice}
+starter_dice <- function() sample(1:6, 1)
+```
+
+From here, we can add a formal argument `n`, which requires the number of dice to be specified. Let's set the default value of `n` to 1. However, if more than one dice is thrown, we want to make sure that any number from `1-6` has the chance of being returned. To do so, make sure the `replace` argument in `sample()` is set to `TRUE`. Now we have generalized the function `starter_dice()`!
+
+```{r starter_dice_generalized}
+starter_dice <- function(n = 1) sample(1:6, n, replace = TRUE)
+```
+
+Now let's create an intermediate function `add_dice()` which throws n dice and adds the results:
 
 ```{r add_dice}
 add_dice <- function(n = 1) {
@@ -841,70 +935,3 @@ You can think of `case_when()` as a generalized `ifelse()`.  The syntax is a lit
 Side B is more likely to win.
 
 The chance of a tie is approximately 11%.
-
-The syntax can get even simpler than this if we use [anonymous functions.](https://coolbutuseless.github.io/2019/03/13/anonymous-functions-in-r-part-1/)  An anonymous function in R is one without a name. The function `increment()` has a name, obviously. But we can create a function which does the same thing "on the fly" without bothering to give it a name. 
-
-There are two ways to create anonymous functions.  The first one, using base R, uses `function()` to create a function within `map_dbl()`.  
-
-```{r}
-tibble(start = c(3, 2.5, 6)) %>% 
-  mutate(new = map_dbl(start, function(x) x + 1))
-```
-
-The second, using the **purrr** package (from where we get `map_dbl()`), starts with the `~` operator and then uses `.` to represent the current element.
-
-```{r}
-tibble(start = c(3, 2.5, 6)) %>% 
-  mutate(new = map_dbl(start, ~ (. + 1)))
-```
-
-Note that the parantheses are not necessary. As long as everything after the `~` works as R code, the anonymous function should work, each time replace the `.` with the value of the `.x` variable --- which is `start` in this case --- with its value in that row.
-
-```{r}
-tibble(start = c(3, 2.5, 6)) %>% 
-  mutate(new = map_dbl(start, ~ . + 1))
-```
-
-The `~ ` shorthand is very convenient once you get used to it.  Let's see it in an example. We'll use the `weather` dataset in the `nycflights13` package. Let's say that we want to return a list-column with all the recorded temperatures in a day in Celsius.
-
-First, let's wrangle the data so each observation is a day rather than an hour.  We'll create a list column `temps_F` that consists of all the temperatures recorded that day at a particular origin.
-
-```{r weather_temps, eval = FALSE}
-weather %>%
-  group_by(origin, year, month, day) %>%
-  summarize(temps_F = list(c(temp)))
-```
-
-Now that we have a list column, we can use it as the input to `map()`, outputting another list column.  Let's say we wanted a new list column, `temps_C`, which records the temperature in Celsius:
-
-```{r temps_C, eval = FALSE}
-weather %>%
-  group_by(origin, year, month, day) %>%
-  summarize(temps_F = list(c(temp))) %>%
-  mutate(temps_C = map(temps_F, ~ (. - 32) * 5/9))
-```
-
-
-<!-- The rules that a language uses to look up values are known as _scoping rules_, and R's scoping rules are closely tied to a new type of R object: the environment. So let's start there. -->
-
-<!-- Before we begin, let me assure you: this topic is worth studying, even though it is unusually technical. R becomes much more predictable when you know how R looks up objects and their values. -->
-
-<!-- ### The big picture -->
-
-<!-- An R _environment_ is a list of object names paired with the values contained in the objects. Each environment is linked to another environment, and together these links form a chain of environments. -->
-
-<!-- 1. R first looks for objects in the current active environment. -->
-
-<!-- 2. If R cannot find an object in the active environment, R looks for the object in the parent of the active environment. R then looks in the parent of the parent, and so on until R finds the object or comes to the empty environment. -->
-
-<!-- 3. If R gets to the empty environment before it finds an object, R will return the familiar error message: `Error: object not found`. -->
-
-<!-- These three rules are R's scoping rules. -->
-
-<!-- When you call a function, R executes the code that is saved in the body of the function. To execute that code safely: -->
-
-<!-- 1. R creates a fresh environment to run the code in. I'll call this environment the _execution environment_. -->
-
-<!-- 2. R sets the parent of the execution environment to the function's _enclosing environment_, which is the environment where the function was first defined. This ensures that the function will use the same, predictable search path each time that it runs. -->
-
-<!-- 3. When R finishes running the function, R returns the result to the _calling environment_, which is the environment that was active when the function was called. R also makes the calling environment the active environment again, which removes the execution environment from the search path. -->
