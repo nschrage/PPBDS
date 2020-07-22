@@ -40,8 +40,6 @@ nesting(...)
 
 <!-- Need to update regexp to mention new string constant in R 4.0 -->
 
-<!-- EWF: should I discuss tibbles vs. dataframes? parse_* functions? --> 
-
 Recall the `read_csv()` function from chapter 1 of this textbook. In a previous exercise, we ran the following code chunk:
 ```{r}
 library(readr)
@@ -89,12 +87,26 @@ Run the `summary()` function on the `gender_data` dataframe.
 ```{r}
 summary(gender_data)
 ```
-You may notice that something appears to be wrong with this dataset. Which department could have employed 644 male full professors. Let's explore what is going wrong here. 
+You may notice that something appears to be wrong with this dataset. Which department could have employed 644 male full professors? Let's explore what is going wrong here. 
 ```{r}
 gender_data %>% filter(full_profs_m == 644)
 ```
+
+It seems that one row of the table takes the sum of each of the other rows. This is likely the last row of the dataframe. Use `tail()` to print the last rows of the dataframe to check the final row.
+```{r}
+tail(gender_data)
+```
+
+Now, remove the "Total" row because it will affect any dplyr functions we try to run on the dataframe. Check the `tail()` of the dataframe again to make sure that the proper row was removed. 
+```{r}
+gender_data <- gender_data %>%
+  filter(concentration != "Total")
+
+tail(gender_data)
+```
+
 ## `summarize` variables {#summarize}
-<!-- EF: Add across() and rowwise() --> 
+<!-- EF: Add across() --> 
 
 The next common task when working with data frames is to compute *summary statistics*. \index{summary statistics}Summary statistics are single numerical values that summarize a large number of values. Commonly known examples of summary statistics include the mean (also called the average) and the median (the middle value). Other examples of summary statistics that might not immediately come to mind include the *sum*, the smallest value also called the *minimum*, the largest value also called the *maximum*, and the *standard deviation*. See Appendix \@ref(appendix-stat-terms) for a glossary of such summary statistics.
 
@@ -102,12 +114,16 @@ The next common task when working with data frames is to compute *summary statis
 knitr::include_graphics("02-tidyverse/images/summarize1.png")
 ```
 
+Recall the output of the `summary()` function. 
+```{r, echo = FALSE}
+summary(gender_data)
+```
 
-Let's calculate two summary statistics of the `temp` temperature variable in the `weather` data frame: the mean and standard deviation (recall from Section \@ref(nycflights13) that the `weather` data frame is included in the `nycflights13` package). To compute these summary statistics, we need the `mean()` and `sd()` *summary functions* in R. Summary functions in R take in many values and return a single value.
+This function offers an array of summary statistics for each of the columns of the dataset, but `summarize()` (or alternatively `summarise()`) allows us to calculate these statistics on individual columns of the dataset. 
+
+Return to a familiar dataset. Let's calculate two summary statistics of the `temp` temperature variable in the `weather` data frame: the mean and standard deviation (recall from Section \@ref(nycflights13) that the `weather` data frame is included in the `nycflights13` package). To compute these summary statistics, we need the `mean()` and `sd()` *summary functions* in R. Summary functions in R take in many values and return a single value.
 
 More precisely, we'll use the `mean()` and `sd()` summary functions within the `summarize()` \index{dplyr!summarize()} function from the **dplyr** package. Note you can also use the British English spelling of `summarise()`. As shown in Figure \@ref(fig:sum1), the `summarize()` function takes in a data frame and returns a data frame with only one row corresponding to the summary statistics. 
-
-<!-- EF: In my opinion, we really do not need two graphics that show the same thing here --> 
 
 We'll save the results in a new data frame called `summary_temp` that will have two columns/variables: the `mean` and the `std_dev`:
 
@@ -134,9 +150,6 @@ Notice how the `na.rm = TRUE` \index{functions!na.rm argument} are used as argum
 
 However, one needs to be cautious whenever ignoring missing values as we've just done. There are possible ramifications of blindly sweeping rows with missing values "under the rug." This is in fact why the `na.rm` argument to any summary statistic function in R is set to `FALSE` by default. In other words, R does not ignore rows with missing values by default. R is alerting you to the presence of missing data and you should be mindful of this missingness and any potential causes of this missingness throughout your analysis.
 
-<!-- EWF: I think here might be a good moment to take a slightly longer detour and discuss a few other 
-items like is.na() while thinking about NA values in this section --> 
-
 What are other summary functions we can use inside the `summarize()` verb to compute summary statistics? As seen in the diagram in Figure \@ref(fig:summary-function), you can use any function in R that takes many values and returns just one. Here are just a few:
 
 * `mean()`: the average
@@ -149,25 +162,42 @@ What are other summary functions we can use inside the `summarize()` verb to com
 Let's look at some summary statistics of the `gain` variable by considering multiple summary functions at once in the same `summarize()` code:
 
 ```{r}
-# gain_summary <- flights %>% 
-#   summarize(
-#     min = min(gain, na.rm = TRUE),
-#     q1 = quantile(gain, 0.25, na.rm = TRUE),
-#     median = quantile(gain, 0.5, na.rm = TRUE),
-#     q3 = quantile(gain, 0.75, na.rm = TRUE),
-#     max = max(gain, na.rm = TRUE),
-#     mean = mean(gain, na.rm = TRUE),
-#     sd = sd(gain, na.rm = TRUE),
-#     missing = sum(is.na(gain))
-#   )
-# gain_summary
+gain_summary <- flights %>% 
+  summarize(
+    min = min(gain, na.rm = TRUE),
+    q1 = quantile(gain, 0.25, na.rm = TRUE),
+    median = quantile(gain, 0.5, na.rm = TRUE),
+    q3 = quantile(gain, 0.75, na.rm = TRUE),
+    max = max(gain, na.rm = TRUE),
+    mean = mean(gain, na.rm = TRUE),
+    sd = sd(gain, na.rm = TRUE),
+    missing = sum(is.na(gain))
+  )
+gain_summary
 ```
 
-We see for example that the average gain is +5 minutes, while the largest is +109 minutes! However, this code would take some time to type out in practice. We'll see later on in Subsection \@ref(model1EDA) that there is a much more succinct way to compute a variety of common summary statistics: using the `skim()` function from the `skimr` package.
+We see for example that the average gain is +5 minutes, while the largest is +109 minutes! However, this code would take some time to type out in practice. 
+
+We can also run summary statistics `across()` multiple columns at the same time. To get a better understanding of the `across()` helper function, run `?across` in your console and see what arguments it takes. Suppose we wanted to take the `mean()` of both the `temp` and the `dewp` variables. 
+```{r}
+weather %>%
+  summarize(across(c(temp, dewp), mean))
+```
+Again, we encounter `NA` values missing values, and have to set `na.rm = TRUE` as an argument for the `mean()` function. 
+<!-- EWF: How should I explain the ~ and .x? --> 
+```{r}
+weather %>%
+  summarize(across(c(temp, dewp), ~mean(.x, na.rm = TRUE)))
+```
+
+```{r}
+weather %>%
+  summarize(across(where(is.numeric), ~mean(.x, na.rm = TRUE)))
+```
 
 ## Character Vectors
 
-We've spent a lot of time working with big, beautiful data frames. That are clean and wholesome, like the Gapminder data.
+We've spent a lot of time working with big, beautiful data frames. That are clean and wholesome, like the Gapminder and nycflights13 data.
 
 But real life will be much nastier. You will bring data into R from the outside world and discover there are problems. You might think: how hard can it be to deal with character data? And the answer is: it can be very hard!
 
