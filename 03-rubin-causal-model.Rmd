@@ -15,6 +15,7 @@ library(PPBDS.data)
 ```
 
 
+
 <!-- 0) Read the themes.Rmd about predictive versus causal models. Consider the issue of one column Y versus two column Y. Think about where the missing data section belongs. Edit accordingly.  -->
 
 <!-- Maybe start with 5 adult brothers. You have been given 4 heights. What is the 5th? Preceptor Table. Where the 4 chosen at random? Second problem: 7000 Harvard students. We have 100 measures of height. What is the average height? What is the 90th percentile height? Much harder. Third problem, we have some X variables for all students. What if we have age and gender for everyone? -->
@@ -30,11 +31,9 @@ library(PPBDS.data)
 
 <!-- 2) Most things in life are somewhere between the one column and the two column case. To show this, we need a new Preceptor Table in which, instead of rows in which Y always have two columns, we have a Y which mostly has two columns but sometimes only has 1. What's nice about this example is that it generalizes to other cases. -->
 
-<!-- ignorability as a concept -->
-
-<!-- Another aspect of the Governor's paper that I like is that it highlights that, often, we can only (plausibly) estimate tau for a subset of the data.  -->
 
 <!-- 3) let's do some coding! (Or maybe we don't show the students the code you use to demonstrate these things. I am not sure.) Anyway, start with a simple example (maybe 8 people) in which you know all the values in the RT and in which tau is a constant positive number. (Recall some of the videos about permtutations tests that I made you watch.) Question: Does random assignment guarantee that we get the right answer? NO! This is a point that students often get wrong. Pick one "random" assignment which generates a negative estimate of tau. And that could easily happen. -->
+
 
 <!-- But then show what happens for all the 70 (8 choose 4) possible treatment assignments, each one with equal likelihood of happening if assignment is truly random. (Subtle note is that we are requiring that 4 get the treatment and 4 get the control.) Some of these overestimate tau. Some underestimate it. But the average of all possible assignments will be tau, which is why randomization is so cool. But the 70 possible results are really spread out! It would not be surprising if, by chance, you picked one that gave a very wrong answer. Which would make you sad! -->
 
@@ -61,6 +60,30 @@ knitr::include_graphics("03-rubin-causal-model/images/don_rubin.jpg")
 
 The Rubin Causal Model (RCM) is an approach to the statistical analysis of cause and effect based on the framework of potential outcomes, created by Donald Rubin. The name "Rubin Causal Model" was first coined in Holland (1986). 
 
+## Starting simple: What do we want to know?
+
+<!-- CB: Do not feel any attachment to this section heading just had to think of something. -->
+
+Let's start with a very simple statistical model. Say you have 5 adult brothers and you are given 4 of their heights. What is the 5th brother's height? Because we are not given it, we can use statistics to make a best guess. Let's look visually at our problem:
+
+```{r}
+tibble(Brothers = c("Robert", "Nicholas", "Beau", "Ishan", "Andy"),
+       Heights = c("178", "165", "172", "173", "?")) %>%
+  
+  # Then, we use the gt function to make it pretty
+  
+  gt() %>%
+  cols_label(Brothers = md("**Brothers**"),
+                Heights = "Heights (cm)") %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(Brothers))) %>%
+  tab_style(cell_text(weight = "bold"),
+            location = cells_body(columns = vars(Brothers))) %>%
+  cols_align(align = "center", columns = TRUE)
+```
+
+Maybe our best guess for Andy's height is just an average of all of his brothers: $$\frac{(178 + 165 + 172 + 173)}{4} = 172 cm$$. Maybe the four brother's heights are known because they are the tallest in the family. In that case is it realistic to use an average for our best guess of Andy's height? Probably not! 
+
 ## What is a causal effect?
 
 ```{r echo=FALSE, fig.cap="This study was conducted by Ryan Enos.", fig.margin = TRUE}
@@ -79,14 +102,14 @@ We will use the variable $Y$ to represent values we are interested in understand
 
 ### Potential outcomes: introduction to the Preceptor Table
 
+`r margin_note("Don't be scared by the fancy term Preceptor Table: you have already seen some in this chapter! What is important is understanding the structure of a Preceptor Table so they can help you to model and answer the questions you have.")`
 Let's start by defining what a Preceptor table is. A **Preceptor Table** is a table with rows and columns for all the data that we would (reasonably) like to have. Preceptor tables can vary depending on the number of rows and columns they have, as well as the amount of data that is missing from them. We use question marks as placeholders for the data we are missing in the Preceptor tables. 
 
 <!-- SJ: the mention of being omniscient here is a bit confusing, it is just mentioned that if you're omniscient then you would be able to know both outcomes which is kind of a "no duh" statement, but what is the reason for saying that? Were you trying to tell us why we have to find the outcomes for each individual scenario (control and treatment) because we do not have omniscient knowledge? -->
 
-Now, suppose that Yao is one of the commuters surveyed in this social experiment. If we were omniscient, we would know the outcomes for Yao under both treatment (with Spanish speakers) and control (no Spanish speakers). The causal effect, or treatment effect, is the difference between these two potential outcomes. We can present this with the following table of potential outcomes, which we will call an Ideal Preceptor Table. This Preceptor Table is considered *ideal* because we are not missing any data, and we can reasonably understand what all the numbers in it mean.
+Now, suppose that Yao is one of the commuters surveyed in this social experiment. If we were omniscient, we would know the outcomes for Yao under both treatment (with Spanish speakers) and control (no Spanish speakers). The causal effect, or treatment effect, is the difference between these two potential outcomes. We can present this with the following table of potential outcomes, which we will call an ideal Preceptor Table. This Preceptor Table is considered *ideal* because we are not missing any data, and we can reasonably understand what all the numbers in it mean.
 
-
-`r margin_note("We are using the phrase 'Attitude if' in this Ideal Preceptor Table because of the Fundamental Problem of Causal Inference. We cannot know both of Yao's potential outcomes. Instead by pretending we are omniscient, we can fill in the values that normally would be impossible to find. In that case, we have both of Yao's potential outcomes without him being assigned to either the Control or Treatment group. We *just know* his attitude in both situations, and are using this to clarify what an Ideal Preceptor Table would look like, even if this is generally impossible to have.")`
+`r margin_note("We are using the phrase 'Attitude if' in this ideal Preceptor Table because of the Fundamental Problem of Causal Inference. We cannot know both of Yao's potential outcomes. Instead by pretending we are omniscient, we can fill in the values that normally would be impossible to find. In that case, we have both of Yao's potential outcomes without him being assigned to either the Control or Treatment group. We *just know* his attitude in both situations, and are using this to clarify what an ideal Preceptor Table would look like, even if this is generally impossible to have.")`
 
 ```{r, echo = FALSE, fig.align = 'left'}
 # First, we create a tibble with the values we want for the table
@@ -148,7 +171,7 @@ gt() %>%
 
 ### Estimands
 
-In order to get an idea of an Estimand, let's look again at our Ideal Preceptor Table for Yao:
+In order to get an idea of an Estimand, let's look again at our ideal Preceptor Table for Yao:
 
 ```{r, echo = FALSE}
 # First, we create a tibble with the values we want for the table
@@ -254,7 +277,7 @@ tibble(subject = c("Yao", "Emma", "Cassidy", "Tahmid", "Diego"),
   fmt_markdown(columns = TRUE)
 ```
 
-From this Ideal Preceptor Table, there are many possible values we might calculate.  Here are just a sampling:
+From this ideal Preceptor Table, there are many possible values we might calculate.  Here are just a sampling:
 
 <!-- DK: Need to discuss other estimands, like causal effect on the treated. -->
 
@@ -279,9 +302,9 @@ effect" throughout -->
 One very common value we might care about has its own name, the **average treatment effect**.  The average treatment effect (often abbreviated **ATE**) is the mean of all the causal effects.  Here, the mean is $+0.6$.
 
 `r margin_note("An estimand is not the number value calculated, but rather the variable you want to understand from your data.")`
-So far, we have been able to calculate all of these different values through simple arithmetic. But remember that in a Actual Preceptor Table we will have a bunch of missing data! This will require us to estimate.  An **estimand** is some variable in the real world that we are trying to measure. All of the variables we calculated above are examples of estimands we might be interested in. For example, we might be interested in the average treatment effect of the train experiment. The estimand in that case would be the ATE. 
+So far, we have been able to calculate all of these different values through simple arithmetic. But remember that in a actual Preceptor Table we will have a bunch of missing data! This will require us to estimate.  An **estimand** is some variable in the real world that we are trying to measure. All of the variables we calculated above are examples of estimands we might be interested in. For example, we might be interested in the average treatment effect of the train experiment. The estimand in that case would be the ATE. 
 
-An Actual Preceptor Table has question marks that represent all the data we are missing because we are not omniscient in the real world. So, an Actual Preceptor Table with our data would look something like this:
+An actual Preceptor Table has question marks that represent all the data we are missing because we are not omniscient in the real world. So, an actual Preceptor Table with our data would look something like this:
 
 ```{r, echo = FALSE}
 # First, we create a tibble with the values we want for the table
@@ -458,7 +481,7 @@ tibble(subject = c("Yao", "Emma", "Cassidy", "Tahmid", "Diego"),
   fmt_markdown(columns = TRUE)
 ```
 
-`r margin_note("'Actual ATE' refers to the average treatment effect we would calculate if we knew all potential outcomes. This is of course not possible due to the Fundamental Problem of Causal Inference, however we will pretend we know in order to highlight potential problems with estimating ATE.")`
+`r margin_note("'actual ATE' refers to the average treatment effect we would calculate if we knew all potential outcomes. This is of course not possible due to the Fundamental Problem of Causal Inference, however we will pretend we know in order to highlight potential problems with estimating ATE.")`
 
 <!-- SJ: In need of a concrete definition of "Fundamental Problem of Casual Inference", I know you have described it above but maybe make it more clear explain it more and put it in bold or something? The reader should have no doubt in their mind that they read about it before when you mention it now -->
 
@@ -576,7 +599,7 @@ tibble(subject = c("Yao", "Emma", "Cassidy", "Tahmid", "Diego"),
   fmt_markdown(columns = TRUE)
 ```
 
-`r margin_note("'Actual ATE' refers to the average treatment effect we would calculate if we knew all potential outcomes. This is of course not possible due to the Fundamental Problem of Causal Inference, however we will pretend we know in order to highlight potential problems with estimating ATE.")`
+`r margin_note("'actual ATE' refers to the average treatment effect we would calculate if we knew all potential outcomes. This is of course not possible due to the Fundamental Problem of Causal Inference, however we will pretend we know in order to highlight potential problems with estimating ATE.")`
 
 In this example, there is indeed a constant treatment effect for everyone: $+2$. Note that the *observed* values are all the same, but the unobserved values were such that our estimated ATE, $-1.33$, is pretty far from the actual ATE, $+2$. We'll consider in a little bit when it is reasonable to assume that our estimate of the ATE is a good one. (The best way, as we'll see, is randomized assignment to treatment.) If we think we have a reasonable estimate of ATE, using that value as a constant for $\tau$ might be our *best guess* if we do want to estimate an unobserved potential outcome for an individual. 
 
@@ -668,19 +691,15 @@ tibble(subject = c("Respondent 1", "Respondent 2", "Respondent 3", "...", "Respo
 
 By surveying 1,000 people on their attitudes towards immigrants we now have some values to work with. This, however, does not solve the missing data problem. We are likely interested in the causal effect *in general*, not just for our 1,000 person sample. We'll need to think about whether our *sample* is representative of the full population. For the vast majority of US adults we still have no value. This is the second of the two most common sources of missing data: 
 
-<!-- SJ: Confused here, I thought you just said in line chunk 447 that this data doesn't have a causal effect because it is the average US citizen's attitude towards immigrants in general but now it is saying that there is a causal effect that we are likely interested in -->
-
 1. For the units in our sample, we only see *one* potential outcome
 2. For the units outside our sample, we see *no* potential outcomes
 
-<!-- SJ: what is the purpose of having these two bullet points here about how we see only one potential outcome versus none? It seems a little redundant if all it is meant to explain is that we don't know the data for people we haven't surveyed, maybe a little more explanation is needed here to justify what you are explaining or the point you are making. I am assuming (no pun intended) it is because there is no way to make assumptions here?  -->
+### The infinite Preceptor Table: many kinds of missing data
 
-### The Infinite Preceptor Table: many kinds of missing data
-
-We have spoken about Ideal Preceptor Tables (no missing data), Actual Preceptor Tables (question marks representing the values we don't know), but there is one more type of Preceptor Table. In the real world, a Preceptor Table has an infinite number of rows, and therefore an infinite amount of missing data. We call this type of Preceptor Table an Infinite Preceptor Table. Such a reality is unworkable, so we make assumptions to reduce the true problem to something more manageable.
+We have spoken about ideal Preceptor Tables (no missing data), actual Preceptor Tables (question marks representing the values we don't know), but there is one more type of Preceptor Table. In the real world, a Preceptor Table has an infinite number of rows, and therefore an infinite amount of missing data. We call this type of Preceptor Table an infinite Preceptor Table. Such a reality is unworkable, so we make assumptions to reduce the true problem to something more manageable.
 
 `r margin_note("Why should we care about Yao's (or anyone's) attitude years from now? We need to consider why we are doing the experiment in the first place. Why would we care about Yao's attitude towards immigrants in the first place? There might be many answers to this question, like wanting to understand how he might vote or treat other people. That would mean we care about Yao's attitude in the future, not just at the time of being surveyed.")`
-Let's start by looking at what kinds of missing data make up the Infinite Preceptor Table. For example, say we only care about the causal effect of this experiment on Yao. Do we only care about his attitude right after the experiment? No! We also care about Yao's potential outcomes one year from now, two years from now, and so on.
+Let's start by looking at what kinds of missing data make up the infinite Preceptor Table. For example, say we only care about the causal effect of this experiment on Yao. Do we only care about his attitude right after the experiment? No! We also care about Yao's potential outcomes one year from now, two years from now, and so on.
 
 So our full Preceptor Table includes people we know (Yao) and people we don't (for example, Eliot), both now and in the future:
 
@@ -935,7 +954,7 @@ This is an extreme example of a problem called **selection bias**. `r margin_not
 
 Much like how the best way to avoid making poor inferences from a sample to a population is to take a random sample of the population, the best assignment mechanism for avoiding confounding is **randomization**. For each platform we could flip a coin to determine if it is in the treatment or control group.
 
-Randomized assignment is the best assignment mechanism for inferring the average treatment effect because if the sample is large enough, the difference in sample means between treated and control units ($\widehat{ATE}$) will be very close to the actual ATE from that sample. `r margin_note("'Actual ATE' in this case would be the ATE you could calculate if you were omniscient and knew all potential outcomes, which is of course impossible.")` (You still can't know *individual* treatment effects without more assumptions, because of the fundamental problem of causal inference.)
+Randomized assignment is the best assignment mechanism for inferring the average treatment effect because if the sample is large enough, the difference in sample means between treated and control units ($\widehat{ATE}$) will be very close to the actual ATE from that sample. `r margin_note("'actual ATE' in this case would be the ATE you could calculate if you were omniscient and knew all potential outcomes, which is of course impossible.")` (You still can't know *individual* treatment effects without more assumptions, because of the fundamental problem of causal inference.)
 
 Randomized assignments don't all look the same. For example, randomized block assignment is a method of random assignment that can be useful in further reducing potential confounding, making it an even better estimator than pure random assignment. In random block assignment, subjects in an experiment are subdivided into blocks. The assignment into blocks is not random, instead there is intentionally less variation within blocks than there is between them. Within those blocks subjects are randomly assigned to treatment or control. 
 
@@ -1207,6 +1226,8 @@ Causal inference, however, is the term for filling in missing data for potential
 In both causal inference and prediction, the process by which some data is missing and some is observed is crucial.  If we think that the missing data is similar to the observed data, we can make inferences more easily.  If not, we have to think through the dissimilarities and consider how to model them.
 
 ### Causal vs. Predictive Models
+
+<!-- CB: This needs to be potentially moved higher up in the chapter. -->
 
 Models help us to infer things in both prediction and causal inference. This chapter is all about the Rubin Causal Model, so naturally we have been focusing on causal models. We should, however, also discuss predictive models and the subtleties that differentiate predictive and causal models. 
 

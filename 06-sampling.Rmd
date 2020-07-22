@@ -960,21 +960,32 @@ Remember the RCM's slogan: *No causation without manipulation*. In both the urn 
 
 ## Preceptor Tables
 
-A Preceptor Table is a table with rows and columns for all the data we would (reasonably) like to have. There are three different types of Preceptor Tables that are applicable to our urn example: Actual, Ideal, and Reduced.
+Recall that a Preceptor Table is a table with rows and columns for all the data we would (reasonably) like to have. There are three different types of Preceptor Tables that are applicable to our urn example: actual, ideal, and reduced.
 
-The Actual Preceptor Table shows what we actually know. Accordingly, the table is riddled with question marks that the real world saddles us with. The Ideal Preceptor Table is the Preceptor Table with no question marks, and a reasonable number of rows and columns. With an Ideal Preceptor Table, we would calculate the value we want without any need for inference; the solution is a simple matter of arithmetic. Finally, the Reduced Preceptor Table...
+An actual Preceptor Table shows what we actually know. Accordingly, the table is riddled with question marks that the real world saddles us with. The ideal Preceptor Table is the Preceptor Table with no question marks, and a reasonable number of rows and columns. With an ideal Preceptor Table, we would calculate the value we want without any need for inference; the solution is a simple matter of arithmetic. Finally, the reduced Preceptor Table...
 
 
 To visualize the different Preceptor Tables and their usefulness to us data scientists, let's revisit our urn.
 
 ### Actual Preceptor Table: What we know
 
-Let's imagine we use our shovel and sample 100 beads from the urn. After taking our sample, we find that 40% of the *sampled* beads are red. What does this information tell us, specifically, about Bead 1? Bead 2? Remember: ball_ID is an identification variable. Let's visulize this by looking at the entire urn after our sample in a Preceptor Table.
+Let's imagine we use our shovel and sample 100 beads from the urn. After taking our sample, we find that 40% of the *sampled* beads are red. What does this information tell us, specifically, about Bead 1? Bead 2? Remember: ball_ID is an identification variable. Let's visualize this by looking at the entire urn after our sample in an actual Preceptor Table. We only know the colors of our randomly sampled 100 beads, the rest of the bead colors is our missing data!
 
+`r margin_note("Not all the rows in our actual Preceptor Table are shown, but you can imagine we have a lot of missing data with only some values filled in for the colors.")`
 ```{r, echo = FALSE}
 
 # Actual Preceptor Table to be created by the very helpful Cass!
 
+tibble(ball_ID = c("1", "2", "3", "4", "5", "6", "7", "8", "...", "2399", "2400"),
+       color = c("?", "?", "?", "white", "?", "?", "?", "?", "...", "red", "?")) %>%
+  gt() %>%
+  cols_label(ball_ID = md("**Ball ID**"),
+             color = "Color") %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(ball_ID))) %>%
+  tab_style(cell_text(weight = "bold"),
+            location = cells_body(columns = vars(ball_ID))) %>%
+  cols_align(align = "center", columns = TRUE)
 ```
 
 Where is all of our data? Well, when we took a sample of 100 beads from the total urn, we only have color identifications for 100 of the total 2400 beads in the urn. The rest of the balls were not sampled and we cannot say for certain whether they are white or red.
@@ -997,20 +1008,50 @@ virtual_histogram +
 
 Here, we see a decent amount of variation in the proportion of red balls. In some extreme cases, our proportion was as low as 20% and as high as 60%! If we took either one of these extremes and tried to make an assumption of Ball 1, we would most certainly be incorrect. This is why we run many simulations to make the *best possible prediction*. 
 
-
 ### Ideal Preceptor Table: What we wish we knew
 
-As is the case in the RCM, we wish we knew the values for every single unit in every possible scenario. The analogous ideal here would be a table where we know the color identity of every single ball. To compare to our previous Preceptor Table, this is what our Ideal Preceptor Table would look like: 
+As is the case in the RCM, we wish we knew the values for every single unit in every possible scenario. The analogous ideal here would be a table where we know the color identity of every single ball. To compare to our previous Preceptor Table, this is what our ideal Preceptor Table would look like: 
 
 ```{r, echo = FALSE}
 
 # Ideal Table to be created by Cass!
 
+urn %>%
+  slice(1:8, 2399, 2400) %>%
+  mutate(ball_ID = as.character(ball_ID),
+         color = as.character(color)) %>%
+  add_row(ball_ID = "...", color = "...", .after  = 8) %>%
+  gt() %>%
+  cols_label(ball_ID = md("**Ball ID**"),
+             color = "Year") %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(ball_ID))) %>%
+  tab_style(cell_text(weight = "bold"),
+            location = cells_body(columns = vars(ball_ID))) %>%
+  cols_align(align = "center", columns = TRUE)
 ```
 
 This Preceptor Table is possible by performing the exhaustive hand count of the entire urn. Let's say that, after this tedious process, we find that the **true** and **real** proportion of red balls is exactly 37.5%. We know each ball's color identity in the entire urn. To revisit the terminology of Chapter 5, we would be dealing with P(A|B), the probability of Ball 1 being red given that we know the color_ID of every single ball in the urn. If the proportion of red balls is **exactly** 37.5%, we can say whether Ball 1 is red or not with 100% certainty, since we know the exact number of red and white balls in the urn. 
 
 However, as has been emphasized before, real-life sampling is far more complex than our urn example. The process is **extremely** prone to error. Despite that, most people overestimate the validity of conclusions drawn from sampling. To stress how easy it is for sampling to go wrong, let's cover some key themes for sampling and data science. 
+
+<!-- CB: Something like this might be helpful for predictive? Very similar to Tahmid's chapter.
+
+urn %>%
+  slice(1:8, 2399, 2400) %>%
+  mutate(ball_ID = as.character(ball_ID),
+         color = as.character(color)) %>%
+  add_row(ball_ID = "...", color = "...", .after  = 8) %>%
+  add_row(ID = "Random bead color?", color = "?") %>%
+  gt() %>%
+  cols_label(ball_ID = md("**Ball ID**"),
+             color = "Year") %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(ball_ID))) %>%
+  tab_style(cell_text(weight = "bold"),
+            location = cells_body(columns = vars(ball_ID))) %>%
+  cols_align(align = "center", columns = TRUE)  -->
+
 
 ## Key Themes
 
