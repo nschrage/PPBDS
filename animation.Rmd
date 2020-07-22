@@ -5,15 +5,20 @@ output_yaml:
 
 # Animation {-}
 
-<!-- AR: Every code chunk that creates an animation has eval = FALSE to save on
-build time; the book then displays a saved gif (use anim_save()) that is the result of that code chunk. -->
+```{r, include=FALSE}
+# The vast majority of plots in this appendix take a while to make, so we cache
+# them all. Maybe we should do this elsewhere? Or do it for the whole book? Or
+# at least for the version we use on Github Actions?
 
-<!-- This section is written by Alboukadel Kassambara and was originally published [here](https://www.datanovia.com/en/blog/gganimate-how-to-create-plots-with-beautiful-animation-in-r/). -->
+knitr::opts_chunk$set(cache=TRUE)
+library(tufte)
+```
 
-<!-- Save anim_save(path) to save the gifs in the right location when creating them. By default, they use the last plot. So, just run the code, then use that. -->
+<!-- Out to add the hex for the package. -->
 
+**[gganimate](https://gganimate.com)** is a package for creating animated ggplots. It provides a range of new functionality that can be added to the plot object in order to customize how it should change with time.
 
-**gganimate** is a package for creating animated ggplots. It provides a range of new functionality that can be added to the plot object in order to customize how it should change with time.
+`r margin_note("Thanks to Alboukadel Kassambara for allowing us to use [his tutorial](https://www.datanovia.com/en/blog/gganimate-how-to-create-plots-with-beautiful-animation-in-r).")`
 
 Key features of gganimate:
 
@@ -21,49 +26,39 @@ Key features of gganimate:
 - **views**: you want your viewpoint to change
 - **shadows**: you want the animation to have memory
 
-## Prerequisites
+
+
+
+## Set Up
 
 Load required packages and set the default ggplot2 theme to `theme_bw()`:
 
-```{r}
-library(ggplot2)
+```{r, message=FALSE}
+library(tidyverse)
+library(gapminder)
 library(gganimate)
 theme_set(theme_bw())
 ```
 
-## Demo dataset
-
 ```{r}
-library(gapminder)
 head(gapminder)
 ```
 
-## Static plot
+## Transition through distinct states in time
 
-<!-- This code chunk caused lots of trouble. It originally came without the -->
-<!-- eval=FALSE. And it works fine on its own. But, it fails if it is placed into -->
-<!-- the entire book. I am not sure why! Putting in eval=FALSE makes it OK. But -->
-<!-- then I needed to save/show a png of the saved image. It all works. But it is -->
-<!-- annoying! And I worry that the error is a sympton of a larger problem. -->
+Begin with a static plot:
 
-<!--  ggsave("other/images/animation-1.png", p) -->
-
-```{r, cache=TRUE}
-p <- ggplot(
-  gapminder,
-  aes(x = gdpPercap, y=lifeExp, size = pop, colour = country)
-  ) +
-  geom_point(show.legend = FALSE, alpha = 0.7) +
-  scale_color_viridis_d() +
-  scale_size(range = c(2, 12)) +
-  scale_x_log10() +
-  labs(x = "GDP per capita", y = "Life expectancy")
+```{r}
+p <- ggplot(gapminder,
+            aes(x = gdpPercap, y=lifeExp, size = pop, colour = country)) +
+      geom_point(show.legend = FALSE, alpha = 0.7) +
+      scale_color_viridis_d() +
+      scale_size(range = c(2, 12)) +
+      scale_x_log10() +
+      labs(x = "GDP per capita", y = "Life expectancy")
 p
 ```
 
-<!-- ![](other/images/animation-1.png) -->
-
-## Transition through distinct states in time
 
 ### Basics
 
@@ -71,56 +66,46 @@ Key R function: `transition_time()`. The transition length between the states wi
 
 Label variables: `frame_time`. Gives the time that the current frame corresponds to.
 
-```{r, cache=TRUE}
+```{r}
 p + transition_time(year) +
   labs(title = "Year: {frame_time}")
 ```
 
-<!-- ![](other/images/basics.gif) -->
-
 Create facets by continent:
 
-```{r, eval = FALSE}
+```{r}
 p + facet_wrap(~continent) +
   transition_time(year) +
   labs(title = "Year: {frame_time}")
 ```
 
-![](other/images/facet_continent.gif)
-
 ### Let the view follow the data in each frame
 
-```{r, eval = FALSE}
+```{r}
 p + transition_time(year) +
   labs(title = "Year: {frame_time}") +
   view_follow(fixed_y = TRUE)
 ```
 
-![](other/images/view_follow_data.gif)
-
 ### Show preceding frames with gradual falloff
 
 This shadow is meant to draw a small wake after data by showing the latest frames up to the current. You can choose to gradually diminish the size and/or opacity of the shadow. The length of the wake is not given in absolute frames as that would make the animation susceptible to changes in the framerate. Instead it is given as a proportion of the total length of the animation.
 
-```{r, eval = FALSE}
+```{r}
 p + transition_time(year) +
   labs(title = "Year: {frame_time}") +
   shadow_wake(wake_length = 0.1, alpha = FALSE)
 ```
 
-![](other/images/gradual_falloff.gif)
-
 ### Show the original data as background marks
 
 This shadow lets you show the raw data behind the current frame. Both past and/or future raw data can be shown and styled as you want.
 
-```{r, eval = FALSE}
+```{r}
 p + transition_time(year) +
   labs(title = "Year: {frame_time}") +
   shadow_mark(alpha = 0.3, size = 0.5)
 ```
-
-![](other/images/background_marks.gif)
 
 ## Reveal data along a given dimension
 
@@ -129,14 +114,12 @@ This transition allows you to let data gradually appear, based on a given time d
 ### Static plot
 
 ```{r}
-p <- ggplot(
-  airquality,
-  aes(Day, Temp, group = Month, color = factor(Month))
-  ) +
-  geom_line() +
-  scale_color_viridis_d() +
-  labs(x = "Day of Month", y = "Temperature") +
-  theme(legend.position = "top")
+p <- ggplot(airquality,
+            aes(Day, Temp, group = Month, color = factor(Month))) +
+      geom_line() +
+      scale_color_viridis_d() +
+      labs(x = "Day of Month", y = "Temperature") +
+      theme(legend.position = "top")
 p
 ```
 
@@ -144,102 +127,76 @@ p
 
 - Reveal by day (x-axis)
 
-```{r, eval = FALSE}
+```{r}
 p + transition_reveal(Day)
 ```
 
-![](other/images/reveal_by_day.gif)
-
 - Show points:
 
-```{r, eval = FALSE}
+```{r}
 p + 
   geom_point() +
   transition_reveal(Day)
 ```
 
-![](other/images/show_points.gif)
 
 - Points can be kept by giving them a unique group:
 
-```{r, eval = FALSE}
+```{r}
 p + 
   geom_point(aes(group = seq_along(Day))) +
   transition_reveal(Day)
 ```
 
-![](other/images/unique_group.gif)
-
-## Transition between several distinct stages of the data
+### Transition between several distinct stages of the data
 
 Data preparation:
 
 ```{r}
-library(dplyr)
 mean.temp <- airquality %>%
   group_by(Month) %>%
-  summarise(Temp = mean(Temp))
+  summarise(Temp = mean(Temp), .groups = "drop_last")
 mean.temp
 ```
 
 Create a bar plot of mean temperature:
 
 ```{r}
-p <- ggplot(mean.temp, aes(Month, Temp, fill = Temp)) +
-  geom_col() +
-  scale_fill_distiller(palette = "Reds", direction = 1) +
-  theme_minimal() +
-  theme(
-    panel.grid = element_blank(),
-    panel.grid.major.y = element_line(color = "white"),
-    panel.ontop = TRUE
-  )
+p <- ggplot(mean.temp, 
+            aes(Month, Temp, fill = Temp)) +
+      geom_col() +
+      scale_fill_distiller(palette = "Reds", direction = 1) +
+      theme_minimal() +
+      theme(panel.grid = element_blank(),
+            panel.grid.major.y = element_line(color = "white"),
+            panel.ontop = TRUE)
 p
 ```
 
 - transition_states():
 
-```{r, eval = FALSE}
+```{r}
 p + transition_states(Month, wrap = FALSE) +
   shadow_mark()
 ```
 
-![](other/images/transition_states.gif)
-
 - enter_grow() + enter_fade()
 
-```{r, eval = FALSE}
+```{r}
 p + transition_states(Month, wrap = FALSE) +
   shadow_mark() +
   enter_grow() +
   enter_fade()
 ```
 
-![](other/images/enter_grow.gif)
 
-<!-- ### Save animation -->
-
-<!-- If you need to save the animation for later use you can use the ``anim_save()`` function. -->
-
-<!-- It works much like ``ggsave()`` from ggplot2 and automatically grabs the last rendered animation if you do not specify one directly. -->
-
-<!-- Example of usage: -->
-
-<!-- AR: the blog post has no example so I wrote a different section below called "How to save your animation" -->
-
-## Read more
-
-- [gganimate official documentation website](https://gganimate.com/index.html)
-
-## How to save your animation
+## Save your animation
 
 The code to create animations can take a long time to run.  So after you have created an animation, you'll want to save it somewhere so you can display it without having to run the code.  
 
-<!-- AR: if ggsave() is not discussed before now, it may be helpful to add. -->
-
 The key function to use is `anim_save()`, which is very similar to saving static plots using `ggsave()`.  It will save your animation as a gif.  The first argument is the filename you want to give the animation and the second is the animation object, so if you have an animation object called `p` that you wanted to save in a file called "p.gif", you would save it like so:
 
-```{r, eval = FALSE}
+```{r, eval=FALSE}
 anim_save("p.gif", p)
 ```
 
