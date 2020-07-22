@@ -1420,95 +1420,6 @@ flights_dist %>%
 
 As you can see, character variables will be sorted alphabetically. Using the `desc()` helper function with a character variable, will sort the destinations reverse alphabetically. 
 
-### `group_by` rows
-
-<!-- To get `_` to work in caption title. Found at https://github.com/rstudio/bookdown/issues/209 -->
-(ref:groupby) Diagram of group_by() and summarize().
-
-```{r groupsummarize, echo=FALSE, fig.cap="(ref:groupby)", purl=FALSE, fig.height=2.5}
-knitr::include_graphics("01-visualization/images/group_summary.png")
-```
-
-Say instead of a single mean temperature for the whole year, you would like 12 mean temperatures, one for each of the 12 months separately. In other words, we would like to compute the mean temperature split by month. We can do this by "grouping" temperature observations by the values of another variable, in this case by the 12 values of the variable `month`. Run the following code:
-
-```{r}
-summary_monthly_temp <- weather %>% 
-  group_by(month) %>% 
-  summarize(mean = mean(temp, na.rm = TRUE), 
-            std_dev = sd(temp, na.rm = TRUE))
-summary_monthly_temp
-```
-
-This code is identical to the previous code that created `summary_temp`, but with an extra `group_by(month)` added before the `summarize()`. Grouping the `weather` dataset by `month` and then applying the `summarize()` functions yields a data frame that displays the mean and standard deviation temperature split by the 12 months of the year.
-
-It is important to note that the \index{dplyr!group\_by()} `group_by()` function doesn't change data frames by itself. Rather it changes the *meta-data*\index{meta-data}, or data about the data, specifically the grouping structure. It is only after we apply the `summarize()` function that the data frame changes. 
-
-Run this code (do not forget to load its package `nycflights13` in your console if you
-have not already):
-
-```{r, eval=TRUE}
-flights
-```
-
-Observe that the first line of the output reads `# A tibble: 336,776 x 19`. This is an example of meta-data, in this case the number of observations/rows and variables/columns in `flights`. The actual data itself are the subsequent table of values. Now let's pipe the `flights` data frame into `group_by(origin)`:
-
-```{r, eval=TRUE}
-flights %>% 
-  group_by(origin)
-```
-
-Observe that now there is additional meta-data: `# Groups: origin [3]` indicating that the grouping structure meta-data has been set based on the 3 possible levels of the categorical variable `origin`: `"EWR"`, `"JFK"`, and `"LGA"`. On the other hand, observe that the data has not changed: it is still a table of 336,776 $\times$ 19 values.
-
-Only by combining a `group_by()` with another data wrangling operation, in this case `summarize()`, will the data actually be transformed. 
-
-Let's revisit the `n()` \index{dplyr!n()} counting summary function we briefly introduced previously. Recall that the `n()` function counts rows. This is opposed to the `sum()` summary function that returns the sum of a numerical variable. For example, suppose we'd like to count how many flights departed each of the three airports in New York City:
-
-```{r, eval=TRUE}
-by_origin <- flights %>% 
-  group_by(origin) %>% 
-  summarize(count = n())
-by_origin
-```
-
-We see that Newark (`"EWR"`) had the most flights departing in 2013 followed by `"JFK"` and lastly by LaGuardia (`"LGA"`). Note there is a subtle but important difference between `sum()` and `n()`; while `sum()` returns the sum of a numerical variable, `n()` returns a count of the number of rows/observations. 
-
-If you would like to remove this grouping structure meta-data, we can pipe the resulting data frame into the \index{dplyr!ungroup()} `ungroup()` function:
-
-```{r, eval=TRUE}
-flights %>% 
-  group_by(origin) %>% 
-  ungroup()
-```
-
-Observe how the `# Groups: origin [3]` meta-data is no longer present. 
-
-### Grouping by more than one variable
-
-You are not limited to grouping by one variable. Say you want to know the number of flights leaving each of the three New York City airports *for each month*. We can also group by a second variable `month` using `group_by(origin, month)`:
-
-```{r}
-by_origin_monthly <- flights %>% 
-  group_by(origin, month) %>% 
-  summarize(count = n())
-by_origin_monthly
-```
-
-Observe that there are 36 rows to `by_origin_monthly` because there are 12 months for 3 airports (`EWR`, `JFK`, and `LGA`). 
-
-Why do we `group_by(origin, month)` and not `group_by(origin)` and then `group_by(month)`? Let's investigate:
-
-```{r}
-by_origin_monthly_incorrect <- flights %>% 
-  group_by(origin) %>% 
-  group_by(month) %>% 
-  summarize(count = n())
-by_origin_monthly_incorrect
-```
-
-What happened here is that the second `group_by(month)` overwrote the grouping structure meta-data of the earlier `group_by(origin)`, so that in the end we are only grouping by `month`. The lesson here is if you want to `group_by()` two or more variables, you should include all the variables at the same time in the same `group_by()` adding a comma between the variable names.
-
-<!-- EF: perhaps the student should also be encouraged to explore whether or not the order 
-of the variables in the group_by are important --> 
 
 ### `mutate` existing variables {#mutate}
 
@@ -1847,3 +1758,38 @@ Note that the `read_csv()` function included in the **readr** package is differe
 <!-- DDK: Add examples of using googlesheets4. Add some examples of dirty data and all the tricky arguments in read_csv.  -->
 
 <!-- Web scraping? --> 
+
+### Summary table
+
+Let's recap our data wrangling verbs in Table \@ref(tab:wrangle-summary-table). Using these verbs and the pipe `%>%` operator from Section \@ref(piping), you'll be able to write easily legible code to perform almost all the data wrangling and data transformation necessary for the rest of this book. 
+
+<!--EF: Variables in this section needs to be renamed --> 
+
+```{r, echo=FALSE, message=FALSE}
+# The following Google Doc is published to CSV and loaded using read_csv():
+# https://docs.google.com/spreadsheets/d/1nRkXfYMQiTj79c08xQPY0zkoJSpde3NC1w6DRhsWCss/edit#gid=0
+
+# Lots of hacky stuff deleted from here. Get rid of this and the data/ directory?
+
+ch4_scenarios <- read_rds("02-tidyverse/data/ch4_scenarios.rds")
+
+# ch4_scenarios %>% 
+#     kable(
+#       caption = "Summary of data wrangling verbs", 
+#       booktabs = TRUE,
+#       format = "html")
+```
+
+
+<!-- EWF: Added from Chapter 2. Jessica decide whether this is useful for you --> 
+### Additional resources
+
+If you want to further unlock the power of the **dplyr** package for data wrangling, we suggest that you check out RStudio's "Data Transformation with dplyr" cheatsheet. This cheatsheet summarizes much more than what we've discussed in this chapter, in particular more intermediate level and advanced data wrangling functions, while providing quick and easy-to-read visual descriptions. In fact, many of the diagrams illustrating data wrangling operations in this chapter, such as Figure \@ref(fig:filter) on `filter()`, originate from this cheatsheet.
+
+In the current version of RStudio in late 2019, you can access this cheatsheet by going to the RStudio Menu Bar -> Help -> Cheatsheets -> "Data Transformation with dplyr." `r if(knitr::is_html_output()) "You can see a preview in the figure below."`
+
+```{r, echo=FALSE, fig.cap="Data Transformation with dplyr cheatsheet."}
+knitr::include_graphics("02-tidyverse/images/dplyr_cheatsheet-1.png")
+```
+
+On top of the data wrangling verbs and examples we presented in this section, if you'd like to see more examples of using the **dplyr** package for data wrangling, check out [Chapter 5](http://r4ds.had.co.nz/transform.html) of *R for Data Science* [@rds2016].
