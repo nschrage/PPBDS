@@ -190,7 +190,7 @@ tibble(start = c(3, 2.5, 6)) %>%
 
 `sqrt()` with the parentheses is a call to the function. So, the first thing R tries to do is to run the function. Doing so fails because `sqrt()` requires an argument `x`, which is empty. 
 
-```{marginfigure, echo = TRUE}
+```{marginfigure, echo = TRUE, fig.margin = TRUE}
 Lesson: When passing a function in to `map_*` functions, pass just the name.
 ```
 
@@ -275,13 +275,7 @@ Later on, we will practice using map functions to create list columns with custo
 
 <!-- This is where we need to fill in the gap between map functions and functions in general -->
 
-## Using functions to generate data
-
-<!-- EC:  Use rnorm(), sample(), and replicate()-->
-
 ## Built-In Functions and Custom Functions
-
-<!-- Needs new/more concise name? I changed it from "Part 1". -->
 
 Load gapminder.
 
@@ -415,7 +409,7 @@ In both cases, R's eagerness to make sense of our requests is unfortunately succ
 
 ### Check the validity of arguments
 
-For functions that will be used again -- which is not all of them! -- it is good to check the validity of arguments. This implements a rule from [the Unix philosophy][unix-philosophy]:
+For functions that will be used again -- which is not all of them! -- it is good to check the validity of arguments. This implements a rule from the Unix philosophy:
 
 > Rule of Repair: When you must fail, fail noisily and as soon as possible.
 
@@ -465,6 +459,99 @@ The tidyverse style guide has a very useful [chapter on how to construct error m
 
 Another good use of this pattern is to leave checks behind in data analytical scripts. Consider our repetitive use of Gapminder in this book. Every time we load it, we inspect it, hoping to see the usual stuff. If we were loading from file (vs. a stable data package), we might want to formalize our expectations about the number of rows and columns, the names and flavors of the variables, etc. This would alert us if the data suddenly changed, which can be a useful wake-up call in scripts that you re-run *ad nauseam* on auto-pilot or non-interactively.
 
+### Using functions to generate data randomly
+
+<!-- EC:  Added section using rnorm(), runif(), sample(), and replicate(). Review?-->
+
+As data scientists, there are many reasons to create your own data. Perhaps you'd like to run a simulation as a baseline for comparison to another dataset that contains observed values. Or, perhaps you want to create a quick "fake" dataset to model real world phenomena. Either way, you will realize that at one point, you would like to generate data, which will induce some element of *randomness*. See, there is no point in manually creating a dataset in which you already *know* what every observation looks like. Real life is messy! Next, we will be introducing four functions that can be used to generate data ranomdly.
+
+#### Generating data using statistical distributions
+
+<!-- EC: Is using this moderndive paragraph enough background for distributions?-->
+
+What is a distribution? The distribution of a variable shows how frequently different values of a variable occur. Looking at the visualization of a distribution can show where the values are centered, show how the values vary, and give some information about where a typical value might fall. It can also alert you to the presence of outliers. If you feel like we have encountered distributions before, then you are absolutely correct. Recall that we can visualize the distribution of a numerical variable using binning in a histogram and that we can visualize the distribution of a categorical variable using a barplot.
+
+<!-- EC: What formulas do we want? I'm guessing not something as complex as a probability density function, will explaining the elements of a normal/Uniform dist be enough? -->
+
+The function `rnorm()` can be read of "r-norm". It corresponds to a Normal distribution, whose histograms look roughly like the following:
+
+<!-- EC: Clean up graphic (or even just insert as picture?) -->
+
+```{r echo=FALSE}
+rnorm(1000) %>% hist()
+```
+
+`rnorm()` has three arguments: `n`, `mean`, and `sd`. `n` corresponds to the number of observations, `mean` corresponds to the average as a whole, and `sd` corresponds to the size of the standard deviation from the mean. We will go further in depth in future chapters on what the statistical mechanics are behind these distributions, but for now, let's focus on creating a Normal distribution.
+
+```{marginfigure, echo=TRUE}
+Insert Normal formula here.
+```
+
+If we run the following:
+```{r}
+rnorm(10)
+```
+
+We get 10 observations centered around a default `mean` of 0 with a default `sd` of 1. What if we create a histogram of the values?
+
+```{r}
+rnorm(10) %>% hist()
+```
+As you can see, it's not as symmetrical as the one displayed before. Now what if we try taking 100 observations, then 1000?
+
+```{r}
+rnorm(100) %>% hist()
+```
+
+```{r}
+rnorm(1000) %>% hist()
+```
+
+Now it's looking a lot more similar! As you just discovered, the more observations a normal distribution has, the closer it looks to a symmetrical bell curve.
+
+The function `runif()` can be read as "r-unif". It corresponds to a Uniform distribution, in which every outcome has the same chance of occurring. A Uniform distribution you might encounter everyday is rolling a fair die. You are as likely to roll a 2 as you are to roll a 6.
+
+```{marginfigure, echo=TRUE}
+Insert uniform formula here.
+```
+
+The `runif()` function allows us to create our own uniform distributions with the specifications `n`, `min`, and `max`. Note that in R, `runif()` returns a continuous uniform distribution, not a discrete one. This means that if we tried to simulate our die-rolling example, we would get decimal values.
+
+Let's press on with our die-rolling example now that we have cautioned you about the difference between discrete and continuous uniform distributions. There are three arguments to `runif()`: `n`, `min`, and `max`. `n` is the number of observations, or `n = 1` since we are rolling the die once. The default value for `min` is `0` and the default value of `max` is 1. In our die-rolling example, these two values would be `min = 1` and `max = 6`, respectively. Let's plug these arguments into the function and see what we get.
+
+```{r}
+runif(1,1,6)
+```
+Nice! We just made our first uniform distribution. Again, note that the output contains decimel numbers. If we really want to simulate the discrete uniform distribution of dice rolling, there is a better function to do so: `sample()`.
+
+#### `sample()` and `replicate()`
+
+`sample()` takes a vector of values and spits out a number of random values from that vector. You can specify the number of random values with the argument `size`. Let's take it for a spin.
+
+```{r echo=TRUE}
+sample(x = 1:6, size = 1)
+```
+
+What if we want to roll the dice 3 times? Make sure that the `replace` argument is set to `TRUE`. This will ensure that each number is able to be rolled, regardless of what the previous rolls resulted in.
+
+```{r echo=TRUE}
+sample(x = 1:6, size = 3, replace = TRUE)
+```
+
+Perfect! The last function we want to introduce is `replicate()`, which interacts really well with the above three functions. `replicate()` takes an expression and repeats it for `n` specified times. This is really useful when you want to generate many iterations of data. What if we replicated the rolling of two dice ten times?
+
+```{r echo=TRUE}
+replicate(10, sample(1:6, 2))
+```
+
+As you can see, the default output is an array.
+
+```{r echo=TRUE}
+replicate(10, sample(1:6, 2), simplify = FALSE)
+```
+
+Setting `simplify=FALSE` turns it into a list of `n = 10` elements.
+
 ### Wrap-up and what's next?
 
 Here's the function we've written so far:
@@ -478,6 +565,7 @@ What we've accomplished:
 * We've written our first function.
 * We are checking the validity of its input, argument `x`.
 * We've done a good amount of informal testing.
+* We have been introduced to data generating functions.
   
 ## Argument Specifications and Default Values
 
