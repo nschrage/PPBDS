@@ -14,7 +14,7 @@
 
 <meta name="author" content="David Kane" />
 
-<meta name="date" content="2020-07-19" />
+<meta name="date" content="2020-07-22" />
 
 <script type="text/x-mathjax-config">
 MathJax.Hub.Config({
@@ -151,9 +151,8 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li class="toc"><a href="#resampling-tactile"> Pennies activity</a></li>
 <li class="toc"><a href="#confidence-intervals-using-lm"> Confidence Intervals using lm</a></li>
 <li class="toc"><a href="#ci-build-up"> Measuring uncertainty with confidence intervals</a></li>
-<li class="toc"><a href="#income-from-trains-using-bootstrap"> Income from trains using Bootstrap</a></li>
+<li class="toc"><a href="#eda-for-nhanes"> EDA for nhanes</a></li>
 <li class="toc"><a href="#parameter-uncertainty-and-unmodeled-variation"> Parameter Uncertainty and Unmodeled Variation</a></li>
-<li class="toc"><a href="#case-study-looking-at-2018-qscore-data"> Case study: Looking at 2018 Qscore data</a></li>
 <li class="toc"><a href="#ci-conclusion"> Conclusion</a></li>
 </ul>
 <a href="two-parameters.html"><span class="toc-section-number">8</span> Two Parameters</a>
@@ -179,162 +178,48 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <html><body><div id="one-parameter" class="section level1">
 <h1>
 <span class="header-section-number">Chapter 7</span> One Parameter</h1>
-<!-- DK: Key question is: How do we include forecasts in this process? -->
-<!-- Explain PPBDS.data and how to install it at start of chapter. Just a sentence or two, with `remotes::install_github("davidkane9/PPBDS.data")` in the sentence, along with note that, obviously, one needs to `library(remotes)` first. This would make for a good margin note. -->
-<!-- 
-
-$$ y_i = \beta + \epsilon_i $$
-$$ \hat{y_i} = \beta  $$
-
-
-
-Read Chapter 5 and zoom with Vivian about the connection between the two chapters
-
-Figure out the 5-8 subparts and the sub-subparts within each. This will evolve over time, of course.
-
-0. Question about height in America in 2009. 
-
-1. Pennies. Pretty much as it is now, with perhaps the addition of showing how lm(year ~ 1) gives the same answer.
-
-2. Exploratory Data Analysis of nhanes
-
-2. height from the 5,000 nhanes observations for 2009. This can go much faster. Two key differences from pennies. First, we know the truth, so we can examine whether or not the bootstrap works. (That is, we pull a sample of 40 and see if the bootstrap confidence interval from that 40 includes the true mean of the 5,000.) Second, we simultaneously calculate two things: mean height and 75th percentile height. The first can also be done with lm(). But the second can not! Which is why we sometimes need the bootstrap.
-
-Possibly focus on just 2500 men and their average height. their mean height is this, but we make a game and I give you a sample of like 40. Her's the 40, and give me a 95% CI using the bootstrap tools we learned. If we do the same procedure, then 950 should include the truth. That's how we know bootstraps is correct and I could only demonstrate this to you if we know what the truth is. 
-
-Cut this from chapter 8. Something like it belongs here
-
-=======
-Consider a bootstrap sample of the trains dataset with 1,000 replicates, and the data contained in the first of these 1000 replicates: 
-
-
-
-```r
-# boots <- bootstraps(trains, 1000)
-```
-
-Because bootstrapping can take a lot of time, we often create the bootstrap sample as a new object, and then use this new object as the starting point for later analysis. You would not want to redo the bootstrap every time you made a minor change in a plot later on. The result of running `bootstraps()` is usually a tibble of class "bootstraps," with two colums: `splits`  (a list) and `id` (a character).  
-
-
-```r
-# boots
-```
-
-
-Using the `analysis()` function from the **rsample** package is useful in working with the data stored within each replicate in the `splits` column. Let's look at the 9th replicate.
-
-
-```r
-# x$boots[[9]] %>% analysis()
-```
-
-Now, let's say we're interested in calculating a single parameter across each of these bootstrapped samples: the mean income for each of these replicates. We use `mutate()` to add a new column to the tibble. We use a map function to accomplish this, as explained in Chapter \@ref(functions).
-
-
-```r
-# x <- boots %>% 
-#  mutate(mean_income = map_dbl(splits, ~ analysis(.) %>% 
-#                              pull(income) %>% 
-#                              mean()))
-
-#x
-```
-
-
-
-Now we have 1000 replicates and 1000 values of mean_income to work with. If we want to construct a distribution for the bootstrapped values of `mean_income` with a 95 percent confidence interval, we can calculate the bounds of this interval.
-=======
-End of cut section.
-
-3. height in the US, using all 5,000 for 2009. Let's skip the bootstrap here. (We have seen it twice already.) Instead, we just go straight to lm(), tidy() to calculate the mean and its confidence interval. Note that, unlike with 2, we can never know the truth. Then, use this as an example to discuss parameter uncertainty. 
-
-want to estimate the height for the all US women. and i give you 2500. We don't need to do bootstraps, we could just run lm and tidy for the CI. We don't really have the true value in this case, but we can talk about the parameter uncertainty in this case. Want a plot that shows the thousand diff runs in the y axis and x axis is the different cI. check chapter 8 for the plot. 
-
-4. Prediction. What can we use this model for? We think we know p(mean height for 2009), call it p(height). So what? What can we do with this and what do we need to be careful about? This is where we can discuss all our other topics from themes.Rmd. Some key topics:
-
-possibly make them sub sub section based on themes
-
--->
-<!-- Turn Standard error method section of coin bootstrap into a four sentence margin note. -->
-<!-- Fix summarize warnings. I think you just need to provide a value for the `.groups` argument, perhaps just `.groups = "drop_last"`, which is the default. Of course, you also need to explain what this does. But why do we need to specify the default? -->
-<!-- Switch from qscores to nhanes as the main data example. Why? The demonstration works much better with a big dataset than it does with a small one, for reasons that we ought to discuss in the chapter. Which variable should we use? Let's go with height? Use just the data from 2009, which is 5,000 observations.  -->
-<!-- a) We can see how good that confidence interval is because we have all the data. We know the height for all 5,000 people in the sample, so we can see what the true mean is. Did our 95% confidence interval include the mean? It should! -->
-<!-- b) We can replicate this experiment 1,000 times. Sample, without replacement, 43 people from nhanes. (Point out that, although we used 50 with the penny example, bootstrapping works whatever the size of our sample. So, we use 43 here.) Use the bootstrap to calculate a confidence interval for the mean. This should include the mean about 950 of the 1,000. But it will fail about 500 times! And that is cool to show. -->
-<!-- c) Discuss how this exercise is still useful even if we begin with all our data. That is, don't sample. Just use all 5,000 people. Then, do the bootstrap to get a confidence interval. Note that the interval will be --- how much? --- smaller than the ones we got above, because we are using 116 times as much data. But it is also weird. I know exactly what the mean is! I have the entire Rubin Table! I don't need a confidence interval for the mean.  -->
-<!-- d) That is both true, and false. If all you truly care about is the mean these 5,000 people then, it is true, you are done. But that is generally not the case! The true Rubin Table is often bigger than you might initially think. You might also be interested in data from another time period (which has occurred but which may not be available to you) or from 2021, which has not even happened yet. Your Rubin Table includes rows for all those people. They are just missing. You also care about the millions of people who are not in the 5,000. You really want the mean for the country. (Or the world?) So, you use the model that you have to estimate stuff for the data that you don't. What is your best guess for the mean in 2011 (which you can check) or in 2021 (which you can't)? How confident are you are that estimate? What is your 50/50 prediction interval? -->
-<!-- e) Relatedly, what if I told you that your 2009 data I gave you did not include one person (or ten people or 100), which was (were) dropped at random from the data by mistake. What is your guess as to the height of that single person, or the height of the average of the 10 people or the tallest of the 10 classes? What is your confidence interval for that? Want to bet? These are all different estimands. -->
-<!-- All of this allows us to hit all the themes from style.Rmd even though we are only estimating one parameter. I think that this is enough for one chapter, especially if we keep the pennies around. No need to get into other data sets. -->
-<!-- 2) Need to get rid of `rep_sample_n()` and replace with `rsample:boostraps()`. Example usage [here](https://juliasilge.com/blog/beer-production/). Do this first, just to get warmed up. Make sure everything still works! Consult this [useful tutorial](https://www.danielphadley.com/bootstrap_tutto/) for the bootstraps function. We can keep everything else with the penny example the same, for now. -->
-<!-- 4) After completing the current penny example, show how we can estimate other estimands --- the median, 3rd biggest, et cetera --- in exactly the same way. All the same procedures apply in these cases. Obviously, we can go much faster and don't have to do them all. Key is to see that there are many things (and their uncertainty) which we can estimate. The mean is just one of them. We can still just use our standard Bayesian interpretation for all these estimands and uncertainty intervals. -->
-<!-- 3) Refer back to the probability chapter. Note that it ends with the estimating of a single parameter, the p associated with a coin. You want to remind readers of what they have already learned and also move a little bit further. Read the set of notes at the start of chapter 6.  -->
-<!-- 4) Recall how the probability chapter goes farther than this. It gets all the way to posterior predictions. What will be the mint year of the next penny we get from the bank? What will be the average of the next five pennies we pull? What is a reasonable uncertainty for these forecasts?  Do a posterior predictive checks. Note that we should use all the same "tools" as in that probability chapter. That is, our bootstraps has built a posterior distribution, just like the posterior distribution we built with the coin tosses. We then sample from this posterior to answer other questions. -->
-<!-- 4a) Key issue: How to we transition from this crazy bootstrap approach to using R functions to make the same calculations. Bootstraps take too long, and they are a bother. We need to show how they give the same answer as the built in R functions and then transition away from the bootstrap. Indeed, there is an argument that this chapter (or last chapter?) is the last Bayes Scatterplot we show. That was all about intuition. Once we have that, we can just go to doing things the right way. -->
-<!-- 4b) Key issue two: Do we go straight from the bootstrap to rstanarm functions? That would be pretty aggressive. But also pretty cool! Or maybe this chapter we show the bootstrap, the base R (t.test()? lm()?) and rstanarm together. Indeed, the goal for this chapter is to connect them all. Then, next chapter (two parameters) leaves out the bootstrap. And then N parameters drop base functions. But does that really work? Maybe we use base and rstanarm for the rest of the book? Maybe rstanarm only appears in advanced sections. We never use them in this class. Save them for Gov 52? I don't know! -->
-<!-- 5) Need to build a Rubin Table. (Read chapter 3 for background and discussion.) We want to have the year for every penny in the world. Sadly, we don't have that! But we do have 50 pennies. Show an RT, which shows both pennies we know the year of and pennies we don't know the year of. If we knew all the pennies, we could just caculate our estimand directly. We would know exactly the mean, the median, the 3rd oldest and so on. No uncertainty. But, we don't have all the years. The question marks mock us! So, we need to infer what is in the missing rows. (And then we . . . not sure I have thought this through.) Also, we can discuss lots of possible biases in the sampling mechanism. Indeed, the sampling mechanism is the key thing to discuss in this section. -->
-<!-- 6) We should start the chapter with a decision we face, even a toy one which is not much more than the prediction game. Maybe our friend Joe bets us that a random penny that we get in change from Starbuck's will be older than 1990. Should we take the bet? At what odds? Then, we come back to this at the end and, with the information we have learned, take the bet or not. -->
-<!-- 7) Always nice to highlight how flexible the simulation approach is. You might be able to solve the basic problem analytically. But, as soon as some complexity comes in, simulation is your only hope. For example, Joe bets that the second oldest of the four pennies he got in change is older than 1990. Take that bet? Only (?) approach is simulation. Or maybe we should start with a bet which we know can only be solved with simulation. -->
-<!-- 1) Get rid of ## Warning: `...` is not empty by using the `.group` argument correctly. -->
-<!-- 2) Get rid of ## Warning: Removed 2 rows containing missing values (geom_bar). Just use drop_na() and explain what you are doing. -->
-<!-- 3) Make our own speadsheet data? Use names from contributors to the book. -->
-<!-- Other Notes -->
-<!-- This is probably too hard for the chapter itself but might make for a good problem set: Estimating who is going to win an election as the votes come in. After one vote, don't know anything. After 5 votes, maybe a little. After 10 votes, more. And so on. Show how the best estimate evolves over time, as information comes in. Do this as a contest. What procedure is best? Show that some shrinkage is a very good idea. Each stage is, potentially, a new contest. See which approach wins the most contests. In the end, of course, they converge. Can't just be "Repub ahead" as H_1. Need to be "Repub = 0.6" Without this hack, can't calculate the likelihood easily. Right? See Rossman approach for tennis matches.  -->
-<!-- TA: Yea, I like this!
-
-<!-- Show updating as each vote comes in. Then show that you get the same answer if you just include all the votes at once. -->
-<!-- First, look at competing models. Who is ahead, D or R? -->
-<!-- Second, add another model. D or R or tied? -->
-<!-- Third, what is D percentage of support? -->
-<!-- Assuming this is correct, we get to bring in prediction and betting. Then, we have the motivating question: What is a good estimate for the percentage of Democrats in this bucket? How do we combine information from the overall population and from our sample to come up with a good estimate, and confidence interval, for the percentage Democratic in that bucket? Perhaps this multi-level model is one of the last things we do. Even Mr P??  -->
-<!-- Find a place for this quote somewhere. -->
-<!-- > In this sense, the bootstrap distribution represents an (approximate) -->
-<!-- nonparametric, noninformative posterior distribution for our parameter. -->
-<!-- But this bootstrap distribution is obtained painlessly --- without having to -->
-<!-- formally specify a prior and without having to sample from the posterior -->
-<!-- distribution. Hence we might think of the bootstrap distribution as a “poor -->
-<!-- man’s” Bayes posterior. By perturbing the data, the bootstrap approximates -->
-<!-- the Bayesian effect of perturbing the parameters, and is typically -->
-<!-- much simpler to carry out. --- Elements of Statistical Learning, 2nd edition, by Hastie et al, page 271. -->
-<!-- Workshop Statistics:  Discovery with Data, A Bayesian Approach by James H. Albert and Allan J. Rossman --- Topic 16 has some interesting stuff about how we learn a proportion.  -->
-<p>Before digging into this chapter, please download PPBDS data, which we will be using for this chapter. To get the PPBDS data, please run <code>library(remotes)</code> and then <code>remotes::install_github("davidkane9/PPBDS.data")</code>. In Chapter <a href="sampling.html#sampling">6</a>, we studied sampling. We started with a “tactile” exercise where we wanted to know the proportion of balls in the urn in Figure <a href="#fig:sampling-exercise-1"><strong>??</strong></a> that are red. While we could have performed an exhaustive count, this would have been a tedious process. So instead, we used a shovel to extract a sample of 50 balls and used the resulting proportion that were red as an <em>estimate</em>. Furthermore, we made sure to mix the urn’s contents before every use of the shovel. Because of the randomness created by the mixing, different uses of the shovel yielded different proportions red and hence different estimates of the proportion of the urn’s balls that are red.</p>
+<p>What is the average height of an American male? What is the 75th percentile of the distribution of height for American men? How certain are you are your estimates? If we past 5 men walking down the street, what are the odds that the tallest will be at least 5 centimeters taller than the shortest?</p>
+<div id="resampling-tactile" class="section level2">
+<h2>
+<span class="header-section-number">7.1</span> Pennies activity</h2>
+<p>In Chapter <a href="sampling.html#sampling">6</a>, we studied sampling. We started with a “tactile” exercise where we wanted to know the proportion of balls in the urn that are red. While we could have performed an exhaustive count, this would have been a tedious process. So instead, we used a shovel to extract a sample of 50 balls and used the resulting proportion that were red as an <em>estimate</em>. Furthermore, we made sure to mix the urn’s contents before every use of the shovel. Because of the randomness created by the mixing, different uses of the shovel yielded different proportions red and hence different estimates of the proportion of the urn’s balls that are red.</p>
 <p>Remember: There is a <em>truth</em> here. There is an urn. It has red and white balls in it. An exact, but unknown, number of the balls are red. An exact, but unknown, number of the balls are white. An exact, but unknown, percentage of the balls are red – defined as the number red divided by the sum of the number red and the number white. Our goal was to estimate that unknown percentage. We wanted to make statements about the world, even if we can never be certain that those statements are <em>true</em>. We will never have the time or inclination to actually count all the balls. We use the term <em>parameter</em> for things that exist but which are unknown. We use statistics to estimate the true values of parameters.</p>
-<!-- TA: This might just be me, but I think it would be helpful to reinforce the last two sentences as the topic sentences for the Remember paragraph. -->
+<!-- Reinforce the last two sentences as the topic sentences for the Remember paragraph. -->
 <p>We then mimicked this <em>physical</em> sampling exercise with an equivalent <em>virtual</em> sampling exercise using the computer. In Subsection <a href="sampling.html#different-shovels">6.2.4</a>, we repeated this sampling procedure 1,000 times, using three different virtual shovels with 25, 50, and 100 slots. We visualized these three sets of 1,000 estimates in Figure <a href="#fig:comparing-sampling-distributions-3"><strong>??</strong></a> and saw that as the sample size increased, the variation in the estimates decreased. We then expanded this for all sample sizes from 1 to 100.</p>
 <p>In doing so, we constructed <em>sampling distributions</em>. The motivation for taking a 1,000 repeated samples and visualizing the resulting estimates was to study how these estimates varied from one sample to another; in other words, we wanted to study the effect of <em>sampling variation</em>. We quantified the variation of these estimates using their standard deviation, which has a special name: the <em>standard error</em>. In particular, we saw that as the sample size increased from 1 to 100, the standard error decreased and thus the sampling distributions narrowed. Larger sample sizes led to more <em>precise</em> estimates that varied less around the center.</p>
-<!-- TA: I think we can distinguish further the difference between standard deviation and standard error in the above paragraph. Readers can confuse the two. -->
+<!-- Distinguish further the difference between standard deviation and standard error in the above paragraph. Readers can confuse the two. -->
 <p>We then tied these sampling exercises to terminology and mathematical notation related to sampling in Subsection <a href="sampling.html#terminology-and-notation">6.3.1</a>. Our <em>study population</em> was the large urn with <span class="math inline">\(N\)</span> = 2,400 balls, while the <em>population parameter</em>, the unknown quantity of interest, was the population proportion <span class="math inline">\(p\)</span> of the urn’s balls that were red. Since performing a <em>census</em> would be expensive in terms of time and energy, we instead extracted a <em>sample</em> of size <span class="math inline">\(n\)</span> = 50. The <em>point estimate</em>, also known as a <em>sample statistic</em>, used to estimate <span class="math inline">\(p\)</span> was the sample proportion <span class="math inline">\(\widehat{p}\)</span> of these 50 sampled balls that were red. Furthermore, since the sample was obtained at <em>random</em>, it can be considered as <em>unbiased</em> and as <em>representative</em> of the population. Thus any results based on the sample could be <em>generalized</em> to the population. Therefore, the proportion of the shovel’s balls that were red was a “good guess” of the proportion of the urn’s balls that are red. In other words, we used the sample to draw <em>inferences</em> about the population.</p>
 <p>However, as described in Section <a href="sampling.html#sampling-simulation">6.2</a>, both the physical and virtual sampling exercises are not what one would do in real life. This was merely an activity used to study the effects of sampling variation. In a real life situation, we would not take 1,000 samples of size <span class="math inline">\(n\)</span>, but rather take a <em>single</em> representative sample that’s as large as possible. Additionally, we knew that the true proportion of the urn’s balls that were red was 37.5%. In a real-life situation, we will not know what this value is. Because if we did, then why would we take a sample to estimate it?</p>
 <p>An example of a realistic sampling situation would be a poll, like the <a href="https://www.npr.org/sections/itsallpolitics/2013/12/04/248793753/poll-support-for-obama-among-young-americans-eroding">Obama poll</a> you saw in Section <a href="sampling.html#sampling-case-study">6.4</a>. Pollsters did not know the true proportion of <em>all</em> young Americans who supported President Obama in 2013, and thus they took a single sample of size <span class="math inline">\(n\)</span> = 2,089 young Americans to estimate this value.</p>
 <p>So how does one quantify the effects of sampling variation when you only have a <em>single sample</em> to work with? You cannot directly study the effects of sampling variation when you only have one sample. One common method to study this is <em>bootstrapping resampling</em>.</p>
 <p>What if we would like, not only a single estimate of the unknown population parameter, but also a <em>range of highly plausible</em> values? Going back to the Obama poll article, it stated that the pollsters’ estimate of the proportion of all young Americans who supported President Obama was 41%. But in addition it stated that the poll’s “margin of error was plus or minus 2.1 percentage points.” This “plausible range” was [41% - 2.1%, 41% + 2.1%] = [38.9%, 43.1%]. This range of plausible values is what’s known as a <em>confidence interval</em>, which will be the focus of the later sections of this chapter.</p>
-<p>For concreteness, let’s consider two simple tasks. First, predict the height of a random person you have not met. Second, predict the height of the second tallest person in a group of ten random people. What are you predictions and how certain are you of them?</p>
-<!-- Problem of predicting someone's height or of predicting the tallest person in a group of 10. And how uncertain are you about those predictions? -->
-<!--
-Create graphic illustrating two-step process of 1) construct bootstrap distribution
-and then 2) based on bootstrap dist'n create CI?
--->
-<!-- TA: For the comment above, are you referring to Obama's polling data?-->
-<div id="resampling-tactile" class="section level2">
-<h2>
-<span class="header-section-number">7.1</span> Pennies activity</h2>
+<!-- Create graphic illustrating two-step process of 1) construct bootstrap distribution
+and then 2) based on bootstrap dist'n create CI? -->
+<div id="to-the-bank" class="section level3">
+<h3>
+<span class="header-section-number">7.1.1</span> To the Bank</h3>
 <p>As we did in Chapter <a href="sampling.html#sampling">6</a>, we’ll begin with a hands-on tactile activity. We almost always need the <strong>tidyverse</strong> package.</p>
-<div class="sourceCode" id="cb637"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb637-1"><a href="one-parameter.html#cb637-1"></a><span class="kw">library</span>(PPBDS.data)</span>
-<span id="cb637-2"><a href="one-parameter.html#cb637-2"></a><span class="kw">library</span>(rsample)</span>
-<span id="cb637-3"><a href="one-parameter.html#cb637-3"></a><span class="kw">library</span>(tidyverse)</span></code></pre></div>
-<p><strong>PPBDS.data</strong> includes the data sets for this book. <strong>rsample</strong> includes functions for bootstraping, the main statistical tool which will we use here.</p>
+<!-- DK: Why can't we stick a margin note in here about how to install PPBDS.data? I can't even leave a commented out version of the note without crashing any knitting attempt. -->
+<div class="sourceCode" id="cb664"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb664-1"><a href="one-parameter.html#cb664-1"></a><span class="kw">library</span>(PPBDS.data)</span>
+<span id="cb664-2"><a href="one-parameter.html#cb664-2"></a><span class="kw">library</span>(rsample)</span>
+<span id="cb664-3"><a href="one-parameter.html#cb664-3"></a><span class="kw">library</span>(tidyverse)</span>
+<span id="cb664-4"><a href="one-parameter.html#cb664-4"></a><span class="kw">library</span>(skimr)</span></code></pre></div>
+<p><strong>PPBDS.data</strong> includes the data sets for this book. <strong>rsample</strong> includes functions for bootstrapping, the main statistical tool which will we use in this chapter</p>
+</div>
 <div id="what-is-the-average-year-on-us-pennies-in-2019" class="section level3">
 <h3>
-<span class="header-section-number">7.1.1</span> What is the average year on US pennies in 2019?</h3>
+<span class="header-section-number">7.1.2</span> What is the average year on US pennies in 2019?</h3>
 <p>Try to imagine all the pennies being used in the United States in 2019. That’s a lot of pennies! Now say we’re interested in the average year of minting of <em>all</em> these pennies. One way to compute this value would be to gather up all pennies being used in the US, record the year, and compute the average. However, this would be near impossible! So instead, let’s collect a <em>sample</em> of 50 pennies from a local bank in downtown Northampton, Massachusetts, USA as seen in Figure <a href="#fig:resampling-exercise-a"><strong>??</strong></a>.</p>
 <!-- CB: I think it would help  with the Preceptor table concept to ask the question of 'If we are given a random penny in 2019, what would we predict the year to be on that penny?' And that way you can tie in and reinforce the idea of the predictive model which is introduced in my chapter like we talked about. Either introduce here or around line 246? -->
 <div class="figure">
-<span id="fig:unnamed-chunk-432-1"></span>
+<span id="fig:unnamed-chunk-462-1"></span>
 <p class="caption marginnote shownote">
 FIGURE 7.1: Collecting a sample of 50 US pennies from a local bank.
 </p>
 <img src="07-one-parameter/images/bank.jpg" alt="Collecting a sample of 50 US pennies from a local bank.">
 </div>
 <div class="figure">
-<span id="fig:unnamed-chunk-432-2"></span>
+<span id="fig:unnamed-chunk-462-2"></span>
 <p class="caption marginnote shownote">
 FIGURE 7.2: Collecting a sample of 50 US pennies from a local bank.
 </p>
@@ -342,16 +227,16 @@ FIGURE 7.2: Collecting a sample of 50 US pennies from a local bank.
 </div>
 <p>An image of these 50 pennies can be seen in Figure <a href="#fig:resampling-exercise-c"><strong>??</strong></a>. For each of the 50 pennies starting in the top left, progressing row-by-row, and ending in the bottom right, note there is an “ID” identification variable printed in black and the year of minting printed in white.</p>
 <div class="figure">
-<span id="fig:unnamed-chunk-433"></span>
+<span id="fig:unnamed-chunk-463"></span>
 <p class="caption marginnote shownote">
 FIGURE 7.3: 50 US pennies labelled.
 </p>
 <img src="07-one-parameter/images/3.jpg" alt="50 US pennies labelled.">
 </div>
 <p>The <strong>moderndive</strong>  package contains this data on our 50 sampled pennies in the <code>pennies_sample</code> data frame:</p>
-<div class="sourceCode" id="cb638"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb638-1"><a href="one-parameter.html#cb638-1"></a><span class="kw">library</span>(moderndive)</span>
-<span id="cb638-2"><a href="one-parameter.html#cb638-2"></a></span>
-<span id="cb638-3"><a href="one-parameter.html#cb638-3"></a>pennies_sample</span></code></pre></div>
+<div class="sourceCode" id="cb665"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb665-1"><a href="one-parameter.html#cb665-1"></a><span class="kw">library</span>(moderndive)</span>
+<span id="cb665-2"><a href="one-parameter.html#cb665-2"></a></span>
+<span id="cb665-3"><a href="one-parameter.html#cb665-3"></a>pennies_sample</span></code></pre></div>
 <pre><code>## # A tibble: 50 x 2
 ##       ID  year
 ##    &lt;int&gt; &lt;dbl&gt;
@@ -367,792 +252,6 @@ FIGURE 7.3: 50 US pennies labelled.
 ## 10    10  2000
 ## # … with 40 more rows</code></pre>
 <p>The <code>pennies_sample</code> data frame has 50 rows corresponding to each penny with two variables. The first variable <code>ID</code> corresponds to the ID labels in Figure <a href="#fig:resampling-exercise-c"><strong>??</strong></a>, whereas the second variable <code>year</code> corresponds to the year of minting saved as a numeric variable, also known as a double (<code>dbl</code>).</p>
-<style>html {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
-}
-
-#rgndohygub .gt_table {
-  display: table;
-  border-collapse: collapse;
-  margin-left: auto;
-  margin-right: auto;
-  color: #333333;
-  font-size: 16px;
-  background-color: #FFFFFF;
-  width: auto;
-  border-top-style: solid;
-  border-top-width: 2px;
-  border-top-color: #A8A8A8;
-  border-right-style: none;
-  border-right-width: 2px;
-  border-right-color: #D3D3D3;
-  border-bottom-style: solid;
-  border-bottom-width: 2px;
-  border-bottom-color: #A8A8A8;
-  border-left-style: none;
-  border-left-width: 2px;
-  border-left-color: #D3D3D3;
-}
-
-#rgndohygub .gt_heading {
-  background-color: #FFFFFF;
-  text-align: center;
-  border-bottom-color: #FFFFFF;
-  border-left-style: none;
-  border-left-width: 1px;
-  border-left-color: #D3D3D3;
-  border-right-style: none;
-  border-right-width: 1px;
-  border-right-color: #D3D3D3;
-}
-
-#rgndohygub .gt_title {
-  color: #333333;
-  font-size: 125%;
-  font-weight: initial;
-  padding-top: 4px;
-  padding-bottom: 4px;
-  border-bottom-color: #FFFFFF;
-  border-bottom-width: 0;
-}
-
-#rgndohygub .gt_subtitle {
-  color: #333333;
-  font-size: 85%;
-  font-weight: initial;
-  padding-top: 0;
-  padding-bottom: 4px;
-  border-top-color: #FFFFFF;
-  border-top-width: 0;
-}
-
-#rgndohygub .gt_bottom_border {
-  border-bottom-style: solid;
-  border-bottom-width: 2px;
-  border-bottom-color: #D3D3D3;
-}
-
-#rgndohygub .gt_col_headings {
-  border-top-style: solid;
-  border-top-width: 2px;
-  border-top-color: #D3D3D3;
-  border-bottom-style: solid;
-  border-bottom-width: 2px;
-  border-bottom-color: #D3D3D3;
-  border-left-style: none;
-  border-left-width: 1px;
-  border-left-color: #D3D3D3;
-  border-right-style: none;
-  border-right-width: 1px;
-  border-right-color: #D3D3D3;
-}
-
-#rgndohygub .gt_col_heading {
-  color: #333333;
-  background-color: #FFFFFF;
-  font-size: 100%;
-  font-weight: normal;
-  text-transform: inherit;
-  border-left-style: none;
-  border-left-width: 1px;
-  border-left-color: #D3D3D3;
-  border-right-style: none;
-  border-right-width: 1px;
-  border-right-color: #D3D3D3;
-  vertical-align: bottom;
-  padding-top: 5px;
-  padding-bottom: 6px;
-  padding-left: 5px;
-  padding-right: 5px;
-  overflow-x: hidden;
-}
-
-#rgndohygub .gt_column_spanner_outer {
-  color: #333333;
-  background-color: #FFFFFF;
-  font-size: 100%;
-  font-weight: normal;
-  text-transform: inherit;
-  padding-top: 0;
-  padding-bottom: 0;
-  padding-left: 4px;
-  padding-right: 4px;
-}
-
-#rgndohygub .gt_column_spanner_outer:first-child {
-  padding-left: 0;
-}
-
-#rgndohygub .gt_column_spanner_outer:last-child {
-  padding-right: 0;
-}
-
-#rgndohygub .gt_column_spanner {
-  border-bottom-style: solid;
-  border-bottom-width: 2px;
-  border-bottom-color: #D3D3D3;
-  vertical-align: bottom;
-  padding-top: 5px;
-  padding-bottom: 6px;
-  overflow-x: hidden;
-  display: inline-block;
-  width: 100%;
-}
-
-#rgndohygub .gt_group_heading {
-  padding: 8px;
-  color: #333333;
-  background-color: #FFFFFF;
-  font-size: 100%;
-  font-weight: initial;
-  text-transform: inherit;
-  border-top-style: solid;
-  border-top-width: 2px;
-  border-top-color: #D3D3D3;
-  border-bottom-style: solid;
-  border-bottom-width: 2px;
-  border-bottom-color: #D3D3D3;
-  border-left-style: none;
-  border-left-width: 1px;
-  border-left-color: #D3D3D3;
-  border-right-style: none;
-  border-right-width: 1px;
-  border-right-color: #D3D3D3;
-  vertical-align: middle;
-}
-
-#rgndohygub .gt_empty_group_heading {
-  padding: 0.5px;
-  color: #333333;
-  background-color: #FFFFFF;
-  font-size: 100%;
-  font-weight: initial;
-  border-top-style: solid;
-  border-top-width: 2px;
-  border-top-color: #D3D3D3;
-  border-bottom-style: solid;
-  border-bottom-width: 2px;
-  border-bottom-color: #D3D3D3;
-  vertical-align: middle;
-}
-
-#rgndohygub .gt_striped {
-  background-color: rgba(128, 128, 128, 0.05);
-}
-
-#rgndohygub .gt_from_md > :first-child {
-  margin-top: 0;
-}
-
-#rgndohygub .gt_from_md > :last-child {
-  margin-bottom: 0;
-}
-
-#rgndohygub .gt_row {
-  padding-top: 8px;
-  padding-bottom: 8px;
-  padding-left: 5px;
-  padding-right: 5px;
-  margin: 10px;
-  border-top-style: solid;
-  border-top-width: 1px;
-  border-top-color: #D3D3D3;
-  border-left-style: none;
-  border-left-width: 1px;
-  border-left-color: #D3D3D3;
-  border-right-style: none;
-  border-right-width: 1px;
-  border-right-color: #D3D3D3;
-  vertical-align: middle;
-  overflow-x: hidden;
-}
-
-#rgndohygub .gt_stub {
-  color: #333333;
-  background-color: #FFFFFF;
-  font-size: 100%;
-  font-weight: initial;
-  text-transform: inherit;
-  border-right-style: solid;
-  border-right-width: 2px;
-  border-right-color: #D3D3D3;
-  padding-left: 12px;
-}
-
-#rgndohygub .gt_summary_row {
-  color: #333333;
-  background-color: #FFFFFF;
-  text-transform: inherit;
-  padding-top: 8px;
-  padding-bottom: 8px;
-  padding-left: 5px;
-  padding-right: 5px;
-}
-
-#rgndohygub .gt_first_summary_row {
-  padding-top: 8px;
-  padding-bottom: 8px;
-  padding-left: 5px;
-  padding-right: 5px;
-  border-top-style: solid;
-  border-top-width: 2px;
-  border-top-color: #D3D3D3;
-}
-
-#rgndohygub .gt_grand_summary_row {
-  color: #333333;
-  background-color: #FFFFFF;
-  text-transform: inherit;
-  padding-top: 8px;
-  padding-bottom: 8px;
-  padding-left: 5px;
-  padding-right: 5px;
-}
-
-#rgndohygub .gt_first_grand_summary_row {
-  padding-top: 8px;
-  padding-bottom: 8px;
-  padding-left: 5px;
-  padding-right: 5px;
-  border-top-style: double;
-  border-top-width: 6px;
-  border-top-color: #D3D3D3;
-}
-
-#rgndohygub .gt_table_body {
-  border-top-style: solid;
-  border-top-width: 2px;
-  border-top-color: #D3D3D3;
-  border-bottom-style: solid;
-  border-bottom-width: 2px;
-  border-bottom-color: #D3D3D3;
-}
-
-#rgndohygub .gt_footnotes {
-  color: #333333;
-  background-color: #FFFFFF;
-  border-bottom-style: none;
-  border-bottom-width: 2px;
-  border-bottom-color: #D3D3D3;
-  border-left-style: none;
-  border-left-width: 2px;
-  border-left-color: #D3D3D3;
-  border-right-style: none;
-  border-right-width: 2px;
-  border-right-color: #D3D3D3;
-}
-
-#rgndohygub .gt_footnote {
-  margin: 0px;
-  font-size: 90%;
-  padding: 4px;
-}
-
-#rgndohygub .gt_sourcenotes {
-  color: #333333;
-  background-color: #FFFFFF;
-  border-bottom-style: none;
-  border-bottom-width: 2px;
-  border-bottom-color: #D3D3D3;
-  border-left-style: none;
-  border-left-width: 2px;
-  border-left-color: #D3D3D3;
-  border-right-style: none;
-  border-right-width: 2px;
-  border-right-color: #D3D3D3;
-}
-
-#rgndohygub .gt_sourcenote {
-  font-size: 90%;
-  padding: 4px;
-}
-
-#rgndohygub .gt_left {
-  text-align: left;
-}
-
-#rgndohygub .gt_center {
-  text-align: center;
-}
-
-#rgndohygub .gt_right {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-#rgndohygub .gt_font_normal {
-  font-weight: normal;
-}
-
-#rgndohygub .gt_font_bold {
-  font-weight: bold;
-}
-
-#rgndohygub .gt_font_italic {
-  font-style: italic;
-}
-
-#rgndohygub .gt_super {
-  font-size: 65%;
-}
-
-#rgndohygub .gt_footnote_marks {
-  font-style: italic;
-  font-size: 65%;
-}
-</style>
-<div id="rgndohygub" style="overflow-x:auto;overflow-y:auto;width:auto;height:auto;"><table class="gt_table">
-<thead class="gt_col_headings"><tr>
-<th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1"><strong>Penny ID</strong></th>
-      <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1">Year</th>
-    </tr></thead>
-<tbody class="gt_table_body">
-<tr>
-<td class="gt_row gt_center" style="border-right-width: 1px; border-right-style: solid; border-right-color: #000000; font-weight: bold;">1</td>
-      <td class="gt_row gt_center">2002</td>
-    </tr>
-<tr>
-<td class="gt_row gt_center" style="border-right-width: 1px; border-right-style: solid; border-right-color: #000000; font-weight: bold;">2</td>
-      <td class="gt_row gt_center">1986</td>
-    </tr>
-<tr>
-<td class="gt_row gt_center" style="border-right-width: 1px; border-right-style: solid; border-right-color: #000000; font-weight: bold;">3</td>
-      <td class="gt_row gt_center">2017</td>
-    </tr>
-<tr>
-<td class="gt_row gt_center" style="border-right-width: 1px; border-right-style: solid; border-right-color: #000000; font-weight: bold;">4</td>
-      <td class="gt_row gt_center">1988</td>
-    </tr>
-<tr>
-<td class="gt_row gt_center" style="border-right-width: 1px; border-right-style: solid; border-right-color: #000000; font-weight: bold;">5</td>
-      <td class="gt_row gt_center">2008</td>
-    </tr>
-<tr>
-<td class="gt_row gt_center" style="border-right-width: 1px; border-right-style: solid; border-right-color: #000000; font-weight: bold;">6</td>
-      <td class="gt_row gt_center">1983</td>
-    </tr>
-<tr>
-<td class="gt_row gt_center" style="border-right-width: 1px; border-right-style: solid; border-right-color: #000000; font-weight: bold;">7</td>
-      <td class="gt_row gt_center">2008</td>
-    </tr>
-<tr>
-<td class="gt_row gt_center" style="border-right-width: 1px; border-right-style: solid; border-right-color: #000000; font-weight: bold;">...</td>
-      <td class="gt_row gt_center">...</td>
-    </tr>
-<tr>
-<td class="gt_row gt_center" style="border-right-width: 1px; border-right-style: solid; border-right-color: #000000; font-weight: bold;">50</td>
-      <td class="gt_row gt_center">2017</td>
-    </tr>
-<tr>
-<td class="gt_row gt_center" style="border-right-width: 1px; border-right-style: solid; border-right-color: #000000; font-weight: bold;">X</td>
-      <td class="gt_row gt_center">?</td>
-    </tr>
-</tbody>
-</table></div>
-<p>Based on these 50 sampled pennies, what can we say about <em>all</em> US pennies in 2019? Let’s study some properties of our sample by performing an exploratory data analysis. Let’s first visualize the distribution of the year of these 50 pennies using our data visualization tools from Chapter <a href="#viz"><strong>??</strong></a>. Since <code>year</code> is a numerical variable, we use a histogram in Figure <a href="#fig:pennies-sample-histogram"><strong>??</strong></a> to visualize its distribution.</p>
-<div class="sourceCode" id="cb640"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb640-1"><a href="one-parameter.html#cb640-1"></a>pennies_sample <span class="op">%&gt;%</span></span>
-<span id="cb640-2"><a href="one-parameter.html#cb640-2"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> year)) <span class="op">+</span></span>
-<span id="cb640-3"><a href="one-parameter.html#cb640-3"></a><span class="st">  </span><span class="kw">geom_histogram</span>(<span class="dt">binwidth =</span> <span class="dv">10</span>, <span class="dt">color =</span> <span class="st">"white"</span>)</span></code></pre></div>
-<div class="figure">
-<span id="fig:unnamed-chunk-436"></span>
-<p class="caption marginnote shownote">
-FIGURE 7.4: Distribution of year on 50 US pennies.
-</p>
-<img src="book_temp_files/figure-html/unnamed-chunk-436-1.png" alt="Distribution of year on 50 US pennies." width="672">
-</div>
-<p>Observe a slightly left-skewed distribution, since most pennies fall between 1980 and 2010 with only a few pennies older than 1970. What is the average year for the 50 sampled pennies? Eyeballing the histogram it appears to be around 1990. Let’s now compute this value exactly using our data wrangling tools from Chapter <a href="tidyverse.html#tidyverse">2</a>.</p>
-<div class="sourceCode" id="cb641"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb641-1"><a href="one-parameter.html#cb641-1"></a>pennies_sample <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb641-2"><a href="one-parameter.html#cb641-2"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">mean_year =</span> <span class="kw">mean</span>(year))</span></code></pre></div>
-<pre><code>## # A tibble: 1 x 1
-##   mean_year
-##       &lt;dbl&gt;
-## 1     1995.</code></pre>
-<p>Thus, if we’re willing to assume that <code>pennies_sample</code> is a representative sample from <em>all</em> US pennies, a “good guess” of the average year of minting of all US pennies would be 1995.44. In other words, around 1995. This should all start sounding similar to what we did previously in Chapter <a href="sampling.html#sampling">6</a>!</p>
-<style>html {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
-}
-
-#kyfnzjdnmy .gt_table {
-  display: table;
-  border-collapse: collapse;
-  margin-left: auto;
-  margin-right: auto;
-  color: #333333;
-  font-size: 16px;
-  background-color: #FFFFFF;
-  width: auto;
-  border-top-style: solid;
-  border-top-width: 2px;
-  border-top-color: #A8A8A8;
-  border-right-style: none;
-  border-right-width: 2px;
-  border-right-color: #D3D3D3;
-  border-bottom-style: solid;
-  border-bottom-width: 2px;
-  border-bottom-color: #A8A8A8;
-  border-left-style: none;
-  border-left-width: 2px;
-  border-left-color: #D3D3D3;
-}
-
-#kyfnzjdnmy .gt_heading {
-  background-color: #FFFFFF;
-  text-align: center;
-  border-bottom-color: #FFFFFF;
-  border-left-style: none;
-  border-left-width: 1px;
-  border-left-color: #D3D3D3;
-  border-right-style: none;
-  border-right-width: 1px;
-  border-right-color: #D3D3D3;
-}
-
-#kyfnzjdnmy .gt_title {
-  color: #333333;
-  font-size: 125%;
-  font-weight: initial;
-  padding-top: 4px;
-  padding-bottom: 4px;
-  border-bottom-color: #FFFFFF;
-  border-bottom-width: 0;
-}
-
-#kyfnzjdnmy .gt_subtitle {
-  color: #333333;
-  font-size: 85%;
-  font-weight: initial;
-  padding-top: 0;
-  padding-bottom: 4px;
-  border-top-color: #FFFFFF;
-  border-top-width: 0;
-}
-
-#kyfnzjdnmy .gt_bottom_border {
-  border-bottom-style: solid;
-  border-bottom-width: 2px;
-  border-bottom-color: #D3D3D3;
-}
-
-#kyfnzjdnmy .gt_col_headings {
-  border-top-style: solid;
-  border-top-width: 2px;
-  border-top-color: #D3D3D3;
-  border-bottom-style: solid;
-  border-bottom-width: 2px;
-  border-bottom-color: #D3D3D3;
-  border-left-style: none;
-  border-left-width: 1px;
-  border-left-color: #D3D3D3;
-  border-right-style: none;
-  border-right-width: 1px;
-  border-right-color: #D3D3D3;
-}
-
-#kyfnzjdnmy .gt_col_heading {
-  color: #333333;
-  background-color: #FFFFFF;
-  font-size: 100%;
-  font-weight: normal;
-  text-transform: inherit;
-  border-left-style: none;
-  border-left-width: 1px;
-  border-left-color: #D3D3D3;
-  border-right-style: none;
-  border-right-width: 1px;
-  border-right-color: #D3D3D3;
-  vertical-align: bottom;
-  padding-top: 5px;
-  padding-bottom: 6px;
-  padding-left: 5px;
-  padding-right: 5px;
-  overflow-x: hidden;
-}
-
-#kyfnzjdnmy .gt_column_spanner_outer {
-  color: #333333;
-  background-color: #FFFFFF;
-  font-size: 100%;
-  font-weight: normal;
-  text-transform: inherit;
-  padding-top: 0;
-  padding-bottom: 0;
-  padding-left: 4px;
-  padding-right: 4px;
-}
-
-#kyfnzjdnmy .gt_column_spanner_outer:first-child {
-  padding-left: 0;
-}
-
-#kyfnzjdnmy .gt_column_spanner_outer:last-child {
-  padding-right: 0;
-}
-
-#kyfnzjdnmy .gt_column_spanner {
-  border-bottom-style: solid;
-  border-bottom-width: 2px;
-  border-bottom-color: #D3D3D3;
-  vertical-align: bottom;
-  padding-top: 5px;
-  padding-bottom: 6px;
-  overflow-x: hidden;
-  display: inline-block;
-  width: 100%;
-}
-
-#kyfnzjdnmy .gt_group_heading {
-  padding: 8px;
-  color: #333333;
-  background-color: #FFFFFF;
-  font-size: 100%;
-  font-weight: initial;
-  text-transform: inherit;
-  border-top-style: solid;
-  border-top-width: 2px;
-  border-top-color: #D3D3D3;
-  border-bottom-style: solid;
-  border-bottom-width: 2px;
-  border-bottom-color: #D3D3D3;
-  border-left-style: none;
-  border-left-width: 1px;
-  border-left-color: #D3D3D3;
-  border-right-style: none;
-  border-right-width: 1px;
-  border-right-color: #D3D3D3;
-  vertical-align: middle;
-}
-
-#kyfnzjdnmy .gt_empty_group_heading {
-  padding: 0.5px;
-  color: #333333;
-  background-color: #FFFFFF;
-  font-size: 100%;
-  font-weight: initial;
-  border-top-style: solid;
-  border-top-width: 2px;
-  border-top-color: #D3D3D3;
-  border-bottom-style: solid;
-  border-bottom-width: 2px;
-  border-bottom-color: #D3D3D3;
-  vertical-align: middle;
-}
-
-#kyfnzjdnmy .gt_striped {
-  background-color: rgba(128, 128, 128, 0.05);
-}
-
-#kyfnzjdnmy .gt_from_md > :first-child {
-  margin-top: 0;
-}
-
-#kyfnzjdnmy .gt_from_md > :last-child {
-  margin-bottom: 0;
-}
-
-#kyfnzjdnmy .gt_row {
-  padding-top: 8px;
-  padding-bottom: 8px;
-  padding-left: 5px;
-  padding-right: 5px;
-  margin: 10px;
-  border-top-style: solid;
-  border-top-width: 1px;
-  border-top-color: #D3D3D3;
-  border-left-style: none;
-  border-left-width: 1px;
-  border-left-color: #D3D3D3;
-  border-right-style: none;
-  border-right-width: 1px;
-  border-right-color: #D3D3D3;
-  vertical-align: middle;
-  overflow-x: hidden;
-}
-
-#kyfnzjdnmy .gt_stub {
-  color: #333333;
-  background-color: #FFFFFF;
-  font-size: 100%;
-  font-weight: initial;
-  text-transform: inherit;
-  border-right-style: solid;
-  border-right-width: 2px;
-  border-right-color: #D3D3D3;
-  padding-left: 12px;
-}
-
-#kyfnzjdnmy .gt_summary_row {
-  color: #333333;
-  background-color: #FFFFFF;
-  text-transform: inherit;
-  padding-top: 8px;
-  padding-bottom: 8px;
-  padding-left: 5px;
-  padding-right: 5px;
-}
-
-#kyfnzjdnmy .gt_first_summary_row {
-  padding-top: 8px;
-  padding-bottom: 8px;
-  padding-left: 5px;
-  padding-right: 5px;
-  border-top-style: solid;
-  border-top-width: 2px;
-  border-top-color: #D3D3D3;
-}
-
-#kyfnzjdnmy .gt_grand_summary_row {
-  color: #333333;
-  background-color: #FFFFFF;
-  text-transform: inherit;
-  padding-top: 8px;
-  padding-bottom: 8px;
-  padding-left: 5px;
-  padding-right: 5px;
-}
-
-#kyfnzjdnmy .gt_first_grand_summary_row {
-  padding-top: 8px;
-  padding-bottom: 8px;
-  padding-left: 5px;
-  padding-right: 5px;
-  border-top-style: double;
-  border-top-width: 6px;
-  border-top-color: #D3D3D3;
-}
-
-#kyfnzjdnmy .gt_table_body {
-  border-top-style: solid;
-  border-top-width: 2px;
-  border-top-color: #D3D3D3;
-  border-bottom-style: solid;
-  border-bottom-width: 2px;
-  border-bottom-color: #D3D3D3;
-}
-
-#kyfnzjdnmy .gt_footnotes {
-  color: #333333;
-  background-color: #FFFFFF;
-  border-bottom-style: none;
-  border-bottom-width: 2px;
-  border-bottom-color: #D3D3D3;
-  border-left-style: none;
-  border-left-width: 2px;
-  border-left-color: #D3D3D3;
-  border-right-style: none;
-  border-right-width: 2px;
-  border-right-color: #D3D3D3;
-}
-
-#kyfnzjdnmy .gt_footnote {
-  margin: 0px;
-  font-size: 90%;
-  padding: 4px;
-}
-
-#kyfnzjdnmy .gt_sourcenotes {
-  color: #333333;
-  background-color: #FFFFFF;
-  border-bottom-style: none;
-  border-bottom-width: 2px;
-  border-bottom-color: #D3D3D3;
-  border-left-style: none;
-  border-left-width: 2px;
-  border-left-color: #D3D3D3;
-  border-right-style: none;
-  border-right-width: 2px;
-  border-right-color: #D3D3D3;
-}
-
-#kyfnzjdnmy .gt_sourcenote {
-  font-size: 90%;
-  padding: 4px;
-}
-
-#kyfnzjdnmy .gt_left {
-  text-align: left;
-}
-
-#kyfnzjdnmy .gt_center {
-  text-align: center;
-}
-
-#kyfnzjdnmy .gt_right {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-#kyfnzjdnmy .gt_font_normal {
-  font-weight: normal;
-}
-
-#kyfnzjdnmy .gt_font_bold {
-  font-weight: bold;
-}
-
-#kyfnzjdnmy .gt_font_italic {
-  font-style: italic;
-}
-
-#kyfnzjdnmy .gt_super {
-  font-size: 65%;
-}
-
-#kyfnzjdnmy .gt_footnote_marks {
-  font-style: italic;
-  font-size: 65%;
-}
-</style>
-<div id="kyfnzjdnmy" style="overflow-x:auto;overflow-y:auto;width:auto;height:auto;"><table class="gt_table">
-<thead class="gt_col_headings"><tr>
-<th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1"><strong>Penny ID</strong></th>
-      <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1">Year</th>
-    </tr></thead>
-<tbody class="gt_table_body">
-<tr>
-<td class="gt_row gt_center" style="border-right-width: 1px; border-right-style: solid; border-right-color: #000000; font-weight: bold;">1</td>
-      <td class="gt_row gt_center">2002</td>
-    </tr>
-<tr>
-<td class="gt_row gt_center" style="border-right-width: 1px; border-right-style: solid; border-right-color: #000000; font-weight: bold;">2</td>
-      <td class="gt_row gt_center">1986</td>
-    </tr>
-<tr>
-<td class="gt_row gt_center" style="border-right-width: 1px; border-right-style: solid; border-right-color: #000000; font-weight: bold;">3</td>
-      <td class="gt_row gt_center">2017</td>
-    </tr>
-<tr>
-<td class="gt_row gt_center" style="border-right-width: 1px; border-right-style: solid; border-right-color: #000000; font-weight: bold;">4</td>
-      <td class="gt_row gt_center">1988</td>
-    </tr>
-<tr>
-<td class="gt_row gt_center" style="border-right-width: 1px; border-right-style: solid; border-right-color: #000000; font-weight: bold;">5</td>
-      <td class="gt_row gt_center">2008</td>
-    </tr>
-<tr>
-<td class="gt_row gt_center" style="border-right-width: 1px; border-right-style: solid; border-right-color: #000000; font-weight: bold;">6</td>
-      <td class="gt_row gt_center">1983</td>
-    </tr>
-<tr>
-<td class="gt_row gt_center" style="border-right-width: 1px; border-right-style: solid; border-right-color: #000000; font-weight: bold;">7</td>
-      <td class="gt_row gt_center">2008</td>
-    </tr>
-<tr>
-<td class="gt_row gt_center" style="border-right-width: 1px; border-right-style: solid; border-right-color: #000000; font-weight: bold;">...</td>
-      <td class="gt_row gt_center">...</td>
-    </tr>
-<tr>
-<td class="gt_row gt_center" style="border-right-width: 1px; border-right-style: solid; border-right-color: #000000; font-weight: bold;">50</td>
-      <td class="gt_row gt_center">2017</td>
-    </tr>
-<tr>
-<td class="gt_row gt_center" style="border-right-width: 1px; border-right-style: solid; border-right-color: #000000; font-weight: bold;">X</td>
-      <td class="gt_row gt_center">1995</td>
-    </tr>
-</tbody>
-</table></div>
-<p>In Chapter <a href="sampling.html#sampling">6</a>, our <em>study population</em> was the urn of <span class="math inline">\(N\)</span> = 2400 balls. Our <em>population parameter</em> was the <em>population proportion</em> of these balls that were red, denoted by <span class="math inline">\(p\)</span>. In order to estimate <span class="math inline">\(p\)</span>, we extracted a sample of 50 balls using the shovel. We then computed the relevant <em>point estimate</em>: the <em>sample proportion</em> of these 50 balls that were red, denoted mathematically by <span class="math inline">\(\widehat{p}\)</span>.</p>
-<p>Here our population is <span class="math inline">\(N\)</span> = whatever the number of pennies are being used in the US, a value which we don’t know and probably never will. The population parameter of interest is now the <em>population mean</em> year of all these pennies, a value denoted mathematically by the Greek letter <span class="math inline">\(\mu\)</span> (pronounced “mu”). In order to estimate <span class="math inline">\(\mu\)</span>, we went to the bank and obtained a sample of 50 pennies and computed the relevant point estimate: the <em>sample mean</em> year of these 50 pennies, denoted mathematically by <span class="math inline">\(\overline{x}\)</span> (pronounced “x-bar”). An alternative and more intuitive notation for the sample mean is <span class="math inline">\(\widehat{\mu}\)</span>. However, this is unfortunately not as commonly used, so in this book we’ll stick with convention and always denote the sample mean as <span class="math inline">\(\overline{x}\)</span>.</p>
-<p>We summarize the correspondence between the sampling urn exercise in Chapter <a href="sampling.html#sampling">6</a> and our pennies exercise in Table <a href="#tab:table-ch8-b"><strong>??</strong></a>.</p>
 <style>html {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
 }
@@ -1489,6 +588,792 @@ FIGURE 7.4: Distribution of year on 50 US pennies.
 </style>
 <div id="okztoqhimd" style="overflow-x:auto;overflow-y:auto;width:auto;height:auto;"><table class="gt_table">
 <thead class="gt_col_headings"><tr>
+<th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1"><strong>Penny ID</strong></th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1">Year</th>
+    </tr></thead>
+<tbody class="gt_table_body">
+<tr>
+<td class="gt_row gt_center" style="border-right-width: 1px; border-right-style: solid; border-right-color: #000000; font-weight: bold;">1</td>
+      <td class="gt_row gt_center">2002</td>
+    </tr>
+<tr>
+<td class="gt_row gt_center" style="border-right-width: 1px; border-right-style: solid; border-right-color: #000000; font-weight: bold;">2</td>
+      <td class="gt_row gt_center">1986</td>
+    </tr>
+<tr>
+<td class="gt_row gt_center" style="border-right-width: 1px; border-right-style: solid; border-right-color: #000000; font-weight: bold;">3</td>
+      <td class="gt_row gt_center">2017</td>
+    </tr>
+<tr>
+<td class="gt_row gt_center" style="border-right-width: 1px; border-right-style: solid; border-right-color: #000000; font-weight: bold;">4</td>
+      <td class="gt_row gt_center">1988</td>
+    </tr>
+<tr>
+<td class="gt_row gt_center" style="border-right-width: 1px; border-right-style: solid; border-right-color: #000000; font-weight: bold;">5</td>
+      <td class="gt_row gt_center">2008</td>
+    </tr>
+<tr>
+<td class="gt_row gt_center" style="border-right-width: 1px; border-right-style: solid; border-right-color: #000000; font-weight: bold;">6</td>
+      <td class="gt_row gt_center">1983</td>
+    </tr>
+<tr>
+<td class="gt_row gt_center" style="border-right-width: 1px; border-right-style: solid; border-right-color: #000000; font-weight: bold;">7</td>
+      <td class="gt_row gt_center">2008</td>
+    </tr>
+<tr>
+<td class="gt_row gt_center" style="border-right-width: 1px; border-right-style: solid; border-right-color: #000000; font-weight: bold;">...</td>
+      <td class="gt_row gt_center">...</td>
+    </tr>
+<tr>
+<td class="gt_row gt_center" style="border-right-width: 1px; border-right-style: solid; border-right-color: #000000; font-weight: bold;">50</td>
+      <td class="gt_row gt_center">2017</td>
+    </tr>
+<tr>
+<td class="gt_row gt_center" style="border-right-width: 1px; border-right-style: solid; border-right-color: #000000; font-weight: bold;">X</td>
+      <td class="gt_row gt_center">?</td>
+    </tr>
+</tbody>
+</table></div>
+<p>Based on these 50 sampled pennies, what can we say about <em>all</em> US pennies in 2019? Let’s study some properties of our sample by performing an exploratory data analysis. Let’s first visualize the distribution of the year of these 50 pennies using our data visualization tools from Chapter <a href="#viz"><strong>??</strong></a>. Since <code>year</code> is a numerical variable, we use a histogram in Figure <a href="#fig:pennies-sample-histogram"><strong>??</strong></a> to visualize its distribution.</p>
+<div class="sourceCode" id="cb667"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb667-1"><a href="one-parameter.html#cb667-1"></a>pennies_sample <span class="op">%&gt;%</span></span>
+<span id="cb667-2"><a href="one-parameter.html#cb667-2"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> year)) <span class="op">+</span></span>
+<span id="cb667-3"><a href="one-parameter.html#cb667-3"></a><span class="st">  </span><span class="kw">geom_histogram</span>(<span class="dt">binwidth =</span> <span class="dv">10</span>, <span class="dt">color =</span> <span class="st">"white"</span>)</span></code></pre></div>
+<div class="figure">
+<span id="fig:unnamed-chunk-466"></span>
+<p class="caption marginnote shownote">
+FIGURE 7.4: Distribution of year on 50 US pennies.
+</p>
+<img src="book_temp_files/figure-html/unnamed-chunk-466-1.png" alt="Distribution of year on 50 US pennies." width="672">
+</div>
+<p>Observe a slightly left-skewed distribution, since most pennies fall between 1980 and 2010 with only a few pennies older than 1970. What is the average year for the 50 sampled pennies? Eyeballing the histogram it appears to be around 1990. Let’s now compute this value exactly using our data wrangling tools from Chapter <a href="tidyverse.html#tidyverse">2</a>.</p>
+<div class="sourceCode" id="cb668"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb668-1"><a href="one-parameter.html#cb668-1"></a>pennies_sample <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb668-2"><a href="one-parameter.html#cb668-2"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">mean_year =</span> <span class="kw">mean</span>(year))</span></code></pre></div>
+<pre><code>## # A tibble: 1 x 1
+##   mean_year
+##       &lt;dbl&gt;
+## 1     1995.</code></pre>
+<p>Thus, if we’re willing to assume that <code>pennies_sample</code> is a representative sample from <em>all</em> US pennies, a “good guess” of the average year of minting of all US pennies would be 1995.44. In other words, around 1995. This should all start sounding similar to what we did previously in Chapter <a href="sampling.html#sampling">6</a>!</p>
+<style>html {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
+}
+
+#uddrimrbvd .gt_table {
+  display: table;
+  border-collapse: collapse;
+  margin-left: auto;
+  margin-right: auto;
+  color: #333333;
+  font-size: 16px;
+  background-color: #FFFFFF;
+  width: auto;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #A8A8A8;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #A8A8A8;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+}
+
+#uddrimrbvd .gt_heading {
+  background-color: #FFFFFF;
+  text-align: center;
+  border-bottom-color: #FFFFFF;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+}
+
+#uddrimrbvd .gt_title {
+  color: #333333;
+  font-size: 125%;
+  font-weight: initial;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  border-bottom-color: #FFFFFF;
+  border-bottom-width: 0;
+}
+
+#uddrimrbvd .gt_subtitle {
+  color: #333333;
+  font-size: 85%;
+  font-weight: initial;
+  padding-top: 0;
+  padding-bottom: 4px;
+  border-top-color: #FFFFFF;
+  border-top-width: 0;
+}
+
+#uddrimrbvd .gt_bottom_border {
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+
+#uddrimrbvd .gt_col_headings {
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+}
+
+#uddrimrbvd .gt_col_heading {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: normal;
+  text-transform: inherit;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: bottom;
+  padding-top: 5px;
+  padding-bottom: 6px;
+  padding-left: 5px;
+  padding-right: 5px;
+  overflow-x: hidden;
+}
+
+#uddrimrbvd .gt_column_spanner_outer {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: normal;
+  text-transform: inherit;
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+#uddrimrbvd .gt_column_spanner_outer:first-child {
+  padding-left: 0;
+}
+
+#uddrimrbvd .gt_column_spanner_outer:last-child {
+  padding-right: 0;
+}
+
+#uddrimrbvd .gt_column_spanner {
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  vertical-align: bottom;
+  padding-top: 5px;
+  padding-bottom: 6px;
+  overflow-x: hidden;
+  display: inline-block;
+  width: 100%;
+}
+
+#uddrimrbvd .gt_group_heading {
+  padding: 8px;
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  text-transform: inherit;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: middle;
+}
+
+#uddrimrbvd .gt_empty_group_heading {
+  padding: 0.5px;
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  vertical-align: middle;
+}
+
+#uddrimrbvd .gt_striped {
+  background-color: rgba(128, 128, 128, 0.05);
+}
+
+#uddrimrbvd .gt_from_md > :first-child {
+  margin-top: 0;
+}
+
+#uddrimrbvd .gt_from_md > :last-child {
+  margin-bottom: 0;
+}
+
+#uddrimrbvd .gt_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  margin: 10px;
+  border-top-style: solid;
+  border-top-width: 1px;
+  border-top-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: middle;
+  overflow-x: hidden;
+}
+
+#uddrimrbvd .gt_stub {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  text-transform: inherit;
+  border-right-style: solid;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  padding-left: 12px;
+}
+
+#uddrimrbvd .gt_summary_row {
+  color: #333333;
+  background-color: #FFFFFF;
+  text-transform: inherit;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#uddrimrbvd .gt_first_summary_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+}
+
+#uddrimrbvd .gt_grand_summary_row {
+  color: #333333;
+  background-color: #FFFFFF;
+  text-transform: inherit;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#uddrimrbvd .gt_first_grand_summary_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-top-style: double;
+  border-top-width: 6px;
+  border-top-color: #D3D3D3;
+}
+
+#uddrimrbvd .gt_table_body {
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+
+#uddrimrbvd .gt_footnotes {
+  color: #333333;
+  background-color: #FFFFFF;
+  border-bottom-style: none;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+}
+
+#uddrimrbvd .gt_footnote {
+  margin: 0px;
+  font-size: 90%;
+  padding: 4px;
+}
+
+#uddrimrbvd .gt_sourcenotes {
+  color: #333333;
+  background-color: #FFFFFF;
+  border-bottom-style: none;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+}
+
+#uddrimrbvd .gt_sourcenote {
+  font-size: 90%;
+  padding: 4px;
+}
+
+#uddrimrbvd .gt_left {
+  text-align: left;
+}
+
+#uddrimrbvd .gt_center {
+  text-align: center;
+}
+
+#uddrimrbvd .gt_right {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+#uddrimrbvd .gt_font_normal {
+  font-weight: normal;
+}
+
+#uddrimrbvd .gt_font_bold {
+  font-weight: bold;
+}
+
+#uddrimrbvd .gt_font_italic {
+  font-style: italic;
+}
+
+#uddrimrbvd .gt_super {
+  font-size: 65%;
+}
+
+#uddrimrbvd .gt_footnote_marks {
+  font-style: italic;
+  font-size: 65%;
+}
+</style>
+<div id="uddrimrbvd" style="overflow-x:auto;overflow-y:auto;width:auto;height:auto;"><table class="gt_table">
+<thead class="gt_col_headings"><tr>
+<th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1"><strong>Penny ID</strong></th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1">Year</th>
+    </tr></thead>
+<tbody class="gt_table_body">
+<tr>
+<td class="gt_row gt_center" style="border-right-width: 1px; border-right-style: solid; border-right-color: #000000; font-weight: bold;">1</td>
+      <td class="gt_row gt_center">2002</td>
+    </tr>
+<tr>
+<td class="gt_row gt_center" style="border-right-width: 1px; border-right-style: solid; border-right-color: #000000; font-weight: bold;">2</td>
+      <td class="gt_row gt_center">1986</td>
+    </tr>
+<tr>
+<td class="gt_row gt_center" style="border-right-width: 1px; border-right-style: solid; border-right-color: #000000; font-weight: bold;">3</td>
+      <td class="gt_row gt_center">2017</td>
+    </tr>
+<tr>
+<td class="gt_row gt_center" style="border-right-width: 1px; border-right-style: solid; border-right-color: #000000; font-weight: bold;">4</td>
+      <td class="gt_row gt_center">1988</td>
+    </tr>
+<tr>
+<td class="gt_row gt_center" style="border-right-width: 1px; border-right-style: solid; border-right-color: #000000; font-weight: bold;">5</td>
+      <td class="gt_row gt_center">2008</td>
+    </tr>
+<tr>
+<td class="gt_row gt_center" style="border-right-width: 1px; border-right-style: solid; border-right-color: #000000; font-weight: bold;">6</td>
+      <td class="gt_row gt_center">1983</td>
+    </tr>
+<tr>
+<td class="gt_row gt_center" style="border-right-width: 1px; border-right-style: solid; border-right-color: #000000; font-weight: bold;">7</td>
+      <td class="gt_row gt_center">2008</td>
+    </tr>
+<tr>
+<td class="gt_row gt_center" style="border-right-width: 1px; border-right-style: solid; border-right-color: #000000; font-weight: bold;">...</td>
+      <td class="gt_row gt_center">...</td>
+    </tr>
+<tr>
+<td class="gt_row gt_center" style="border-right-width: 1px; border-right-style: solid; border-right-color: #000000; font-weight: bold;">50</td>
+      <td class="gt_row gt_center">2017</td>
+    </tr>
+<tr>
+<td class="gt_row gt_center" style="border-right-width: 1px; border-right-style: solid; border-right-color: #000000; font-weight: bold;">X</td>
+      <td class="gt_row gt_center">1995</td>
+    </tr>
+</tbody>
+</table></div>
+<p>In Chapter <a href="sampling.html#sampling">6</a>, our <em>study population</em> was the urn of <span class="math inline">\(N\)</span> = 2400 balls. Our <em>population parameter</em> was the <em>population proportion</em> of these balls that were red, denoted by <span class="math inline">\(p\)</span>. In order to estimate <span class="math inline">\(p\)</span>, we extracted a sample of 50 balls using the shovel. We then computed the relevant <em>point estimate</em>: the <em>sample proportion</em> of these 50 balls that were red, denoted mathematically by <span class="math inline">\(\widehat{p}\)</span>.</p>
+<p>Here our population is <span class="math inline">\(N\)</span> = whatever the number of pennies are being used in the US, a value which we don’t know and probably never will. The population parameter of interest is now the <em>population mean</em> year of all these pennies, a value denoted mathematically by the Greek letter <span class="math inline">\(\mu\)</span> (pronounced “mu”). In order to estimate <span class="math inline">\(\mu\)</span>, we went to the bank and obtained a sample of 50 pennies and computed the relevant point estimate: the <em>sample mean</em> year of these 50 pennies, denoted mathematically by <span class="math inline">\(\overline{x}\)</span> (pronounced “x-bar”). An alternative and more intuitive notation for the sample mean is <span class="math inline">\(\widehat{\mu}\)</span>. However, this is unfortunately not as commonly used, so in this book we’ll stick with convention and always denote the sample mean as <span class="math inline">\(\overline{x}\)</span>.</p>
+<p>We summarize the correspondence between the sampling urn exercise in Chapter <a href="sampling.html#sampling">6</a> and our pennies exercise in Table <a href="#tab:table-ch8-b"><strong>??</strong></a>.</p>
+<style>html {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
+}
+
+#abgezwqsub .gt_table {
+  display: table;
+  border-collapse: collapse;
+  margin-left: auto;
+  margin-right: auto;
+  color: #333333;
+  font-size: 16px;
+  background-color: #FFFFFF;
+  width: auto;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #A8A8A8;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #A8A8A8;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+}
+
+#abgezwqsub .gt_heading {
+  background-color: #FFFFFF;
+  text-align: center;
+  border-bottom-color: #FFFFFF;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+}
+
+#abgezwqsub .gt_title {
+  color: #333333;
+  font-size: 125%;
+  font-weight: initial;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  border-bottom-color: #FFFFFF;
+  border-bottom-width: 0;
+}
+
+#abgezwqsub .gt_subtitle {
+  color: #333333;
+  font-size: 85%;
+  font-weight: initial;
+  padding-top: 0;
+  padding-bottom: 4px;
+  border-top-color: #FFFFFF;
+  border-top-width: 0;
+}
+
+#abgezwqsub .gt_bottom_border {
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+
+#abgezwqsub .gt_col_headings {
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+}
+
+#abgezwqsub .gt_col_heading {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: normal;
+  text-transform: inherit;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: bottom;
+  padding-top: 5px;
+  padding-bottom: 6px;
+  padding-left: 5px;
+  padding-right: 5px;
+  overflow-x: hidden;
+}
+
+#abgezwqsub .gt_column_spanner_outer {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: normal;
+  text-transform: inherit;
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+#abgezwqsub .gt_column_spanner_outer:first-child {
+  padding-left: 0;
+}
+
+#abgezwqsub .gt_column_spanner_outer:last-child {
+  padding-right: 0;
+}
+
+#abgezwqsub .gt_column_spanner {
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  vertical-align: bottom;
+  padding-top: 5px;
+  padding-bottom: 6px;
+  overflow-x: hidden;
+  display: inline-block;
+  width: 100%;
+}
+
+#abgezwqsub .gt_group_heading {
+  padding: 8px;
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  text-transform: inherit;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: middle;
+}
+
+#abgezwqsub .gt_empty_group_heading {
+  padding: 0.5px;
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  vertical-align: middle;
+}
+
+#abgezwqsub .gt_striped {
+  background-color: rgba(128, 128, 128, 0.05);
+}
+
+#abgezwqsub .gt_from_md > :first-child {
+  margin-top: 0;
+}
+
+#abgezwqsub .gt_from_md > :last-child {
+  margin-bottom: 0;
+}
+
+#abgezwqsub .gt_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  margin: 10px;
+  border-top-style: solid;
+  border-top-width: 1px;
+  border-top-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: middle;
+  overflow-x: hidden;
+}
+
+#abgezwqsub .gt_stub {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  text-transform: inherit;
+  border-right-style: solid;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  padding-left: 12px;
+}
+
+#abgezwqsub .gt_summary_row {
+  color: #333333;
+  background-color: #FFFFFF;
+  text-transform: inherit;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#abgezwqsub .gt_first_summary_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+}
+
+#abgezwqsub .gt_grand_summary_row {
+  color: #333333;
+  background-color: #FFFFFF;
+  text-transform: inherit;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#abgezwqsub .gt_first_grand_summary_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-top-style: double;
+  border-top-width: 6px;
+  border-top-color: #D3D3D3;
+}
+
+#abgezwqsub .gt_table_body {
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+
+#abgezwqsub .gt_footnotes {
+  color: #333333;
+  background-color: #FFFFFF;
+  border-bottom-style: none;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+}
+
+#abgezwqsub .gt_footnote {
+  margin: 0px;
+  font-size: 90%;
+  padding: 4px;
+}
+
+#abgezwqsub .gt_sourcenotes {
+  color: #333333;
+  background-color: #FFFFFF;
+  border-bottom-style: none;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+}
+
+#abgezwqsub .gt_sourcenote {
+  font-size: 90%;
+  padding: 4px;
+}
+
+#abgezwqsub .gt_left {
+  text-align: left;
+}
+
+#abgezwqsub .gt_center {
+  text-align: center;
+}
+
+#abgezwqsub .gt_right {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+#abgezwqsub .gt_font_normal {
+  font-weight: normal;
+}
+
+#abgezwqsub .gt_font_bold {
+  font-weight: bold;
+}
+
+#abgezwqsub .gt_font_italic {
+  font-style: italic;
+}
+
+#abgezwqsub .gt_super {
+  font-size: 65%;
+}
+
+#abgezwqsub .gt_footnote_marks {
+  font-style: italic;
+  font-size: 65%;
+}
+</style>
+<div id="abgezwqsub" style="overflow-x:auto;overflow-y:auto;width:auto;height:auto;"><table class="gt_table">
+<thead class="gt_col_headings"><tr>
 <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1">Scenario</th>
       <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1">Population_parameter</th>
       <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1">Notation</th>
@@ -1602,72 +1487,81 @@ FIGURE 7.4: Distribution of year on 50 US pennies.
 </table></div>
 <p>Going back to our 50 sampled pennies in Figure <a href="#fig:resampling-exercise-c"><strong>??</strong></a>, the point estimate of interest is the sample mean <span class="math inline">\(\overline{x}\)</span> of 1995.44. This quantity is an <em>estimate</em> of the population mean year of <em>all</em> US pennies <span class="math inline">\(\mu\)</span>.</p>
 <p>Recall that we also saw in Chapter <a href="sampling.html#sampling">6</a> that such estimates are prone to <em>sampling variation</em>. For example, in this particular sample in Figure <a href="#fig:resampling-exercise-c"><strong>??</strong></a>, we observed three pennies with the year 1999. If we sampled another 50 pennies, would we observe exactly three pennies with the year 1999 again? More than likely not. We might observe none, one, two, or maybe even all 50! The same can be said for the other 26 unique years that are represented in our sample of 50 pennies.</p>
-<p>Let’s now perform the virtual analog for 1000 resamples. Using these results, we’ll be able to study the variability in the sample means from 1000 resamples of size 50. Let’s first add a <code>times = 1000</code> argument to <code>bootstraps()</code>  to indicate we would like 1000 replicates. Remember that we must use the <code>rsample</code> library to use bootstraps. Thus, we want to repeat the resampling with the replacement of 50 pennies 1000 times. We will also select the variable we care concerned with, which is <code>year</code>.</p>
-<div class="sourceCode" id="cb643"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb643-1"><a href="one-parameter.html#cb643-1"></a>virtual_resamples &lt;-<span class="st"> </span>pennies_sample <span class="op">%&gt;%</span></span>
-<span id="cb643-2"><a href="one-parameter.html#cb643-2"></a><span class="st">  </span><span class="kw">select</span>(year) <span class="op">%&gt;%</span></span>
-<span id="cb643-3"><a href="one-parameter.html#cb643-3"></a><span class="st">  </span><span class="kw">bootstraps</span>(<span class="dt">times =</span> <span class="dv">1000</span>)</span>
-<span id="cb643-4"><a href="one-parameter.html#cb643-4"></a>virtual_resamples</span></code></pre></div>
+<p>So what do we do about this sampling variation? One solution is that we create bootstrap samples! As you already know that resampling is a significant tool in data science, bootstrapping is one such resampling method that many data scientists use today. Bootstrapping essentially repeatedly draws independent samples from our data set with replacement. By sampling with replacement, the same observation can be sampled multiple times and each bootstrap sample will have the same number of observations as the original data set.</p>
+<p><label for="tufte-mn-48" class="margin-toggle">⊕</label><input type="checkbox" id="tufte-mn-48" class="margin-toggle"><span class="marginnote">To conduct bootstraps, make sure your dowload both rsample and tidyverse libraries</span></p>
+<p>Before the computer age, scientists would use direct standard error formulas and complex Taylor Series to compute confidence intervals for an estimate. However, the bootstrap was developed as an alternative to compute standard errors and confidence intervals for any statistic in a much faster and easier way.</p>
+<p>The intuition with bootstrapping is that we can model an inference about the population from resampling our sample data and then performing an inference about a sample from each resample. It will look something like this: resampled → sample → population.</p>
+<p>The first thing we want to do when bootstrapping is creating our bootstrap samples.Since we are concerned with the <code>year</code> of pennies in 2019, let’s select <code>year</code> in our data set before we create our bootstraps. Let’s now perform the virtual analog for 1000 resamples. Using these results, we’ll be able to study the variability in the sample means from 1000 resamples of size 50. Let’s first add a <code>times = 1000</code> argument to <code>bootstraps()</code>  to indicate we would like 1000 replicates. Remember that we must use the <code>rsample</code> library to use bootstraps.</p>
+<div class="sourceCode" id="cb670"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb670-1"><a href="one-parameter.html#cb670-1"></a><span class="kw">set.seed</span>(<span class="dv">9</span>)</span>
+<span id="cb670-2"><a href="one-parameter.html#cb670-2"></a>virtual_resamples &lt;-<span class="st"> </span>pennies_sample <span class="op">%&gt;%</span></span>
+<span id="cb670-3"><a href="one-parameter.html#cb670-3"></a><span class="st">  </span><span class="kw">select</span>(year) <span class="op">%&gt;%</span></span>
+<span id="cb670-4"><a href="one-parameter.html#cb670-4"></a><span class="st">  </span><span class="kw">bootstraps</span>(<span class="dt">times =</span> <span class="dv">1000</span>)</span>
+<span id="cb670-5"><a href="one-parameter.html#cb670-5"></a>virtual_resamples</span></code></pre></div>
 <pre><code>## # Bootstrap sampling 
 ## # A tibble: 1,000 x 2
 ##    splits          id           
 ##    &lt;list&gt;          &lt;chr&gt;        
-##  1 &lt;split [50/20]&gt; Bootstrap0001
+##  1 &lt;split [50/19]&gt; Bootstrap0001
 ##  2 &lt;split [50/20]&gt; Bootstrap0002
-##  3 &lt;split [50/17]&gt; Bootstrap0003
-##  4 &lt;split [50/21]&gt; Bootstrap0004
-##  5 &lt;split [50/20]&gt; Bootstrap0005
-##  6 &lt;split [50/19]&gt; Bootstrap0006
-##  7 &lt;split [50/15]&gt; Bootstrap0007
-##  8 &lt;split [50/17]&gt; Bootstrap0008
-##  9 &lt;split [50/16]&gt; Bootstrap0009
-## 10 &lt;split [50/19]&gt; Bootstrap0010
+##  3 &lt;split [50/16]&gt; Bootstrap0003
+##  4 &lt;split [50/18]&gt; Bootstrap0004
+##  5 &lt;split [50/18]&gt; Bootstrap0005
+##  6 &lt;split [50/18]&gt; Bootstrap0006
+##  7 &lt;split [50/17]&gt; Bootstrap0007
+##  8 &lt;split [50/14]&gt; Bootstrap0008
+##  9 &lt;split [50/19]&gt; Bootstrap0009
+## 10 &lt;split [50/20]&gt; Bootstrap0010
 ## # … with 990 more rows</code></pre>
-<p>So we have now created bootstrap samples, which are stored in a tibble-like object, and each bootstrap sample is nested in the splits column. If you are interested to view a specific bootstrap sample, you can use the <code>analysis()</code> function from the <code>rsample</code> package, which basically allows you to view a specific bootstrap sample as a data frame. To do so, type <code>analysis(virtual_resamples$splits[[n]]) %&gt;% as_tibble()</code> where n represents the nth bootstrap sample. We will be looking at the first bootstrap sample in this case.</p>
-<div class="sourceCode" id="cb645"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb645-1"><a href="one-parameter.html#cb645-1"></a><span class="kw">analysis</span>(virtual_resamples<span class="op">$</span>splits[[<span class="dv">1</span>]]) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">as_tibble</span>()</span></code></pre></div>
+<p>So we have now created our bootstrap samples, which are stored in a tibble-like object, and each bootstrap sample is nested in the splits column. This means that each <code>rsplit</code> row is a different bootstrap sample and the <code>id</code> column is used to identify each bootstrap sample.</p>
+<p><label for="tufte-mn-49" class="margin-toggle">⊕</label><input type="checkbox" id="tufte-mn-49" class="margin-toggle"><span class="marginnote">Check out ?analysis in console to get an even more comprehensive review of what analysis() does</span>
+Now if you are interested to view a specific bootstrap sample, you can use the <code>analysis()</code> function from the <code>rsample</code> package, which basically allows you to view a specific bootstrap sample as a data frame. To do so, type <code>analysis(virtual_resamples$splits[[n]]) %&gt;% as_tibble()</code> where n represents the nth row bootstrap sample. We will be looking at the first bootstrap sample in this case.</p>
+<div class="sourceCode" id="cb672"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb672-1"><a href="one-parameter.html#cb672-1"></a><span class="kw">analysis</span>(virtual_resamples<span class="op">$</span>splits[[<span class="dv">1</span>]]) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">as_tibble</span>()</span></code></pre></div>
 <pre><code>## # A tibble: 50 x 1
 ##     year
 ##    &lt;dbl&gt;
-##  1  1993
-##  2  1981
-##  3  1988
-##  4  2015
-##  5  2017
-##  6  2004
-##  7  2015
-##  8  2017
-##  9  1986
-## 10  1976
+##  1  1983
+##  2  2017
+##  3  1983
+##  4  2017
+##  5  1995
+##  6  1988
+##  7  1978
+##  8  2015
+##  9  1962
+## 10  1996
 ## # … with 40 more rows</code></pre>
-<p>Using <code>analysis</code> is a very significant function for bootstrapping, because it allows us to pull out necessary data.</p>
-<div class="sourceCode" id="cb647"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb647-1"><a href="one-parameter.html#cb647-1"></a>virtual_resamples &lt;-<span class="st"> </span>pennies_sample <span class="op">%&gt;%</span></span>
-<span id="cb647-2"><a href="one-parameter.html#cb647-2"></a><span class="st">  </span><span class="kw">select</span>(year) <span class="op">%&gt;%</span></span>
-<span id="cb647-3"><a href="one-parameter.html#cb647-3"></a><span class="st">  </span><span class="kw">bootstraps</span>(<span class="dt">times =</span> <span class="dv">1000</span>) <span class="op">%&gt;%</span></span>
-<span id="cb647-4"><a href="one-parameter.html#cb647-4"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">boot =</span> <span class="kw">map</span>(splits, <span class="op">~</span><span class="st"> </span><span class="kw">analysis</span>(.)))</span>
-<span id="cb647-5"><a href="one-parameter.html#cb647-5"></a>virtual_resamples</span></code></pre></div>
+<p>As you can see, we were able to view the data in first bootstrap sample. Noticed how it has 50 rows, which is the same as our <code>pennies_sample</code>. Now that we know how to create bootstrap samples and view them, we can apply more code to our bootstraps to find our desired statistic, which is the average year of pennies in 2019.</p>
+<p><label for="tufte-mn-50" class="margin-toggle">⊕</label><input type="checkbox" id="tufte-mn-50" class="margin-toggle"><span class="marginnote">In this chapter, bootstrap samples and resamples mean the same thing</span>
+To compute our desired statistics, we now create the column <code>boot</code> by <code>mutate(boot = map(splits, ~ analysis(.)))</code>. What we are doing here is that we are iterating an analysis over each bootstrap sample in a new sample. We want to iterate an analysis over each bootstrap sample, because analysis allows us to extract the mean year for each resample.</p>
+<div class="sourceCode" id="cb674"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb674-1"><a href="one-parameter.html#cb674-1"></a>virtual_resamples &lt;-<span class="st"> </span>pennies_sample <span class="op">%&gt;%</span></span>
+<span id="cb674-2"><a href="one-parameter.html#cb674-2"></a><span class="st">  </span><span class="kw">select</span>(year) <span class="op">%&gt;%</span></span>
+<span id="cb674-3"><a href="one-parameter.html#cb674-3"></a><span class="st">  </span><span class="kw">bootstraps</span>(<span class="dt">times =</span> <span class="dv">1000</span>) <span class="op">%&gt;%</span></span>
+<span id="cb674-4"><a href="one-parameter.html#cb674-4"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">boot =</span> <span class="kw">map</span>(splits, <span class="op">~</span><span class="st"> </span><span class="kw">analysis</span>(.)))</span>
+<span id="cb674-5"><a href="one-parameter.html#cb674-5"></a>virtual_resamples</span></code></pre></div>
 <pre><code>## # Bootstrap sampling 
 ## # A tibble: 1,000 x 3
 ##    splits          id            boot             
 ##  * &lt;list&gt;          &lt;chr&gt;         &lt;list&gt;           
-##  1 &lt;split [50/20]&gt; Bootstrap0001 &lt;tibble [50 × 1]&gt;
-##  2 &lt;split [50/16]&gt; Bootstrap0002 &lt;tibble [50 × 1]&gt;
-##  3 &lt;split [50/16]&gt; Bootstrap0003 &lt;tibble [50 × 1]&gt;
-##  4 &lt;split [50/14]&gt; Bootstrap0004 &lt;tibble [50 × 1]&gt;
+##  1 &lt;split [50/19]&gt; Bootstrap0001 &lt;tibble [50 × 1]&gt;
+##  2 &lt;split [50/18]&gt; Bootstrap0002 &lt;tibble [50 × 1]&gt;
+##  3 &lt;split [50/20]&gt; Bootstrap0003 &lt;tibble [50 × 1]&gt;
+##  4 &lt;split [50/18]&gt; Bootstrap0004 &lt;tibble [50 × 1]&gt;
 ##  5 &lt;split [50/19]&gt; Bootstrap0005 &lt;tibble [50 × 1]&gt;
-##  6 &lt;split [50/19]&gt; Bootstrap0006 &lt;tibble [50 × 1]&gt;
-##  7 &lt;split [50/16]&gt; Bootstrap0007 &lt;tibble [50 × 1]&gt;
-##  8 &lt;split [50/17]&gt; Bootstrap0008 &lt;tibble [50 × 1]&gt;
-##  9 &lt;split [50/15]&gt; Bootstrap0009 &lt;tibble [50 × 1]&gt;
-## 10 &lt;split [50/18]&gt; Bootstrap0010 &lt;tibble [50 × 1]&gt;
+##  6 &lt;split [50/15]&gt; Bootstrap0006 &lt;tibble [50 × 1]&gt;
+##  7 &lt;split [50/13]&gt; Bootstrap0007 &lt;tibble [50 × 1]&gt;
+##  8 &lt;split [50/19]&gt; Bootstrap0008 &lt;tibble [50 × 1]&gt;
+##  9 &lt;split [50/20]&gt; Bootstrap0009 &lt;tibble [50 × 1]&gt;
+## 10 &lt;split [50/19]&gt; Bootstrap0010 &lt;tibble [50 × 1]&gt;
 ## # … with 990 more rows</code></pre>
-<p><code>boot</code> is now a list-column in the tibble, which we can use if we want to find a specific characteristic of each sample like the average year or median year. Let’s add more columns for our tibble to find the average year of each bootstrap sample.</p>
-<div class="sourceCode" id="cb649"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb649-1"><a href="one-parameter.html#cb649-1"></a><span class="kw">set.seed</span>(<span class="dv">9</span>)</span>
-<span id="cb649-2"><a href="one-parameter.html#cb649-2"></a>virtual_resamples &lt;-<span class="st"> </span>pennies_sample <span class="op">%&gt;%</span></span>
-<span id="cb649-3"><a href="one-parameter.html#cb649-3"></a><span class="st">  </span><span class="kw">select</span>(year) <span class="op">%&gt;%</span></span>
-<span id="cb649-4"><a href="one-parameter.html#cb649-4"></a><span class="st">  </span><span class="kw">bootstraps</span>(<span class="dt">times =</span> <span class="dv">1000</span>) <span class="op">%&gt;%</span></span>
-<span id="cb649-5"><a href="one-parameter.html#cb649-5"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">boot =</span> <span class="kw">map</span>(splits, <span class="op">~</span><span class="st"> </span><span class="kw">analysis</span>(.))) <span class="op">%&gt;%</span></span>
-<span id="cb649-6"><a href="one-parameter.html#cb649-6"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">years =</span> <span class="kw">map</span>(boot, <span class="op">~</span><span class="st"> </span><span class="kw">pull</span>(., year))) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb649-7"><a href="one-parameter.html#cb649-7"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">year_mean =</span> <span class="kw">map_dbl</span>(years, <span class="op">~</span><span class="st"> </span><span class="kw">mean</span>(.))) </span>
-<span id="cb649-8"><a href="one-parameter.html#cb649-8"></a>virtual_resamples</span></code></pre></div>
+<p><code>boot</code> is now a list-column in the tibble, which we can use if we want to find a specific characteristic of each sample like the average year. Given that <code>boot</code> is a list column and we want to pull out the mean year as we are interested in this, we can create two more columns: <code>years</code> and year_mean<code>, respectively.  To create our</code>years<code>column, we run</code>mutate(years = map(boot, ~ pull(., year)))<code>after creating our</code>boot<code>column. What this does is that we are now pulling the year column of each bootstrap sample, which will evidently be nested in a list. Finally, we can create the column</code>year_mean<code>to extract the mean of each bootstrap sample by now running</code>mutate(year_mean = map_dbl(years, ~ mean(.)))<code>. This command line essentially calculates the mean year from the</code>years` list nested column.</p>
+<div class="sourceCode" id="cb676"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb676-1"><a href="one-parameter.html#cb676-1"></a><span class="kw">set.seed</span>(<span class="dv">9</span>)</span>
+<span id="cb676-2"><a href="one-parameter.html#cb676-2"></a>virtual_resamples &lt;-<span class="st"> </span>pennies_sample <span class="op">%&gt;%</span></span>
+<span id="cb676-3"><a href="one-parameter.html#cb676-3"></a><span class="st">  </span><span class="kw">select</span>(year) <span class="op">%&gt;%</span></span>
+<span id="cb676-4"><a href="one-parameter.html#cb676-4"></a><span class="st">  </span><span class="kw">bootstraps</span>(<span class="dt">times =</span> <span class="dv">1000</span>) <span class="op">%&gt;%</span></span>
+<span id="cb676-5"><a href="one-parameter.html#cb676-5"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">boot =</span> <span class="kw">map</span>(splits, <span class="op">~</span><span class="st"> </span><span class="kw">analysis</span>(.))) <span class="op">%&gt;%</span></span>
+<span id="cb676-6"><a href="one-parameter.html#cb676-6"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">years =</span> <span class="kw">map</span>(boot, <span class="op">~</span><span class="st"> </span><span class="kw">pull</span>(., year))) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb676-7"><a href="one-parameter.html#cb676-7"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">year_mean =</span> <span class="kw">map_dbl</span>(years, <span class="op">~</span><span class="st"> </span><span class="kw">mean</span>(.)))</span>
+<span id="cb676-8"><a href="one-parameter.html#cb676-8"></a>virtual_resamples</span></code></pre></div>
 <pre><code>## # Bootstrap sampling 
 ## # A tibble: 1,000 x 5
 ##    splits          id            boot              years      year_mean
@@ -1683,19 +1577,19 @@ FIGURE 7.4: Distribution of year on 50 US pennies.
 ##  9 &lt;split [50/19]&gt; Bootstrap0009 &lt;tibble [50 × 1]&gt; &lt;dbl [50]&gt;     1993.
 ## 10 &lt;split [50/20]&gt; Bootstrap0010 &lt;tibble [50 × 1]&gt; &lt;dbl [50]&gt;     2000.
 ## # … with 990 more rows</code></pre>
-<p>Great! We were able to create a thousand bootstrap samples and calculate the mean year for each resample. Let’s now create a plot to visualize the distribution of the average year for each resample.</p>
-<div class="sourceCode" id="cb651"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb651-1"><a href="one-parameter.html#cb651-1"></a>virtual_resamples <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb651-2"><a href="one-parameter.html#cb651-2"></a><span class="st">  </span><span class="kw">ggplot</span>() <span class="op">+</span></span>
-<span id="cb651-3"><a href="one-parameter.html#cb651-3"></a><span class="st">    </span><span class="kw">geom_histogram</span>(<span class="kw">aes</span>(<span class="dt">x =</span> year_mean), <span class="dt">binwidth =</span> <span class="fl">.1</span>, <span class="dt">fill =</span> <span class="st">"red"</span>) <span class="op">+</span></span>
-<span id="cb651-4"><a href="one-parameter.html#cb651-4"></a><span class="st">    </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">"Estimate in Year"</span>,</span>
-<span id="cb651-5"><a href="one-parameter.html#cb651-5"></a>         <span class="dt">title =</span> <span class="st">"Posterior Distribution for the Mean Year of American Pennies in 2019"</span>)</span></code></pre></div>
-<p><img src="book_temp_files/figure-html/unnamed-chunk-445-1.png" width="672">
+<p>Voila! We were able to create a thousand bootstrap samples and calculate the mean year for each resample. Let’s now create a plot to visualize the distribution of the average year for each resample.</p>
+<div class="sourceCode" id="cb678"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb678-1"><a href="one-parameter.html#cb678-1"></a>virtual_resamples <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb678-2"><a href="one-parameter.html#cb678-2"></a><span class="st">  </span><span class="kw">ggplot</span>() <span class="op">+</span></span>
+<span id="cb678-3"><a href="one-parameter.html#cb678-3"></a><span class="st">    </span><span class="kw">geom_histogram</span>(<span class="kw">aes</span>(<span class="dt">x =</span> year_mean), <span class="dt">binwidth =</span> <span class="fl">.1</span>, <span class="dt">fill =</span> <span class="st">"red"</span>) <span class="op">+</span></span>
+<span id="cb678-4"><a href="one-parameter.html#cb678-4"></a><span class="st">    </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">"Estimate in Year"</span>,</span>
+<span id="cb678-5"><a href="one-parameter.html#cb678-5"></a>         <span class="dt">title =</span> <span class="st">"Posterior Distribution for the Mean Year of American Pennies in 2019"</span>)</span></code></pre></div>
+<p><img src="book_temp_files/figure-html/unnamed-chunk-475-1.png" width="672">
 Note here that the bell shape is starting to become much more apparent. We now have a general sense for the range of values that the sample mean may take on. But where is this histogram centered? Let’s compute the mean of the 1,000 resample means:</p>
-<div class="sourceCode" id="cb652"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb652-1"><a href="one-parameter.html#cb652-1"></a>mean_of_means &lt;-<span class="st"> </span>virtual_resamples <span class="op">%&gt;%</span></span>
-<span id="cb652-2"><a href="one-parameter.html#cb652-2"></a><span class="st">  </span><span class="kw">select</span>(year_mean) <span class="op">%&gt;%</span></span>
-<span id="cb652-3"><a href="one-parameter.html#cb652-3"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">mean_of_means =</span> <span class="kw">mean</span>(year_mean)) <span class="op">%&gt;%</span></span>
-<span id="cb652-4"><a href="one-parameter.html#cb652-4"></a><span class="st">  </span><span class="kw">pull</span>() <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb652-5"><a href="one-parameter.html#cb652-5"></a><span class="st">  </span><span class="kw">round</span>(<span class="dv">2</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb679"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb679-1"><a href="one-parameter.html#cb679-1"></a>mean_of_means &lt;-<span class="st"> </span>virtual_resamples <span class="op">%&gt;%</span></span>
+<span id="cb679-2"><a href="one-parameter.html#cb679-2"></a><span class="st">  </span><span class="kw">select</span>(year_mean) <span class="op">%&gt;%</span></span>
+<span id="cb679-3"><a href="one-parameter.html#cb679-3"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">mean_of_means =</span> <span class="kw">mean</span>(year_mean)) <span class="op">%&gt;%</span></span>
+<span id="cb679-4"><a href="one-parameter.html#cb679-4"></a><span class="st">  </span><span class="kw">pull</span>() <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb679-5"><a href="one-parameter.html#cb679-5"></a><span class="st">  </span><span class="kw">round</span>(<span class="dv">2</span>)</span></code></pre></div>
 <p>The mean of these 1,000 means is 1995.52, which is quite close to the mean of our original sample of 50 pennies of 1995.44. This is the case since each of the 1,000 resamples is based on the original sample of 50 pennies.</p>
 <p>Recall that in the “resampling with replacement” scenario we are illustrating here, this histogram has a special name: the <em>bootstrap distribution of the sample mean</em>. Furthermore, recall it is an approximation to the <em>sampling distribution</em> of the sample mean, a concept you saw in Chapter <a href="sampling.html#sampling">6</a> on sampling. This distribution allows us to study the effect of sampling variation on our estimates of the true population mean, in this case the true mean year for <em>all</em> US pennies. However, unlike in Chapter <a href="sampling.html#sampling">6</a> where we took multiple samples (something one would never do in practice), bootstrap distributions are constructed by taking multiple resamples from a <em>single</em> sample: in this case, the 50 original pennies from the bank.</p>
 <p>Congratulations! You’ve just constructed your first bootstrap distribution! In the next section, you’ll see how to use this bootstrap distribution to construct <em>confidence intervals</em>.</p>
@@ -1704,18 +1598,19 @@ Note here that the bell shape is starting to become much more apparent. We now h
 <div id="confidence-intervals-using-lm" class="section level2">
 <h2>
 <span class="header-section-number">7.2</span> Confidence Intervals using lm</h2>
-<div class="sourceCode" id="cb653"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb653-1"><a href="one-parameter.html#cb653-1"></a><span class="kw">set.seed</span>(<span class="dv">9</span>)</span>
-<span id="cb653-2"><a href="one-parameter.html#cb653-2"></a>  <span class="kw">lm</span>(year_mean <span class="op">~</span><span class="st"> </span><span class="dv">1</span>, <span class="dt">data =</span> virtual_resamples) <span class="op">%&gt;%</span></span>
-<span id="cb653-3"><a href="one-parameter.html#cb653-3"></a><span class="st">  </span><span class="kw">tidy</span>(<span class="dt">conf.int =</span> <span class="ot">TRUE</span>) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb653-4"><a href="one-parameter.html#cb653-4"></a><span class="st">  </span><span class="kw">select</span>(conf.low, estimate, conf.high)</span></code></pre></div>
-<pre><code>## # A tibble: 1 x 3
-##   conf.low estimate conf.high
-##      &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;
-## 1    1995.    1996.     1996.</code></pre>
-<div class="sourceCode" id="cb655"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb655-1"><a href="one-parameter.html#cb655-1"></a><span class="kw">set.seed</span>(<span class="dv">9</span>)</span>
-<span id="cb655-2"><a href="one-parameter.html#cb655-2"></a>  <span class="kw">lm</span>(year_mean <span class="op">~</span><span class="st"> </span><span class="dv">1</span>, <span class="dt">data =</span> virtual_resamples) <span class="op">%&gt;%</span></span>
-<span id="cb655-3"><a href="one-parameter.html#cb655-3"></a><span class="st">  </span><span class="kw">tidy</span>(<span class="dt">conf.int =</span> <span class="ot">TRUE</span>) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb655-4"><a href="one-parameter.html#cb655-4"></a><span class="st">  </span><span class="kw">select</span>(conf.low, estimate, conf.high)</span></code></pre></div>
+<div class="sourceCode" id="cb680"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb680-1"><a href="one-parameter.html#cb680-1"></a><span class="kw">set.seed</span>(<span class="dv">9</span>)</span>
+<span id="cb680-2"><a href="one-parameter.html#cb680-2"></a>  <span class="kw">lm</span>(year <span class="op">~</span><span class="st"> </span><span class="dv">1</span>, <span class="dt">data =</span> pennies_sample) </span></code></pre></div>
+<pre><code>## 
+## Call:
+## lm(formula = year ~ 1, data = pennies_sample)
+## 
+## Coefficients:
+## (Intercept)  
+##        1995</code></pre>
+<div class="sourceCode" id="cb682"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb682-1"><a href="one-parameter.html#cb682-1"></a><span class="kw">set.seed</span>(<span class="dv">9</span>)</span>
+<span id="cb682-2"><a href="one-parameter.html#cb682-2"></a>  <span class="kw">lm</span>(year_mean <span class="op">~</span><span class="st"> </span><span class="dv">1</span>, <span class="dt">data =</span> virtual_resamples) <span class="op">%&gt;%</span></span>
+<span id="cb682-3"><a href="one-parameter.html#cb682-3"></a><span class="st">  </span><span class="kw">tidy</span>(<span class="dt">conf.int =</span> <span class="ot">TRUE</span>) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb682-4"><a href="one-parameter.html#cb682-4"></a><span class="st">  </span><span class="kw">select</span>(conf.low, estimate, conf.high)</span></code></pre></div>
 <pre><code>## # A tibble: 1 x 3
 ##   conf.low estimate conf.high
 ##      &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;
@@ -1730,7 +1625,7 @@ Note here that the bell shape is starting to become much more apparent. We now h
 <p>What would “fishing with a net” correspond to? Look at the bootstrap distribution in Figure <a href="#fig:one-thousand-sample-means"><strong>??</strong></a> once more. Between which two years would you say that “most” sample means lie? While this question is somewhat subjective, saying that most sample means lie between 1992 and 2000 would not be unreasonable. Think of this interval as the “net.”</p>
 <p>What we’ve just illustrated is the concept of a <em>confidence interval</em>, which we’ll abbreviate with “CI” throughout this book. As opposed to a point estimate/sample statistic that estimates the value of an unknown population parameter with a single value, a <em>confidence interval</em>  gives what can be interpreted as a range of plausible values. Going back to our analogy, point estimates/sample statistics can be thought of as spears, whereas confidence intervals can be thought of as nets.</p>
 <div class="figure" style="text-align: center">
-<span id="fig:unnamed-chunk-449"></span>
+<span id="fig:unnamed-chunk-479"></span>
 <p class="caption marginnote shownote">
 FIGURE 7.5: Analogy of difference between point estimates and confidence intervals.
 </p>
@@ -2122,43 +2017,326 @@ FIGURE 7.5: Analogy of difference between point estimates and confidence interva
 </tbody>
 </table></div>
 </div>
-<div id="income-from-trains-using-bootstrap" class="section level2">
+<div id="eda-for-nhanes" class="section level2">
 <h2>
-<span class="header-section-number">7.4</span> Income from trains using Bootstrap</h2>
-<p>In addition to using <code>lm()</code>, we can also use bootsrapping to extract confidence intervals. Bootstrapping is a significant tool used in statistics. Bootstrapping repeatedly draws samples from a data set and derives standard errors and confidence intervals for any statistic. While using <code>lm()</code> can produce confidence intervals for the mean of a data set or the coefficient in a regression, bootstrapping can produce confidence intervals for any statistics, such as median, 3rd highest value, etc.</p>
-<p>To use bootstrapping, we will need the <strong>tidyverse</strong> and <strong>rsample</strong> packages. The <strong>rsample</strong> package gives us commands to use for bootstrapping. For the purpose of this example, let’s try to find the confidence interval for the mean income in our trains dataset from Chapter 3.</p>
-<div class="sourceCode" id="cb657"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb657-1"><a href="one-parameter.html#cb657-1"></a><span class="kw">library</span>(tidyverse)</span>
-<span id="cb657-2"><a href="one-parameter.html#cb657-2"></a><span class="kw">library</span>(rsample)</span>
-<span id="cb657-3"><a href="one-parameter.html#cb657-3"></a><span class="kw">library</span>(PPBDS.data)</span>
-<span id="cb657-4"><a href="one-parameter.html#cb657-4"></a></span>
-<span id="cb657-5"><a href="one-parameter.html#cb657-5"></a>train_samples &lt;-<span class="st"> </span><span class="kw">bootstraps</span>(trains, <span class="dt">times =</span> <span class="dv">1000</span>)</span>
-<span id="cb657-6"><a href="one-parameter.html#cb657-6"></a></span>
-<span id="cb657-7"><a href="one-parameter.html#cb657-7"></a>derive_mean_income &lt;-<span class="st"> </span><span class="cf">function</span>(splits) {</span>
-<span id="cb657-8"><a href="one-parameter.html#cb657-8"></a> x &lt;-<span class="st"> </span><span class="kw">analysis</span>(splits)</span>
-<span id="cb657-9"><a href="one-parameter.html#cb657-9"></a> <span class="kw">return</span>(<span class="kw">mean</span>(x<span class="op">$</span>income))</span>
-<span id="cb657-10"><a href="one-parameter.html#cb657-10"></a>}</span>
-<span id="cb657-11"><a href="one-parameter.html#cb657-11"></a></span>
-<span id="cb657-12"><a href="one-parameter.html#cb657-12"></a>train_samples<span class="op">$</span>mean_income &lt;-<span class="st"> </span><span class="kw">map_dbl</span>(train_samples<span class="op">$</span>splits, derive_mean_income)</span>
-<span id="cb657-13"><a href="one-parameter.html#cb657-13"></a><span class="kw">quantile</span>(train_samples<span class="op">$</span>mean_income, <span class="dt">probs =</span> <span class="kw">c</span>(.<span class="dv">025</span>, <span class="fl">.975</span>))</span></code></pre></div>
-<pre><code>##   2.5%    98% 
-## 128365 154947</code></pre>
-<p>To find the confidence interval for the mean income in our train dataset, we first create our bootstrap samples using <code>bootstraps()</code>, where the times argument represents the number of bootstrap samples you want. Bootstrap samples are stored in a tibble and each bootstrap sample is nested in a split column. We then create a function for the statistic we are looking at; in this case, we want to focus on the mean income. Once we create our function, we can apply our statistic, the mean income, to each of our bootstrap samples by using map_dbl. Finally, we use quantile to extract our confidence intervals.</p>
-<p>If we want to find a different statistic like the median income, we can essentially do the same thing but edit the function to derive the median income.</p>
-<div class="sourceCode" id="cb659"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb659-1"><a href="one-parameter.html#cb659-1"></a><span class="kw">library</span>(tidyverse)</span>
-<span id="cb659-2"><a href="one-parameter.html#cb659-2"></a><span class="kw">library</span>(rsample)</span>
-<span id="cb659-3"><a href="one-parameter.html#cb659-3"></a><span class="kw">library</span>(PPBDS.data)</span>
-<span id="cb659-4"><a href="one-parameter.html#cb659-4"></a></span>
-<span id="cb659-5"><a href="one-parameter.html#cb659-5"></a>train_samples &lt;-<span class="st"> </span><span class="kw">bootstraps</span>(trains, <span class="dt">times =</span> <span class="dv">1000</span>)</span>
-<span id="cb659-6"><a href="one-parameter.html#cb659-6"></a></span>
-<span id="cb659-7"><a href="one-parameter.html#cb659-7"></a>derive_median_income &lt;-<span class="st"> </span><span class="cf">function</span>(splits) {</span>
-<span id="cb659-8"><a href="one-parameter.html#cb659-8"></a> x &lt;-<span class="st"> </span><span class="kw">analysis</span>(splits)</span>
-<span id="cb659-9"><a href="one-parameter.html#cb659-9"></a> <span class="kw">return</span>(<span class="kw">median</span>(x<span class="op">$</span>income))</span>
-<span id="cb659-10"><a href="one-parameter.html#cb659-10"></a>}</span>
-<span id="cb659-11"><a href="one-parameter.html#cb659-11"></a></span>
-<span id="cb659-12"><a href="one-parameter.html#cb659-12"></a>train_samples<span class="op">$</span>median_income &lt;-<span class="st"> </span><span class="kw">map_dbl</span>(train_samples<span class="op">$</span>splits, derive_median_income)</span>
-<span id="cb659-13"><a href="one-parameter.html#cb659-13"></a><span class="kw">quantile</span>(train_samples<span class="op">$</span>median_income, <span class="dt">probs =</span> <span class="kw">c</span>(.<span class="dv">025</span>, <span class="fl">.975</span>))</span></code></pre></div>
-<pre><code>##   2.5%    98% 
-## 105000 135000</code></pre>
+<span class="header-section-number">7.4</span> EDA for nhanes</h2>
+<p>Let’s perform an exploratory data analysis (EDA) of the nhanes data set from the PPBDS.data package. The nhanes data Let’s load the libraries we will need in this chapter and look at the data.</p>
+<div class="sourceCode" id="cb684"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb684-1"><a href="one-parameter.html#cb684-1"></a><span class="kw">glimpse</span>(nhanes)</span></code></pre></div>
+<pre><code>## Rows: 10,000
+## Columns: 14
+## $ gender      &lt;chr&gt; "male", "male", "male", "male", "female", "male", "male",…
+## $ year        &lt;int&gt; 2009, 2009, 2009, 2009, 2009, 2009, 2009, 2009, 2009, 200…
+## $ age         &lt;int&gt; 34, 34, 34, 4, 49, 9, 8, 45, 45, 45, 66, 58, 54, 10, 58, …
+## $ race        &lt;chr&gt; "white", "white", "white", "other", "white", "white", "wh…
+## $ education   &lt;ord&gt; high school, high school, high school, NA, some college, …
+## $ income      &lt;int&gt; 1, 1, 1, NA, 2, 4, NA, 4, 4, 4, 1, 5, NA, NA, 4, NA, NA, …
+## $ weight      &lt;dbl&gt; 87, 87, 87, 17, 87, 30, 35, 76, 76, 76, 68, 78, 75, 39, 5…
+## $ height      &lt;dbl&gt; 165, 165, 165, 105, 168, 133, 131, 167, 167, 167, 170, 18…
+## $ bmi         &lt;dbl&gt; 32, 32, 32, 15, 31, 17, 21, 27, 27, 27, 24, 24, 26, 19, 2…
+## $ health      &lt;int&gt; 3, 3, 3, NA, 3, NA, NA, 4, 4, 4, 4, 4, 2, NA, NA, 3, NA, …
+## $ depressed   &lt;ord&gt; several, several, several, NA, several, NA, NA, none, non…
+## $ pregnancies &lt;int&gt; NA, NA, NA, NA, 2, NA, NA, 1, 1, 1, NA, NA, NA, NA, NA, N…
+## $ sleep       &lt;int&gt; 4, 4, 4, NA, 8, NA, NA, 8, 8, 8, 7, 5, 4, NA, 5, 7, NA, 6…
+## $ pulse       &lt;int&gt; 70, 70, 70, NA, 86, 82, 72, 62, 62, 62, 60, 62, 76, 80, 9…</code></pre>
+<div class="sourceCode" id="cb686"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb686-1"><a href="one-parameter.html#cb686-1"></a>ch7 &lt;-<span class="st"> </span>nhanes <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb686-2"><a href="one-parameter.html#cb686-2"></a><span class="st">  </span><span class="kw">select</span>(height, age, gender) <span class="op">%&gt;%</span></span>
+<span id="cb686-3"><a href="one-parameter.html#cb686-3"></a><span class="st">  </span><span class="kw">drop_na</span>()</span>
+<span id="cb686-4"><a href="one-parameter.html#cb686-4"></a><span class="co">#call this nahnes40 and use this for nahnes sample of 40</span></span>
+<span id="cb686-5"><a href="one-parameter.html#cb686-5"></a><span class="kw">sample_n</span>(ch7, <span class="dv">40</span>, <span class="dt">replace =</span> <span class="ot">FALSE</span>)</span></code></pre></div>
+<pre><code>## # A tibble: 40 x 3
+##    height   age gender
+##     &lt;dbl&gt; &lt;int&gt; &lt;chr&gt; 
+##  1   183.    16 male  
+##  2   158.    39 female
+##  3   157     33 female
+##  4   162.    80 male  
+##  5   170.    24 male  
+##  6   171.    62 male  
+##  7   106.     3 male  
+##  8   177.    49 male  
+##  9   136.     9 male  
+## 10   170.    21 male  
+## # … with 30 more rows</code></pre>
+<p>Here, we can see variables that indicate each respondent’s gender, political affiliations, age, and income. Additionally, we have variables that indicate whether a subject was in the control or treatment group, and the their attitudes toward immigration both before or after the treatment. You can type ?trains to read the help page for more information about each variable. Let’s restrict attention to a subset of the variables.</p>
+<p>It is always smart to look at a some random samples of the data:</p>
+<div class="sourceCode" id="cb688"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb688-1"><a href="one-parameter.html#cb688-1"></a>ch7 <span class="op">%&gt;%</span></span>
+<span id="cb688-2"><a href="one-parameter.html#cb688-2"></a><span class="st">  </span><span class="kw">sample_n</span>(<span class="dv">5</span>)</span></code></pre></div>
+<pre><code>## # A tibble: 5 x 3
+##   height   age gender
+##    &lt;dbl&gt; &lt;int&gt; &lt;chr&gt; 
+## 1   174.    15 male  
+## 2   177.    15 male  
+## 3   171.    40 male  
+## 4   181.    18 male  
+## 5   155.    53 female</code></pre>
+<p>att_end is a measure of person’s attitude toward immigration, a higher number means to a more conservative, i.e., a more exclusionary stance on immigration into the United States. Running glimpse() is another way of exploring a data set.</p>
+<div class="sourceCode" id="cb690"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb690-1"><a href="one-parameter.html#cb690-1"></a>ch7 <span class="op">%&gt;%</span></span>
+<span id="cb690-2"><a href="one-parameter.html#cb690-2"></a><span class="st">  </span><span class="kw">glimpse</span>()</span></code></pre></div>
+<pre><code>## Rows: 9,647
+## Columns: 3
+## $ height &lt;dbl&gt; 165, 165, 165, 105, 168, 133, 131, 167, 167, 167, 170, 182, 16…
+## $ age    &lt;int&gt; 34, 34, 34, 4, 49, 9, 8, 45, 45, 45, 66, 58, 54, 10, 58, 50, 9…
+## $ gender &lt;chr&gt; "male", "male", "male", "male", "female", "male", "male", "fem…</code></pre>
+<p>Pay attention to the variable “type.” Do they make sense? Perhaps. But there are certainly grounds for suspicion. Why are age and att_end doubles rather than integers? Why is party a character variable and treament a factor variable? It could be that these are intentional choices made by the creator of the tibble, i.e., us. These could be mistakes. Or, most likely, these choices are a mixture of sensible and arbitrary. Regardless, it is your responsibility to notice them. You can’t make a good model without looking closely at the data which you are using.</p>
+<p>skim from the skimr package is the best way to get an overview of a tibble.</p>
+<div class="sourceCode" id="cb692"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb692-1"><a href="one-parameter.html#cb692-1"></a>ch7 <span class="op">%&gt;%</span></span>
+<span id="cb692-2"><a href="one-parameter.html#cb692-2"></a><span class="st">  </span><span class="kw">skim</span>()</span></code></pre></div>
+<table style="width: auto;" class="table table-condensed">
+<caption>
+<span id="tab:unnamed-chunk-484">TABLE 7.1: </span>Data summary
+</caption>
+<thead><tr>
+<th style="text-align:left;">
+</th>
+<th style="text-align:left;">
+</th>
+</tr></thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+Name
+</td>
+<td style="text-align:left;">
+Piped data
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Number of rows
+</td>
+<td style="text-align:left;">
+9647
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Number of columns
+</td>
+<td style="text-align:left;">
+3
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+_______________________
+</td>
+<td style="text-align:left;">
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Column type frequency:
+</td>
+<td style="text-align:left;">
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+character
+</td>
+<td style="text-align:left;">
+1
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+numeric
+</td>
+<td style="text-align:left;">
+2
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+________________________
+</td>
+<td style="text-align:left;">
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Group variables
+</td>
+<td style="text-align:left;">
+None
+</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Variable type: character</strong></p>
+<table>
+<thead><tr>
+<th style="text-align:left;">
+skim_variable
+</th>
+<th style="text-align:right;">
+n_missing
+</th>
+<th style="text-align:right;">
+complete_rate
+</th>
+<th style="text-align:right;">
+min
+</th>
+<th style="text-align:right;">
+max
+</th>
+<th style="text-align:right;">
+empty
+</th>
+<th style="text-align:right;">
+n_unique
+</th>
+<th style="text-align:right;">
+whitespace
+</th>
+</tr></thead>
+<tbody><tr>
+<td style="text-align:left;">
+gender
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+4
+</td>
+<td style="text-align:right;">
+6
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+2
+</td>
+<td style="text-align:right;">
+0
+</td>
+</tr></tbody>
+</table>
+<p><strong>Variable type: numeric</strong></p>
+<table>
+<thead><tr>
+<th style="text-align:left;">
+skim_variable
+</th>
+<th style="text-align:right;">
+n_missing
+</th>
+<th style="text-align:right;">
+complete_rate
+</th>
+<th style="text-align:right;">
+mean
+</th>
+<th style="text-align:right;">
+sd
+</th>
+<th style="text-align:right;">
+p0
+</th>
+<th style="text-align:right;">
+p25
+</th>
+<th style="text-align:right;">
+p50
+</th>
+<th style="text-align:right;">
+p75
+</th>
+<th style="text-align:right;">
+p100
+</th>
+<th style="text-align:left;">
+hist
+</th>
+</tr></thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+height
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+162
+</td>
+<td style="text-align:right;">
+20
+</td>
+<td style="text-align:right;">
+84
+</td>
+<td style="text-align:right;">
+157
+</td>
+<td style="text-align:right;">
+166
+</td>
+<td style="text-align:right;">
+174
+</td>
+<td style="text-align:right;">
+200
+</td>
+<td style="text-align:left;">
+▁▁▁▇▂
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+age
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+38
+</td>
+<td style="text-align:right;">
+22
+</td>
+<td style="text-align:right;">
+2
+</td>
+<td style="text-align:right;">
+19
+</td>
+<td style="text-align:right;">
+37
+</td>
+<td style="text-align:right;">
+54
+</td>
+<td style="text-align:right;">
+80
+</td>
+<td style="text-align:left;">
+▇▇▇▇▅
+</td>
+</tr>
+</tbody>
+</table>
+<p>skim() shows us what the different values of treatment are because it is a factor. Unfortunately, it does not do the same for character variables like party. The ranges for age and att_end seem reasonable. Recall that participants were asked three questions about immigration issues, each of which allowed for an answer which was a strength of agreement between 1 and 5, with higher values indicating more agreement with conservative viewpoints. So, the most liberal possible value is 3 and the most conservative is 15.</p>
+<p>Plotting some variables from the dataset is another important practice in exploratory data analysis:</p>
+<div class="sourceCode" id="cb693"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb693-1"><a href="one-parameter.html#cb693-1"></a>ch7 <span class="op">%&gt;%</span></span>
+<span id="cb693-2"><a href="one-parameter.html#cb693-2"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> age, <span class="dt">y =</span> height)) <span class="op">+</span><span class="st"> </span></span>
+<span id="cb693-3"><a href="one-parameter.html#cb693-3"></a><span class="st">  </span><span class="kw">geom_jitter</span>(<span class="dt">width =</span> <span class="fl">0.1</span>, <span class="dt">height =</span> <span class="dv">0</span>) <span class="op">+</span><span class="st"> </span></span>
+<span id="cb693-4"><a href="one-parameter.html#cb693-4"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">"Age"</span>,</span>
+<span id="cb693-5"><a href="one-parameter.html#cb693-5"></a>       <span class="dt">y =</span> <span class="st">"Height"</span>,</span>
+<span id="cb693-6"><a href="one-parameter.html#cb693-6"></a>       <span class="dt">title =</span> <span class="st">"Height by Age in Nhanes Dataset"</span>)</span></code></pre></div>
+<p><img src="book_temp_files/figure-html/unnamed-chunk-485-1.png" width="672"></p>
 <p>Redo but more quickly, estimating mean income.</p>
 <p>Estimate median income, or 3rd highest income.</p>
 </div>
@@ -2167,54 +2345,17 @@ FIGURE 7.5: Analogy of difference between point estimates and confidence interva
 <span class="header-section-number">7.5</span> Parameter Uncertainty and Unmodeled Variation</h2>
 <p>Although, we have used bootstrap to predict what we think the mean or a parameter like the median will be, it is important to understand what parameter uncertainty is. Paraameter uncertainty refers to when exact values of parameters are unknown to experimenters and cannot be controlled for. These values usually cannot be inferred by statistical or computational methods. Let’s look at the confidence interval of the mean as an example. Based on our bootstrap method, the 95% CI for the mean income is [128999.8, 155201.6]. However, if we take into consideration parameter uncertainty here, we fall under the trap of overconfidence. This is because we do not know for sure the way our confidence interval is elicited is perfectly accurate. We are thus overconfident here when we use a confidence interval.</p>
 <p>Furthermore, it is important that we understand what a residual is. The residual in data science is the error that results. In simple terms, it is the observed value minus the predicted value. So, for example, let’s say that the actual mean income is 140,000 but the predicted mean income we got was 130,000. That means the residual in our estimation is 10,000.</p>
-<p>But the reason why residuals are so important is that they help explain why we can’t make perfect predictions, especially for an individual. In our experiments, there is a lot of unmodeled variation, or residual variation. Residual variance refers to the variance of residuals, and occurs because randomness in our data is inherently intrinsic. There will be randomness in our data even if we have full knowldge of our data. This thus implies that we cannot really make fully accurate predictions of the future; we can only make probabilistic predictions. It is essentially difficult to control for residual variation, and predictions we get from methods like bootstrapping should not be taken as the final concensus.</p>
-<p>I might need to talk more about unmodeled variation here.</p>
-</div>
-<div id="case-study-looking-at-2018-qscore-data" class="section level2">
-<h2>
-<span class="header-section-number">7.6</span> Case study: Looking at 2018 Qscore data</h2>
-<div class="sourceCode" id="cb661"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb661-1"><a href="one-parameter.html#cb661-1"></a>qscoresdata &lt;-<span class="st"> </span>qscores <span class="op">%&gt;%</span></span>
-<span id="cb661-2"><a href="one-parameter.html#cb661-2"></a><span class="st">  </span><span class="kw">filter</span>(term <span class="op">==</span><span class="st"> "2018F"</span>) <span class="op">%&gt;%</span></span>
-<span id="cb661-3"><a href="one-parameter.html#cb661-3"></a><span class="st">  </span><span class="kw">select</span>(course_name, department, rating)</span>
-<span id="cb661-4"><a href="one-parameter.html#cb661-4"></a></span>
-<span id="cb661-5"><a href="one-parameter.html#cb661-5"></a><span class="kw">set.seed</span>(<span class="dv">9</span>)</span>
-<span id="cb661-6"><a href="one-parameter.html#cb661-6"></a>sampleqscore &lt;-<span class="st"> </span><span class="kw">sample_n</span>(qscoresdata, <span class="dv">50</span>, <span class="dt">replace =</span> <span class="ot">FALSE</span>)</span>
-<span id="cb661-7"><a href="one-parameter.html#cb661-7"></a></span>
-<span id="cb661-8"><a href="one-parameter.html#cb661-8"></a>qscoreboot &lt;-<span class="st"> </span><span class="kw">bootstraps</span>(sampleqscore, <span class="dt">times =</span> <span class="dv">10</span>)</span>
-<span id="cb661-9"><a href="one-parameter.html#cb661-9"></a></span>
-<span id="cb661-10"><a href="one-parameter.html#cb661-10"></a>derive_mean_rating &lt;-<span class="st"> </span><span class="cf">function</span>(splits) {</span>
-<span id="cb661-11"><a href="one-parameter.html#cb661-11"></a> x &lt;-<span class="st"> </span><span class="kw">analysis</span>(splits)</span>
-<span id="cb661-12"><a href="one-parameter.html#cb661-12"></a> <span class="kw">return</span>(<span class="kw">mean</span>(x<span class="op">$</span>rating))</span>
-<span id="cb661-13"><a href="one-parameter.html#cb661-13"></a>}</span>
-<span id="cb661-14"><a href="one-parameter.html#cb661-14"></a></span>
-<span id="cb661-15"><a href="one-parameter.html#cb661-15"></a>qscoreboot<span class="op">$</span>mean_rating &lt;-<span class="st"> </span><span class="kw">map_dbl</span>(qscoreboot<span class="op">$</span>splits, derive_mean_rating)</span>
-<span id="cb661-16"><a href="one-parameter.html#cb661-16"></a><span class="kw">quantile</span>(qscoreboot<span class="op">$</span>mean_rating, <span class="dt">probs =</span> <span class="kw">c</span>(.<span class="dv">025</span>, <span class="fl">.975</span>))</span></code></pre></div>
-<pre><code>## 2.5%  98% 
-##  4.1  4.3</code></pre>
-<!-- TA: Is this you want it done with bootstraps? Am a little confused how the directions ask to make bootstraps from one sample -->
-<div class="sourceCode" id="cb663"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb663-1"><a href="one-parameter.html#cb663-1"></a><span class="kw">set.seed</span>(<span class="dv">9</span>)</span>
-<span id="cb663-2"><a href="one-parameter.html#cb663-2"></a></span>
-<span id="cb663-3"><a href="one-parameter.html#cb663-3"></a>qscoresamples &lt;-<span class="st"> </span><span class="kw">rep_sample_n</span>(qscores, <span class="dv">50</span>, <span class="dt">replace =</span> <span class="ot">TRUE</span>, <span class="dt">reps =</span> <span class="dv">1000</span>)</span>
-<span id="cb663-4"><a href="one-parameter.html#cb663-4"></a>qscorebootstraps &lt;-<span class="st"> </span><span class="kw">bootstraps</span>(qscoresamples, <span class="dt">times =</span> <span class="dv">1000</span>)</span>
-<span id="cb663-5"><a href="one-parameter.html#cb663-5"></a></span>
-<span id="cb663-6"><a href="one-parameter.html#cb663-6"></a>derive_mean_rating &lt;-<span class="st"> </span><span class="cf">function</span>(splits) {</span>
-<span id="cb663-7"><a href="one-parameter.html#cb663-7"></a> x &lt;-<span class="st"> </span><span class="kw">analysis</span>(splits)</span>
-<span id="cb663-8"><a href="one-parameter.html#cb663-8"></a> <span class="kw">return</span>(<span class="kw">mean</span>(x<span class="op">$</span>rating))</span>
-<span id="cb663-9"><a href="one-parameter.html#cb663-9"></a>}</span>
-<span id="cb663-10"><a href="one-parameter.html#cb663-10"></a></span>
-<span id="cb663-11"><a href="one-parameter.html#cb663-11"></a>qscorebootstraps<span class="op">$</span>mean_rating &lt;-<span class="st"> </span><span class="kw">map_dbl</span>(qscorebootstraps<span class="op">$</span>splits, derive_mean_rating)</span>
-<span id="cb663-12"><a href="one-parameter.html#cb663-12"></a><span class="kw">quantile</span>(qscorebootstraps<span class="op">$</span>mean_rating, <span class="dt">probs =</span> <span class="kw">c</span>(.<span class="dv">025</span>, <span class="fl">.975</span>))</span></code></pre></div>
-<pre><code>## 2.5%  98% 
-##  4.2  4.2</code></pre>
-<!-- TA: Based on the directions, it seems that i need to use rep_sample_n but Im confused how we are then going to apply bootstraps function to those samples.  -->
+<p>But the reason why residuals are so important is that they help explain why we can’t make perfect predictions, especially for an individual. In our experiments, there is a lot of unmodeled variation, or residual variation. Residual variance refers to the variance of residuals, and occurs because randomness in our data is inherently intrinsic. There will be randomness in our data even if we have full knowledge of our data. This thus implies that we cannot really make fully accurate predictions of the future; we can only make probabilistic predictions. It is essentially difficult to control for residual variation, and predictions we get from methods like bootstrapping should not be taken as the final consensus.</p>
+<p>I might need to talk more about unmodeled variation here.
+reference chapter 5: even if something is fari, we still cant make accurate predictions, only probabilistic predictions.</p>
 </div>
 <div id="ci-conclusion" class="section level2">
 <h2>
-<span class="header-section-number">7.7</span> Conclusion</h2>
+<span class="header-section-number">7.6</span> Conclusion</h2>
 <!-- DK: This section --- and, indeed, the conclusion to each chapter --- are very important. This is a real chance to hit all the highlights. Everything here should be considered fair game for the exam. Indeed, everything here should be covered in the exam. This one is not bad. But it could be cleaned up a bit, with much nicer plots. Maybe a table which directly compares bootstrap and sampling distributions. Need to remind people about why we bootstrap. (We do it because it proves that the lm() simple approaches make sense. It is the justification for our shortcuts. And, indeed, whenever those shortcuts don't work --- which is often! --- a bootstrap still will work.) -->
 <div id="bootstrap-vs-sampling" class="section level3">
 <h3>
-<span class="header-section-number">7.7.1</span> Comparing bootstrap and sampling distributions</h3>
+<span class="header-section-number">7.6.1</span> Comparing bootstrap and sampling distributions</h3>
 <p>Let’s talk more about the relationship between <em>sampling distributions</em> and <em>bootstrap distributions</em>.</p>
 <p>Recall back in Subsection <a href="sampling.html#shovel-1000-times">6.2.3</a>, we took 1,000 virtual samples from the <code>urn</code> using a virtual shovel, computed 1,000 values of the sample proportion red <span class="math inline">\(\widehat{p}\)</span>, then visualized their distribution in a histogram. Recall that this distribution is called the <em>sampling distribution of</em> <span class="math inline">\(\widehat{p}\)</span> . Furthermore, the standard deviation of the sampling distribution has a special name: the <em>standard error</em>.</p>
 <p>We also mentioned that this sampling activity does not reflect how sampling is done in real life. Rather, it was an <em>idealized version</em> of sampling so that we could study the effects of sampling variation on estimates, like the proportion of the shovel’s balls that are red. In real life, however, one would take a single sample that’s as large as possible, much like in the Obama poll we saw in Section <a href="sampling.html#sampling-case-study">6.4</a>. But how can we get a sense of the effect of sampling variation on estimates if we only have one sample and thus only one estimate? Don’t we need many samples and hence many estimates?</p>
@@ -2298,7 +2439,7 @@ We see that of our 100 confidence intervals based on samples of size $n$ = 50, `
 <a href="two-parameters.html"><button class="btn btn-default">Next</button></a>
 </p>
 <p class="build-date">Page built: 
-2020-07-19
+2020-07-22
 </p>
 </div>
 </div>

@@ -14,7 +14,7 @@
 
 <meta name="author" content="David Kane" />
 
-<meta name="date" content="2020-07-19" />
+<meta name="date" content="2020-07-22" />
 
 <script type="text/x-mathjax-config">
 MathJax.Hub.Config({
@@ -185,20 +185,22 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <h1>
 <span class="header-section-number">Chapter 9</span> N Parameters</h1>
 <!-- Outline: -->
-<!-- The goal of this chapter is to replicate all of the things we have learned in chapter 8, except with models that allow for more than two parameters. We are also going to explicitly avoid discussing some common pitfalls in these problems, saving those pitfalls for chapter 10. So, nothing about overfitting. Nothing about rstanarm. Just two more examples which go through themes.Rmd with more complex models. But nothing fundamentally knew or different. -->
-<!-- 0) Start with a problem: You are running for Governor and want to do a better job of getting your voters to vote. You are considering sending out a "shaming" voting reminder. What will happen if you do? -->
-<!-- 1) EDA of `shaming`. I have cleaned up the data, so you need to re-install PPBDS.data. I think that hh_size is a good variable to check for interactions with, especially with Control. One approach: Create a new variable called `solo` which is TRUE if the `hh_size` is equal to 1 and FALSE otherwise. In other words, does the state of living along telkl us anything? We will interact this term with treatment in our model. It is cool that the p value for the interaction with Self is 0.06. A perfect example for the evils of testing! Why is general_04 only Yes? -->
-<!-- 2) `primary_06` as a function of `treatment` and `solo` and of their interaction. We will build up this model step-by-step, very similar to how we explored the effect of treatment in chapter 8. But we go deeper because  we are learning about interactions. Note that we are not using any continuous variables on the left side. That is saved for Chapter 10. Key thing is to go through all the themes.Rmd issues, at least until prediction. Note that this situation is different from Chapter 8 in that fitted values and predicted values are not the same thing! The fitted value, for a combination of values for treatment and solo, is something 0.30, meaning that 30% of the people in this bucket votes. But the predicted value must be 0 or 1. Either you voted or you didn't. This example is clearly causal and so you need a Rubin Table with 4 potential outcome columns. Perhaps we should also include age and other continuous variables. Perhaps we might explicitly compare different models, but save discussion of choosing between them till chapter 10. We need to explicitly acknowledge at least two differences with chapter 8. First, we are using continuous as well as discrete righthand side variables. (Or maybe we should use a continuous variable on chapter 8?) Second, we are using multiple variables. -->
-<!-- 3) EDA of `nes`. This can be fairly quick. Again, we won't use all the variables. Only discuss the ones we do use. One of the variables should be year. We want to show off Gelman's trick by plotting things by year. -->
-<!-- 4) We are making a predictive model of what as a function of what other stuff? Want to use a continuous variable and some discrete variables as well. Interactions to.  -->
-<!-- 5) I don't think we bother with a scenario which requires a bootstrap. Or should we?  -->
-<!-- 6) Prediction. How do we use our model to make predictions? Bring the discussion back to the way that we opened the chapter with a problem. -->
-<p>Having created models with one parameter in Chapter @ref(#one-parameter) and two parameters in Chapter @ref(#two-parameters), you are now ready to make the jump to <span class="math inline">\(N\)</span> parameters. The more parameters we include in our models, the more flexible they can become. But we must be careful of <em>overfitting</em>, of making models which are inaccurate because they don’t use enough data to accurately estimate those parameters. The tension between overfitting and underfitting is central to the practice of data science.</p>
+<!-- The goal of this chapter is to replicate all of the things we have learned in chapter 8, except with models that allow for more than two parameters, which mostly involves have more than one right-hand side variable. We are also going to explicitly avoid discussing some common pitfalls in these problems, saving those pitfalls for chapter 10. So, nothing about overfitting. Nothing about rstanarm. Just two more examples which go through themes.Rmd with more complex models. But nothing fundamentally new or different. -->
+<!-- 0) Start with a problem-->
+<p>Imagine you are running for Governor and want to do a better job of getting your voters to vote. You recently read about a large-scale experiment showing the effect of sending out a voting reminder that “shames” citizens who do not vote. You are considering sending out a “shaming” voting reminder yourself. What will happen if you do? Will more voters show up to the polls? Additionally, on the day of the election a female citizen is randomly selected. What is the probability she will vote?</p>
+<p>In this chapter, we will consider models with multiple parameters and the complexities that arise from these additions. We will also learn how to make more accurate predictions using Bayesian methods that will provide us with answers to the questions posed above.</p>
+<!-- 1) EDA of `shaming`. I think that hh_size is a good variable to check for interactions with, especially with Control. One approach: Create a new variable called `solo` which is TRUE if the `hh_size` is equal to 1 and FALSE otherwise. In other words, does the state of living alone tell us anything? We will interact this term with treatment in our model. It is cool that the p value for the interaction with Self is 0.06. A perfect example for the evils of testing!  -->
 <div id="explorator-data-analysis-of-shaming" class="section level2">
 <h2>
 <span class="header-section-number">9.1</span> Explorator Data Analysis of <code>shaming</code>
 </h2>
 <p>Begin by loading packages which we have used in previous chapters.</p>
+<p>We will start off this chapter introducing a new data set from the <strong>PPBDS.data</strong> package: shaming. This data set corresponds to an experiment carried out by Gerber, Green, and Larimer (2008) titled “Social Pressure and Voter Turnout: Evidence from a Large-Scale Field Experiment”. This experiment used several hundred thousand registered voters and a series of mailings to determine the effect of social pressure on voter turnout. Four types of treatments were used in the experiment, with voters receiving one type of mailing. All of the mailing treatments carried the message, “DO YOUR CIVIC DUTY - VOTE!”.</p>
+<p>The first treatment, Civic Duty, also read, “Remember your rights and responsibilities as a citizen. Remember to vote.” This message acted as a baseline for the other treatments, since it carried a message very similar to the one displayed on all the mailings.</p>
+<p>In the second type of treatment, households received a mailing called the Hawthorne effect that told the voters that they were being studied and their voting behavior would be examined through public records. This adds a small amount of social pressure to the households receiving this mailing.</p>
+<p>The third type of treatment is Self, in which the mailing includes the recent voting record of each member of the household, placing the word “Voted” next to their name if they did in fact vote in the 2004 election or places a blank space next to the name if they did not. In this mailing, the households were also told, “we intend to mail an updated chart” with the voting record of the members after the 2006 election. By emphasizing the public nature of voting records, this type of mailing exerts more social pressure on voting than the Hawthorne treatment.</p>
+<p>The final type of mailing is the Neighbors treatment, which follows the Self mailing by listing the household members’ voting records, as well as the voting records of those who live nearby. This mailing also told recipients, “we intend to mail an updated chart” of who voted in the 2006 election. This “shaming” treatment exerts the most social pressure of all the treatments and broadcasts individuals’ voting habits.</p>
+<p>Having created models with one parameter in Chapter @ref(#one-parameter) and two parameters in Chapter @ref(#two-parameters), you are now ready to make the jump to <span class="math inline">\(N\)</span> parameters.</p>
 <p>Consider the <code>shaming</code> tibble from <strong>PPBDS.data</strong>.</p>
 <!-- Provide a EDA of the shaming tibble, perhaps restricting it to a subset of the provided columns. Follow the lead of chapter 10. Make sure to use `glimpse()`, `sample_n()` and `skim()`. Readers need to know understand what the dependent variable means, along with left-hand side variables like treatment. -->
 <pre><code>## Rows: 344,084
@@ -216,15 +218,15 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <pre><code>## # A tibble: 5 x 10
 ##   sex   birth_year primary_02 general_02 primary_04 general_04 treatment
 ##   &lt;chr&gt;      &lt;int&gt; &lt;chr&gt;      &lt;chr&gt;      &lt;chr&gt;      &lt;chr&gt;      &lt;fct&gt;    
-## 1 Fema…       1969 No         No         Yes        Yes        Control  
-## 2 Fema…       1945 No         Yes        Yes        Yes        Control  
-## 3 Fema…       1939 No         Yes        Yes        Yes        Civic Du…
-## 4 Fema…       1948 No         Yes        No         Yes        Civic Du…
-## 5 Fema…       1972 No         No         Yes        Yes        Self     
+## 1 Male        1979 No         No         No         Yes        Civic Du…
+## 2 Fema…       1937 Yes        Yes        No         Yes        Self     
+## 3 Fema…       1964 Yes        Yes        No         Yes        Neighbors
+## 4 Male        1948 Yes        Yes        No         Yes        Hawthorne
+## 5 Male        1955 No         Yes        Yes        Yes        Control  
 ## # … with 3 more variables: primary_06 &lt;int&gt;, hh_size &lt;int&gt;, no_of_names &lt;int&gt;</code></pre>
 <table style="width: auto;" class="table table-condensed">
 <caption>
-<span id="tab:unnamed-chunk-498">TABLE 9.1: </span>Data summary
+<span id="tab:unnamed-chunk-531">TABLE 9.1: </span>Data summary
 </caption>
 <thead><tr>
 <th style="text-align:left;">
@@ -483,6 +485,7 @@ primary_06
 </td>
 </tr></tbody>
 </table>
+<!-- It may be worth mentioning that general_04 is always "yes", unlike all the other voting history variables which have values of "yes" and "no". Why is that? I *think* that this is caused by their sampling plan. They found all the people who voted in the 2004 general election. Then, the authors found their history. As we would expect, those people had sometimes voted in the past and sometime not. Then, the authors sent the mailing. The key dependent variable, primary_06, is coding 0/1, since that makes doing the statistics easier. --><!-- 2) `primary_06` as a function of `treatment` and `solo` and of their interaction. We will build up this model step-by-step, very similar to how we explored the effect of treatment in chapter 8. But we go deeper because  we are learning about interactions. Key thing is to go through all the themes.Rmd issues, at least until prediction. Note that this situation is different from Chapter 8 in that fitted values and predicted values are not the same thing! The fitted value, for a combination of values for treatment and solo, is something 0.30, meaning that 30% of the people in this bucket votes. But the predicted value must be 0 or 1. Either you voted or you didn't. This example is clearly causal and so you need a Rubin Table with 4 potential outcome columns. The key difference in this chapter is that we are using lots of right hand side variables, both continuous and discrete. --><!-- 3) EDA of `nes`. This can be fairly quick. Again, we won't use all the variables. Only discuss the ones we do use. One of the variables should be year. We want to show off Gelman's trick by plotting things by year. --><!-- 4) We are making a predictive model of what as a function of what other stuff? Want to use a continuous variable and some discrete variables as well. Interactions to.  --><!-- 5) I don't think we bother with a scenario which requires a bootstrap. Or should we?  --><!-- 6) Prediction. How do we use our model to make predictions? Bring the discussion back to the way that we opened the chapter with a problem. --><p>Having created models with one parameter in Chapter @ref(#one-parameter) and two parameters in Chapter @ref(#two-parameters), you are now ready to make the jump to <span class="math inline">\(N\)</span> parameters. The more parameters we include in our models, the more flexible they can become. But we must be careful of <em>overfitting</em>, of making models which are inaccurate because they don’t use enough data to accurately estimate those parameters. The tension between overfitting and underfitting is central to the practice of data science.</p>
 </div>
 <div id="causal-effects-of-treament" class="section level2">
 <h2>
@@ -618,7 +621,7 @@ What problems do we face? All the things that make modeling difficult. Why is th
 <h2>
 <span class="header-section-number">9.7</span> 5 sources of uncertainty</h2>
 <p>style.Rmd</p>
-<div id="parameter-uncertainty-3" class="section level4">
+<div id="parameter-uncertainty-4" class="section level4">
 <h4>
 <span class="header-section-number">9.7.0.1</span> 3. Parameter Uncertainty</h4>
 <p>estimate of income coefficient
@@ -627,7 +630,7 @@ confidence interval gives the range of uncertainty
 - this is where you use posterior predict
 - difference between uncertainty about parameyer mean estimate but confidence interval for the mean is not equal to the estimate for the new observation</p>
 </div>
-<div id="unmodeled-variation-2" class="section level4">
+<div id="unmodeled-variation-3" class="section level4">
 <h4>
 <span class="header-section-number">9.7.0.2</span> 4. Unmodeled Variation</h4>
 </div>
@@ -642,10 +645,6 @@ confidence interval gives the range of uncertainty
 <span class="header-section-number">9.9</span> cces data</h2>
 <p>In this chapter we will be using the cces data, or Cooperative Congress Election Survey. The CCES is a 50,000+ person national stratified sample survey that consists of a pre- and post- election wave. In the pre-election wave, respondents complete two-thirds of the survey that asks about general political attitudes, various demographic factors, assessment of roll call voting choices, political information, and vote intentions. In the post-election wave, respondents complete the final third of the survey that consists mostly of items related to the election that just occurred.</p>
 <p>Some of the key variables that are included in the data set are approval ratings of the elected officials, from the governor to the president, on a scale from “Strongly Disapprove” to “Strongly Approve”. To quantify this data, the new variables <code>approval_pres_num</code>, <code>approval_rep_num</code>, <code>approval_sen1_num</code>, <code>approval_sen2_num</code>, and <code>approval_gov_num</code> have all been created and quantify the approval scale by ordering the responses from a 1 to a 5. Those who answered with “Strongly Disapprove” are a 1 on the approval scale, while those who answered with “Strongly Approve” are a 5 on the numerical approval scale. Those who are neutral answered with “Neither Approve Nor Disapprove” and are quantified as a 3 on the scale. Respondents who answered with “Never Heard / Not Sure” have been removed in order to improve the accuracy of the approval ratings.</p>
-<!-- HV: How do I add these new variables to the data set for everyone to use? Do I include the code for that in the Markdown or do I instruct the readers how to create these variables themselves with the cces data they are given? 
-
-DK: I have updated cces so that "approval" is presidential approval
--->
 <p>Other variables in the cces data include state, race, age, education level, gender, and ideology. The data taken spans from 2006 to 2018, although it should be noted that there are more observations in years with general elections.</p>
 </div>
 <div id="presidential-approval-overall-by-year-by-state-by-state-x-year-x-educ" class="section level2">
@@ -669,6 +668,13 @@ DK: I have updated cces so that "approval" is presidential approval
 <!-- Connecting parameters to real world concepts. What are we measuring? validity. -->
 <!-- estimands -->
 
+<!-- DK: The key goal of this chapter is to walk students through all the most common pitfalls with creating models and then show them how to deal with those pitfalls. Then, in chapters 11 and 12, students put what we have taught them to work. The problem is that I only have a hazy idea of what the key pitfalls are and how to deal with them. -->
+<!-- * Not using Bayesian tools. So, use them! -->
+<!-- * Not using tidymodels! So, use them. It will make everything in later chapters easier. -->
+<!-- * Failing to think clearly about what the goals of the model is and what that goal implies for how we should construct a model. -->
+<!-- * Overfitting/underfitting. How do we diagnose this? How do we deal with it? -->
+<!-- * Figuring out causal effects from observational data. Doing so stupidly. -->
+<!-- * Type M/S errors. Seeing effects when none are there. -->
 </div>
 </div></body></html>
 
@@ -677,7 +683,7 @@ DK: I have updated cces so that "approval" is presidential approval
 <a href="pitfalls.html"><button class="btn btn-default">Next</button></a>
 </p>
 <p class="build-date">Page built: 
-2020-07-19
+2020-07-22
 </p>
 </div>
 </div>
