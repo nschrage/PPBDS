@@ -92,7 +92,7 @@ Perhaps all this is enough to both fill this chapter and set the stage for 11 an
 
 <!-- DK: Change the smoking example to political campaigns. If you work on the NYT, all you care about is forecasting election results conditional on campaign spending. If you are a (rich!) candidate, you care about the causal effect of spending on votes. Same model might be estimated by both! But the latter needs to be much more careful in deciding whether or not the results are real. -->
 
-<!-- Albert points out a difficulty in combining the RCM with regression. You can't easily put in a distribution for the unknown potential outcome, even if you have a good regression model. You can't just add to the observed outcome because . . . actually I am confused about this! -->
+<!-- Albert points out a difficulty in combining the RCM with regression. You can't easily put in a distribution for the unknown potential outcome, even if you have a good regression model. You can't just add to the observed outcome because . . . actually I am confused about this!  -->
 
 The fundamental goal of data modeling is to make explicit the relationship between:
 
@@ -160,23 +160,20 @@ library(patchwork)
 
 Why do some professors and instructors at universities and colleges receive high teaching evaluations scores from students while others receive lower ones? Are there differences in teaching evaluations between instructors of different demographic groups? Could there be an impact due to student biases? These are all questions that are of interest to university/college administrators, as teaching evaluations are among the many criteria considered in determining which instructors and professors get promoted.
 
-Researchers at the University of Texas in Austin, Texas (UT Austin) tried to answer the following research question: what factors explain differences in instructor teaching evaluation scores? To this end, they collected instructor and course information on 463 courses. A full description of the study can be found at [openintro.org](https://www.openintro.org/data/index.php?data=evals).
+In this section, we'll keep things simple for now and try to explain differences in instructor ratingserage hourly workload for that class. Could it be that instructors with lower hourly workloads also have higher ratings? Could it be instead that instructors with lower hourly workloads tend to have lower ratings? Or could it be that there is no relationship between workload and teaching evaluations? We'll answer these questions by modeling the relationship between rating and workload using *simple linear regression* \index{regression!simple linear} where we have:
 
-In this section, we'll keep things simple for now and try to explain differences in instructor teaching scores as a function of one numerical variable: the instructor's "beauty" score (we'll describe how this score was determined shortly). Could it be that instructors with higher "beauty" scores also have higher teaching evaluations? Could it be instead that instructors with higher "beauty" scores tend to have lower teaching evaluations? Or could it be that there is no relationship between "beauty" score and teaching evaluations? We'll answer these questions by modeling the relationship between teaching scores and "beauty" scores using *simple linear regression* \index{regression!simple linear} where we have:
-
-1. A numerical outcome variable $y$ (the instructor's teaching score) and
-1. A single numerical explanatory variable $x$ (the instructor's "beauty" score).
-
+1. A numerical outcome variable $y$ (the instructor's teaching rating) and
+1. A single numerical explanatory variable $x$ (the average hourly workload for the class).
 
 ### Exploratory data analysis {#model1EDA}
 
-The data on the 463 courses at UT Austin can be found in the `evals` data frame included in the **moderndive** package. However, to keep things simple, let's `select()` only the subset of the variables we'll consider in this chapter, and save this data in a new data frame called `evals_ch11`:
+The data on the Q Guide scores can be found in the `qscores` data frame included in the **PPBDS.data** package. However, to keep things simple, let's `select()` only the subset of the variables we'll consider in this chapter, and save this data in a new data frame called `qscores_ch10`:
 
 ```{r}
-library(moderndive)
+library(PPBDS.data)
 
-evals_ch11 <- evals %>%
-  select(ID, score, bty_avg, age)
+qscores_ch10 <- qscores %>%
+  select(course_number, rating, hours, enrollment, department)
 ```
 
 A crucial step before doing any kind of analysis or modeling is performing an *exploratory data analysis*, \index{data analysis!exploratory} or EDA for short. EDA gives you a sense of the distributions of the individual variables in your data, whether any potential relationships exist between variables, whether there are outliers and/or missing values, and (most importantly) how to build your model. Here are three common steps in an EDA:
@@ -194,41 +191,51 @@ You can do this by using RStudio's spreadsheet viewer or by using the `glimpse()
 <!-- DK: Add summary() -->
 
 ```{r}
-glimpse(evals_ch11) %>%
+glimpse(qscores_ch10)
+
+glimpse(qscores_ch10) %>%
   summary()
 
 ```
 
-<!-- EG: I can change some of this language later to reflect the vocab of glimpse with summary as opposed to just glimpse, if we like this option. -->
+<!-- EG: Should I just keep glimpse() with summary(), or should I include an analysis of glimpse() alone before doing both? -->
 
-Observe that `Observations: 463` indicates that there are 463 rows/observations in `evals_ch11`, where each row corresponds to one observed course at UT Austin. It is important to note that the *observational unit* \index{observational unit} is an individual course and not an individual instructor. Recall from Subsection \@ref(exploredataframes) that the observational unit is the "type of thing" that is being measured by our variables. Since instructors teach more than one course in an academic year, the same instructor will appear more than once in the data. Hence there are fewer than 463 unique instructors being represented in `evals_ch11`.
+Observe that `Rows: 748` indicates that there are 748 rows/observations in `qscores_ch10`, where each row corresponds to one observed course at Harvard. It is important to note that the *observational unit* \index{observational unit} is an individual course and not an individual instructor. Recall from Subsection \@ref(exploredataframes) that the observational unit is the "type of thing" that is being measured by our variables. Since instructors teach more than one course in an academic year, the same instructor will appear more than once in the data. Hence there are fewer than 748 unique instructors being represented in `qscores_ch10`.
 
-A full description of all the variables included in `evals` can be found at [openintro.org](https://www.openintro.org/data/index.php?data=evals) or by reading the associated help file (run `?evals` in the console). However, let's fully describe only the `r ncol(evals_ch11)` variables we selected in `evals_ch11`:
+To further explore the data, we can add a second function to our initial call of `glimpse()`: the `summary()` function. `summary()` can provide us with useful result summaries of all the observations in a dataset for each variable. Calling `glimpse()` on `qscores_ch10` and then `summary()` allows us to see the minimum and maximum values along with several other quantiles for numeric variables and tells us the number of observations, class, and mode of categorical variables. For instance, examining the `hours` column in the `summary()` results shows that the minimum number of workload hours reported for a Harvard class in the Q Guide was 1 hour, while the median was 5.2 hours and the maximum was 22.5 hours. Exploring the `department` column shows that `department` is a character variable containing 748 observations, which makes sense because we know that there are 748 classes in this dataset.
 
-1. `ID`: An identification variable used to distinguish between the 1 through 463 courses in the dataset.
-1. `score`: A numerical variable of the course instructor's average teaching score, where the average is computed from the evaluation scores from all students in that course.  Teaching scores of 1 are lowest and 5 are highest. This is the outcome variable $y$ of interest.
-1. `bty_avg`: A numerical variable of the course instructor's average "beauty" score, where the average is computed from a separate panel of six students. "Beauty" scores of 1 are lowest and 10 are highest. This is the explanatory variable $x$ of interest.
-1. `age`: A numerical variable of the course instructor's age. 
+<!-- EG: Commenting this out for the moment "A full description of all the variables included in `evals` can be found at [openintro.org](https://www.openintro.org/data/index.php?data=evals) or by reading the associated help file (run `?evals` in the console)." Is there a place where we have descriptions of the PPBDS library data like this? --> 
 
-An alternative way to look at the raw data values is by choosing a random sample of the rows in `evals_ch11` by piping it into the `sample_n()` \index{dplyr!sample\_n()} function from the **dplyr** package. Here we set the `size` argument to be `5`, indicating that we want a random sample of 5 rows. We display the results below. Note that due to the random nature of the sampling, you will likely end up with a different subset of 5 rows.
+However, let's fully describe only the `r ncol(qscores_ch10)` variables we selected in `qscores_ch10`:
+
+1. `course_number`: An identification variable used to distinguish between the 1 through 748 courses in the dataset.
+1. `rating`: A numerical variable of the overall quality of a course, where the average is computed from the evaluation scores from all the students who choose to provide feedback for that course.  Ratings of 1 are lowest and 5 are highest. This is the outcome variable $y$ of interest.
+1. `hours`: A numerical variable of the amount of work students put into a course per week in hours, where the average is computed from the evaluation scores from all students who choose to provide feedback for that course. This is the explanatory variable $x$ of interest.
+1. `enrollment`: A numerical variable of the amount of students enrolled in a course.
+1. `department`: A categorical variable representing the name of the department in which a particular course is listed.
+
+An alternative way to look at the raw data values is by choosing a random sample of the rows in `qscores_ch10` by piping it into the `sample_n()` \index{dplyr!sample\_n()} function from the **dplyr** package. Here we set the `size` argument to be `5`, indicating that we want a random sample of 5 rows. We display the results below. Note that due to the random nature of the sampling, you will likely end up with a different subset of 5 rows.
 
 ```{r, eval=FALSE}
-evals_ch11 %>%
+qscores_ch10 %>%
   sample_n(size = 5)
 ```
-```{r, echo=FALSE, fig.cap="A random sample of 5 out of the 463 courses at UT Austin"}
-evals_ch11 %>%
+
+```{r, echo=FALSE, fig.cap="A random sample of 5 out of the 748 courses at Harvard"}
+qscores_ch10 %>%
   sample_n(5) 
 ```
 
-Now that we've looked at the raw values in our `evals_ch11` data frame and got a preliminary sense of the data, let's move on to the next common step in an exploratory data analysis: computing summary statistics. Let's start by computing the mean and median of our numerical outcome variable `score` and our numerical explanatory variable "beauty" score denoted as `bty_avg`. We'll do this by using the `summarize()` function from `dplyr` along with the `mean()` and `median()` summary functions we saw in Section \@ref(summarize).
+<!-- EG: Should we still include summarize() if we're including summary() with glimpse() above? Summary() seems to include more information and is generally more useful. Or should we simply compare the two and advise when one could be more useful than the other? -->
+
+Now that we've looked at the raw values in our `qscores_ch10` data frame and got a preliminary sense of the data, let's move on to the next common step in an exploratory data analysis: computing summary statistics. Let's start by computing the mean and median of our numerical outcome variable `rating` and our numerical explanatory variable `hours`. We'll do this by using the `summarize()` function from `dplyr` along with the `mean()` and `median()` summary functions we saw in Section \@ref(summarize).
 
 ```{r, eval=TRUE}
-evals_ch11 %>%
-  summarize(mean_bty_avg = mean(bty_avg),
-            mean_score = mean(score),
-            median_bty_avg = median(bty_avg),
-            median_score = median(score))
+qscores_ch10 %>%
+  summarize(mean_hours = mean(hours),
+            mean_rating = mean(rating),
+            median_hours = median(hours),
+            median_rating = median(rating))
 ```
 
 <!-- DK: This is nice. Having motivated the use of skim() once, we can just go straight to using it in other chapters. And/or show other tricks each chapter, like across(). -->
@@ -238,13 +245,12 @@ However, what if we want other summary statistics as well, such as the standard 
 Typing out all these summary statistic functions in `summarize()` would be long and tedious. Instead, let's use the convenient `skim()` function from the **skimr** package. This function takes in a data frame, "skims" it, and returns commonly used summary statistics. Let's take our `evals_ch11` data frame, `select()` only the outcome and explanatory variables teaching `score` and `bty_avg`, and pipe them into the `skim()` function:
 
 ```{r}
-evals_ch11 %>% 
-  select(score, bty_avg) %>% 
+qscores_ch10 %>% 
+  select(rating, hours) %>% 
   skim()
 ```
 
-
-For the numerical variables teaching `score` and `bty_avg` it returns:
+For the numerical variables teaching `rating` and `hours` it returns:
 
 - `n_missing`: the number of missing values
 - `complete_rate`: the percentage of non-missing or complete values
@@ -256,7 +262,7 @@ For the numerical variables teaching `score` and `bty_avg` it returns:
 - `p75`: the 75th percentile: the value at which 75% of observations are smaller than it (the *3rd quartile*)
 - `p100`: the 100th percentile: the value at which 100% of observations are smaller than it (the *maximum* value)
 
-Looking at this output, we can see how the values of both variables are distributed. For example, the mean teaching score was 4.17 out of 5, whereas the mean "beauty" score was 4.42 out of 10. Furthermore, the middle 50% of teaching scores was between 3.80 and 4.6 (the first and third quartiles), whereas the middle 50% of "beauty" scores falls within 3.17 to 5.5 out of 10.
+Looking at this output, we can see how the values of both variables are distributed. For example, the mean course rating was 4.18 out of 5, whereas the mean workload per week was 6.17 hours. Furthermore, the middle 50% of course ratings was between 3.9 and 4.5 (the first and third quartiles), whereas the middle 50% of hours of work falls within 3.77 to 7.6, with a maximum reported workload of 22.5 hours per week.
 
 <!-- DK: Keep this. -->
 
@@ -312,32 +318,33 @@ if(knitr::is_latex_output()){
 The correlation coefficient can be computed using the `cor()` summary function within a `summarize()`:
 
 ```{r, eval=FALSE}
-evals_ch11 %>% 
-  summarize(correlation = cor(score, bty_avg))
+qscores_ch10 %>% 
+  summarize(correlation = cor(rating, hours))
 ```
 
 ```{r, echo=FALSE}
-cor_ch11 <- evals_ch11 %>%
-  summarize(correlation = cor(score, bty_avg)) %>% 
+cor_ch10 <- qscores_ch10 %>%
+  summarize(correlation = cor(rating, hours)) %>% 
   round(3) %>% 
   pull()
 ```
 
-In our case, the correlation coefficient of `r cor_ch11` indicates that the relationship between teaching evaluation score and "beauty" average is "weakly positive." There is a certain amount of subjectivity in interpreting correlation coefficients, especially those that aren't close to the extreme values of -1, 0, and 1. 
+In our case, the correlation coefficient of `r cor_ch10` indicates that the relationship between overall course rating and average weekly workload in hours is "weakly negative." There is a certain amount of subjectivity in interpreting correlation coefficients, especially those that aren't close to the extreme values of -1, 0, and 1. 
 
-Let's now perform the last of the steps in an exploratory data analysis: creating data visualizations. Since both the `score` and `bty_avg` variables are numerical, a scatterplot is an appropriate graph to visualize this data. Let's do this using `geom_point()` and display the result. Furthermore, let's highlight the six points in the top right of the visualization in a box.
+Let's now perform the last of the steps in an exploratory data analysis: creating data visualizations. Since both the `rating` and `hours` variables are numerical, a scatterplot is an appropriate graph to visualize this data. Let's do this using `geom_point()` and display the result. Furthermore, let's highlight the six points in the top right of the visualization in a box.
 
 ```{r, eval=FALSE}
-evals_ch11 %>%
-  ggplot(aes(x = bty_avg, y = score)) +
+qscores_ch10 %>%
+  ggplot(aes(x = hours, y = rating)) +
   geom_point() +
-  labs(x = "Beauty Score", 
-       y = "Teaching Score",
-       title = "Scatterplot of relationship of teaching and beauty scores")
+  labs(x = "Hours of Work Per Week", 
+       y = "Q Guide Rating",
+       title = "Scatterplot of relationship between Q Scores and Weekly Workload")
 ```
 
-```{r, warning=FALSE, echo=FALSE, fig.cap="Instructor evaluation scores at UT Austin.", fig.height=4.5}
+```{r, warning=FALSE, echo=FALSE, fig.cap="Q Guide Scores at Harvard", fig.height=4.5}
 # Define orange box
+# EG: I need to fix this later- how should I define the box?
 margin_x <- 0.15
 margin_y <- 0.075
 box <- tibble(
@@ -345,52 +352,57 @@ box <- tibble(
   y = c(4.6, 4.6, 5, 5, 4.6) + c(-1, -1, 1, 1, -1) * margin_y
   )
 
-evals_ch11 %>%
-  ggplot(aes(x = bty_avg, y = score)) +
+qscores_ch10 %>%
+  ggplot(aes(x = hours, y = rating)) +
   geom_point() +
-  labs(x = "Beauty Score", 
-       y = "Teaching Score",
-       title = "Scatterplot of relationship of teaching and beauty scores") +
+  labs(x = "Hours of Work Per Week", 
+       y = "Q Guide Rating",
+       title = "Scatterplot of relationship between Q Scores and Weekly Workload") +
   geom_path(data = box, aes(x=x, y=y), col = "orange", size = 1)
 ```
+<!-- EG: Need to be more precise with this in the future. Will come back and edit later. -->
 
-Observe that most "beauty" scores lie between 2 and 8, while most teaching scores lie between 3 and 5. Furthermore, while opinions may vary, it is our opinion that the relationship between teaching score and "beauty" score is "weakly positive." This is consistent with our earlier computed correlation coefficient of `r cor_ch11`.
+Observe that most courses have reported average workloads between 2 and 10 hours per week, while most teaching scores lie between 3 and 5. Furthermore, while opinions may vary, it is our opinion that the relationship between Q guide rating and weekly workload in hours is "weakly negative." This is consistent with our earlier computed correlation coefficient of `r cor_ch10`.
+
+<!-- EG: I'll change this language below as well once I figure out how to work on the box. -->
 
 Furthermore, there appear to be six points in the top-right of this plot highlighted in the box. However, this is not actually the case, as this plot suffers from *overplotting*. Recall from Subsection \@ref(overplotting) that overplotting occurs when several points are stacked directly on top of each other, making it difficult to distinguish them. So while it may appear that there are only six points in the box, there are actually more.  This fact is only apparent when using `geom_jitter()` in place of `geom_point()`. We display the resulting plot along with the same small box as before.
 
 ```{r, eval=FALSE}
-evals_ch11 %>%
-  ggplot(aes(x = bty_avg, y = score)) +
+qscores_ch10 %>%
+  ggplot(aes(x = hours, y = rating)) +
   geom_jitter() +
-  labs(x = "Beauty Score", y = "Teaching Score",
-       title = "Scatterplot of relationship of teaching and beauty scores")
+  labs(x = "Hours of Work Per Week", y = "Q Guide Score",
+       title = "Scatterplot of relationship between Q Scores and Weekly Workload")
 ```
 
-```{r, warning=FALSE, echo=FALSE, fig.cap="Instructor evaluation scores at UT Austin.", fig.height=4.2}
-ggplot(evals_ch11, aes(x = bty_avg, y = score)) +
+```{r, warning=FALSE, echo=FALSE, fig.cap="Q Guide Scores at Harvard.", fig.height=4.2}
+qscores_ch10 %>%
+  ggplot(aes(x = hours, y = rating)) +
   geom_jitter() +
-  labs(x = "Beauty Score", y = "Teaching Score",
-       title = "(Jittered) Scatterplot of relationship of teaching and beauty scores") +
+  labs(x = "Hours of Work Per Week", y = "Q Guide Score",
+       title = "Scatterplot of relationship between Q Scores and Weekly Workload") +
   geom_path(data = box, aes(x = x, y = y), col = "orange", size = 1)
 ```
+
+<!-- EG: I'll change this section as well after changing the box size. -->
 
 It is now apparent that there are `r evals_ch11 %>% filter(score > 4.5 & bty_avg > 7.5) %>% nrow()` points in the area highlighted in the box and not six as originally suggested. Recall from Subsection \@ref(overplotting) on overplotting that jittering adds a little random "nudge" to each of the points to break up these ties. Furthermore, recall that jittering is strictly a visualization tool; it does not alter the original values in the data frame `evals_ch11`. To keep things simple going forward, however, we'll only present regular scatterplots rather than their jittered counterparts.
 
 Let's build on the unjittered scatterplot by adding a "best-fitting" line: of all possible lines we can draw on this scatterplot, it is the line that "best" fits through the cloud of points. We do this by adding a new `geom_smooth(method = "lm", se = FALSE)` layer to the `ggplot()` code that created the scatterplot. The `method = "lm"` argument sets the line to be a "`l`inear `m`odel." The `se = FALSE` \index{ggplot2!geom\_smooth()} argument suppresses _standard error_ uncertainty bars. (We defined the concept of _standard error_ in Subsection \@ref(sampling-definitions).)
 
 ```{r, warning=FALSE, fig.cap="Regression line."}
-evals_ch11 %>%
-  ggplot(aes(x = bty_avg, y = score)) +
-  geom_point() +
-  labs(x = "Beauty Score", y = "Teaching Score",
-       title = "Relationship between teaching and beauty scores") +  
+qscores_ch10 %>%
+  ggplot(aes(x = hours, y = rating)) +
+  geom_jitter() +
+  labs(x = "Hours of Work Per Week", y = "Q Guide Score",
+       title = "Scatterplot of relationship between Q Scores and Weekly Workload") + 
   geom_smooth(method = "lm", se = FALSE)
 ```
 
-The line in the resulting figure is called a "regression line." The regression line \index{regression!line} is a visual summary of the relationship between two numerical variables, in our case the outcome variable `score` and the explanatory variable `bty_avg`. The positive slope of the blue line is consistent with our earlier observed correlation coefficient of `r cor_ch11` suggesting that there is a positive relationship between these two variables: as instructors have higher "beauty" scores, so also do they receive higher teaching evaluations. We'll see later, however, that while the correlation coefficient and the slope of a regression line always have the same sign (positive or negative), they typically do not have the same value.
+The line in the resulting figure is called a "regression line." The regression line \index{regression!line} is a visual summary of the relationship between two numerical variables, in our case the outcome variable `rating` and the explanatory variable `hours`. The positive slope of the blue line is consistent with our earlier observed correlation coefficient of `r cor_ch10` suggesting that there is a weakly negative relationship between these two variables: as students report higher average weekly workloads, courses receive lower teaching evaluations. We'll see later, however, that while the correlation coefficient and the slope of a regression line always have the same sign (positive or negative), they typically do not have the same value.
 
 Furthermore, a regression line is "best-fitting" in that it minimizes some mathematical criteria. We present these mathematical criteria in Section \@ref(leastsquares), but we suggest you read this subsection only after first reading the rest of this section on regression with one numerical explanatory variable.
-
 
 ### Simple linear regression {#model1table}
 
