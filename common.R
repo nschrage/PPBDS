@@ -8,6 +8,11 @@
 
 # before_chapter_script: "common.R"
 
+# Packages used by almost all chapters
+
+library(tufte)
+library(gt)
+
 options(digits = 2)
 
 # Without this, the cache is created --- in book_temp_cache, since
@@ -16,5 +21,6 @@ options(digits = 2)
 # cache to persist, at least in the book-builders home directory. I don't think
 # that using a common directory will cause conflicts across chapters . . .
 
+knitr::opts_chunk$set(cache=TRUE)
 knitr::opts_chunk$set(cache.path = "cache-directory/")
 

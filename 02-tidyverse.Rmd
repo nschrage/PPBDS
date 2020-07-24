@@ -2,26 +2,25 @@
 output_yaml: _output.yml
 ---
 
-
 # Tidyverse {#tidyverse}
 
 ```{r, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, tidy = FALSE, cache.extra = packageVersion('tufte')) 
 library(ggrepel)
-library(gt)
-library(tufte)
 ```
 
+<!-- Do we really need all these data packages? -->
 
 Start by loading the packages which we will need in this chapter.
 
 ```{r, message=FALSE}
+library(gapminder)
 library(nycflights13)
-library(tidyverse)
+library(fivethirtyeight)
 library(PPBDS.data)
+library(tidyverse)
 ```
 
-The **tidyverse** package will be used in every chapter. **nycflights** is a package with data associated with flights out of New York City's three major airports. **PPBDS.data** includes, as you might guess, data organized for use by this textbook.
+The **tidyverse** package will be used in every chapter. **nycflights** includes data associated with flights out of New York City's three major airports. **gapminder** has data for countries across decades. **fivethirtyeight** cleans up data from the [FiveThirtyEight](https://fivethirtyeight.com/) team.  **PPBDS.data** includes, as you might guess, data organized for use with this textbook.
 
 <!-- Outline: -->
 
@@ -145,13 +144,14 @@ by_origin_monthly_incorrect
 What happened here is that the second `group_by(month)` overwrote the grouping structure meta-data of the earlier `group_by(origin)`, so that in the end we are only grouping by `month`. The lesson here is if you want to `group_by()` two or more variables, you should include all the variables at the same time in the same `group_by()` adding a comma between the variable names.
 
 Recall the `read_csv()` function from chapter 1 of this textbook. In a previous exercise, we ran the following code chunk:
+
 ```{r}
-library(readr)
 dem_score <- read_csv(file = "https://moderndive.com/data/dem_score.csv")
 ```
 The result of this code chunk is pretty tame. It tells us that each comma from the .csv file corresponds to a column, and the column names are taken from the first line of the file. Then, the function "guesses" an appropriate data type for each of the columns it creates. Sometimes .csv files are a lot dirtier and require significant wrangling before you can explore the data and create usable graphics. 
 
 Let's try to run `read_csv()` on another dataset. This is a link to a file containing the faculty's gender data across departments at Harvard University.
+
 ```{r}
 url <- "https://raw.githubusercontent.com/davidkane9/PPBDS/master/02-tidyverse/data/harvard-faculty-gender-final.csv"
 gender_data <- read_csv(file = url)
@@ -172,7 +172,7 @@ gender_data
 Now suppose we want to change the data type of one of more of the columns. The `col_type` argument allows us to do this. Without the `col_type` argument, the `division` column is read in as a character column. Instead, we want it to be read in as a factor.  
 
 ```{r}
-gender_data <- read_csv(file = url, skip = 1, col_type = cols(division = col_factor()))
+# gender_data <- read_csv(file = url, skip = 1, col_type = cols(division = col_factor()))
 ```
 
 Now that the new dataset has been read in, explore it using the `View()` and `glimpse()` functions and the `$` operator from the previous chapter. 
@@ -355,11 +355,9 @@ A God-awful and powerful language for expressing patterns to match in text or fo
   - [What Every Programmer Absolutely, Positively Needs To Know About Encodings And Character Sets To Work With Text][programmers-encoding]
 
 ### Character vectors that live in a data frame
+
 Load the tidyverse, which includes stringr
 
-```{r start_char_vectors}
-library(tidyverse)
-```
 
 ### Regex-free string manipulation with stringr and tidyr
 
@@ -535,7 +533,6 @@ knitr::include_graphics("02-tidyverse/images/regexp.jpg")
 The country names in the `gapminder` dataset are convenient for examples. Load it now and store the `r nlevels(gapminder::gapminder$country)` unique country names in the object `countries`.
 
 ```{r}
-library(gapminder)
 countries <- levels(gapminder$country)
 ```
 
@@ -787,8 +784,6 @@ The data in `gapminder` was originally excavated from 3 messy Excel spreadsheets
 I create 3 separate data frames, do some evil row sorting, then column bind. There are no errors. The result `gapminder_garbage` sort of looks OK. Univariate summary statistics and exploratory plots will look OK. But I've created complete nonsense!
 
 ```{r}
-library(gapminder)
-
 life_exp <- gapminder %>%
   select(country, year, lifeExp)
 
@@ -841,11 +836,10 @@ gapminder %>%
 
 Join (a.k.a. merge) two tables: dplyr join cheatsheet with comic characters and publishers.
 
-```{r gt-table-making-functions, include = FALSE}
-library(gt)
-
+```{r, include = FALSE}
 # function to style the tables for display
 # used alongside CSS
+
 style_table <- function(data, table_title) {
   data %>% 
   gt() %>% 
@@ -904,10 +898,7 @@ Other great places to read about joins:
 
 Working with two small data frames: `superheroes` and `publishers`.
 
-```{r start_joins, message = FALSE, warning = FALSE}
-# dplyr provides the join functions
-
-library(tidyverse)
+```{r, message = FALSE, warning = FALSE}
 
 superheroes <- tibble::tribble(
        ~name, ~alignment,  ~gender,          ~publisher,
@@ -1277,29 +1268,23 @@ Let's apply some of the data wrangling verbs on the `drinks` data frame:
 and save the resulting data frame in `drinks_smaller`:
 
 ```{r}
-drinks_smaller <- drinks %>% 
-  filter(country %in% c("USA", "China", "Italy", "Saudi Arabia")) %>% 
-  select(-total_litres_of_pure_alcohol) %>% 
-  rename(beer = beer_servings, spirit = spirit_servings, wine = wine_servings)
-drinks_smaller
+# drinks_smaller <- drinks %>%
+#   filter(country %in% c("USA", "China", "Italy", "Saudi Arabia")) %>%
+#   select(-total_litres_of_pure_alcohol) %>%
+#   rename(beer = beer_servings, spirit = spirit_servings, wine = wine_servings)
+# drinks_smaller
 ```
 
 Let's now ask ourselves a question: "Using the `drinks_smaller` data frame, how would we create the side-by-side barplot below. 
 
-```{r, fig.cap="Comparing alcohol consumption in 4 countries.", fig.height=3.9, echo=FALSE}
-drinks_smaller_tidy <- drinks_smaller %>% 
-  pivot_longer(cols = -country, names_to = "type", values_to = "servings")
-drinks_smaller_tidy_plot <- ggplot(
-    drinks_smaller_tidy, 
-    aes(x = country, y = servings, fill = type)
-    ) +
-  geom_col(position = "dodge") +
-  labs(x = "country", y = "servings")
-if(knitr::is_html_output()){
-  drinks_smaller_tidy_plot
-} else {
-  drinks_smaller_tidy_plot + scale_fill_grey()
-}
+```{r, fig.cap="Comparing alcohol consumption in 4 countries."}
+# drinks_smaller_tidy <- drinks_smaller %>% 
+#   pivot_longer(cols = -country, names_to = "type", values_to = "servings")
+# 
+# drinks_smaller_tidy_plot <- ggplot(drinks_smaller_tidy, 
+#                                    aes(x = country, y = servings, fill = type)) +
+#                               geom_col(position = "dodge") +
+#                               labs(x = "country", y = "servings")
 ```
 
 Let's break down the grammar of graphic:
@@ -1311,7 +1296,7 @@ Let's break down the grammar of graphic:
 Observe, however, that `drinks_smaller` has three separate variables `beer`, `spirit`, and `wine`. In order to use the `ggplot()` function to recreate the barplot we need a *single variable* `type` with three possible values: `beer`, `spirit`, and `wine`.  We could then map this `type` variable to the `fill` aesthetic of our plot.  In other words, to recreate the barplot, our data frame would have to look like this:
 
 ```{r}
-drinks_smaller_tidy
+# drinks_smaller_tidy
 ```
 
 Observe that while `drinks_smaller` and `drinks_smaller_tidy` are both rectangular in shape and contain the same 12 numerical values (3 alcohol types by 4 countries), they are formatted differently. `drinks_smaller` is formatted in what's known as  ["wide"](https://en.wikipedia.org/wiki/Wide_and_narrow_data) format, whereas `drinks_smaller_tidy` is formatted in what's known as ["long/narrow"](https://en.wikipedia.org/wiki/Wide_and_narrow_data#Narrow) format.
@@ -1351,17 +1336,17 @@ In this book so far, you've only seen data frames that were already in "tidy" fo
 Going back to our `drinks_smaller` data frame from earlier:
 
 ```{r}
-drinks_smaller
+# drinks_smaller
 ```
 
 We convert it to "tidy" format by using the `pivot_longer()` function from the **tidyr** package as follows:
 
 ```{r}
-drinks_smaller_tidy <- drinks_smaller %>% 
-  pivot_longer(names_to = "type", 
-               values_to = "servings", 
-               cols = -country)
-drinks_smaller_tidy
+# drinks_smaller_tidy <- drinks_smaller %>% 
+#   pivot_longer(names_to = "type", 
+#                values_to = "servings", 
+#                cols = -country)
+# drinks_smaller_tidy
 ```
 
 We set the arguments to `pivot_longer()` as follows:
@@ -1373,36 +1358,32 @@ We set the arguments to `pivot_longer()` as follows:
 The third argument here of `cols` is a little nuanced, so let's consider code that's written slightly differently but that produces the same output: 
 
 ```{r, eval=FALSE}
-drinks_smaller %>% 
-  pivot_longer(names_to = "type", 
-               values_to = "servings", 
-               cols = c(beer, spirit, wine))
+# drinks_smaller %>% 
+#   pivot_longer(names_to = "type", 
+#                values_to = "servings", 
+#                cols = c(beer, spirit, wine))
 ```
 
 Note that the third argument now specifies which columns we want to "tidy" with `c(beer, spirit, wine)`, instead of the columns we don't want to "tidy" using `-country`. We use the `c()` function to create a vector of the columns in `drinks_smaller` that we'd like to "tidy." Note that since these three columns appear one after another in the `drinks_smaller` data frame, we could also do the following for the `cols` argument:
 
 ```{r, eval=FALSE}
-drinks_smaller %>% 
-  pivot_longer(names_to = "type", 
-               values_to = "servings", 
-               cols = beer:wine)
+# drinks_smaller %>% 
+#   pivot_longer(names_to = "type", 
+#                values_to = "servings", 
+#                cols = beer:wine)
 ```
 
 With our `drinks_smaller_tidy` "tidy" formatted data frame, we can now produce the barplot you saw previously using `geom_col()`. Recall from the previous chapter that we use `geom_col()` and not `geom_bar()`, since we would like to map the "pre-counted" `servings` variable to the `y`-aesthetic of the bars.
 
 ```{r eval=FALSE}
-ggplot(drinks_smaller_tidy, aes(x = country, y = servings, fill = type)) +
-  geom_col(position = "dodge")
+# ggplot(drinks_smaller_tidy, aes(x = country, y = servings, fill = type)) +
+#   geom_col(position = "dodge")
 ```
 
 (ref:drinks-col) Comparing alcohol consumption in 4 countries using geom_col().
 
-```{r drinks-smaller-tidy-barplot, echo=FALSE, fig.cap='(ref:drinks-col)', fig.height=2.5}
-if(knitr::is_html_output()){
-  drinks_smaller_tidy_plot
-} else {
-  drinks_smaller_tidy_plot + scale_fill_grey()
-}
+```{r, echo=FALSE, fig.cap='(ref:drinks-col)'}
+# drinks_smaller_tidy_plot
 ```
 
 Converting "wide" format data to "tidy" format often confuses new R users. The only way to learn to get comfortable with the `pivot_longer()` function is with practice, practice, and more practice using different datasets. For example, run `?pivot_longer` and look at the examples in the bottom of the help file.
