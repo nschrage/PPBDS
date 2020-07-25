@@ -5,7 +5,7 @@
 <meta charset="utf-8" />
 <meta name="generator" content="pandoc" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<meta property="og:title" content="Chapter 11 Continuous Response | Preceptor’s Primer for Bayesian Data Science" />
+<meta property="og:title" content="Chapter 10 Continuous Response | Preceptor’s Primer for Bayesian Data Science" />
 <meta property="og:type" content="book" />
 
 
@@ -14,7 +14,7 @@
 
 <meta name="author" content="David Kane" />
 
-<meta name="date" content="2020-07-23" />
+<meta name="date" content="2020-07-25" />
 
 <script type="text/x-mathjax-config">
 MathJax.Hub.Config({
@@ -23,9 +23,9 @@ MathJax.Hub.Config({
 </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML-full" type="text/javascript"></script>
 
-<meta name="description" content="Chapter 11 Continuous Response | Preceptor’s Primer for Bayesian Data Science">
+<meta name="description" content="Chapter 10 Continuous Response | Preceptor’s Primer for Bayesian Data Science">
 
-<title>Chapter 11 Continuous Response | Preceptor’s Primer for Bayesian Data Science</title>
+<title>Chapter 10 Continuous Response | Preceptor’s Primer for Bayesian Data Science</title>
 
 <link href="libs/tufte-css-2015.12.29/tufte.css" rel="stylesheet" />
 <link href="libs/tufte-css-2015.12.29/envisioned.css" rel="stylesheet" />
@@ -150,8 +150,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <a href="one-parameter.html"><span class="toc-section-number">7</span> One Parameter</a>
 <a href="two-parameters.html"><span class="toc-section-number">8</span> Two Parameters</a>
 <a href="n-parameters.html"><span class="toc-section-number">9</span> N Parameters</a>
-<a href="pitfalls.html"><span class="toc-section-number">10</span> Pitfalls</a>
-<a id="active-page" href="continuous-response.html"><span class="toc-section-number">11</span> Continuous Response</a><ul class="toc-sections">
+<a id="active-page" href="continuous-response.html"><span class="toc-section-number">10</span> Continuous Response</a><ul class="toc-sections">
 <li class="toc"><a href="#model4"> Income and Gender: One numerical and one categorical explanatory variable</a></li>
 <li class="toc"><a href="#model3"> Credit card debt: two numerical explanatory variables</a></li>
 <li class="toc"><a href="#seattle-house-prices"> Case study: Seattle house prices</a></li>
@@ -173,7 +172,15 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
 <html><body><div id="continuous-response" class="section level1">
 <h1>
-<span class="header-section-number">Chapter 11</span> Continuous Response</h1>
+<span class="header-section-number">Chapter 10</span> Continuous Response</h1>
+<!-- Overview: The main structure of the this chapter is three full scale linear modeling approaches to the same data set, where the response variable is continuous. (Maybe we have two data sets, and apply all three models to each one?) In each case, we use the tidymodels framework. I am not sure what the best dataset would be. I am not sure what the three approaches should be. Presumably lm() and stan_glm() would be included. Maybe gam() also. Or loess(). Or robust_lm(). Could be something fancier like svm(). Or neural network. -->
+<!-- 0) Preamble. Plan out to chapter. Nothing more to learn. Just apply. Review themes.Rmd, and the three problems which we confronted in 9 and solved in 10. What specific questions are we going to answer? -->
+<!-- 1) EDA of the data set we are using. (Or the two data sets?) validity -->
+<!-- 2) Specify the mathematical stucture.  -->
+<!-- 3) Specify the dgm -->
+<!-- 4) humility -->
+<!-- 5) How do we select among the models. -->
+<!-- 6) Answer the questions we started with. -->
 <!-- EC: Chapter Organization
 Since Ch. 14 might be partially absorbed into this chapter, I'm wondering how to organize it.
 Concepts in this chapter are multivariate regression, interaction models, parallel slope models, model selection, 3D scatterplots & regression planes. Concepts in Ch 14 are using tidymodels, machine learning, and cross validation. Here's a rough outline;
@@ -186,22 +193,15 @@ Concepts in this chapter are multivariate regression, interaction models, parall
 UT Austin example: trains or sps. I need another dataset regressing on one numerical and one categorical variable, also the datasets are similar in that they analyze evaluation scores. 
 Credit card debt example: Scores. 1 numerical outcome variable and 2 numerical explanatory variables
 Seattle house prices example: trains or SPS. 1 numerical outcome, 1 numerical explanatory, 1 categorical explanatory. -->
+<!-- 2. Use a different model, like loess, to solve the exact same problem. Go through the same overview, but more quickly. Not everything will work. For example, there are no parameter estimates for loess, or at least none that are easily visible. -->
+<!-- 3. How do we decide? lm() or loess() or something? Incorporate (i.e., copy and paste) chapter 14 material. Don't do anything with tidymodel syntax. All that falls to chapter 11. But you are explaining every concept. -->
+<!-- In loess section, grab a copy of this xkcd and use it: https://xkcd.com/2048/ -->
 <p>Earlier we introduced ideas related to modeling for explanation, in particular that the goal of modeling is to make explicit the relationship between some outcome variable <span class="math inline">\(y\)</span> and some explanatory variable <span class="math inline">\(x\)</span>. While there are many approaches to modeling, we focused on one particular technique: <em>linear regression</em>, one of the most commonly used and easy-to-understand approaches to modeling. To keep things simple, we only considered models with one explanatory <span class="math inline">\(x\)</span> variable that was either numerical or categorical.</p>
 <p>In this chapter on multiple regression, we’ll start considering models that include more than one explanatory variable <span class="math inline">\(x\)</span>. You can imagine when trying to model a particular outcome variable, like annual incomes or life expectancy, that it would be useful to include more than just one explanatory variable’s worth of information.</p>
 <p>Since our regression models will now consider more than one explanatory variable, the interpretation of the associated effect of any one explanatory variable must be made in conjunction with the other explanatory variables included in your model. Let’s begin by loading all the necessary packages for this chapter.</p>
-<div class="sourceCode" id="cb865"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb865-1"><a href="continuous-response.html#cb865-1"></a><span class="kw">library</span>(tidyverse)</span>
-<span id="cb865-2"><a href="continuous-response.html#cb865-2"></a><span class="kw">library</span>(broom)</span>
-<span id="cb865-3"><a href="continuous-response.html#cb865-3"></a><span class="kw">library</span>(skimr)</span>
-<span id="cb865-4"><a href="continuous-response.html#cb865-4"></a><span class="kw">library</span>(ISLR)</span>
-<span id="cb865-5"><a href="continuous-response.html#cb865-5"></a><span class="kw">library</span>(fivethirtyeight)</span>
-<span id="cb865-6"><a href="continuous-response.html#cb865-6"></a><span class="kw">library</span>(gt)</span>
-<span id="cb865-7"><a href="continuous-response.html#cb865-7"></a><span class="kw">library</span>(rsample)</span>
-<span id="cb865-8"><a href="continuous-response.html#cb865-8"></a><span class="kw">library</span>(PPBDS.data)</span>
-<span id="cb865-9"><a href="continuous-response.html#cb865-9"></a><span class="kw">library</span>(gapminder)</span>
-<span id="cb865-10"><a href="continuous-response.html#cb865-10"></a><span class="kw">library</span>(moderndive)</span></code></pre></div>
 <div id="model4" class="section level2">
 <h2>
-<span class="header-section-number">11.1</span> Income and Gender: One numerical and one categorical explanatory variable</h2>
+<span class="header-section-number">10.1</span> Income and Gender: One numerical and one categorical explanatory variable</h2>
 <!-- EC: Is income appropriate? It's interesting but also not a completely continuous variable -->
 <p>Recall the <code>trains</code> dataset, which examines the immigration attitudes of daily commuters in a predominantly white Massachusetts town. The dataset provides demographic information for its subjects, as well as data relevant to the experiment. In this section, let’s focus on the demographic data, namely income, age, and gender. Our outcome variable will be income, a continuous variable, and our two explanatory variables will be age and gender.</p>
 <p>Could it be that subjects who are older earn higher incomes, perhaps because they have had time to climb up the career ladder? Are there differences in incomes for subjects of the same age, but of different genders? What can we predict for the income of, say, a 30-year-old woman in this town? We’ll answer these questions by modeling the relationship between these variables using <em>multiple regression</em>, where we have:</p>
@@ -216,23 +216,15 @@ Seattle house prices example: trains or SPS. 1 numerical outcome, 1 numerical ex
 </ol>
 <div id="model4EDA" class="section level3">
 <h3>
-<span class="header-section-number">11.1.1</span> Exploratory data analysis</h3>
+<span class="header-section-number">10.1.1</span> Exploratory data analysis</h3>
 <p>To keep things simple, let’s <code>select()</code> only the subset of the variables we’ll consider in this chapter, and save this data in a new data frame called <code>earnings</code>.</p>
-<div class="sourceCode" id="cb866"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb866-1"><a href="continuous-response.html#cb866-1"></a><span class="kw">library</span>(PPBDS.data)</span>
-<span id="cb866-2"><a href="continuous-response.html#cb866-2"></a></span>
-<span id="cb866-3"><a href="continuous-response.html#cb866-3"></a>earnings &lt;-<span class="st"> </span>trains <span class="op">%&gt;%</span></span>
-<span id="cb866-4"><a href="continuous-response.html#cb866-4"></a><span class="st">  </span><span class="kw">select</span>(gender, age, income)</span></code></pre></div>
 <p>Let’s first look at the raw data values by using the <code>glimpse()</code> function from the <strong>dplyr</strong> package:</p>
-<div class="sourceCode" id="cb867"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb867-1"><a href="continuous-response.html#cb867-1"></a><span class="kw">glimpse</span>(earnings)</span></code></pre></div>
 <pre><code>## Rows: 115
 ## Columns: 3
 ## $ gender &lt;chr&gt; "Female", "Female", "Male", "Male", "Male", "Female", "Female"…
 ## $ age    &lt;dbl&gt; 31, 34, 63, 45, 55, 37, 53, 36, 54, 42, 33, 50, 24, 40, 53, 50…
 ## $ income &lt;dbl&gt; 135000, 105000, 135000, 300000, 135000, 87500, 87500, 135000, …</code></pre>
 <p>Let’s also display a random sample of 5 rows of the data, with each row corresponding to a subject. Due to the random nature of the sampling, you will likely end up with a different subset of 5 rows. The <code>set.seed()</code> function allows you to “randomly” obtain the same 5 rows if you set the same number as the seed. In this case, we’ve set the seed to 1, arbitrarily.</p>
-<div class="sourceCode" id="cb869"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb869-1"><a href="continuous-response.html#cb869-1"></a><span class="kw">set.seed</span>(<span class="dv">1</span>)</span>
-<span id="cb869-2"><a href="continuous-response.html#cb869-2"></a>earnings <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb869-3"><a href="continuous-response.html#cb869-3"></a><span class="st">  </span><span class="kw">sample_n</span>(<span class="dt">size =</span> <span class="dv">5</span>)</span></code></pre></div>
 <style>html {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
 }
@@ -611,11 +603,9 @@ Seattle house prices example: trains or SPS. 1 numerical outcome, 1 numerical ex
 </table></div>
 <p>Before we compute summary statistics, let’s change the variable type of <code>gender</code> from ‘character’ to ‘factor.’<label for="tufte-sn-15" class="margin-toggle sidenote-number">15</label><input type="checkbox" id="tufte-sn-15" class="margin-toggle"><span class="sidenote"><span class="sidenote-number">15</span> This is because, at the time, the study only offered two responses to <code>gender</code>. Because there are only two categories, we can factorize the variable, which tells R that these are categories.</span></p>
 <p>Now that we’ve looked at the raw values in our <code>earnings</code> data frame and got a sense of the data, let’s compute summary statistics. As done before, let’s use the <code>skim()</code> function from <strong>skimr</strong>.</p>
-<div class="sourceCode" id="cb870"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb870-1"><a href="continuous-response.html#cb870-1"></a>earnings <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb870-2"><a href="continuous-response.html#cb870-2"></a><span class="st">  </span><span class="kw">skim</span>()</span></code></pre></div>
 <table style="width: auto;" class="table table-condensed">
 <caption>
-<span id="tab:unnamed-chunk-643">TABLE 11.1: </span>Data summary
+<span id="tab:unnamed-chunk-577">TABLE 10.1: </span>Data summary
 </caption>
 <thead><tr>
 <th style="text-align:left;">
@@ -850,30 +840,21 @@ income
 </table>
 <p>We can see that there were 64 male subjects and 51 female subjects. The mean age of the subjects was 42.4 years old, with a roughly even age distribution save for the oldest group. The average income is $141,813, which is exceptionally high for the United States. Let’s keep in mind the environmental context of the study - a wealthy, predominantly white town in the Northeast.</p>
 <p>Now, let’s compute the correlation coefficient between our two numerical variables: <code>income</code> and <code>age</code>. Recall that correlation coefficients only exist between numerical variables. We observe that they are “weakly positively” correlated.</p>
-<div class="sourceCode" id="cb871"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb871-1"><a href="continuous-response.html#cb871-1"></a>earnings <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb871-2"><a href="continuous-response.html#cb871-2"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">correlation =</span> <span class="kw">cor</span>(income, age)) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb871-3"><a href="continuous-response.html#cb871-3"></a><span class="st">  </span><span class="kw">round</span>(<span class="dv">3</span>) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb871-4"><a href="continuous-response.html#cb871-4"></a><span class="st">  </span><span class="kw">pull</span>()</span></code></pre></div>
 <pre><code>## [1] 0.15</code></pre>
 <p>Let’s now create a visualization to display the relationship between the outcome variable <code>income</code> and the explanatory variable <code>age</code>. Since both variables are numerical, we’ll use a scatterplot to display their relationship. We can incorporate the categorical variable <code>gender</code> by adding <code>color = gender</code> to the <code>aes()</code>thetic mapping.</p>
-<div class="sourceCode" id="cb873"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb873-1"><a href="continuous-response.html#cb873-1"></a>earnings <span class="op">%&gt;%</span></span>
-<span id="cb873-2"><a href="continuous-response.html#cb873-2"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> age, <span class="dt">y =</span> income, <span class="dt">color =</span> gender)) <span class="op">+</span></span>
-<span id="cb873-3"><a href="continuous-response.html#cb873-3"></a><span class="st">  </span><span class="kw">geom_point</span>() <span class="op">+</span></span>
-<span id="cb873-4"><a href="continuous-response.html#cb873-4"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">"Age"</span>, <span class="dt">y =</span> <span class="st">"Income"</span>, <span class="dt">color =</span> <span class="st">"Gender"</span>) <span class="op">+</span></span>
-<span id="cb873-5"><a href="continuous-response.html#cb873-5"></a><span class="st">  </span><span class="kw">geom_smooth</span>(<span class="dt">method =</span> <span class="st">"lm"</span>, <span class="dt">se =</span> <span class="ot">FALSE</span>) </span></code></pre></div>
 <div class="figure">
-<span id="fig:unnamed-chunk-646"></span>
+<span id="fig:unnamed-chunk-580"></span>
 <p class="caption marginnote shownote">
-FIGURE 11.1: Colored scatterplot of relationship between age and income.
+FIGURE 10.1: Colored scatterplot of relationship between age and income.
 </p>
-<img src="book_temp_files/figure-html/unnamed-chunk-646-1.png" alt="Colored scatterplot of relationship between age and income." width="672">
+<img src="book_temp_files/figure-html/unnamed-chunk-580-1.png" alt="Colored scatterplot of relationship between age and income." width="672">
 </div>
 <p>Observe that the <code>geom_smooth(method = "lm", se = FALSE)</code> layer automatically fits a different regression line for each group.</p>
 <p>We notice some interesting trends. First, there is a wide range of income, with both men and women reporting the lowest and highest incomes. Second, the slope of the regression line for age for female subjects seems to be slightly negative, whereas that of male subjects is positive. It seems like female subjects are paying a penalty for age<label for="tufte-sn-16" class="margin-toggle sidenote-number">16</label><input type="checkbox" id="tufte-sn-16" class="margin-toggle"><span class="sidenote"><span class="sidenote-number">16</span> Pun unintended.</span>, whereas male subjects seem to benefit from older age.</p>
 </div>
 <div id="model4interactiontable" class="section level3">
 <h3>
-<span class="header-section-number">11.1.2</span> Interaction model</h3>
+<span class="header-section-number">10.1.2</span> Interaction model</h3>
 <p>Let’s now quantify the relationship of our outcome variable <span class="math inline">\(y\)</span> and the two explanatory variables using one type of multiple regression model known as an <em>interaction model</em>. We’ll explain where the term “interaction” comes from at the end of this section.</p>
 <p>In particular, we’ll write out the equation of the two regression lines using the values from a regression table. Before we do this, however, let’s go over a brief refresher of regression when you have a categorical explanatory variable <span class="math inline">\(x\)</span>.</p>
 <p>Recall this regression model for countries’ life expectancies as a function of which continent the country was in. In other words, we had a numerical outcome variable <span class="math inline">\(y\)</span> = <code>lifeExp</code> and a categorical explanatory variable <span class="math inline">\(x\)</span> = <code>continent</code> which had 5 levels: <code>Africa</code>, <code>Americas</code>, <code>Asia</code>, <code>Europe</code>, and <code>Oceania</code>.</p>
@@ -1261,15 +1242,6 @@ FIGURE 11.1: Colored scatterplot of relationship between age and income.
 </table></div>
 <p>Recall our interpretation of the <code>estimate</code> column. Since <code>Africa</code> was the “baseline for comparison” group, the <code>intercept</code> term corresponds to the mean life expectancy for all countries in Africa of 54.8 years. The other four values of <code>estimate</code> correspond to “offsets” relative to the baseline group. So, for example, the “offset” corresponding to the Americas is +18.8 as compared to the baseline for comparison group Africa. In other words, the average life expectancy for countries in the Americas is 18.8 years <em>higher</em>. Thus the mean life expectancy for all countries in the Americas is 54.8 + 18.8 = 73.6. The same interpretation holds for Asia, Europe, and Oceania.</p>
 <p>Going back to our multiple regression model for <code>income</code> using <code>age</code> and <code>gender</code>, we generate the regression table using a two-step approach: we first “fit” the model using the <code>lm()</code> “linear model” function and then we apply the <code>tidy()</code> function. This time, however, our model formula won’t be of the form <code>y ~ x</code>, but rather of the form <code>y ~ x1 * x2</code>. In other words, our two explanatory variables <code>x1</code> and <code>x2</code> are separated by a <code>*</code> sign:</p>
-<div class="sourceCode" id="cb874"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb874-1"><a href="continuous-response.html#cb874-1"></a><span class="co"># Fit regression model:</span></span>
-<span id="cb874-2"><a href="continuous-response.html#cb874-2"></a></span>
-<span id="cb874-3"><a href="continuous-response.html#cb874-3"></a>earnings_model_interaction &lt;-<span class="st"> </span><span class="kw">lm</span>(income <span class="op">~</span><span class="st"> </span>age <span class="op">*</span><span class="st"> </span>gender, <span class="dt">data =</span> earnings)</span>
-<span id="cb874-4"><a href="continuous-response.html#cb874-4"></a></span>
-<span id="cb874-5"><a href="continuous-response.html#cb874-5"></a><span class="co"># Get regression table:</span></span>
-<span id="cb874-6"><a href="continuous-response.html#cb874-6"></a></span>
-<span id="cb874-7"><a href="continuous-response.html#cb874-7"></a>earnings_model_interaction <span class="op">%&gt;%</span></span>
-<span id="cb874-8"><a href="continuous-response.html#cb874-8"></a><span class="st">  </span><span class="kw">tidy</span>(<span class="dt">conf.int =</span> <span class="ot">TRUE</span>) <span class="op">%&gt;%</span></span>
-<span id="cb874-9"><a href="continuous-response.html#cb874-9"></a><span class="st">  </span><span class="kw">select</span>(term, estimate, conf.low, conf.high)</span></code></pre></div>
 <style>html {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
 }
@@ -2015,14 +1987,7 @@ FIGURE 11.1: Colored scatterplot of relationship between age and income.
 <p>Since the slope for age for the female subjects was -127.8557, it means that on average, a female subject who is a year older would have an income that is -127.8557 dollars <strong>lower</strong>, whereas the corresponding associated change for males was on average an increase of 1543.5278 dollars. This may or may not be consistent with the previous observation that this model is suggesting that age impacts earnings for female subjects more than for male subjects. It is difficult to say because of the opposite signs of each slope, and the difference between intercepts. We will revisit this question later.</p>
 <p>Note that our regression table included the confidence interval bounds generated from <code>tidy(conf.int = TRUE)</code>. Let’s reassure ourselves that they are similar to what we would get from the bootstrap samples.</p>
 <p>The process is somewhat more involved because we have multiple coefficients around which we would like to construct confidence intervals.</p>
-<div class="sourceCode" id="cb875"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb875-1"><a href="continuous-response.html#cb875-1"></a><span class="kw">library</span>(rsample)</span>
-<span id="cb875-2"><a href="continuous-response.html#cb875-2"></a></span>
-<span id="cb875-3"><a href="continuous-response.html#cb875-3"></a>x &lt;-<span class="st"> </span>earnings <span class="op">%&gt;%</span></span>
-<span id="cb875-4"><a href="continuous-response.html#cb875-4"></a><span class="st">  </span><span class="kw">bootstraps</span>(<span class="dt">times =</span> <span class="dv">1000</span>) <span class="op">%&gt;%</span></span>
-<span id="cb875-5"><a href="continuous-response.html#cb875-5"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">mod =</span> <span class="kw">map</span>(splits, <span class="op">~</span><span class="st"> </span><span class="kw">lm</span>(income <span class="op">~</span><span class="st"> </span>age <span class="op">*</span><span class="st"> </span>gender, <span class="dt">data =</span> .)),</span>
-<span id="cb875-6"><a href="continuous-response.html#cb875-6"></a>         <span class="dt">reg_results =</span> <span class="kw">map</span>(mod, <span class="op">~</span><span class="st"> </span><span class="kw">tidy</span>(.)))</span></code></pre></div>
 <p>Let’s take advantage of <code>unnest()</code> to reshape our data so that the unit of analysis is a replicate-term:</p>
-<div class="sourceCode" id="cb876"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb876-1"><a href="continuous-response.html#cb876-1"></a>  x <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">unnest</span>(reg_results)</span></code></pre></div>
 <pre><code>## # A tibble: 4,000 x 8
 ##    splits       id         mod   term      estimate std.error statistic  p.value
 ##    &lt;list&gt;       &lt;chr&gt;      &lt;lis&gt; &lt;chr&gt;        &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;    &lt;dbl&gt;
@@ -2039,11 +2004,6 @@ FIGURE 11.1: Colored scatterplot of relationship between age and income.
 ## # … with 3,990 more rows</code></pre>
 <p>Now we have 4,000 rows, which are 1,000 replicates apiece for each of the <code>term</code>s in our regression.</p>
 <p>It is now a simple matter to <code>group_by(term)</code> and <code>summarize()</code> to create our confidence intervals:</p>
-<div class="sourceCode" id="cb878"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb878-1"><a href="continuous-response.html#cb878-1"></a>x <span class="op">%&gt;%</span></span>
-<span id="cb878-2"><a href="continuous-response.html#cb878-2"></a><span class="st">  </span><span class="kw">unnest</span>(reg_results) <span class="op">%&gt;%</span></span>
-<span id="cb878-3"><a href="continuous-response.html#cb878-3"></a><span class="st">  </span><span class="kw">group_by</span>(term) <span class="op">%&gt;%</span></span>
-<span id="cb878-4"><a href="continuous-response.html#cb878-4"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">conf.low =</span> <span class="kw">quantile</span>(estimate, <span class="fl">0.025</span>),</span>
-<span id="cb878-5"><a href="continuous-response.html#cb878-5"></a>            <span class="dt">conf.high =</span> <span class="kw">quantile</span>(estimate, <span class="fl">0.975</span>))</span></code></pre></div>
 <pre><code>## # A tibble: 4 x 3
 ##   term           conf.low conf.high
 ##   &lt;chr&gt;             &lt;dbl&gt;     &lt;dbl&gt;
@@ -2475,7 +2435,7 @@ First, let’s use an indicator variable, <span class="math inline">\({1}_{\text
 </div>
 <div id="interpreting-regression-coefficients-with-interactions" class="section level3">
 <h3>
-<span class="header-section-number">11.1.3</span> Interpreting regression coefficients with interactions</h3>
+<span class="header-section-number">10.1.3</span> Interpreting regression coefficients with interactions</h3>
 <p>Before we end this section, we explain why we refer to this type of model as an “interaction model.” The <span class="math inline">\(b_{\text{age,male}}\)</span> term in the equation for the fitted value <span class="math inline">\(\widehat{y}\)</span> = <span class="math inline">\(\widehat{\text{income}}\)</span> is what’s known in statistical modeling as an “interaction effect.”
 We say there is an interaction effect if the associated effect of one variable <em>depends on the value of another variable</em>. That is to say, the two variables are “interacting” with each other. Here, the associated effect of the variable age <em>depends</em> on the value of the other variable gender. The difference in slopes for age of +1671 of male subjects relative to female subjects shows this.</p>
 <p>Another way of thinking about interaction effects as follows. For a given person, there might be an associated effect of their age <em>by itself</em>, there might be an associated effect of their gender <em>by itself</em>, but when age and gender are considered <em>together</em> there might be an <em>additional effect</em> above and beyond the two individual effects.</p>
@@ -3254,33 +3214,12 @@ predictive intervals aren't causal quantities.  But this was my best attempt.
 <!-- AR: we could teach the students how to use a covariance matrix to calculate this quantity, but this chapter is very long and I fear this is already pretty confusing, so I'm presenting an easy way to get the answer -->
 <!-- EC: What is the reason for calculating the CIs at each age? -->
 <p>Thankfully, there is an easy way to get that using <code>lm()</code> and <code>tidy()</code>. Recall that our coefficient on <code>gendermale</code> reflects the effect for subjects whose age is 0. If we <em>recenter</em> age so 0 is equal to the age we are interested in, then we can use both the coefficient and confidence interval around <code>gendermale</code> to get the confidence interval for that age. For example, here is how we would get the coefficient and confidence interval for subjects whose age is 30:</p>
-<div class="sourceCode" id="cb882"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb882-1"><a href="continuous-response.html#cb882-1"></a><span class="kw">lm</span>(income <span class="op">~</span><span class="st"> </span><span class="kw">I</span>(age <span class="op">-</span><span class="st"> </span><span class="dv">30</span>) <span class="op">*</span><span class="st"> </span>gender, <span class="dt">data =</span> earnings) <span class="op">%&gt;%</span></span>
-<span id="cb882-2"><a href="continuous-response.html#cb882-2"></a><span class="st">  </span><span class="kw">tidy</span>(<span class="dt">conf.int =</span> <span class="ot">TRUE</span>) <span class="op">%&gt;%</span></span>
-<span id="cb882-3"><a href="continuous-response.html#cb882-3"></a><span class="st">  </span><span class="kw">filter</span>(term <span class="op">==</span><span class="st"> "gendermale"</span>) <span class="op">%&gt;%</span></span>
-<span id="cb882-4"><a href="continuous-response.html#cb882-4"></a><span class="st">  </span><span class="kw">select</span>(term, estimate, conf.low, conf.high)</span></code></pre></div>
 <pre><code>## # A tibble: 0 x 4
 ## # … with 4 variables: term &lt;chr&gt;, estimate &lt;dbl&gt;, conf.low &lt;dbl&gt;,
 ## #   conf.high &lt;dbl&gt;</code></pre>
 <!-- AR: at least this is an excuse to use our `map_*` code for regressions
 another time! -->
 <p>But there’s no reason to do this just for one age. We can use <code>map_*</code> functions and list columns to get the coefficient on <code>gendermale</code> and the confidence interval for an arbitrary range of ages, say 20 to 90:</p>
-<div class="sourceCode" id="cb884"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb884-1"><a href="continuous-response.html#cb884-1"></a>gendermale_coefs &lt;-<span class="st"> </span><span class="kw">tibble</span>(<span class="dt">ages =</span> <span class="dv">20</span><span class="op">:</span><span class="dv">90</span>) <span class="op">%&gt;%</span></span>
-<span id="cb884-2"><a href="continuous-response.html#cb884-2"></a><span class="st">  </span></span>
-<span id="cb884-3"><a href="continuous-response.html#cb884-3"></a><span class="st">  </span><span class="co"># First, we get our regression results for each age:</span></span>
-<span id="cb884-4"><a href="continuous-response.html#cb884-4"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">mod =</span> <span class="kw">map</span>(ages, <span class="op">~</span><span class="st"> </span><span class="kw">lm</span>(income <span class="op">~</span><span class="st"> </span><span class="kw">I</span>(age <span class="op">-</span><span class="st"> </span>.) <span class="op">*</span><span class="st"> </span>gender, <span class="dt">data =</span> earnings)),</span>
-<span id="cb884-5"><a href="continuous-response.html#cb884-5"></a>         <span class="dt">reg_results =</span> <span class="kw">map</span>(mod, <span class="op">~</span><span class="st"> </span><span class="kw">tidy</span>(., <span class="dt">conf.int =</span> <span class="ot">TRUE</span>)),</span>
-<span id="cb884-6"><a href="continuous-response.html#cb884-6"></a>         </span>
-<span id="cb884-7"><a href="continuous-response.html#cb884-7"></a>         <span class="co"># We only care about the term "gendermale":</span></span>
-<span id="cb884-8"><a href="continuous-response.html#cb884-8"></a>         </span>
-<span id="cb884-9"><a href="continuous-response.html#cb884-9"></a>         <span class="dt">reg_gendermale =</span> <span class="kw">map</span>(reg_results, <span class="op">~</span><span class="st"> </span><span class="kw">filter</span>(., term <span class="op">==</span><span class="st"> "genderMale"</span>)),</span>
-<span id="cb884-10"><a href="continuous-response.html#cb884-10"></a>         </span>
-<span id="cb884-11"><a href="continuous-response.html#cb884-11"></a>         <span class="co"># Now, let's get the estimates and CIs:</span></span>
-<span id="cb884-12"><a href="continuous-response.html#cb884-12"></a>         </span>
-<span id="cb884-13"><a href="continuous-response.html#cb884-13"></a>         <span class="dt">estimate =</span> <span class="kw">map_dbl</span>(reg_gendermale, <span class="op">~</span><span class="st"> </span><span class="kw">pull</span>(., estimate)),</span>
-<span id="cb884-14"><a href="continuous-response.html#cb884-14"></a>         <span class="dt">conf.low =</span> <span class="kw">map_dbl</span>(reg_gendermale, <span class="op">~</span><span class="st"> </span><span class="kw">pull</span>(., conf.low)),</span>
-<span id="cb884-15"><a href="continuous-response.html#cb884-15"></a>         <span class="dt">conf.high =</span> <span class="kw">map_dbl</span>(reg_gendermale, <span class="op">~</span><span class="st"> </span><span class="kw">pull</span>(., conf.high)))</span>
-<span id="cb884-16"><a href="continuous-response.html#cb884-16"></a></span>
-<span id="cb884-17"><a href="continuous-response.html#cb884-17"></a>gendermale_coefs</span></code></pre></div>
 <pre><code>## # A tibble: 71 x 7
 ##     ages mod    reg_results      reg_gendermale    estimate conf.low conf.high
 ##    &lt;int&gt; &lt;list&gt; &lt;list&gt;           &lt;list&gt;               &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;
@@ -3297,21 +3236,9 @@ another time! -->
 ## # … with 61 more rows</code></pre>
 <p>Note how closely this code follows code we’ve seen before for using <code>map_*</code> functions to run multiple models, except now we are using <code>I(age - .)</code> in the <code>lm()</code> call to recenter each regression by <code>ages</code>.</p>
 <p>The heterogeneous treatment effects are easiest to understand if plotted visually:</p>
-<div class="sourceCode" id="cb886"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb886-1"><a href="continuous-response.html#cb886-1"></a>gendermale_coefs <span class="op">%&gt;%</span></span>
-<span id="cb886-2"><a href="continuous-response.html#cb886-2"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> ages, <span class="dt">y =</span> estimate, <span class="dt">ymin =</span> conf.low, <span class="dt">ymax =</span> conf.high)) <span class="op">+</span></span>
-<span id="cb886-3"><a href="continuous-response.html#cb886-3"></a><span class="st">  </span><span class="kw">geom_point</span>() <span class="op">+</span></span>
-<span id="cb886-4"><a href="continuous-response.html#cb886-4"></a><span class="st">  </span><span class="kw">geom_errorbar</span>() <span class="op">+</span></span>
-<span id="cb886-5"><a href="continuous-response.html#cb886-5"></a><span class="st">  </span><span class="kw">theme_minimal</span>() <span class="op">+</span></span>
-<span id="cb886-6"><a href="continuous-response.html#cb886-6"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">"Age"</span>,</span>
-<span id="cb886-7"><a href="continuous-response.html#cb886-7"></a>       <span class="dt">y =</span> <span class="st">"Effect of being male on incomes"</span>,</span>
-<span id="cb886-8"><a href="continuous-response.html#cb886-8"></a>       <span class="dt">title =</span> <span class="st">"Predicting incomes with gender and age"</span>,</span>
-<span id="cb886-9"><a href="continuous-response.html#cb886-9"></a>       <span class="dt">subtitle =</span> <span class="st">"As age increases, being male is more associated with higher incomes"</span>)</span></code></pre></div>
-<p><img src="book_temp_files/figure-html/unnamed-chunk-659-1.png" width="672"></p>
+<p><img src="book_temp_files/figure-html/unnamed-chunk-593-1.png" width="672"></p>
 <p>Note that our interaction model constrains the heterogeneous treatment effects to be linear with respect to age. If that isn’t a good model of the relationship, our model may make poor predictions.</p>
 <p>Finally, let’s extract the values we need for our potential outcomes table:</p>
-<div class="sourceCode" id="cb887"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb887-1"><a href="continuous-response.html#cb887-1"></a>gendermale_coefs <span class="op">%&gt;%</span></span>
-<span id="cb887-2"><a href="continuous-response.html#cb887-2"></a><span class="st">  </span><span class="kw">filter</span>(ages <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="dv">30</span>, <span class="dv">45</span>, <span class="dv">60</span>)) <span class="op">%&gt;%</span></span>
-<span id="cb887-3"><a href="continuous-response.html#cb887-3"></a><span class="st">  </span><span class="kw">select</span>(ages, estimate, conf.low, conf.high)</span></code></pre></div>
 <pre><code>## # A tibble: 3 x 4
 ##    ages estimate conf.low conf.high
 ##   &lt;int&gt;    &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;
@@ -3719,32 +3646,19 @@ another time! -->
 </div>
 <div id="model4table" class="section level3">
 <h3>
-<span class="header-section-number">11.1.4</span> Parallel slopes model</h3>
+<span class="header-section-number">10.1.4</span> Parallel slopes model</h3>
 <p>Another model we can use to visualize regressing on one numerical variable and one categorical variable is known as a <em>parallel slopes</em> model. Unlike interaction models where the regression lines can have different intercepts and different slopes, parallel slopes models still allow for different intercepts but <em>force</em> all lines to have the same slope. This is done by using the indicator variable we previously introduced, <span class="math inline">\({1}_{\text{is male}}\)</span>. Each line will correspond to an outcome of this indicator variable. Let’s visualize the best-fitting parallel slopes model to <code>earnings</code>.</p>
 <p>A function called <code>geom_parallel_slopes()</code> in the <strong>moderndive</strong> package allows us to plot the parallel slopes model for teaching income. Notice how the code is identical to the code that produced the visualization of the interaction model previously, but now the <code>geom_smooth(method = "lm", se = FALSE)</code> layer is replaced with <code>geom_parallel_slopes(se = FALSE)</code>.</p>
-<div class="sourceCode" id="cb890"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb890-1"><a href="continuous-response.html#cb890-1"></a><span class="kw">ggplot</span>(earnings, <span class="kw">aes</span>(<span class="dt">x =</span> age, <span class="dt">y =</span> income, <span class="dt">color =</span> gender)) <span class="op">+</span></span>
-<span id="cb890-2"><a href="continuous-response.html#cb890-2"></a><span class="st">  </span><span class="kw">geom_point</span>() <span class="op">+</span></span>
-<span id="cb890-3"><a href="continuous-response.html#cb890-3"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">"Age"</span>, <span class="dt">y =</span> <span class="st">"Income"</span>, <span class="dt">color =</span> <span class="st">"Gender"</span>) <span class="op">+</span></span>
-<span id="cb890-4"><a href="continuous-response.html#cb890-4"></a><span class="st">  </span><span class="kw">geom_parallel_slopes</span>(<span class="dt">se =</span> <span class="ot">FALSE</span>)</span></code></pre></div>
 <div class="figure">
-<span id="fig:unnamed-chunk-663"></span>
+<span id="fig:unnamed-chunk-597"></span>
 <p class="caption marginnote shownote">
-FIGURE 11.2: Parallel slopes model of income with age and gender.
+FIGURE 10.2: Parallel slopes model of income with age and gender.
 </p>
-<img src="book_temp_files/figure-html/unnamed-chunk-663-1.png" alt="Parallel slopes model of income with age and gender." width="672">
+<img src="book_temp_files/figure-html/unnamed-chunk-597-1.png" alt="Parallel slopes model of income with age and gender." width="672">
 </div>
 <p>Observe that we now have parallel lines corresponding to the female and male subjects, respectively: here they have the same negative slope. This is telling us that, in general, subjects who are older will tend to receive lower teaching incomes than subjects who are younger. Furthermore, since the lines are parallel, the associated penalty for being older is assumed to be the same for both female and male subjects.</p>
 <p>However, observe also that these two lines have different intercepts as evidenced by the fact that the blue line corresponding to the male subjects is higher than the red line corresponding to the female subjects. This is telling us that irrespective of age, female subjects tended to receive lower teaching incomes than male subjects.</p>
 <p>In order to obtain the precise numerical values of the two intercepts and the single common slope, we once again “fit” the model using the <code>lm()</code> “linear model” function and then apply the <code>tidy()</code> function. However, unlike the interaction model which had a model formula of the form <code>y ~ x1 * x2</code>, our model formula is now of the form <code>y ~ x1 + x2</code>. In other words, our two explanatory variables <code>x1</code> and <code>x2</code> are separated by a <code>+</code> sign:</p>
-<div class="sourceCode" id="cb891"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb891-1"><a href="continuous-response.html#cb891-1"></a><span class="co"># Fit regression model:</span></span>
-<span id="cb891-2"><a href="continuous-response.html#cb891-2"></a></span>
-<span id="cb891-3"><a href="continuous-response.html#cb891-3"></a>earnings_model_parallel_slopes &lt;-<span class="st"> </span><span class="kw">lm</span>(income <span class="op">~</span><span class="st"> </span>age <span class="op">+</span><span class="st"> </span>gender, <span class="dt">data =</span> earnings)</span>
-<span id="cb891-4"><a href="continuous-response.html#cb891-4"></a></span>
-<span id="cb891-5"><a href="continuous-response.html#cb891-5"></a><span class="co"># Get regression table:</span></span>
-<span id="cb891-6"><a href="continuous-response.html#cb891-6"></a></span>
-<span id="cb891-7"><a href="continuous-response.html#cb891-7"></a>earnings_model_parallel_slopes <span class="op">%&gt;%</span></span>
-<span id="cb891-8"><a href="continuous-response.html#cb891-8"></a><span class="st">  </span><span class="kw">tidy</span>(<span class="dt">conf.int =</span> <span class="ot">TRUE</span>) <span class="op">%&gt;%</span></span>
-<span id="cb891-9"><a href="continuous-response.html#cb891-9"></a><span class="st">  </span><span class="kw">select</span>(term, estimate, conf.low, conf.high)</span></code></pre></div>
 <pre><code>## Warning: 'html' is deprecated.
 ## Use 'xml2::read_html' instead.
 ## See help("Deprecated")
@@ -4528,26 +4442,26 @@ FIGURE 11.2: Parallel slopes model of income with age and gender.
 <p>Great! We’ve considered both an interaction model and a parallel slopes model for our data. Let’s compare the visualizations for both models side-by-side.</p>
 <pre><code>## `geom_smooth()` using formula 'y ~ x'</code></pre>
 <div class="figure">
-<span id="fig:unnamed-chunk-668"></span>
+<span id="fig:unnamed-chunk-602"></span>
 <p class="caption marginnote shownote">
-FIGURE 11.3: Comparison of interaction and parallel slopes models.
+FIGURE 10.3: Comparison of interaction and parallel slopes models.
 </p>
-<img src="book_temp_files/figure-html/unnamed-chunk-668-1.png" alt="Comparison of interaction and parallel slopes models." width="768">
+<img src="book_temp_files/figure-html/unnamed-chunk-602-1.png" alt="Comparison of interaction and parallel slopes models." width="768">
 </div>
 <p>At this point, you might be asking yourself: “Why would we ever use a parallel slopes model?” Looking at the left-hand plot, the two lines definitely do not appear to be parallel, so why would we <em>force</em> them to be parallel? For this data, we agree! It can easily be argued that the interaction model on the left is more appropriate. However, in the upcoming subsection on model selection, we’ll present an example where it can be argued that the case for a parallel slopes model might be stronger.</p>
 </div>
 <div id="model4points" class="section level3">
 <h3>
-<span class="header-section-number">11.1.5</span> Observed/fitted values and residuals</h3>
+<span class="header-section-number">10.1.5</span> Observed/fitted values and residuals</h3>
 <p>Let’s say we now have a 36 year old female subject and a 59 year old male subject. What fitted values <span class="math inline">\(\widehat{y}\)</span> = <span class="math inline">\(\widehat{\text{income}}\)</span> would our <code>earnings_model_interaction</code> yield?</p>
 <p>We answer this question visually first for the female subject by finding the intersection of the red regression line and the vertical line at <span class="math inline">\(x\)</span> = age = 36. We mark this value with a large red dot. Similarly, we can identify the fitted value <span class="math inline">\(\widehat{y}\)</span> = <span class="math inline">\(\widehat{\text{income}}\)</span> for the male subject by finding the intersection of the blue regression line and the vertical line at <span class="math inline">\(x\)</span> = age = 59. We mark this value with a large blue dot.</p>
 <pre><code>## `geom_smooth()` using formula 'y ~ x'</code></pre>
 <div class="figure">
-<span id="fig:unnamed-chunk-669"></span>
+<span id="fig:unnamed-chunk-603"></span>
 <p class="caption marginnote shownote">
-FIGURE 11.4: Fitted values for two new subjects.
+FIGURE 10.4: Fitted values for two new subjects.
 </p>
-<img src="book_temp_files/figure-html/unnamed-chunk-669-1.png" alt="Fitted values for two new subjects." width="672">
+<img src="book_temp_files/figure-html/unnamed-chunk-603-1.png" alt="Fitted values for two new subjects." width="672">
 </div>
 <p>What are these two values of <span class="math inline">\(\widehat{y}\)</span> = <span class="math inline">\(\widehat{\text{income}}\)</span> precisely? We can use the equations of the two regression lines we computed:</p>
 <ul>
@@ -4558,18 +4472,12 @@ FIGURE 11.4: Fitted values for two new subjects.
 </ul>
 <p>So our fitted values would be: <span class="math inline">\(131906 - 128 \cdot 36 = 127298\)</span> and <span class="math inline">\(86787 + 1544 \cdot 59 = 177883\)</span>, respectively.</p>
 <p>Now what if we want the fitted values not just for these two subjects, but for all of the subjects in the <code>trains</code> experiment? Doing this by hand would be long and tedious! This is where the <code>augment()</code> function from the <strong>broom</strong> package can help: it will quickly automate the above calculations for all 115 subjects. Just like in the last chapter, we’ll use the <code>.se.fit</code> column to construct confidence intervals around our predicted values.</p>
-<div class="sourceCode" id="cb895"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb895-1"><a href="continuous-response.html#cb895-1"></a><span class="co"># regression_points &lt;- earnings_model_interaction %&gt;%</span></span>
-<span id="cb895-2"><a href="continuous-response.html#cb895-2"></a><span class="co">#   augment() %&gt;%</span></span>
-<span id="cb895-3"><a href="continuous-response.html#cb895-3"></a><span class="co">#   mutate(conf.low = .fitted - 2 * .se.fit,</span></span>
-<span id="cb895-4"><a href="continuous-response.html#cb895-4"></a><span class="co">#          conf.high = .fitted + 2 * .se.fit) %&gt;%</span></span>
-<span id="cb895-5"><a href="continuous-response.html#cb895-5"></a><span class="co">#   select(income, age, gender, .fitted, conf.low, conf.high, .resid)</span></span>
-<span id="cb895-6"><a href="continuous-response.html#cb895-6"></a><span class="co"># regression_points</span></span></code></pre></div>
 <p>The <code>augment()</code> function also returns the residuals <span class="math inline">\(y-\widehat{y}\)</span>. Notice that there are both positive and negative residuals for both male and female subjects.</p>
 </div>
 </div>
 <div id="model3" class="section level2">
 <h2>
-<span class="header-section-number">11.2</span> Credit card debt: two numerical explanatory variables</h2>
+<span class="header-section-number">10.2</span> Credit card debt: two numerical explanatory variables</h2>
 <p>Let’s now switch gears and consider multiple regression models where instead of one numerical and one categorical explanatory variable, we now have two numerical explanatory variables. The dataset we’ll use is from <a href="http://www-bcf.usc.edu/~gareth/ISL/"><em>An Introduction to Statistical Learning with Applications in R (ISLR)</em></a>, an intermediate-level textbook on statistical and machine learning <span class="citation">(James et al. <a href="references-1.html#ref-islr2017" role="doc-biblioref">2017</a>)</span>. Its accompanying <strong>ISLR</strong> R package contains the datasets to which the authors apply various machine learning methods.</p>
 <p>One frequently used dataset in this book is the <code>Credit</code> dataset, where the outcome variable of interest is the credit card debt of 400 individuals. Other variables like income, credit limit, credit rating, and age are included as well. Note that the <code>Credit</code> data is not based on real individuals’ financial information, but rather is a simulated dataset used for educational purposes.</p>
 <p>In this section, we’ll fit a regression model where we have</p>
@@ -4584,15 +4492,9 @@ FIGURE 11.4: Fitted values for two new subjects.
 </ol>
 <div id="model3EDA" class="section level3">
 <h3>
-<span class="header-section-number">11.2.1</span> Exploratory data analysis</h3>
+<span class="header-section-number">10.2.1</span> Exploratory data analysis</h3>
 <p>Let’s load the <code>Credit</code> dataset. To keep things simple let’s <code>select()</code> the subset of the variables we’ll consider in this chapter, and save this data in the new data frame <code>credit_ch12</code>. Notice our slightly different use of the <code>select()</code> verb here than previously. For example, we’ll select the <code>Balance</code> variable from <code>Credit</code> but then save it with a new variable name <code>debt</code>. We do this because here the term “debt” is easier to interpret than “balance.”</p>
-<div class="sourceCode" id="cb896"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb896-1"><a href="continuous-response.html#cb896-1"></a><span class="kw">library</span>(ISLR)</span>
-<span id="cb896-2"><a href="continuous-response.html#cb896-2"></a>credit_ch12 &lt;-<span class="st"> </span>Credit <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb896-3"><a href="continuous-response.html#cb896-3"></a><span class="st">  </span><span class="kw">as_tibble</span>() <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb896-4"><a href="continuous-response.html#cb896-4"></a><span class="st">  </span><span class="kw">select</span>(ID, <span class="dt">debt =</span> Balance, <span class="dt">credit_limit =</span> Limit, </span>
-<span id="cb896-5"><a href="continuous-response.html#cb896-5"></a>         <span class="dt">income =</span> Income, <span class="dt">credit_rating =</span> Rating, <span class="dt">age =</span> Age)</span></code></pre></div>
 <p>You can observe the effect of our use of <code>select()</code> in the first common step of an exploratory data analysis: looking at the raw values either in RStudio’s spreadsheet viewer or by using <code>glimpse()</code>.</p>
-<div class="sourceCode" id="cb897"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb897-1"><a href="continuous-response.html#cb897-1"></a><span class="kw">glimpse</span>(credit_ch12)</span></code></pre></div>
 <pre><code>## Rows: 400
 ## Columns: 6
 ## $ ID            &lt;int&gt; 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, …
@@ -4602,8 +4504,6 @@ FIGURE 11.4: Fitted values for two new subjects.
 ## $ credit_rating &lt;int&gt; 283, 483, 514, 681, 357, 569, 259, 512, 266, 491, 589, …
 ## $ age           &lt;int&gt; 34, 82, 71, 36, 68, 77, 37, 87, 66, 41, 30, 64, 57, 49,…</code></pre>
 <p>Furthermore, let’s look at a random sample of five out of the 400 credit card holders. Once again, note that due to the random nature of the sampling, you will likely end up with a different subset of five rows.</p>
-<div class="sourceCode" id="cb899"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb899-1"><a href="continuous-response.html#cb899-1"></a>credit_ch12 <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb899-2"><a href="continuous-response.html#cb899-2"></a><span class="st">  </span><span class="kw">sample_n</span>(<span class="dt">size =</span> <span class="dv">5</span>)</span></code></pre></div>
 <style>html {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
 }
@@ -4999,12 +4899,9 @@ FIGURE 11.4: Fitted values for two new subjects.
 </tbody>
 </table></div>
 <p>Now that we’ve looked at the raw values in our <code>credit_ch12</code> data frame and got a sense of the data, let’s move on to computing summary statistics using <code>skim()</code>. We are only selecting for the variables of interest:</p>
-<div class="sourceCode" id="cb900"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb900-1"><a href="continuous-response.html#cb900-1"></a>credit_ch12 <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb900-2"><a href="continuous-response.html#cb900-2"></a><span class="st">  </span><span class="kw">select</span>(debt, credit_limit, income) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb900-3"><a href="continuous-response.html#cb900-3"></a><span class="st">  </span><span class="kw">skim</span>()</span></code></pre></div>
 <table style="width: auto;" class="table table-condensed">
 <caption>
-<span id="tab:unnamed-chunk-676">TABLE 11.2: </span>Data summary
+<span id="tab:unnamed-chunk-610">TABLE 10.2: </span>Data summary
 </caption>
 <thead><tr>
 <th style="text-align:left;">
@@ -5223,20 +5120,11 @@ income
 </table>
 <p>Observe the summary statistics for the outcome variable <code>debt</code>: the mean and median credit card debt are $520.01 and $459.50, respectively, and that 25% of card holders had debts of $68.75 or less. Let’s now look at one of the explanatory variables <code>credit_limit</code>: the mean and median credit card limit are $4735.6 and $4622.50, respectively, while 75% of card holders had incomes of $57,470 or less.</p>
 <p>Since our outcome variable <code>debt</code> and the explanatory variables <code>credit_limit</code> and <code>income</code> are numerical, we can compute the correlation coefficient between the different possible pairs of these variables. First, we can run the <code>cor()</code> command twice, once for each explanatory variable:</p>
-<div class="sourceCode" id="cb901"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb901-1"><a href="continuous-response.html#cb901-1"></a>credit_ch12 <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb901-2"><a href="continuous-response.html#cb901-2"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">correlation =</span> <span class="kw">cor</span>(debt, credit_limit)) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb901-3"><a href="continuous-response.html#cb901-3"></a><span class="st">  </span><span class="kw">pull</span>(correlation)</span>
-<span id="cb901-4"><a href="continuous-response.html#cb901-4"></a>credit_ch12 <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb901-5"><a href="continuous-response.html#cb901-5"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">correlation =</span> <span class="kw">cor</span>(debt, income)) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb901-6"><a href="continuous-response.html#cb901-6"></a><span class="st">  </span><span class="kw">pull</span>(correlation)</span></code></pre></div>
 <p>Or we can simultaneously compute them by returning a <em>correlation matrix</em>. We can see the correlation coefficient for any pair of variables by looking them up in the appropriate row/column combination.</p>
 <!-- EC: Only remaining kable charts because cor() and gt() aren't friends. Error message: "no applicable method for 'group_vars' applied to an object of class "c('matrix', 'array', 'double', 'numeric')"" -->
-<div class="sourceCode" id="cb902"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb902-1"><a href="continuous-response.html#cb902-1"></a>credit_ch12 <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb902-2"><a href="continuous-response.html#cb902-2"></a><span class="st">  </span><span class="kw">select</span>(debt, credit_limit, income) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb902-3"><a href="continuous-response.html#cb902-3"></a><span class="st">  </span><span class="kw">cor</span>()</span></code></pre></div>
 <table class="table" style="font-size: 16px; margin-left: auto; margin-right: auto;">
 <caption style="font-size: initial !important;">
-<span id="tab:unnamed-chunk-679">TABLE 11.3: </span>Correlation coefficients between credit card debt, credit limit, and income
+<span id="tab:unnamed-chunk-613">TABLE 10.3: </span>Correlation coefficients between credit card debt, credit limit, and income
 </caption>
 <thead><tr>
 <th style="text-align:left;">
@@ -5309,25 +5197,12 @@ income
 <p>We say there is a high degree of <em>collinearity</em> between the <code>credit_limit</code> and <code>income</code> explanatory variables. Collinearity (or multicollinearity) is a phenomenon where one explanatory variable in a multiple regression model is highly correlated with another.</p>
 <p>So in our case since <code>credit_limit</code> and <code>income</code> are highly correlated, if we knew someone’s <code>credit_limit</code>, we could make pretty good guesses about their <code>income</code> as well. Thus, these two variables provide somewhat redundant information. However, we’ll leave discussion on how to work with collinear explanatory variables to a more intermediate-level book on regression modeling.</p>
 <p>Let’s visualize the relationship of the outcome variable with each of the two explanatory variables in two separate plots.</p>
-<div class="sourceCode" id="cb903"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb903-1"><a href="continuous-response.html#cb903-1"></a>credit_ch12 <span class="op">%&gt;%</span></span>
-<span id="cb903-2"><a href="continuous-response.html#cb903-2"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> credit_limit, <span class="dt">y =</span> debt)) <span class="op">+</span></span>
-<span id="cb903-3"><a href="continuous-response.html#cb903-3"></a><span class="st">  </span><span class="kw">geom_point</span>() <span class="op">+</span></span>
-<span id="cb903-4"><a href="continuous-response.html#cb903-4"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">"Credit limit (in $)"</span>, <span class="dt">y =</span> <span class="st">"Credit card debt (in $)"</span>, </span>
-<span id="cb903-5"><a href="continuous-response.html#cb903-5"></a>       <span class="dt">title =</span> <span class="st">"Debt and credit limit"</span>) <span class="op">+</span></span>
-<span id="cb903-6"><a href="continuous-response.html#cb903-6"></a><span class="st">  </span><span class="kw">geom_smooth</span>(<span class="dt">method =</span> <span class="st">"lm"</span>, <span class="dt">se =</span> <span class="ot">FALSE</span>)</span>
-<span id="cb903-7"><a href="continuous-response.html#cb903-7"></a></span>
-<span id="cb903-8"><a href="continuous-response.html#cb903-8"></a>credit_ch12 <span class="op">%&gt;%</span></span>
-<span id="cb903-9"><a href="continuous-response.html#cb903-9"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> income, <span class="dt">y =</span> debt)) <span class="op">+</span></span>
-<span id="cb903-10"><a href="continuous-response.html#cb903-10"></a><span class="st">  </span><span class="kw">geom_point</span>() <span class="op">+</span></span>
-<span id="cb903-11"><a href="continuous-response.html#cb903-11"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">"Income (in $1,000)"</span>, <span class="dt">y =</span> <span class="st">"Credit card debt (in $)"</span>, </span>
-<span id="cb903-12"><a href="continuous-response.html#cb903-12"></a>       <span class="dt">title =</span> <span class="st">"Debt and income"</span>) <span class="op">+</span></span>
-<span id="cb903-13"><a href="continuous-response.html#cb903-13"></a><span class="st">  </span><span class="kw">geom_smooth</span>(<span class="dt">method =</span> <span class="st">"lm"</span>, <span class="dt">se =</span> <span class="ot">FALSE</span>)</span></code></pre></div>
 <div class="figure">
-<span id="fig:unnamed-chunk-681"></span>
+<span id="fig:unnamed-chunk-615"></span>
 <p class="caption marginnote shownote">
-FIGURE 11.5: Relationship between credit card debt and credit limit/income.
+FIGURE 10.5: Relationship between credit card debt and credit limit/income.
 </p>
-<img src="book_temp_files/figure-html/unnamed-chunk-681-1.png" alt="Relationship between credit card debt and credit limit/income." width="672">
+<img src="book_temp_files/figure-html/unnamed-chunk-615-1.png" alt="Relationship between credit card debt and credit limit/income." width="672">
 </div>
 <p>Observe there is a positive relationship between credit limit and credit card debt: as credit limit increases so also does credit card debt. This is consistent with the strongly positive correlation coefficient of 0.862 we computed earlier. In the case of income, the positive relationship doesn’t appear as strong, given the weakly positive correlation coefficient of 0.464.</p>
 <p>However, the two plots only focus on the relationship of the outcome variable with each of the two explanatory variables <em>separately</em>. To visualize the <em>joint</em> relationship of all three variables simultaneously, we need a 3-dimensional (3D) scatterplot. Each of the 400 observations in the <code>credit_ch12</code> data frame are marked with a blue point where</p>
@@ -5336,9 +5211,9 @@ FIGURE 11.5: Relationship between credit card debt and credit limit/income.
 <li>The two numerical explanatory variables, <span class="math inline">\(x_1\)</span> <code>income</code> and <span class="math inline">\(x_2\)</span> <code>credit_limit</code>, are on the two axes that form the bottom plane.</li>
 </ol>
 <div class="figure">
-<span id="fig:unnamed-chunk-682"></span>
+<span id="fig:unnamed-chunk-616"></span>
 <p class="caption marginnote shownote">
-FIGURE 11.6: 3D scatterplot and regression plane.
+FIGURE 10.6: 3D scatterplot and regression plane.
 </p>
 <img src="11-continuous-response/images/credit_card_balance_regression_plane.png" alt="3D scatterplot and regression plane." width="75%">
 </div>
@@ -5346,17 +5221,8 @@ FIGURE 11.6: 3D scatterplot and regression plane.
 </div>
 <div id="model3table" class="section level3">
 <h3>
-<span class="header-section-number">11.2.2</span> Regression plane</h3>
-<p>Let’s now fit a regression model and get the regression table corresponding to the regression plane. To keep things brief in this subsection, we won’t consider an interaction model for the two numerical explanatory variables <code>income</code> and <code>credit_limit</code> like we did in Subsection <a href="continuous-response.html#model4interactiontable">11.1.2</a> using the model formula <code>income ~ age * gender</code>. Rather we’ll only consider a model fit with a formula of the form <code>y ~ x1 + x2</code>. Confusingly, however, since we now have a regression plane instead of multiple lines, the label “parallel slopes” doesn’t apply when you have two numerical explanatory variables. Just as we have done multiple times throughout Chapters <a href="pitfalls.html#pitfalls">10</a> and this chapter, the regression table for this model using our two-step process is in Table <a href="#tab:model3-table-output"><strong>??</strong></a>.</p>
-<div class="sourceCode" id="cb904"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb904-1"><a href="continuous-response.html#cb904-1"></a><span class="co"># Fit regression model:</span></span>
-<span id="cb904-2"><a href="continuous-response.html#cb904-2"></a></span>
-<span id="cb904-3"><a href="continuous-response.html#cb904-3"></a>debt_model &lt;-<span class="st"> </span><span class="kw">lm</span>(debt <span class="op">~</span><span class="st"> </span>credit_limit <span class="op">+</span><span class="st"> </span>income, <span class="dt">data =</span> credit_ch12)</span>
-<span id="cb904-4"><a href="continuous-response.html#cb904-4"></a></span>
-<span id="cb904-5"><a href="continuous-response.html#cb904-5"></a><span class="co"># Get regression table:</span></span>
-<span id="cb904-6"><a href="continuous-response.html#cb904-6"></a></span>
-<span id="cb904-7"><a href="continuous-response.html#cb904-7"></a>debt_model <span class="op">%&gt;%</span></span>
-<span id="cb904-8"><a href="continuous-response.html#cb904-8"></a><span class="st">  </span><span class="kw">tidy</span>(<span class="dt">conf.int =</span> <span class="ot">TRUE</span>) <span class="op">%&gt;%</span></span>
-<span id="cb904-9"><a href="continuous-response.html#cb904-9"></a><span class="st">  </span><span class="kw">select</span>(term, estimate, conf.low, conf.high)</span></code></pre></div>
+<span class="header-section-number">10.2.2</span> Regression plane</h3>
+<p>Let’s now fit a regression model and get the regression table corresponding to the regression plane. To keep things brief in this subsection, we won’t consider an interaction model for the two numerical explanatory variables <code>income</code> and <code>credit_limit</code> like we did in Subsection <a href="continuous-response.html#model4interactiontable">10.1.2</a> using the model formula <code>income ~ age * gender</code>. Rather we’ll only consider a model fit with a formula of the form <code>y ~ x1 + x2</code>. Confusingly, however, since we now have a regression plane instead of multiple lines, the label “parallel slopes” doesn’t apply when you have two numerical explanatory variables. Just as we have done multiple times throughout Chapters <a href="#pitfalls"><strong>??</strong></a> and this chapter, the regression table for this model using our two-step process is in Table <a href="#tab:model3-table-output"><strong>??</strong></a>.</p>
 <style>html {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
 }
@@ -5743,7 +5609,7 @@ FIGURE 11.6: 3D scatterplot and regression plane.
 &amp;= -385.179 + 0.263 \cdot\text{limit} - 7.663 \cdot\text{income}
 \end{aligned}
 \]</span></p>
-<p>Recall however in the right-hand plot of Figure <a href="#fig:2numxplot1"><strong>??</strong></a> that when plotting the relationship between <code>debt</code> and <code>income</code> in isolation, there appeared to be a <em>positive</em> relationship. In the last discussed multiple regression, however, when <em>jointly</em> modeling the relationship between <code>debt</code>, <code>credit_limit</code>, and <code>income</code>, there appears to be a <em>negative</em> relationship of <code>debt</code> and <code>income</code> as evidenced by the negative slope for <code>income</code> of -$7.663. What explains these contradictory results? A phenomenon known as <em>Simpson’s Paradox</em>, whereby overall trends that exist in aggregate either disappear or reverse when the data are broken down into groups. In Subsection <a href="continuous-response.html#simpsonsparadox">11.3.8</a> we elaborate on this idea by looking at the relationship between <code>credit_limit</code> and credit card <code>debt</code>, but split along different <code>income</code> brackets.</p>
+<p>Recall however in the right-hand plot of Figure <a href="#fig:2numxplot1"><strong>??</strong></a> that when plotting the relationship between <code>debt</code> and <code>income</code> in isolation, there appeared to be a <em>positive</em> relationship. In the last discussed multiple regression, however, when <em>jointly</em> modeling the relationship between <code>debt</code>, <code>credit_limit</code>, and <code>income</code>, there appears to be a <em>negative</em> relationship of <code>debt</code> and <code>income</code> as evidenced by the negative slope for <code>income</code> of -$7.663. What explains these contradictory results? A phenomenon known as <em>Simpson’s Paradox</em>, whereby overall trends that exist in aggregate either disappear or reverse when the data are broken down into groups. In Subsection <a href="continuous-response.html#simpsonsparadox">10.3.8</a> we elaborate on this idea by looking at the relationship between <code>credit_limit</code> and credit card <code>debt</code>, but split along different <code>income</code> brackets.</p>
 <p>Let’s say that we are most interested in the effect of income on credit card debt. Can we then use the Rubin Causal Model to estimate the causal effect of moving from one income to another? <strong>Only if</strong> the only confounder is an individual’s credit limit. That’s unlikely to be the case. But if we were willing to make that assumption, we could fill in the following potential outcome table:</p>
 <style>html {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
@@ -6474,22 +6340,18 @@ FIGURE 11.6: 3D scatterplot and regression plane.
 </div>
 <div id="model3points" class="section level3">
 <h3>
-<span class="header-section-number">11.2.3</span> Observed/fitted values and residuals</h3>
+<span class="header-section-number">10.2.3</span> Observed/fitted values and residuals</h3>
 <p>Let’s also compute all fitted values and residuals for our regression model using the <code>augment()</code> function and present only the first 10 rows of output in Table <a href="#tab:model3-points-table"><strong>??</strong></a>. Remember that the coordinates of each of the blue points in our 3D scatterplot in Figure <a href="#fig:3D-scatterplot"><strong>??</strong></a> can be found in the <code>income</code>, <code>credit_limit</code>, and <code>debt</code> columns. The fitted values on the regression plane are found in the <code>.fitted</code> column and are computed using our equation for the regression plane in the previous section:</p>
 <p><span class="math display">\[
 \begin{aligned}
 \widehat{y} = \widehat{\text{debt}} &amp;= -385.179 + 0.263 \cdot \text{limit} - 7.663 \cdot \text{income}
 \end{aligned}
 \]</span></p>
-<div class="sourceCode" id="cb905"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb905-1"><a href="continuous-response.html#cb905-1"></a><span class="kw">augment</span>(debt_model) <span class="op">%&gt;%</span></span>
-<span id="cb905-2"><a href="continuous-response.html#cb905-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">conf.low =</span> .fitted <span class="op">-</span><span class="st"> </span><span class="dv">2</span> <span class="op">*</span><span class="st"> </span>.se.fit,</span>
-<span id="cb905-3"><a href="continuous-response.html#cb905-3"></a>         <span class="dt">conf.high =</span> .fitted <span class="op">+</span><span class="st"> </span><span class="dv">2</span> <span class="op">*</span><span class="st"> </span>.se.fit) <span class="op">%&gt;%</span></span>
-<span id="cb905-4"><a href="continuous-response.html#cb905-4"></a><span class="st">  </span><span class="kw">select</span>(income, credit_limit, debt, .fitted, conf.low, conf.high, .resid)</span></code></pre></div>
 </div>
 </div>
 <div id="seattle-house-prices" class="section level2">
 <h2>
-<span class="header-section-number">11.3</span> Case study: Seattle house prices</h2>
+<span class="header-section-number">10.3</span> Case study: Seattle house prices</h2>
 <!-- EC: Needs new dataset because of ModernDive removal -->
 <p><a href="https://www.kaggle.com/">Kaggle.com</a> is a machine learning and predictive modeling competition website that hosts datasets uploaded by companies, governmental organizations, and other individuals. One of their datasets is the <a href="https://www.kaggle.com/harlfoxem/housesalesprediction">“House Sales in King County, USA”</a>. It consists of sale prices of homes sold between May 2014 and May 2015 in King County, Washington, USA, which includes the greater Seattle metropolitan area. This dataset is in the <code>house_prices</code> data frame included in the <strong>moderndive</strong> package.</p>
 <p>The dataset consists of 21,613 houses and 21 variables describing these houses (for a full list and description of these variables, see the help file by running <code>?house_prices</code> in the console). In this case study, we’ll create a multiple regression model where:</p>
@@ -6505,17 +6367,15 @@ FIGURE 11.6: 3D scatterplot and regression plane.
 <p>Then, we will use <code>map_*</code> functions to run the above model for every year that a house was built.</p>
 <div id="house-prices-EDA-I" class="section level3">
 <h3>
-<span class="header-section-number">11.3.1</span> Exploratory data analysis: Part I</h3>
+<span class="header-section-number">10.3.1</span> Exploratory data analysis: Part I</h3>
 <p>As we’ve said numerous times throughout this book, a crucial first step when presented with data is to perform an exploratory data analysis (EDA). Exploratory data analysis can give you a sense of your data, help identify issues with your data, bring to light any outliers, and help inform model construction.</p>
-<p>Recall the three common steps in an exploratory data analysis we introduced in Subsection <a href="pitfalls.html#model1EDA">10.1.1</a>:</p>
+<p>Recall the three common steps in an exploratory data analysis we introduced in Subsection <a href="#model1EDA"><strong>??</strong></a>:</p>
 <ol style="list-style-type: decimal">
 <li>Looking at the raw data values.</li>
 <li>Computing summary statistics.</li>
 <li>Creating data visualizations.</li>
 </ol>
 <p>First, let’s look at the raw data using <code>View()</code> to bring up RStudio’s spreadsheet viewer and the <code>glimpse()</code> function from the <strong>dplyr</strong> package:</p>
-<div class="sourceCode" id="cb906"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb906-1"><a href="continuous-response.html#cb906-1"></a><span class="kw">View</span>(house_prices)</span>
-<span id="cb906-2"><a href="continuous-response.html#cb906-2"></a><span class="kw">glimpse</span>(house_prices)</span></code></pre></div>
 <pre><code>## Rows: 21,613
 ## Columns: 21
 ## $ id            &lt;chr&gt; "7129300520", "6414100192", "5631500400", "2487200875",…
@@ -6541,27 +6401,13 @@ FIGURE 11.6: 3D scatterplot and regression plane.
 ## $ sqft_lot15    &lt;int&gt; 5650, 7639, 8062, 5000, 7503, 101930, 6819, 9711, 8113,…</code></pre>
 <p>Here are some questions you can ask yourself at this stage of an EDA: Which variables are numerical? Which are categorical? For the categorical variables, what are their levels? Besides the variables we’ll be using in our regression model, what other variables do you think would be useful to use in a model for house price?</p>
 <p>Observe, for example, that while the <code>condition</code> variable has values <code>1</code> through <code>5</code>, these are saved in R as <code>fct</code> standing for “factors.” This is one of R’s ways of saving categorical variables. So you should think of these as the “labels” <code>1</code> through <code>5</code> and not the numerical values <code>1</code> through <code>5</code>.</p>
-<p>Let’s now perform the second step in an EDA: computing summary statistics. Recall from Section <a href="tidyverse.html#summarize">2.1</a> that <em>summary statistics</em> are single numerical values that summarize a large number of values. Examples of summary statistics include the mean, the median, the standard deviation, and various percentiles.</p>
+<p>Let’s now perform the second step in an EDA: computing summary statistics. Recall from Section <a href="#summarize"><strong>??</strong></a> that <em>summary statistics</em> are single numerical values that summarize a large number of values. Examples of summary statistics include the mean, the median, the standard deviation, and various percentiles.</p>
 <p>We could do this using the <code>summarize()</code> function in the <strong>dplyr</strong> package along with R’s built-in <em>summary functions</em>, like <code>mean()</code> and <code>median()</code>. However, recall in Section <a href="visualization.html#mutate">1.13.6</a>, we saw the following code that computes a variety of summary statistics of the variable <code>gain</code>, which is the amount of time that a flight makes up mid-air:</p>
-<div class="sourceCode" id="cb908"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb908-1"><a href="continuous-response.html#cb908-1"></a>gain_summary &lt;-<span class="st"> </span>flights <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb908-2"><a href="continuous-response.html#cb908-2"></a><span class="st">  </span><span class="kw">summarize</span>(</span>
-<span id="cb908-3"><a href="continuous-response.html#cb908-3"></a>    <span class="dt">min =</span> <span class="kw">min</span>(gain, <span class="dt">na.rm =</span> <span class="ot">TRUE</span>),</span>
-<span id="cb908-4"><a href="continuous-response.html#cb908-4"></a>    <span class="dt">q1 =</span> <span class="kw">quantile</span>(gain, <span class="fl">0.25</span>, <span class="dt">na.rm =</span> <span class="ot">TRUE</span>),</span>
-<span id="cb908-5"><a href="continuous-response.html#cb908-5"></a>    <span class="dt">median =</span> <span class="kw">quantile</span>(gain, <span class="fl">0.5</span>, <span class="dt">na.rm =</span> <span class="ot">TRUE</span>),</span>
-<span id="cb908-6"><a href="continuous-response.html#cb908-6"></a>    <span class="dt">q3 =</span> <span class="kw">quantile</span>(gain, <span class="fl">0.75</span>, <span class="dt">na.rm =</span> <span class="ot">TRUE</span>),</span>
-<span id="cb908-7"><a href="continuous-response.html#cb908-7"></a>    <span class="dt">max =</span> <span class="kw">max</span>(gain, <span class="dt">na.rm =</span> <span class="ot">TRUE</span>),</span>
-<span id="cb908-8"><a href="continuous-response.html#cb908-8"></a>    <span class="dt">mean =</span> <span class="kw">mean</span>(gain, <span class="dt">na.rm =</span> <span class="ot">TRUE</span>),</span>
-<span id="cb908-9"><a href="continuous-response.html#cb908-9"></a>    <span class="dt">sd =</span> <span class="kw">sd</span>(gain, <span class="dt">na.rm =</span> <span class="ot">TRUE</span>),</span>
-<span id="cb908-10"><a href="continuous-response.html#cb908-10"></a>    <span class="dt">missing =</span> <span class="kw">sum</span>(<span class="kw">is.na</span>(gain))</span>
-<span id="cb908-11"><a href="continuous-response.html#cb908-11"></a>  )</span></code></pre></div>
-<p>To repeat this for all three <code>price</code>, <code>sqft_living</code>, and <code>condition</code> variables would be tedious to code up. So instead, let’s use the convenient <code>skim()</code> function from the <strong>skimr</strong> package we first used in Subsection <a href="continuous-response.html#model4EDA">11.1.1</a>, being sure to only <code>select()</code> the variables of interest for our model:</p>
+<p>To repeat this for all three <code>price</code>, <code>sqft_living</code>, and <code>condition</code> variables would be tedious to code up. So instead, let’s use the convenient <code>skim()</code> function from the <strong>skimr</strong> package we first used in Subsection <a href="continuous-response.html#model4EDA">10.1.1</a>, being sure to only <code>select()</code> the variables of interest for our model:</p>
 <!-- DDK: The current output does not include the p75 and p100 columns. Fixable? -->
-<div class="sourceCode" id="cb909"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb909-1"><a href="continuous-response.html#cb909-1"></a>house_prices <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb909-2"><a href="continuous-response.html#cb909-2"></a><span class="st">  </span><span class="kw">select</span>(price, sqft_living, condition) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb909-3"><a href="continuous-response.html#cb909-3"></a><span class="st">  </span><span class="kw">skim</span>()</span></code></pre></div>
 <table style="width: auto;" class="table table-condensed">
 <caption>
-<span id="tab:unnamed-chunk-693">TABLE 11.4: </span>Data summary
+<span id="tab:unnamed-chunk-627">TABLE 10.4: </span>Data summary
 </caption>
 <thead><tr>
 <th style="text-align:left;">
@@ -6797,33 +6643,13 @@ sqft_living
 <p>Observe that the mean <code>price</code> of $540,088 is larger than the median of $450,000. This is because a small number of very expensive houses are inflating the average. In other words, there are “outlier” house prices in our dataset. (This fact will become even more apparent when we create our visualizations next.)</p>
 <p>However, the median is not as sensitive to such outlier house prices. This is why news about the real estate market generally report median house prices and not mean/average house prices. We say here that the median is more <em>robust to outliers</em> than the mean. Similarly, while both the standard deviation and interquartile-range (IQR) are both measures of spread and variability, the IQR is more <em>robust to outliers</em>.</p>
 <p>Let’s now perform the last of the three common steps in an exploratory data analysis: creating data visualizations. Let’s first create <em>univariate</em> visualizations. These are plots focusing on a single variable at a time. Since <code>price</code> and <code>sqft_living</code> are numerical variables, we can visualize their distributions using a <code>geom_histogram()</code> as seen in Section <a href="visualization.html#histograms">1.9</a> on histograms. On the other hand, since <code>condition</code> is categorical, we can visualize its distribution using a <code>geom_bar()</code>. Recall from Section <a href="#geombar"><strong>??</strong></a> on barplots that since <code>condition</code> is not “pre-counted”, we use a <code>geom_bar()</code> and not a <code>geom_col()</code>.</p>
-<div class="sourceCode" id="cb910"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb910-1"><a href="continuous-response.html#cb910-1"></a><span class="co"># Histogram of house price:</span></span>
-<span id="cb910-2"><a href="continuous-response.html#cb910-2"></a></span>
-<span id="cb910-3"><a href="continuous-response.html#cb910-3"></a>house_prices <span class="op">%&gt;%</span></span>
-<span id="cb910-4"><a href="continuous-response.html#cb910-4"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> price)) <span class="op">+</span></span>
-<span id="cb910-5"><a href="continuous-response.html#cb910-5"></a><span class="st">  </span><span class="kw">geom_histogram</span>(<span class="dt">color =</span> <span class="st">"white"</span>) <span class="op">+</span></span>
-<span id="cb910-6"><a href="continuous-response.html#cb910-6"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">"price (USD)"</span>, <span class="dt">title =</span> <span class="st">"House price"</span>)</span>
-<span id="cb910-7"><a href="continuous-response.html#cb910-7"></a></span>
-<span id="cb910-8"><a href="continuous-response.html#cb910-8"></a><span class="co"># Histogram of sqft_living</span></span>
-<span id="cb910-9"><a href="continuous-response.html#cb910-9"></a></span>
-<span id="cb910-10"><a href="continuous-response.html#cb910-10"></a>house_prices <span class="op">%&gt;%</span></span>
-<span id="cb910-11"><a href="continuous-response.html#cb910-11"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> sqft_living)) <span class="op">+</span></span>
-<span id="cb910-12"><a href="continuous-response.html#cb910-12"></a><span class="st">  </span><span class="kw">geom_histogram</span>(<span class="dt">color =</span> <span class="st">"white"</span>) <span class="op">+</span></span>
-<span id="cb910-13"><a href="continuous-response.html#cb910-13"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">"living space (square feet)"</span>, <span class="dt">title =</span> <span class="st">"House size"</span>)</span>
-<span id="cb910-14"><a href="continuous-response.html#cb910-14"></a></span>
-<span id="cb910-15"><a href="continuous-response.html#cb910-15"></a><span class="co"># Barplot of condition:</span></span>
-<span id="cb910-16"><a href="continuous-response.html#cb910-16"></a></span>
-<span id="cb910-17"><a href="continuous-response.html#cb910-17"></a>house_prices <span class="op">%&gt;%</span></span>
-<span id="cb910-18"><a href="continuous-response.html#cb910-18"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> condition)) <span class="op">+</span></span>
-<span id="cb910-19"><a href="continuous-response.html#cb910-19"></a><span class="st">  </span><span class="kw">geom_bar</span>() <span class="op">+</span></span>
-<span id="cb910-20"><a href="continuous-response.html#cb910-20"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">"condition"</span>, <span class="dt">title =</span> <span class="st">"House condition"</span>)</span></code></pre></div>
 <p>In Figure <a href="#fig:house-prices-viz"><strong>??</strong></a>, we display all three of these visualizations at once.</p>
 <div class="figure">
-<span id="fig:unnamed-chunk-695"></span>
+<span id="fig:unnamed-chunk-629"></span>
 <p class="caption marginnote shownote">
-FIGURE 11.7: Exploratory visualizations of Seattle house prices data.
+FIGURE 10.7: Exploratory visualizations of Seattle house prices data.
 </p>
-<img src="book_temp_files/figure-html/unnamed-chunk-695-1.png" alt="Exploratory visualizations of Seattle house prices data." width="672">
+<img src="book_temp_files/figure-html/unnamed-chunk-629-1.png" alt="Exploratory visualizations of Seattle house prices data." width="672">
 </div>
 <p>First, observe in the bottom plot that most houses are of condition “3”, with a few more of conditions “4” and “5”, and almost none that are “1” or “2”.</p>
 <p>Next, observe in the histogram for <code>price</code> in the top-left plot that a majority of houses are less than two million dollars. Observe also that the x-axis stretches out to 8 million dollars, even though there does not appear to be any houses close to that price. This is because there are a <em>very small number</em> of houses with prices closer to 8 million. These are the outlier house prices we mentioned earlier. We say that the variable <code>price</code> is <em>right-skewed</em> as exhibited by the long right tail.</p>
@@ -6831,14 +6657,7 @@ FIGURE 11.7: Exploratory visualizations of Seattle house prices data.
 <p>For both the <code>price</code> and <code>sqft_living</code> variables, the right-skew makes distinguishing houses at the lower end of the x-axis hard. This is because the scale of the x-axis is compressed by the small number of quite expensive and immensely-sized houses.</p>
 <p>So what can we do about this skew? Let’s apply a <em>log10 transformation</em> to these variables. A log transformations allow us to alter the scale of a variable to focus on <em>multiplicative</em> changes instead of <em>additive</em> changes. In other words, they shift the view to be on <em>relative</em> changes instead of <em>absolute</em> changes. Such multiplicative/relative changes are also called changes in <em>orders of magnitude</em>.</p>
 <p>Let’s create new log10 transformed versions of the right-skewed variable <code>price</code> and <code>sqft_living</code> using the <code>mutate()</code> function from Section <a href="visualization.html#mutate">1.13.6</a>, but we’ll give the latter the name <code>log10_size</code>, which is shorter and easier to understand than the name <code>log10_sqft_living</code>.</p>
-<div class="sourceCode" id="cb911"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb911-1"><a href="continuous-response.html#cb911-1"></a>house_prices &lt;-<span class="st"> </span>house_prices <span class="op">%&gt;%</span></span>
-<span id="cb911-2"><a href="continuous-response.html#cb911-2"></a><span class="st">  </span><span class="kw">mutate</span>(</span>
-<span id="cb911-3"><a href="continuous-response.html#cb911-3"></a>    <span class="dt">log10_price =</span> <span class="kw">log10</span>(price),</span>
-<span id="cb911-4"><a href="continuous-response.html#cb911-4"></a>    <span class="dt">log10_size =</span> <span class="kw">log10</span>(sqft_living)</span>
-<span id="cb911-5"><a href="continuous-response.html#cb911-5"></a>    )</span></code></pre></div>
 <p>Let’s display the before and after effects of this transformation on these variables for only the first 10 rows of <code>house_prices</code>:</p>
-<div class="sourceCode" id="cb912"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb912-1"><a href="continuous-response.html#cb912-1"></a>house_prices <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb912-2"><a href="continuous-response.html#cb912-2"></a><span class="st">  </span><span class="kw">select</span>(price, log10_price, sqft_living, log10_size)</span></code></pre></div>
 <pre><code>## # A tibble: 21,613 x 4
 ##      price log10_price sqft_living log10_size
 ##      &lt;dbl&gt;       &lt;dbl&gt;       &lt;int&gt;      &lt;dbl&gt;
@@ -6856,47 +6675,21 @@ FIGURE 11.7: Exploratory visualizations of Seattle house prices data.
 <p>Observe in particular the houses in the sixth and third rows. The house in the sixth row has <code>price</code> $1,225,000, which is just above one million dollars. Since <span class="math inline">\(10^6\)</span> is one million, its <code>log10_price</code> is around 6.09.</p>
 <p>Contrast this with all other houses with <code>log10_price</code> less than six, since they all have <code>price</code> less than $1,000,000. The house in the third row is the only house with <code>sqft_living</code> less than 1,000. Since <span class="math inline">\(1,000 = 10^3\)</span>, it’s the lone house with <code>log10_size</code> less than 3.</p>
 <p>Let’s now visualize the before and after effects of this transformation for <code>price</code> in Figure <a href="#fig:log10-price-viz"><strong>??</strong></a>.</p>
-<div class="sourceCode" id="cb914"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb914-1"><a href="continuous-response.html#cb914-1"></a><span class="co"># Before log10 transformation:</span></span>
-<span id="cb914-2"><a href="continuous-response.html#cb914-2"></a></span>
-<span id="cb914-3"><a href="continuous-response.html#cb914-3"></a>house_prices <span class="op">%&gt;%</span></span>
-<span id="cb914-4"><a href="continuous-response.html#cb914-4"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> price)) <span class="op">+</span></span>
-<span id="cb914-5"><a href="continuous-response.html#cb914-5"></a><span class="st">  </span><span class="kw">geom_histogram</span>(<span class="dt">color =</span> <span class="st">"white"</span>) <span class="op">+</span></span>
-<span id="cb914-6"><a href="continuous-response.html#cb914-6"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">"price (USD)"</span>, <span class="dt">title =</span> <span class="st">"House price: Before"</span>)</span>
-<span id="cb914-7"><a href="continuous-response.html#cb914-7"></a></span>
-<span id="cb914-8"><a href="continuous-response.html#cb914-8"></a><span class="co"># After log10 transformation:</span></span>
-<span id="cb914-9"><a href="continuous-response.html#cb914-9"></a></span>
-<span id="cb914-10"><a href="continuous-response.html#cb914-10"></a>house_prices <span class="op">%&gt;%</span></span>
-<span id="cb914-11"><a href="continuous-response.html#cb914-11"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> log10_price)) <span class="op">+</span></span>
-<span id="cb914-12"><a href="continuous-response.html#cb914-12"></a><span class="st">  </span><span class="kw">geom_histogram</span>(<span class="dt">color =</span> <span class="st">"white"</span>) <span class="op">+</span></span>
-<span id="cb914-13"><a href="continuous-response.html#cb914-13"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">"log10 price (USD)"</span>, <span class="dt">title =</span> <span class="st">"House price: After"</span>)</span></code></pre></div>
 <div class="figure">
-<span id="fig:unnamed-chunk-699"></span>
+<span id="fig:unnamed-chunk-633"></span>
 <p class="caption marginnote shownote">
-FIGURE 11.8: House price before and after log10 transformation.
+FIGURE 10.8: House price before and after log10 transformation.
 </p>
-<img src="book_temp_files/figure-html/unnamed-chunk-699-1.png" alt="House price before and after log10 transformation." width="672">
+<img src="book_temp_files/figure-html/unnamed-chunk-633-1.png" alt="House price before and after log10 transformation." width="672">
 </div>
 <p>Observe that after the transformation, the distribution is much less skewed, and in this case, more symmetric and more bell-shaped. Now you can more easily distinguish the lower priced houses.</p>
 <p>Let’s do the same for house size, where the variable <code>sqft_living</code> was log10 transformed to <code>log10_size</code>.</p>
-<div class="sourceCode" id="cb915"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb915-1"><a href="continuous-response.html#cb915-1"></a><span class="co"># Before log10 transformation:</span></span>
-<span id="cb915-2"><a href="continuous-response.html#cb915-2"></a></span>
-<span id="cb915-3"><a href="continuous-response.html#cb915-3"></a>house_prices <span class="op">%&gt;%</span></span>
-<span id="cb915-4"><a href="continuous-response.html#cb915-4"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> sqft_living)) <span class="op">+</span></span>
-<span id="cb915-5"><a href="continuous-response.html#cb915-5"></a><span class="st">  </span><span class="kw">geom_histogram</span>(<span class="dt">color =</span> <span class="st">"white"</span>) <span class="op">+</span></span>
-<span id="cb915-6"><a href="continuous-response.html#cb915-6"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">"living space (square feet)"</span>, <span class="dt">title =</span> <span class="st">"House size: Before"</span>)</span>
-<span id="cb915-7"><a href="continuous-response.html#cb915-7"></a></span>
-<span id="cb915-8"><a href="continuous-response.html#cb915-8"></a><span class="co"># After log10 transformation:</span></span>
-<span id="cb915-9"><a href="continuous-response.html#cb915-9"></a></span>
-<span id="cb915-10"><a href="continuous-response.html#cb915-10"></a>house_prices <span class="op">%&gt;%</span></span>
-<span id="cb915-11"><a href="continuous-response.html#cb915-11"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> log10_size)) <span class="op">+</span></span>
-<span id="cb915-12"><a href="continuous-response.html#cb915-12"></a><span class="st">  </span><span class="kw">geom_histogram</span>(<span class="dt">color =</span> <span class="st">"white"</span>) <span class="op">+</span></span>
-<span id="cb915-13"><a href="continuous-response.html#cb915-13"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">"log10 living space (square feet)"</span>, <span class="dt">title =</span> <span class="st">"House size: After"</span>)</span></code></pre></div>
 <div class="figure">
-<span id="fig:unnamed-chunk-701"></span>
+<span id="fig:unnamed-chunk-635"></span>
 <p class="caption marginnote shownote">
-FIGURE 11.9: House size before and after log10 transformation.
+FIGURE 10.9: House size before and after log10 transformation.
 </p>
-<img src="book_temp_files/figure-html/unnamed-chunk-701-1.png" alt="House size before and after log10 transformation." width="672">
+<img src="book_temp_files/figure-html/unnamed-chunk-635-1.png" alt="House size before and after log10 transformation." width="672">
 </div>
 <p>Observe in Figure <a href="#fig:log10-size-viz"><strong>??</strong></a> that the log10 transformation has a similar effect of unskewing the variable. We emphasize that while in these two cases the resulting distributions are more symmetric and bell-shaped, this is not always necessarily the case.</p>
 <p>Given the now symmetric nature of <code>log10_price</code> and <code>log10_size</code>, we are going to revise our multiple regression model to use our new variables:</p>
@@ -6912,68 +6705,31 @@ FIGURE 11.9: House size before and after log10 transformation.
 </div>
 <div id="house-prices-EDA-II" class="section level3">
 <h3>
-<span class="header-section-number">11.3.2</span> Exploratory data analysis: Part II</h3>
+<span class="header-section-number">10.3.2</span> Exploratory data analysis: Part II</h3>
 <p>Let’s now continue our EDA by creating <em>multivariate</em> visualizations. Unlike the <em>univariate</em> histograms and barplot in the earlier Figures <a href="#fig:house-prices-viz"><strong>??</strong></a>, <a href="#fig:log10-price-viz"><strong>??</strong></a>, and <a href="#fig:log10-size-viz"><strong>??</strong></a>, <em>multivariate</em> visualizations show relationships between more than one variable. This is an important step of an EDA to perform since the goal of modeling is to explore relationships between variables.</p>
-<p>Since our model involves a numerical outcome variable, a numerical explanatory variable, and a categorical explanatory variable, we are in a similar regression modeling situation as in Section <a href="continuous-response.html#model4">11.1</a> where we studied the UT Austin teaching scores dataset. Recall in that case the numerical outcome variable was teaching <code>income</code>, the numerical explanatory variable was subject <code>age</code>, and the categorical explanatory variable was (binary) <code>gender</code>.</p>
+<p>Since our model involves a numerical outcome variable, a numerical explanatory variable, and a categorical explanatory variable, we are in a similar regression modeling situation as in Section <a href="continuous-response.html#model4">10.1</a> where we studied the UT Austin teaching scores dataset. Recall in that case the numerical outcome variable was teaching <code>income</code>, the numerical explanatory variable was subject <code>age</code>, and the categorical explanatory variable was (binary) <code>gender</code>.</p>
 <p>We thus have two choices of models we can fit: either (1) an <em>interaction model</em> where the regression line for each <code>condition</code> level will have both a different slope and a different intercept or (2) a <em>parallel slopes model</em> where the regression line for each <code>condition</code> level will have the same slope but different intercepts. We plot both resulting models below, with the interaction model on the left.</p>
-<div class="sourceCode" id="cb916"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb916-1"><a href="continuous-response.html#cb916-1"></a><span class="co"># Plot interaction model</span></span>
-<span id="cb916-2"><a href="continuous-response.html#cb916-2"></a></span>
-<span id="cb916-3"><a href="continuous-response.html#cb916-3"></a>house_prices <span class="op">%&gt;%</span></span>
-<span id="cb916-4"><a href="continuous-response.html#cb916-4"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> log10_size, <span class="dt">y =</span> log10_price, <span class="dt">col =</span> condition)) <span class="op">+</span></span>
-<span id="cb916-5"><a href="continuous-response.html#cb916-5"></a><span class="st">  </span><span class="kw">geom_point</span>(<span class="dt">alpha =</span> <span class="fl">0.05</span>) <span class="op">+</span></span>
-<span id="cb916-6"><a href="continuous-response.html#cb916-6"></a><span class="st">  </span><span class="kw">geom_smooth</span>(<span class="dt">method =</span> <span class="st">"lm"</span>, <span class="dt">se =</span> <span class="ot">FALSE</span>) <span class="op">+</span></span>
-<span id="cb916-7"><a href="continuous-response.html#cb916-7"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">y =</span> <span class="st">"log10 price"</span>, </span>
-<span id="cb916-8"><a href="continuous-response.html#cb916-8"></a>       <span class="dt">x =</span> <span class="st">"log10 size"</span>, </span>
-<span id="cb916-9"><a href="continuous-response.html#cb916-9"></a>       <span class="dt">title =</span> <span class="st">"House prices in Seattle"</span>)</span>
-<span id="cb916-10"><a href="continuous-response.html#cb916-10"></a></span>
-<span id="cb916-11"><a href="continuous-response.html#cb916-11"></a><span class="co"># Plot parallel slopes model</span></span>
-<span id="cb916-12"><a href="continuous-response.html#cb916-12"></a></span>
-<span id="cb916-13"><a href="continuous-response.html#cb916-13"></a>house_prices <span class="op">%&gt;%</span></span>
-<span id="cb916-14"><a href="continuous-response.html#cb916-14"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> log10_size, <span class="dt">y =</span> log10_price, <span class="dt">col =</span> condition)) <span class="op">+</span></span>
-<span id="cb916-15"><a href="continuous-response.html#cb916-15"></a><span class="st">  </span><span class="kw">geom_point</span>(<span class="dt">alpha =</span> <span class="fl">0.05</span>) <span class="op">+</span></span>
-<span id="cb916-16"><a href="continuous-response.html#cb916-16"></a><span class="st">  </span><span class="kw">geom_parallel_slopes</span>(<span class="dt">se =</span> <span class="ot">FALSE</span>) <span class="op">+</span></span>
-<span id="cb916-17"><a href="continuous-response.html#cb916-17"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">y =</span> <span class="st">"log10 price"</span>, </span>
-<span id="cb916-18"><a href="continuous-response.html#cb916-18"></a>       <span class="dt">x =</span> <span class="st">"log10 size"</span>, </span>
-<span id="cb916-19"><a href="continuous-response.html#cb916-19"></a>       <span class="dt">title =</span> <span class="st">"House prices in Seattle"</span>)</span></code></pre></div>
 <div class="figure">
-<span id="fig:unnamed-chunk-703"></span>
+<span id="fig:unnamed-chunk-637"></span>
 <p class="caption marginnote shownote">
-FIGURE 11.10: Interaction and parallel slopes models.
+FIGURE 10.10: Interaction and parallel slopes models.
 </p>
-<img src="book_temp_files/figure-html/unnamed-chunk-703-1.png" alt="Interaction and parallel slopes models." width="672">
+<img src="book_temp_files/figure-html/unnamed-chunk-637-1.png" alt="Interaction and parallel slopes models." width="672">
 </div>
 <p>In both cases, we see there is a positive relationship between house price and size, meaning as houses are larger, they tend to be more expensive. Furthermore, in both plots it seems that houses of condition 5 tend to be the most expensive for most house sizes as evidenced by the fact that the line for condition 5 is highest, followed by conditions 4 and 3. As for conditions 1 and 2, this pattern isn’t as clear. Recall from the univariate barplot of <code>condition</code> in Figure <a href="#fig:house-prices-viz"><strong>??</strong></a>, there are only a few houses of condition 1 or 2.</p>
 <p>Let’s also show a faceted version of just the interaction model in Figure <a href="#fig:house-price-interaction-2"><strong>??</strong></a>. It is now much more apparent just how few houses are of condition 1 or 2.</p>
-<div class="sourceCode" id="cb917"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb917-1"><a href="continuous-response.html#cb917-1"></a>house_prices <span class="op">%&gt;%</span></span>
-<span id="cb917-2"><a href="continuous-response.html#cb917-2"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> log10_size, <span class="dt">y =</span> log10_price, <span class="dt">col =</span> condition)) <span class="op">+</span></span>
-<span id="cb917-3"><a href="continuous-response.html#cb917-3"></a><span class="st">  </span><span class="kw">geom_point</span>(<span class="dt">alpha =</span> <span class="fl">0.4</span>) <span class="op">+</span></span>
-<span id="cb917-4"><a href="continuous-response.html#cb917-4"></a><span class="st">  </span><span class="kw">geom_smooth</span>(<span class="dt">method =</span> <span class="st">"lm"</span>, <span class="dt">se =</span> <span class="ot">FALSE</span>) <span class="op">+</span></span>
-<span id="cb917-5"><a href="continuous-response.html#cb917-5"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">y =</span> <span class="st">"log10 price"</span>, </span>
-<span id="cb917-6"><a href="continuous-response.html#cb917-6"></a>       <span class="dt">x =</span> <span class="st">"log10 size"</span>, </span>
-<span id="cb917-7"><a href="continuous-response.html#cb917-7"></a>       <span class="dt">title =</span> <span class="st">"House prices in Seattle"</span>) <span class="op">+</span></span>
-<span id="cb917-8"><a href="continuous-response.html#cb917-8"></a><span class="st">  </span><span class="kw">facet_wrap</span>(<span class="op">~</span><span class="st"> </span>condition)</span></code></pre></div>
 <div class="figure">
-<span id="fig:unnamed-chunk-705"></span>
+<span id="fig:unnamed-chunk-639"></span>
 <p class="caption marginnote shownote">
-FIGURE 11.11: Faceted plot of interaction model.
+FIGURE 10.11: Faceted plot of interaction model.
 </p>
-<img src="book_temp_files/figure-html/unnamed-chunk-705-1.png" alt="Faceted plot of interaction model." width="672">
+<img src="book_temp_files/figure-html/unnamed-chunk-639-1.png" alt="Faceted plot of interaction model." width="672">
 </div>
 </div>
 <div id="house-prices-regression" class="section level3">
 <h3>
-<span class="header-section-number">11.3.3</span> Regression modeling</h3>
+<span class="header-section-number">10.3.3</span> Regression modeling</h3>
 <p>What are the five different slopes and five different intercepts for the interaction model? We can obtain these values from the regression table. Recall our two-step process for getting the regression table:</p>
-<div class="sourceCode" id="cb918"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb918-1"><a href="continuous-response.html#cb918-1"></a><span class="co"># Fit regression model:</span></span>
-<span id="cb918-2"><a href="continuous-response.html#cb918-2"></a></span>
-<span id="cb918-3"><a href="continuous-response.html#cb918-3"></a>price_interaction &lt;-<span class="st"> </span><span class="kw">lm</span>(log10_price <span class="op">~</span><span class="st"> </span>log10_size <span class="op">*</span><span class="st"> </span>condition, </span>
-<span id="cb918-4"><a href="continuous-response.html#cb918-4"></a>                        <span class="dt">data =</span> house_prices)</span>
-<span id="cb918-5"><a href="continuous-response.html#cb918-5"></a></span>
-<span id="cb918-6"><a href="continuous-response.html#cb918-6"></a><span class="co"># Get regression table:</span></span>
-<span id="cb918-7"><a href="continuous-response.html#cb918-7"></a></span>
-<span id="cb918-8"><a href="continuous-response.html#cb918-8"></a>price_interaction <span class="op">%&gt;%</span></span>
-<span id="cb918-9"><a href="continuous-response.html#cb918-9"></a><span class="st">  </span><span class="kw">tidy</span>(<span class="dt">conf.int =</span> <span class="ot">TRUE</span>) <span class="op">%&gt;%</span></span>
-<span id="cb918-10"><a href="continuous-response.html#cb918-10"></a><span class="st">  </span><span class="kw">select</span>(term, estimate, conf.low, conf.high)</span></code></pre></div>
 <style>html {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
 }
@@ -7386,7 +7142,7 @@ FIGURE 11.11: Faceted plot of interaction model.
     </tr>
 </tbody>
 </table></div>
-<p>Recall we saw in Subsection <a href="continuous-response.html#model4interactiontable">11.1.2</a> how to interpret a regression table when there are both numerical and categorical explanatory variables. Let’s now do the same for all 10 values in the <code>estimate</code> column of Table <a href="#tab:seattle-interaction"><strong>??</strong></a>.</p>
+<p>Recall we saw in Subsection <a href="continuous-response.html#model4interactiontable">10.1.2</a> how to interpret a regression table when there are both numerical and categorical explanatory variables. Let’s now do the same for all 10 values in the <code>estimate</code> column of Table <a href="#tab:seattle-interaction"><strong>??</strong></a>.</p>
 <p>In this case, the “baseline for comparison” group for the categorical variable <code>condition</code> are the condition 1 houses, since “1” comes first alphanumerically. Thus, the <code>intercept</code> and <code>log10_size</code> values are the intercept and slope for <code>log10_size</code> for this baseline group. Next, the <code>condition2</code> through <code>condition5</code> terms are the <em>offsets</em> in intercepts relative to the condition 1 intercept. Finally, the <code>log10_size:condition2</code> through <code>log10_size:condition5</code> are the <em>offsets</em> in slopes for <code>log10_size</code> relative to the condition 1 slope for <code>log10_size</code>.</p>
 <p>Let’s simplify this by writing out the equation of each of the five regression lines using these 10 <code>estimate</code> values. We’ll write out each line in the following format:</p>
 <p><span class="math display">\[
@@ -7436,7 +7192,7 @@ FIGURE 11.11: Faceted plot of interaction model.
 </div>
 <div id="house-prices-making-predictions" class="section level3">
 <h3>
-<span class="header-section-number">11.3.4</span> Making predictions</h3>
+<span class="header-section-number">10.3.4</span> Making predictions</h3>
 <p>Say you’re a realtor and someone calls you asking you how much their home will sell for. They tell you that it’s in condition = 5 and is sized 1900 square feet. What do you tell them? Let’s use the interaction model we fit to make predictions!</p>
 <p>We first make this prediction visually in Figure <a href="#fig:house-price-interaction-3"><strong>??</strong></a>. The predicted <code>log10_price</code> of this house is marked with a black dot. This is where the following two lines intersect:</p>
 <ul>
@@ -7444,31 +7200,25 @@ FIGURE 11.11: Faceted plot of interaction model.
 <li>The vertical dashed black line at <code>log10_size</code> equals 3.28, since our predictor variable is the log10 transformed square feet of living space of <span class="math inline">\(\log10(1900) = 3.28\)</span>.</li>
 </ul>
 <div class="figure">
-<span id="fig:unnamed-chunk-708"></span>
+<span id="fig:unnamed-chunk-642"></span>
 <p class="caption marginnote shownote">
-FIGURE 11.12: Interaction model with prediction.
+FIGURE 10.12: Interaction model with prediction.
 </p>
-<img src="book_temp_files/figure-html/unnamed-chunk-708-1.png" alt="Interaction model with prediction." width="672">
+<img src="book_temp_files/figure-html/unnamed-chunk-642-1.png" alt="Interaction model with prediction." width="672">
 </div>
 <p>Eyeballing it, it seems the predicted <code>log10_price</code> seems to be around 5.75. Let’s now obtain the exact numerical value for the prediction using the equation of the regression line for the condition = 5 houses, being sure to <code>log10()</code> the square footage first.</p>
-<div class="sourceCode" id="cb919"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb919-1"><a href="continuous-response.html#cb919-1"></a><span class="fl">2.45</span> <span class="op">+</span><span class="st"> </span><span class="dv">1</span> <span class="op">*</span><span class="st"> </span><span class="kw">log10</span>(<span class="dv">1900</span>)</span></code></pre></div>
 <pre><code>## [1] 5.729</code></pre>
 <p>This value is very close to our earlier visually made prediction of 5.75. But wait! Is our prediction for the price of this house $5.75? No! Remember that we are using <code>log10_price</code> as our outcome variable! So, if we want a prediction in dollar units of <code>price</code>, we need to unlog this by taking a power of 10.</p>
-<div class="sourceCode" id="cb921"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb921-1"><a href="continuous-response.html#cb921-1"></a><span class="dv">10</span><span class="op">^</span>(<span class="fl">2.45</span> <span class="op">+</span><span class="st"> </span><span class="dv">1</span> <span class="op">*</span><span class="st"> </span><span class="kw">log10</span>(<span class="dv">1900</span>))</span></code></pre></div>
 <pre><code>## [1] 535493</code></pre>
 <p>So our predicted price for this home of condition 5 and of size 1900 square feet is $535,493.</p>
 </div>
 <div id="fitting-many-models-using-map" class="section level3">
 <h3>
-<span class="header-section-number">11.3.5</span> Fitting many models using <code>map()</code>
+<span class="header-section-number">10.3.5</span> Fitting many models using <code>map()</code>
 </h3>
 <p>Much like we did with the gubernatorial forecasts in the last chapter, we can now use <code>map_*</code> functions to estimate many models using our house prices data.</p>
 <p>How well do size and condition predict house prices for older houses versus newer ones? That’s difficult to visualize without using <code>map_*</code> functions. But by using <code>map()</code> and list columns, we can learn a lot we couldn’t otherwise.</p>
 <p>Let’s start by <code>filter</code>ing our data to houses built before 2000 (since there is little variation in <code>condition</code> for more recently built houses) and <code>nest()</code> by <code>yr_built</code>:</p>
-<div class="sourceCode" id="cb923"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb923-1"><a href="continuous-response.html#cb923-1"></a>house_prices <span class="op">%&gt;%</span></span>
-<span id="cb923-2"><a href="continuous-response.html#cb923-2"></a><span class="st">  </span><span class="kw">filter</span>(yr_built <span class="op">&lt;</span><span class="st"> </span><span class="dv">2000</span>) <span class="op">%&gt;%</span></span>
-<span id="cb923-3"><a href="continuous-response.html#cb923-3"></a><span class="st">  </span><span class="kw">group_by</span>(yr_built) <span class="op">%&gt;%</span></span>
-<span id="cb923-4"><a href="continuous-response.html#cb923-4"></a><span class="st">  </span><span class="kw">nest</span>()</span></code></pre></div>
 <pre><code>## # A tibble: 100 x 2
 ## # Groups:   yr_built [100]
 ##    yr_built data               
@@ -7486,13 +7236,6 @@ FIGURE 11.12: Interaction model with prediction.
 ## # … with 90 more rows</code></pre>
 <p>Now that we have a list column <code>data</code> consisting of our data for each <code>yr_built</code>, we can use some familiar code to run a model for each year. Let’s simplify the model to the parallel slopes model, which we can implement with the formula <code>log10_price ~ log10_size + condition.</code> This simpler model may be a better choice since we have far fewer observations per model. (In general, the smaller your data, the greater concern you should have that you are “overfitting” by including too many predictors.)</p>
 <p>Let’s start by saving our model object in the list column <code>mod</code> and the <code>tid</code>ied version of that in the list column <code>reg_results</code>:</p>
-<div class="sourceCode" id="cb925"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb925-1"><a href="continuous-response.html#cb925-1"></a>house_prices <span class="op">%&gt;%</span></span>
-<span id="cb925-2"><a href="continuous-response.html#cb925-2"></a><span class="st">  </span><span class="kw">filter</span>(yr_built <span class="op">&lt;</span><span class="st"> </span><span class="dv">2000</span>) <span class="op">%&gt;%</span></span>
-<span id="cb925-3"><a href="continuous-response.html#cb925-3"></a><span class="st">  </span><span class="kw">group_by</span>(yr_built) <span class="op">%&gt;%</span></span>
-<span id="cb925-4"><a href="continuous-response.html#cb925-4"></a><span class="st">  </span><span class="kw">nest</span>() <span class="op">%&gt;%</span></span>
-<span id="cb925-5"><a href="continuous-response.html#cb925-5"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">mod =</span> <span class="kw">map</span>(data, <span class="op">~</span><span class="st"> </span><span class="kw">lm</span>(log10_price <span class="op">~</span><span class="st"> </span>log10_size <span class="op">+</span><span class="st"> </span>condition, </span>
-<span id="cb925-6"><a href="continuous-response.html#cb925-6"></a>                        <span class="dt">data =</span> .)),</span>
-<span id="cb925-7"><a href="continuous-response.html#cb925-7"></a>         <span class="dt">reg_results =</span> <span class="kw">map</span>(mod, <span class="op">~</span><span class="st"> </span><span class="kw">tidy</span>(., <span class="dt">conf.int =</span> <span class="ot">TRUE</span>)))</span></code></pre></div>
 <pre><code>## # A tibble: 100 x 4
 ## # Groups:   yr_built [100]
 ##    yr_built data                mod    reg_results     
@@ -7510,21 +7253,6 @@ FIGURE 11.12: Interaction model with prediction.
 ## # … with 90 more rows</code></pre>
 <p>Now let’s take a look at the effect of <code>log10_size_coef</code>. Note that when interpreting this coefficient that these models also include <code>condition</code>, and thus we are looking at the effect of size on price while <em>also</em> allowing the intercept to be offset by different levels of <code>condition</code>. <!-- AR: I don't love this talk of "offsets" -- conceptually, you are just estimating different intercepts for different levels of "condition" and the regression output *expresses* it in terms of offsets -- but this is how the book discusses it throughout and it would take considerable editing to change it. --></p>
 <p>Here is the code to extract the coefficient on <code>log10_size_coef</code> as well as the confidence interval bounds:</p>
-<div class="sourceCode" id="cb927"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb927-1"><a href="continuous-response.html#cb927-1"></a>house_year_model &lt;-<span class="st"> </span>house_prices <span class="op">%&gt;%</span></span>
-<span id="cb927-2"><a href="continuous-response.html#cb927-2"></a><span class="st">  </span><span class="kw">filter</span>(yr_built <span class="op">&lt;</span><span class="st"> </span><span class="dv">2000</span>) <span class="op">%&gt;%</span></span>
-<span id="cb927-3"><a href="continuous-response.html#cb927-3"></a><span class="st">  </span><span class="kw">group_by</span>(yr_built) <span class="op">%&gt;%</span></span>
-<span id="cb927-4"><a href="continuous-response.html#cb927-4"></a><span class="st">  </span><span class="kw">nest</span>() <span class="op">%&gt;%</span></span>
-<span id="cb927-5"><a href="continuous-response.html#cb927-5"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">mod =</span> <span class="kw">map</span>(data, <span class="op">~</span><span class="st"> </span><span class="kw">lm</span>(log10_price <span class="op">~</span><span class="st"> </span>log10_size <span class="op">+</span><span class="st"> </span>condition, </span>
-<span id="cb927-6"><a href="continuous-response.html#cb927-6"></a>                        <span class="dt">data =</span> .)),</span>
-<span id="cb927-7"><a href="continuous-response.html#cb927-7"></a>         <span class="dt">reg_results =</span> <span class="kw">map</span>(mod, <span class="op">~</span><span class="st"> </span><span class="kw">tidy</span>(., <span class="dt">conf.int =</span> <span class="ot">TRUE</span>)),</span>
-<span id="cb927-8"><a href="continuous-response.html#cb927-8"></a>         <span class="dt">log10_size_coef =</span> <span class="kw">map_dbl</span>(reg_results, <span class="op">~</span><span class="st"> </span><span class="kw">filter</span>(., term <span class="op">==</span><span class="st"> "log10_size"</span>) <span class="op">%&gt;%</span></span>
-<span id="cb927-9"><a href="continuous-response.html#cb927-9"></a><span class="st">                                     </span><span class="kw">pull</span>(estimate)),</span>
-<span id="cb927-10"><a href="continuous-response.html#cb927-10"></a>         <span class="dt">log10_size_low =</span> <span class="kw">map_dbl</span>(reg_results, <span class="op">~</span><span class="st"> </span><span class="kw">filter</span>(., term <span class="op">==</span><span class="st"> "log10_size"</span>) <span class="op">%&gt;%</span></span>
-<span id="cb927-11"><a href="continuous-response.html#cb927-11"></a><span class="st">                                     </span><span class="kw">pull</span>(conf.low)),</span>
-<span id="cb927-12"><a href="continuous-response.html#cb927-12"></a>         <span class="dt">log10_size_high =</span> <span class="kw">map_dbl</span>(reg_results, <span class="op">~</span><span class="st"> </span><span class="kw">filter</span>(., term <span class="op">==</span><span class="st"> "log10_size"</span>) <span class="op">%&gt;%</span></span>
-<span id="cb927-13"><a href="continuous-response.html#cb927-13"></a><span class="st">                                     </span><span class="kw">pull</span>(conf.high)))</span>
-<span id="cb927-14"><a href="continuous-response.html#cb927-14"></a></span>
-<span id="cb927-15"><a href="continuous-response.html#cb927-15"></a>house_year_model</span></code></pre></div>
 <pre><code>## # A tibble: 100 x 7
 ## # Groups:   yr_built [100]
 ##    yr_built data  mod   reg_results log10_size_coef log10_size_low
@@ -7541,32 +7269,23 @@ FIGURE 11.12: Interaction model with prediction.
 ## 10     1927 &lt;tib… &lt;lm&gt;  &lt;tibble [4…           0.818          0.657
 ## # … with 90 more rows, and 1 more variable: log10_size_high &lt;dbl&gt;</code></pre>
 <p>The easiest way to see the results of these models is to plot the coefficients:</p>
-<div class="sourceCode" id="cb929"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb929-1"><a href="continuous-response.html#cb929-1"></a>house_year_model <span class="op">%&gt;%</span></span>
-<span id="cb929-2"><a href="continuous-response.html#cb929-2"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> yr_built, <span class="dt">y =</span> log10_size_coef, <span class="dt">ymin =</span> log10_size_low, <span class="dt">ymax =</span> log10_size_high)) <span class="op">+</span></span>
-<span id="cb929-3"><a href="continuous-response.html#cb929-3"></a><span class="st">  </span><span class="kw">geom_point</span>() <span class="op">+</span></span>
-<span id="cb929-4"><a href="continuous-response.html#cb929-4"></a><span class="st">  </span><span class="kw">geom_errorbar</span>() <span class="op">+</span></span>
-<span id="cb929-5"><a href="continuous-response.html#cb929-5"></a><span class="st">  </span><span class="kw">theme_minimal</span>() <span class="op">+</span></span>
-<span id="cb929-6"><a href="continuous-response.html#cb929-6"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">"Year built"</span>,</span>
-<span id="cb929-7"><a href="continuous-response.html#cb929-7"></a>       <span class="dt">y =</span> <span class="st">"Effect of log 10 size on log 10 price"</span>,</span>
-<span id="cb929-8"><a href="continuous-response.html#cb929-8"></a>       <span class="dt">title =</span> <span class="st">"Predicting house price with house size and condition"</span>,</span>
-<span id="cb929-9"><a href="continuous-response.html#cb929-9"></a>       <span class="dt">subtitle =</span> <span class="st">"Regression coefficients for house size plotted by year"</span>)</span></code></pre></div>
-<p><img src="book_temp_files/figure-html/unnamed-chunk-714-1.png" width="672"></p>
+<p><img src="book_temp_files/figure-html/unnamed-chunk-648-1.png" width="672"></p>
 <p>We can learn a lot from this figure that would be hard to do if we just ran a single regression. For example, we see that the effect of house size (taking into account condition) follows no clear pattern for the first half of the twentieth century, but appears to increase throughout the second half of the twentieth century. The size of a house in Seattle is a much better predictor of its price in these models if the house was built in the 1990s than if the house was built in the 1940s.</p>
 </div>
 <div id="model-selection" class="section level3">
 <h3>
-<span class="header-section-number">11.3.6</span> Model selection</h3>
+<span class="header-section-number">10.3.6</span> Model selection</h3>
 <p>Let’s go back to the two regression models above. Which of the two models - the interaction plot or the parallel slopes model - is “better”? You need to make a choice depending on what you want to convey, and own that choice, with including and discussing both also as an option as needed.</p>
 <p>We should only favor more complex models if the additional complexity is <em>warranted</em>. In this case, the more complex model is the interaction model since it considers five intercepts and five slopes total. This is in contrast to the parallel slopes model which considers five intercepts but only one common slope.</p>
 <p>Is the additional complexity of the interaction model warranted? Looking at the parallel slopes model, we’re of the opinion that it is, as evidenced by the slight x-like pattern to some of the lines, therefore focusing our analysis in the previous sections on the interaction model. This visual approach is somewhat subjective, however, so feel free to disagree!</p>
-<p>When should we use an interaction model versus a parallel slopes model? Recall in Sections <a href="continuous-response.html#model4interactiontable">11.1.2</a> and <a href="continuous-response.html#model4table">11.1.4</a> we fit both interaction and parallel slopes models for the outcome variable <span class="math inline">\(y\)</span> (teaching score) using a numerical explanatory variable <span class="math inline">\(x_1\)</span> (age) and a categorical explanatory variable <span class="math inline">\(x_2\)</span> (gender recorded as a binary variable). We compared these models in Figure <a href="#fig:numxcatx-comparison"><strong>??</strong></a>, which we display again now.</p>
+<p>When should we use an interaction model versus a parallel slopes model? Recall in Sections <a href="continuous-response.html#model4interactiontable">10.1.2</a> and <a href="continuous-response.html#model4table">10.1.4</a> we fit both interaction and parallel slopes models for the outcome variable <span class="math inline">\(y\)</span> (teaching score) using a numerical explanatory variable <span class="math inline">\(x_1\)</span> (age) and a categorical explanatory variable <span class="math inline">\(x_2\)</span> (gender recorded as a binary variable). We compared these models in Figure <a href="#fig:numxcatx-comparison"><strong>??</strong></a>, which we display again now.</p>
 <pre><code>## `geom_smooth()` using formula 'y ~ x'</code></pre>
 <div class="figure">
-<span id="fig:unnamed-chunk-715"></span>
+<span id="fig:unnamed-chunk-649"></span>
 <p class="caption marginnote shownote">
-FIGURE 11.13: Previously seen comparison of interaction and parallel slopes models.
+FIGURE 10.13: Previously seen comparison of interaction and parallel slopes models.
 </p>
-<img src="book_temp_files/figure-html/unnamed-chunk-715-1.png" alt="Previously seen comparison of interaction and parallel slopes models." width="672">
+<img src="book_temp_files/figure-html/unnamed-chunk-649-1.png" alt="Previously seen comparison of interaction and parallel slopes models." width="672">
 </div>
 <p>A lot of you might have asked yourselves: “Why would I force the lines to have parallel slopes (as seen in the right-hand plot) when they clearly have different slopes (as seen in the left-hand plot)?”.</p>
 <p>The answer lies in a philosophical principle known as “Occam’s Razor.” It states that, “all other things being equal, simpler solutions are more likely to be correct than complex ones.” When viewed in a modeling framework, Occam’s Razor can be restated as, “all other things being equal, simpler models are to be preferred over complex ones.” In other words, we should only favor the more complex model if the additional complexity is <em>warranted</em>.</p>
@@ -7586,37 +7305,16 @@ FIGURE 11.13: Previously seen comparison of interaction and parallel slopes mode
 <li>A numerical explanatory variable <span class="math inline">\(x_1\)</span>, the percentage of that high school’s student body that are economically disadvantaged and</li>
 <li>A categorical explanatory variable <span class="math inline">\(x_2\)</span>, the school size as measured by enrollment: small (13-341 students), medium (342-541 students), and large (542-4264 students).</li>
 </ol>
-<p>Let’s create visualizations of both the interaction and parallel slopes model once again and display the output in Figure <a href="#fig:numxcatx-comparison-2"><strong>??</strong></a>. Recall from Subsection <a href="continuous-response.html#model4table">11.1.4</a> that the <code>geom_parallel_slopes()</code> function is a special purpose function included in the <strong>moderndive</strong> package, since the <code>geom_smooth()</code> method in the <code>ggplot2</code> package does not have a convenient way to plot parallel slopes models.</p>
-<div class="sourceCode" id="cb931"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb931-1"><a href="continuous-response.html#cb931-1"></a><span class="co"># Interaction model</span></span>
-<span id="cb931-2"><a href="continuous-response.html#cb931-2"></a></span>
-<span id="cb931-3"><a href="continuous-response.html#cb931-3"></a>MA_schools <span class="op">%&gt;%</span></span>
-<span id="cb931-4"><a href="continuous-response.html#cb931-4"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> perc_disadvan, <span class="dt">y =</span> average_sat_math, <span class="dt">color =</span> size)) <span class="op">+</span></span>
-<span id="cb931-5"><a href="continuous-response.html#cb931-5"></a><span class="st">  </span><span class="kw">geom_point</span>(<span class="dt">alpha =</span> <span class="fl">0.25</span>) <span class="op">+</span></span>
-<span id="cb931-6"><a href="continuous-response.html#cb931-6"></a><span class="st">  </span><span class="kw">geom_smooth</span>(<span class="dt">method =</span> <span class="st">"lm"</span>, <span class="dt">se =</span> <span class="ot">FALSE</span>) <span class="op">+</span></span>
-<span id="cb931-7"><a href="continuous-response.html#cb931-7"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">"Percent economically disadvantaged"</span>, <span class="dt">y =</span> <span class="st">"Math SAT Score"</span>, </span>
-<span id="cb931-8"><a href="continuous-response.html#cb931-8"></a>       <span class="dt">color =</span> <span class="st">"School size"</span>, <span class="dt">title =</span> <span class="st">"Interaction model"</span>)</span></code></pre></div>
-<div class="sourceCode" id="cb932"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb932-1"><a href="continuous-response.html#cb932-1"></a><span class="co"># Parallel slopes model</span></span>
-<span id="cb932-2"><a href="continuous-response.html#cb932-2"></a></span>
-<span id="cb932-3"><a href="continuous-response.html#cb932-3"></a><span class="kw">ggplot</span>(MA_schools, </span>
-<span id="cb932-4"><a href="continuous-response.html#cb932-4"></a>       <span class="kw">aes</span>(<span class="dt">x =</span> perc_disadvan, <span class="dt">y =</span> average_sat_math, <span class="dt">color =</span> size)) <span class="op">+</span></span>
-<span id="cb932-5"><a href="continuous-response.html#cb932-5"></a><span class="st">  </span><span class="kw">geom_point</span>(<span class="dt">alpha =</span> <span class="fl">0.25</span>) <span class="op">+</span></span>
-<span id="cb932-6"><a href="continuous-response.html#cb932-6"></a><span class="st">  </span><span class="kw">geom_parallel_slopes</span>(<span class="dt">se =</span> <span class="ot">FALSE</span>) <span class="op">+</span></span>
-<span id="cb932-7"><a href="continuous-response.html#cb932-7"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">"Percent economically disadvantaged"</span>, <span class="dt">y =</span> <span class="st">"Math SAT Score"</span>, </span>
-<span id="cb932-8"><a href="continuous-response.html#cb932-8"></a>       <span class="dt">color =</span> <span class="st">"School size"</span>, <span class="dt">title =</span> <span class="st">"Parallel slopes model"</span>)</span></code></pre></div>
+<p>Let’s create visualizations of both the interaction and parallel slopes model once again and display the output in Figure <a href="#fig:numxcatx-comparison-2"><strong>??</strong></a>. Recall from Subsection <a href="continuous-response.html#model4table">10.1.4</a> that the <code>geom_parallel_slopes()</code> function is a special purpose function included in the <strong>moderndive</strong> package, since the <code>geom_smooth()</code> method in the <code>ggplot2</code> package does not have a convenient way to plot parallel slopes models.</p>
 <pre><code>## `geom_smooth()` using formula 'y ~ x'</code></pre>
 <div class="figure">
-<span id="fig:unnamed-chunk-718"></span>
+<span id="fig:unnamed-chunk-652"></span>
 <p class="caption marginnote shownote">
-FIGURE 11.14: Comparison of interaction and parallel slopes models for Massachusetts schools.
+FIGURE 10.14: Comparison of interaction and parallel slopes models for Massachusetts schools.
 </p>
-<img src="book_temp_files/figure-html/unnamed-chunk-718-1.png" alt="Comparison of interaction and parallel slopes models for Massachusetts schools." width="672">
+<img src="book_temp_files/figure-html/unnamed-chunk-652-1.png" alt="Comparison of interaction and parallel slopes models for Massachusetts schools." width="672">
 </div>
 <p>Look closely at the left-hand plot of Figure <a href="#fig:numxcatx-comparison-2"><strong>??</strong></a> corresponding to an interaction model. While the slopes are indeed different, they do not differ <em>by much</em> and are nearly identical. Now compare the left-hand plot with the right-hand plot corresponding to a parallel slopes model. The two models don’t appear all that different. So in this case, it can be argued that the additional complexity of the interaction model is <em>not warranted</em>. Thus following Occam’s Razor, we should prefer the “simpler” parallel slopes model. Let’s explicitly define what “simpler” means in this case. Let’s compare the regression tables for the interaction and parallel slopes models in Tables <a href="#tab:model2-interaction"><strong>??</strong></a> and <a href="#tab:model2-parallel-slopes"><strong>??</strong></a>.</p>
-<div class="sourceCode" id="cb934"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb934-1"><a href="continuous-response.html#cb934-1"></a>model_<span class="dv">2</span>_interaction &lt;-<span class="st"> </span><span class="kw">lm</span>(average_sat_math <span class="op">~</span><span class="st"> </span>perc_disadvan <span class="op">*</span><span class="st"> </span>size, </span>
-<span id="cb934-2"><a href="continuous-response.html#cb934-2"></a>                          <span class="dt">data =</span> MA_schools)</span>
-<span id="cb934-3"><a href="continuous-response.html#cb934-3"></a>model_<span class="dv">2</span>_interaction <span class="op">%&gt;%</span></span>
-<span id="cb934-4"><a href="continuous-response.html#cb934-4"></a><span class="st">  </span><span class="kw">tidy</span>(<span class="dt">conf.int =</span> <span class="ot">TRUE</span>) <span class="op">%&gt;%</span></span>
-<span id="cb934-5"><a href="continuous-response.html#cb934-5"></a><span class="st">  </span><span class="kw">select</span>(term, estimate, conf.low, conf.high)</span></code></pre></div>
 <style>html {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
 }
@@ -8005,11 +7703,6 @@ FIGURE 11.14: Comparison of interaction and parallel slopes models for Massachus
     </tr>
 </tbody>
 </table></div>
-<div class="sourceCode" id="cb935"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb935-1"><a href="continuous-response.html#cb935-1"></a>model_<span class="dv">2</span>_parallel_slopes &lt;-<span class="st"> </span><span class="kw">lm</span>(average_sat_math <span class="op">~</span><span class="st"> </span>perc_disadvan <span class="op">+</span><span class="st"> </span>size, </span>
-<span id="cb935-2"><a href="continuous-response.html#cb935-2"></a>                              <span class="dt">data =</span> MA_schools)</span>
-<span id="cb935-3"><a href="continuous-response.html#cb935-3"></a>model_<span class="dv">2</span>_parallel_slopes <span class="op">%&gt;%</span></span>
-<span id="cb935-4"><a href="continuous-response.html#cb935-4"></a><span class="st">  </span><span class="kw">tidy</span>(<span class="dt">conf.int =</span> <span class="ot">TRUE</span>) <span class="op">%&gt;%</span></span>
-<span id="cb935-5"><a href="continuous-response.html#cb935-5"></a><span class="st">  </span><span class="kw">select</span>(term, estimate, conf.low, conf.high)</span></code></pre></div>
 <style>html {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
 }
@@ -8396,15 +8089,11 @@ Given that intercepts in the parallel slopes model in the right-hand plot of Fig
 </div>
 <div id="correlationcoefficient2" class="section level3">
 <h3>
-<span class="header-section-number">11.3.7</span> Correlation coefficient</h3>
+<span class="header-section-number">10.3.7</span> Correlation coefficient</h3>
 <p>Recall from Table <a href="#tab:model3-correlation"><strong>??</strong></a> that the correlation coefficient between <code>income</code> in thousands of dollars and credit card <code>debt</code> was 0.464. What if instead we looked at the correlation coefficient between <code>income</code> and credit card <code>debt</code>, but where <code>income</code> was in dollars and not thousands of dollars? This can be done by multiplying <code>income</code> by 1,000.</p>
-<div class="sourceCode" id="cb936"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb936-1"><a href="continuous-response.html#cb936-1"></a>credit_ch12 <span class="op">%&gt;%</span></span>
-<span id="cb936-2"><a href="continuous-response.html#cb936-2"></a><span class="st">  </span><span class="kw">select</span>(debt, income) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb936-3"><a href="continuous-response.html#cb936-3"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">income =</span> income <span class="op">*</span><span class="st"> </span><span class="dv">1000</span>) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb936-4"><a href="continuous-response.html#cb936-4"></a><span class="st">  </span><span class="kw">cor</span>()</span></code></pre></div>
 <table class="table" style="font-size: 16px; margin-left: auto; margin-right: auto;">
 <caption style="font-size: initial !important;">
-<span id="tab:unnamed-chunk-724">TABLE 11.5: </span>Correlation between income (in dollars) and credit card debt
+<span id="tab:unnamed-chunk-658">TABLE 10.5: </span>Correlation between income (in dollars) and credit card debt
 </caption>
 <thead><tr>
 <th style="text-align:left;">
@@ -8445,14 +8134,14 @@ income
 </div>
 <div id="simpsonsparadox" class="section level3">
 <h3>
-<span class="header-section-number">11.3.8</span> Simpson’s Paradox</h3>
-<p>Recall in Section <a href="continuous-response.html#model3">11.2</a>, we saw the two seemingly contradictory results when studying the relationship between credit card <code>debt</code> and <code>income</code>. On the one hand, the right hand plot of Figure <a href="#fig:2numxplot1"><strong>??</strong></a> suggested that the relationship between credit card <code>debt</code> and <code>income</code> was <em>positive</em>. We re-display this in Figure <a href="#fig:2numxplot1-repeat"><strong>??</strong></a>.</p>
+<span class="header-section-number">10.3.8</span> Simpson’s Paradox</h3>
+<p>Recall in Section <a href="continuous-response.html#model3">10.2</a>, we saw the two seemingly contradictory results when studying the relationship between credit card <code>debt</code> and <code>income</code>. On the one hand, the right hand plot of Figure <a href="#fig:2numxplot1"><strong>??</strong></a> suggested that the relationship between credit card <code>debt</code> and <code>income</code> was <em>positive</em>. We re-display this in Figure <a href="#fig:2numxplot1-repeat"><strong>??</strong></a>.</p>
 <div class="figure">
-<span id="fig:unnamed-chunk-725"></span>
+<span id="fig:unnamed-chunk-659"></span>
 <p class="caption marginnote shownote">
-FIGURE 11.15: Relationship between credit card debt and income.
+FIGURE 10.15: Relationship between credit card debt and income.
 </p>
-<img src="book_temp_files/figure-html/unnamed-chunk-725-1.png" alt="Relationship between credit card debt and income." width="672">
+<img src="book_temp_files/figure-html/unnamed-chunk-659-1.png" alt="Relationship between credit card debt and income." width="672">
 </div>
 <p>On the other hand, the multiple regression results in Table <a href="#tab:model3-table-output"><strong>??</strong></a> suggested that the relationship between <code>debt</code> and <code>income</code> was <em>negative</em>. We re-display this information in Table <a href="#tab:model3-table-output-repeat"><strong>??</strong></a>.</p>
 <style>html {
@@ -8829,11 +8518,11 @@ FIGURE 11.15: Relationship between credit card debt and income.
 <p>In other words, while in <em>isolation</em>, the relationship between <code>debt</code> and <code>income</code> may be positive, when taking into account <code>credit_limit</code> as well, this relationship becomes negative. These seemingly paradoxical results are due to a phenomenon aptly named <a href="https://en.wikipedia.org/wiki/Simpson%27s_paradox"><em>Simpson’s Paradox</em></a>. Simpson’s Paradox occurs when trends that exist for the data in aggregate either disappear or reverse when the data are broken down into groups.</p>
 <p>Let’s show how Simpson’s Paradox manifests itself in the <code>credit_ch12</code> data. Let’s first visualize the distribution of the numerical explanatory variable <code>credit_limit</code> with a histogram in Figure <a href="#fig:credit-limit-quartiles"><strong>??</strong></a>.</p>
 <div class="figure">
-<span id="fig:unnamed-chunk-727"></span>
+<span id="fig:unnamed-chunk-661"></span>
 <p class="caption marginnote shownote">
-FIGURE 11.16: Histogram of credit limits and brackets.
+FIGURE 10.16: Histogram of credit limits and brackets.
 </p>
-<img src="book_temp_files/figure-html/unnamed-chunk-727-1.png" alt="Histogram of credit limits and brackets." width="672">
+<img src="book_temp_files/figure-html/unnamed-chunk-661-1.png" alt="Histogram of credit limits and brackets." width="672">
 </div>
 <p>The vertical dashed lines are the <em>quartiles</em> that cut up the variable <code>credit_limit</code> into four equally sized groups. Let’s think of these quartiles as converting our numerical variable <code>credit_limit</code> into a categorical variable “<code>credit_limit</code> bracket” with four levels. This means that</p>
 <ol style="list-style-type: decimal">
@@ -8849,11 +8538,11 @@ FIGURE 11.16: Histogram of credit limits and brackets.
 </ol>
 <p>In other words, the location of the 400 points are the same in both scatterplots, but the right-hand plot shows an additional variable of information: <code>credit_limit</code> bracket.</p>
 <div class="figure">
-<span id="fig:unnamed-chunk-728"></span>
+<span id="fig:unnamed-chunk-662"></span>
 <p class="caption marginnote shownote">
-FIGURE 11.17: Relationship between credit card debt and income by credit limit bracket.
+FIGURE 10.17: Relationship between credit card debt and income by credit limit bracket.
 </p>
-<img src="book_temp_files/figure-html/unnamed-chunk-728-1.png" alt="Relationship between credit card debt and income by credit limit bracket." width="672">
+<img src="book_temp_files/figure-html/unnamed-chunk-662-1.png" alt="Relationship between credit card debt and income by credit limit bracket." width="672">
 </div>
 <p>The left-hand plot of Figure <a href="#fig:2numxplot4"><strong>??</strong></a> focuses on the relationship between <code>debt</code> and <code>income</code> in <em>aggregate</em>. It is suggesting that overall there exists a positive relationship between <code>debt</code> and <code>income</code>. However, the right-hand plot of Figure <a href="#fig:2numxplot4"><strong>??</strong></a> focuses on the relationship between <code>debt</code> and <code>income</code> <em>broken down by <code>credit_limit</code> bracket</em>. In other words, we focus on four <em>separate</em> relationships between <code>debt</code> and <code>income</code>: one for the “low” <code>credit_limit</code> bracket, one for the “medium-low” <code>credit_limit</code> bracket, and so on.</p>
 <p>Observe in the right-hand plot that the relationship between <code>debt</code> and <code>income</code> is clearly negative for the “medium-low” and “medium-high” <code>credit_limit</code> brackets, while the relationship is somewhat flat for the “low” <code>credit_limit</code> bracket. The only <code>credit_limit</code> bracket where the relationship remains positive is for the “high” <code>credit_limit</code> bracket. However, this relationship is less positive than in the relationship in aggregate, since the slope is shallower than the slope of the regression line in the left-hand plot.</p>
@@ -8864,11 +8553,11 @@ FIGURE 11.17: Relationship between credit card debt and income by credit limit b
 </div></body></html>
 
 <p style="text-align: center;">
-<a href="pitfalls.html"><button class="btn btn-default">Previous</button></a>
+<a href="n-parameters.html"><button class="btn btn-default">Previous</button></a>
 <a href="appendices.html"><button class="btn btn-default">Next</button></a>
 </p>
 <p class="build-date">Page built: 
-2020-07-24
+2020-07-25
 </p>
 </div>
 </div>
