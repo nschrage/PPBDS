@@ -4,13 +4,14 @@
 # be reset for chapter 5? For now, I doubt we need to worry about that since
 # individual chapters rarely mess around with this stuff.)
 
-# This is caused by this setting in _bookdown.yml.
-
-# before_chapter_script: "common.R"
+# This is caused by the setting of "before_chapter_script" in _bookdown.yml.
 
 # Packages used by almost all chapters
 
+library(knitr)
 library(tufte)
+library(scales)
+library(skimr)
 library(gt)
 
 options(digits = 2)
@@ -21,6 +22,12 @@ options(digits = 2)
 # cache to persist, at least in the book-builders home directory. I don't think
 # that using a common directory will cause conflicts across chapters . . .
 
-knitr::opts_chunk$set(cache=TRUE)
 knitr::opts_chunk$set(cache.path = "cache-directory/")
+
+# Critical question is whether or not to use/require cache and, if so, where.
+
+# knitr::opts_chunk$set(cache=TRUE)
+
+# invalidate cache when the tufte version changes. Useful? Necessary?
+# knitr::opts_chunk$set(cache.extra = packageVersion('tufte'))
 
