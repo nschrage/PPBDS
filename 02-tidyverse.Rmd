@@ -56,14 +56,352 @@ The **tidyverse** package will be used in every chapter. **nycflights** includes
 
 <!-- Maybe make a big set of FEC data from the 2016 election for use as the practice data? Ought to use something different from airlines . . . which are boring. -->
 
-### `group_by` rows
+## Data Gathering
 
+Recall the `read_csv()` function from chapter 1 of this textbook. In a previous exercise, we ran the following code chunk:
+
+```{r}
+dem_score <- read_csv(file = "https://moderndive.com/data/dem_score.csv")
+```
+The result of this code chunk is pretty tame. It tells us that each comma from the .csv file corresponds to a column, and the column names are taken from the first line of the file. Then, the function "guesses" an appropriate data type for each of the columns it creates. Sometimes .csv files are a lot dirtier and require significant wrangling before you can explore the data and create usable graphics. 
+
+Let's try to run `read_csv()` on another dataset. This is a link to a file containing the faculty's gender data across departments at Harvard University.
+
+```{r}
+url <- "https://raw.githubusercontent.com/davidkane9/PPBDS/master/02-tidyverse/data/harvard-faculty-gender-final.csv"
+gender_data <- read_csv(file = url)
+```
+
+Now, call `gender_data`.
+```{r}
+gender_data
+```
+
+As you can see, the second row was likely meant to contain the column names. You can run `?read_csv()` in your console to see the additional arguments that the `read_csv()` function may contain to make the new dataframe easier to work with.
+
+```{r}
+gender_data <- read_csv(file = url, skip = 1)
+gender_data
+```
+
+Now suppose we want to change the data type of one of more of the columns. The `col_type` argument allows us to do this. Without the `col_type` argument, the `division` column is read in as a character column. Instead, we want it to be read in as a factor.  
+
+```{r}
+# gender_data <- read_csv(file = url, skip = 1, col_type = cols(division = col_factor()))
+```
+
+Now that the new dataset has been read in, explore it using the `View()` and `glimpse()` functions and the `$` operator from the previous chapter. 
+
+```{r, eval=FALSE}
+View(gender_data)
+```
+
+```{r}
+glimpse(gender_data)
+
+gender_data$division
+```
+
+Run the `summary()` function on the `gender_data` dataframe.
+```{r}
+summary(gender_data)
+```
+You may notice that something appears to be wrong with this dataset. Which department could have employed 644 male full professors? Let's explore what is going wrong here. 
+```{r}
+gender_data %>% filter(full_profs_m == 644)
+```
+
+It seems that one row of the table takes the sum of each of the other rows. This is likely the last row of the dataframe. Use `tail()` to print the last rows of the dataframe to check the final row.
+```{r}
+tail(gender_data)
+```
+
+Now, remove the "Total" row because it will affect any dplyr functions we try to run on the dataframe. Check the `tail()` of the dataframe again to make sure that the proper row was removed. 
+```{r}
+gender_data <- gender_data %>%
+  filter(concentration != "Total")
+
+tail(gender_data)
+```
+
+<!-- https://github.com/mdogucu/web-scrape -->
+
+The data we need to answer a question is not always in a spreadsheet ready for us to read. For example, the US murders dataset we used in the R Basics chapter originally comes from [this Wikipedia page](https://en.wikipedia.org/w/index.php?title=Gun_violence_in_the_United_States_by_state): 
+
+```{r}
+url <- paste0("https://en.wikipedia.org/w/index.php?title=",
+              "Gun_violence_in_the_United_States_by_state",
+              "&direction=prev&oldid=810166167")
+```
+
+You can see the data table when you visit the webpage:
+
+```{r, echo=FALSE}
+knitr::include_graphics("02-tidyverse/images/murders-data-wiki-page.png")
+```
+
+
+To get this data, we need to do some _web scraping_. 
+
+_Web scraping_, or _web harvesting_, is the term we use to describe the process of extracting data from a website. The reason we can do this is because the information used by a browser to render webpages is received as a text file from a server. The text is code written in hyper text markup language (HTML). Every browser has a way to show the html source code for a page, each one different. On Chrome, you can use Control-U on a PC and command+alt+U on a Mac. You will see something like this:
+
+```{r, echo=FALSE}
+knitr::include_graphics("02-tidyverse/images/html-code.png")
+```
+
+### HTML
+
+Because this code is accessible, we can download the HTML file, import it into R, and then write programs to extract the information we need from the page. However, once we look at HTML code, this might seem like a daunting task. But we will show you some convenient tools to facilitate the process. To get an idea of how it works, here are a few lines of code from the Wikipedia page that provides the US murders data:
+
+```
+<table class="wikitable sortable">
+<tr>
+<th>State</th>
+<th><a href="/wiki/List_of_U.S._states_and_territories_by_population" 
+title="List of U.S. states and territories by population">Population</a><br />
+<small>(total inhabitants)</small><br />
+<small>(2015)</small> <sup id="cite_ref-1" class="reference">
+<a href="#cite_note-1">[1]</a></sup></th>
+<th>Murders and Nonnegligent
+<p>Manslaughter<br />
+<small>(total deaths)</small><br />
+<small>(2015)</small> <sup id="cite_ref-2" class="reference">
+<a href="#cite_note-2">[2]</a></sup></p>
+</th>
+<th>Murder and Nonnegligent
+<p>Manslaughter Rate<br />
+<small>(per 100,000 inhabitants)</small><br />
+<small>(2015)</small></p>
+</th>
+</tr>
+<tr>
+<td><a href="/wiki/Alabama" title="Alabama">Alabama</a></td>
+<td>4,853,875</td>
+<td>348</td>
+<td>7.2</td>
+</tr>
+<tr>
+<td><a href="/wiki/Alaska" title="Alaska">Alaska</a></td>
+<td>737,709</td>
+<td>59</td>
+<td>8.0</td>
+</tr>
+<tr>
+```
+
+You can actually see the data, except data values are surrounded by html code such as `<td>`. We can also see a pattern of how it is stored. If you know HTML, you can write programs that leverage knowledge of these patterns to extract what we want. We also take advantage of a language widely used to make webpages look "pretty" called Cascading Style Sheets (CSS).
+
+Although we provide tools that make it possible to scrape data without knowing HTML, as a data scientist it is quite useful to learn some HTML and CSS. Not only does this improve your scraping skills, but it might come in handy if you are creating a webpage to showcase your work. 
+
+### The rvest package
+
+The __tidyverse__ provides a web harvesting package called __rvest__. The first step using this package is to import the webpage into R. The package makes this quite simple:
+
+```{r, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(rvest)
+h <- read_html(url)
+```
+
+
+Note that the entire Murders in the US Wikipedia webpage is now contained in `h`. The class of this object is:
+
+```{r}
+class(h)
+```
+
+The __rvest__ package is actually more general; it handles XML documents. XML is a general markup language (that's what the ML stands for) that can be used to represent any kind of data. HTML is a specific type of XML specifically developed for representing webpages. Here we focus on HTML documents.
+
+Now, how do we extract the table from the object `h`? If we print `h`, we don't really see much:
+
+```{r}
+h
+```
+
+We can see all the code that defines the downloaded webpage using the `html_text` function like this:
+
+```{r, eval=FALSE}
+html_text(h)
+```
+
+We don't show the output here because it includes thousands of characters, but if we look at it, we can see the data we are after are stored in an HTML table: you can see this in this line of the HTML code above `<table class="wikitable sortable">`. The different parts of an HTML document, often defined with a message in between  `<` and `>`  are referred to as _nodes_. The __rvest__ package includes functions to extract nodes of an HTML document: `html_nodes` extracts all nodes of different types and `html_node` extracts the first one. To extract the tables from the html code we use:
+
+```{r} 
+tab <- h %>% html_nodes("table")
+```
+
+Now, instead of the entire webpage, we just have the html code for the tables in the page:
+
+```{r}
+tab
+```
+
+The table we are interested is the first one:
+
+```{r}
+tab[[1]]
+```
+
+
+This is clearly not a tidy dataset, not even a data frame. In the code above, you can definitely see a pattern and writing code to extract just the data is very doable. In fact, __rvest__ includes a function just for converting HTML tables into data frames:
+
+
+```{r}
+tab <- tab[[1]] %>% html_table
+class(tab)
+```
+
+We are now much closer to having a usable data table:
+
+```{r}
+tab <- tab %>% setNames(c("state", "population", "total", "murder_rate")) 
+head(tab)
+```
+
+We still have some wrangling to do. For example, we need to remove the commas and turn characters into numbers. Before continuing with this, we will learn a more general approach to extracting information from web sites.
+
+
+### CSS selectors {#css-selectors}
+
+The default look of a webpage made with the most basic HTML is quite unattractive. The aesthetically pleasing pages we see today are made using CSS to define the look and style of webpages. The fact that all pages for a company have the same style usually results from their use of the same CSS file to define the style. The general way these CSS files work is by defining how each of the elements of a webpage will look. The title, headings, itemized lists, tables, and links, for example, each receive their own style including font, color, size, and distance from the margin. CSS does this by leveraging patterns used to define these elements, referred to as _selectors_. An example of such a pattern, which we used above, is `table`, but there are many, many more. 
+
+If we want to grab data from a webpage and we happen to know a selector that is unique to the part of the page containing this data, we can use the `html_nodes` function. However, knowing which selector can be quite complicated. 
+In fact, the complexity of webpages has been increasing as they become more sophisticated. For some of the more advanced ones, it seems almost impossible to find the nodes that define a particular piece of data. However, selector gadgets actually make this possible.
+
+SelectorGadget^[http://selectorgadget.com/] is piece of software that allows you to interactively determine what CSS selector you need to extract specific components from the webpage. If you plan on scraping data other than tables from html pages, we highly recommend you install it. A Chrome extension is available which permits you to turn on the gadget and then, as you click through the page, it highlights parts and shows you the selector you need to extract these parts. There are various demos of how to do this including __rvest__ author Hadley Wickham's
+vignette^[https://cran.r-project.org/web/packages/rvest/vignettes/selectorgadget.html] and other tutorials based on the vignette^[https://stat4701.github.io/edav/2015/04/02/rvest_tutorial/] ^[https://www.analyticsvidhya.com/blog/2017/03/beginners-guide-on-web-scraping-in-r-using-rvest-with-hands-on-knowledge/].
+
+### JSON
+
+Sharing data on the internet has become more and more common. Unfortunately, providers use different formats, which makes it harder for data scientists to wrangle data into R. Yet there are some standards that are also becoming more common. Currently, a format that is widely being adopted is the JavaScript Object Notation or JSON. Because this format is very general, it is nothing like a spreadsheet. This JSON file looks more like the code you use to define a list. Here is an example of information stored in a JSON format:
+
+```{r, echo=FALSE}
+library(jsonlite)
+example <- data.frame(name= c("Miguel", "Sofia", "Aya", "Cheng"), student_id = 1:4, exam_1 = c(85, 94, 87, 90), exam_2 = c(86, 93, 88, 91))
+json <- toJSON(example, pretty = TRUE) 
+json
+```
+
+The file above actually represents a data frame. To read it, we can use the function `fromJSON` from the __jsonlite__ package. Note that JSON files are often made available via the internet. Several organizations provide a JSON API or a web service that you can connect directly to and obtain data. Here is an example:
+
+```{r, eval = FALSE}
+library(jsonlite)
+citi_bike <- fromJSON("http://citibikenyc.com/stations/json")
+```
+
+This downloads a list. The first argument tells you when you downloaded it:
+
+```{r, eval = FALSE}
+citi_bike$executionTime
+```
+
+and the second is a data table:
+
+```{r, eval = FALSE}
+citi_bike$stationBeanList %>% as_tibble() 
+```
+
+You can learn much more by examining tutorials and help files from the __jsonlite__ package. This package is intended for relatively simple tasks such as converging data into tables. For more flexibility, we recommend `rjson`.
+
+## Summarizing Data
 <!-- To get `_` to work in caption title. Found at https://github.com/rstudio/bookdown/issues/209 -->
 (ref:groupby) Diagram of group_by() and summarize().
 
 ```{r groupsummarize, echo=FALSE, fig.cap="(ref:groupby)", purl=FALSE, fig.height=2.5}
 knitr::include_graphics("01-visualization/images/group_summary.png")
 ```
+
+### summarize() function 
+
+The next common task when working with data frames is to compute *summary statistics*. Summary statistics are single numerical values that summarize a large number of values. Commonly known examples of summary statistics include the mean (also called the average) and the median (the middle value). Other examples of summary statistics that might not immediately come to mind include the *sum*, the smallest value also called the *minimum*, the largest value also called the *maximum*, and the *standard deviation*.
+
+Return to a familiar dataset. Let's calculate two summary statistics of the `temp` temperature variable in the `weather` data frame: the mean and standard deviation (recall from Section \@ref(nycflights13) that the `weather` data frame is included in the `nycflights13` package). To compute these summary statistics, we need the `mean()` and `sd()` *summary functions* in R. Summary functions in R take in many values and return a single value.
+
+Recall the output of the `summary()` function. 
+```{r, echo = FALSE}
+summary(weather)
+```
+
+This function offers an array of summary statistics for each of the columns of the dataset, but `summarize()` (or alternatively `summarise()`) allows us to calculate these statistics on individual columns of the dataset. 
+
+More precisely, we'll use the `mean()` and `sd()` summary functions within the `summarize()`  function from the **dplyr** package. Note you can also use the British English spelling of `summarise()`. The `summarize()` function takes in a data frame and returns a data frame with only one row corresponding to the summary statistics. 
+
+We'll save the results in a new data frame called `summary_temp` that will have two columns/variables: the `mean` and the `std_dev`:
+
+```{r, eval=TRUE}
+summary_temp <- weather %>% 
+  summarize(mean = mean(temp), std_dev = sd(temp))
+summary_temp
+```
+
+Why are the values returned `NA`?``NA` is how R encodes *missing values*  where `NA` indicates "not available" or "not applicable." If a value for a particular row and a particular column does not exist, `NA` is stored instead. Values can be missing for many reasons. Perhaps the data was collected but someone forgot to enter it? Perhaps the data was not collected at all because it was too difficult to do so? Perhaps there was an erroneous value that someone entered that has been corrected to read as missing? You'll often encounter issues with missing values when working with real data.
+
+Going back to our `summary_temp` output, by default any time you try to calculate a summary statistic of a variable that has one or more `NA` missing values in R, `NA` is returned. To work around this fact, you can set the `na.rm` argument to `TRUE`, where `rm` is short for "remove"; this will ignore any `NA` missing values and only return the summary value for all non-missing values. 
+
+The code that follows computes the mean and standard deviation of all non-missing values of `temp`:
+
+```{r}
+summary_temp <- weather %>% 
+  summarize(mean = mean(temp, na.rm = TRUE), 
+            std_dev = sd(temp, na.rm = TRUE))
+summary_temp
+```
+
+Notice how the `na.rm = TRUE` are used as arguments to the `mean()` and `sd()` summary functions individually, and not to the `summarize()` function. 
+
+However, one needs to be cautious whenever ignoring missing values as we've just done. There are possible ramifications of blindly sweeping rows with missing values "under the rug." This is in fact why the `na.rm` argument to any summary statistic function in R is set to `FALSE` by default. In other words, R does not ignore rows with missing values by default. R is alerting you to the presence of missing data and you should be mindful of this missingness and any potential causes of this missingness throughout your analysis.
+
+What are other summary functions we can use inside the `summarize()` verb to compute summary statistics? You ou can use any function in R that takes many values and returns just one. Here are just a few:
+
+* `mean()`: the average
+* `sd()`: the standard deviation, which is a measure of spread
+* `min()` and `max()`: the minimum and maximum values, respectively
+* `IQR()`: interquartile range
+* `sum()`: the total amount when adding multiple numbers
+* `n()`: a count of the number of rows in each group.
+
+Let's return to the `gain` variable from the previous chapter and look at some summary statistics by considering multiple summary functions at once in the same `summarize()` code:
+
+```{r, include=FALSE}
+flights <- flights %>%
+  mutate(gain = arr_delay - dep_delay)
+```
+
+```{r}
+gain_summary <- flights %>% 
+  summarize(
+    min = min(gain, na.rm = TRUE),
+    q1 = quantile(gain, 0.25, na.rm = TRUE),
+    median = quantile(gain, 0.5, na.rm = TRUE),
+    q3 = quantile(gain, 0.75, na.rm = TRUE),
+    max = max(gain, na.rm = TRUE),
+    mean = mean(gain, na.rm = TRUE),
+    sd = sd(gain, na.rm = TRUE),
+    missing = sum(is.na(gain))
+  )
+gain_summary
+```
+
+We see for example that the average gain is +5 minutes, while the largest is +109 minutes! However, this code would take some time to type out in practice. 
+
+We can also run summary statistics `across()` multiple columns at the same time. To get a better understanding of the `across()` helper function, run `?across` in your console and see what arguments it takes. Suppose we wanted to take the `mean()` of both the `temp` and the `dewp` variables. 
+```{r}
+weather %>%
+  summarize(across(c(temp, dewp), mean))
+```
+Again, we encounter `NA` values missing values, and have to set `na.rm = TRUE` as an argument for the `mean()` function. 
+<!-- Explain the  ~ and . thoroughly. --> 
+```{r}
+weather %>%
+  summarize(across(c(temp, dewp), ~ mean(., na.rm = TRUE)))
+```
+
+```{r}
+weather %>%
+  summarize(across(where(is.numeric), ~mean(.x, na.rm = TRUE)))
+```
+
+### group_by() function 
 
 Say instead of a single mean temperature for the whole year, you would like 12 mean temperatures, one for each of the 12 months separately. In other words, we would like to compute the mean temperature split by month. We can do this by "grouping" temperature observations by the values of another variable, in this case by the 12 values of the variable `month`. Run the following code:
 
@@ -143,169 +481,9 @@ by_origin_monthly_incorrect
 
 What happened here is that the second `group_by(month)` overwrote the grouping structure meta-data of the earlier `group_by(origin)`, so that in the end we are only grouping by `month`. The lesson here is if you want to `group_by()` two or more variables, you should include all the variables at the same time in the same `group_by()` adding a comma between the variable names.
 
-Recall the `read_csv()` function from chapter 1 of this textbook. In a previous exercise, we ran the following code chunk:
+## Variable Types: Characters 
 
-```{r}
-dem_score <- read_csv(file = "https://moderndive.com/data/dem_score.csv")
-```
-The result of this code chunk is pretty tame. It tells us that each comma from the .csv file corresponds to a column, and the column names are taken from the first line of the file. Then, the function "guesses" an appropriate data type for each of the columns it creates. Sometimes .csv files are a lot dirtier and require significant wrangling before you can explore the data and create usable graphics. 
-
-Let's try to run `read_csv()` on another dataset. This is a link to a file containing the faculty's gender data across departments at Harvard University.
-
-```{r}
-url <- "https://raw.githubusercontent.com/davidkane9/PPBDS/master/02-tidyverse/data/harvard-faculty-gender-final.csv"
-gender_data <- read_csv(file = url)
-```
-
-Now, call `gender_data`.
-```{r}
-gender_data
-```
-
-As you can see, the second row was likely meant to contain the column names. You can run `?read_csv()` in your console to see the additional arguments that the `read_csv()` function may contain to make the new dataframe easier to work with.
-
-```{r}
-gender_data <- read_csv(file = url, skip = 1)
-gender_data
-```
-
-Now suppose we want to change the data type of one of more of the columns. The `col_type` argument allows us to do this. Without the `col_type` argument, the `division` column is read in as a character column. Instead, we want it to be read in as a factor.  
-
-```{r}
-# gender_data <- read_csv(file = url, skip = 1, col_type = cols(division = col_factor()))
-```
-
-Now that the new dataset has been read in, explore it using the `View()` and `glimpse()` functions and the `$` operator from the previous chapter. 
-
-```{r, eval=FALSE}
-View(gender_data)
-```
-
-```{r}
-glimpse(gender_data)
-
-gender_data$division
-```
-
-Run the `summary()` function on the `gender_data` dataframe.
-```{r}
-summary(gender_data)
-```
-You may notice that something appears to be wrong with this dataset. Which department could have employed 644 male full professors? Let's explore what is going wrong here. 
-```{r}
-gender_data %>% filter(full_profs_m == 644)
-```
-
-It seems that one row of the table takes the sum of each of the other rows. This is likely the last row of the dataframe. Use `tail()` to print the last rows of the dataframe to check the final row.
-```{r}
-tail(gender_data)
-```
-
-Now, remove the "Total" row because it will affect any dplyr functions we try to run on the dataframe. Check the `tail()` of the dataframe again to make sure that the proper row was removed. 
-```{r}
-gender_data <- gender_data %>%
-  filter(concentration != "Total")
-
-tail(gender_data)
-```
-
-## `summarize` variables {#summarize}
-<!-- EF: Add across() --> 
-
-The next common task when working with data frames is to compute *summary statistics*. Summary statistics are single numerical values that summarize a large number of values. Commonly known examples of summary statistics include the mean (also called the average) and the median (the middle value). Other examples of summary statistics that might not immediately come to mind include the *sum*, the smallest value also called the *minimum*, the largest value also called the *maximum*, and the *standard deviation*.
-
-```{r, echo=FALSE, fig.cap="Diagram of summarize() rows."}
-knitr::include_graphics("02-tidyverse/images/summarize1.png")
-```
-
-Recall the output of the `summary()` function. 
-```{r, echo = FALSE}
-summary(gender_data)
-```
-
-This function offers an array of summary statistics for each of the columns of the dataset, but `summarize()` (or alternatively `summarise()`) allows us to calculate these statistics on individual columns of the dataset. 
-
-Return to a familiar dataset. Let's calculate two summary statistics of the `temp` temperature variable in the `weather` data frame: the mean and standard deviation (recall from Section \@ref(nycflights13) that the `weather` data frame is included in the `nycflights13` package). To compute these summary statistics, we need the `mean()` and `sd()` *summary functions* in R. Summary functions in R take in many values and return a single value.
-
-
-More precisely, we'll use the `mean()` and `sd()` summary functions within the `summarize()`  function from the **dplyr** package. Note you can also use the British English spelling of `summarise()`. The `summarize()` function takes in a data frame and returns a data frame with only one row corresponding to the summary statistics. 
-
-We'll save the results in a new data frame called `summary_temp` that will have two columns/variables: the `mean` and the `std_dev`:
-
-```{r, eval=TRUE}
-summary_temp <- weather %>% 
-  summarize(mean = mean(temp), std_dev = sd(temp))
-summary_temp
-```
-
-Why are the values returned `NA`?``NA` is how R encodes *missing values*  where `NA` indicates "not available" or "not applicable." If a value for a particular row and a particular column does not exist, `NA` is stored instead. Values can be missing for many reasons. Perhaps the data was collected but someone forgot to enter it? Perhaps the data was not collected at all because it was too difficult to do so? Perhaps there was an erroneous value that someone entered that has been corrected to read as missing? You'll often encounter issues with missing values when working with real data.
-
-Going back to our `summary_temp` output, by default any time you try to calculate a summary statistic of a variable that has one or more `NA` missing values in R, `NA` is returned. To work around this fact, you can set the `na.rm` argument to `TRUE`, where `rm` is short for "remove"; this will ignore any `NA` missing values and only return the summary value for all non-missing values. 
-
-The code that follows computes the mean and standard deviation of all non-missing values of `temp`:
-
-```{r}
-summary_temp <- weather %>% 
-  summarize(mean = mean(temp, na.rm = TRUE), 
-            std_dev = sd(temp, na.rm = TRUE))
-summary_temp
-```
-
-Notice how the `na.rm = TRUE` are used as arguments to the `mean()` and `sd()` summary functions individually, and not to the `summarize()` function. 
-
-However, one needs to be cautious whenever ignoring missing values as we've just done. There are possible ramifications of blindly sweeping rows with missing values "under the rug." This is in fact why the `na.rm` argument to any summary statistic function in R is set to `FALSE` by default. In other words, R does not ignore rows with missing values by default. R is alerting you to the presence of missing data and you should be mindful of this missingness and any potential causes of this missingness throughout your analysis.
-
-What are other summary functions we can use inside the `summarize()` verb to compute summary statistics? You ou can use any function in R that takes many values and returns just one. Here are just a few:
-
-* `mean()`: the average
-* `sd()`: the standard deviation, which is a measure of spread
-* `min()` and `max()`: the minimum and maximum values, respectively
-* `IQR()`: interquartile range
-* `sum()`: the total amount when adding multiple numbers
-* `n()`: a count of the number of rows in each group.
-
-Let's return to the `gain` variable from the previous chapter and look at some summary statistics by considering multiple summary functions at once in the same `summarize()` code:
-
-```{r, include=FALSE}
-flights <- flights %>%
-  mutate(gain = arr_delay - dep_delay)
-```
-
-```{r}
-gain_summary <- flights %>% 
-  summarize(
-    min = min(gain, na.rm = TRUE),
-    q1 = quantile(gain, 0.25, na.rm = TRUE),
-    median = quantile(gain, 0.5, na.rm = TRUE),
-    q3 = quantile(gain, 0.75, na.rm = TRUE),
-    max = max(gain, na.rm = TRUE),
-    mean = mean(gain, na.rm = TRUE),
-    sd = sd(gain, na.rm = TRUE),
-    missing = sum(is.na(gain))
-  )
-gain_summary
-```
-
-We see for example that the average gain is +5 minutes, while the largest is +109 minutes! However, this code would take some time to type out in practice. 
-
-We can also run summary statistics `across()` multiple columns at the same time. To get a better understanding of the `across()` helper function, run `?across` in your console and see what arguments it takes. Suppose we wanted to take the `mean()` of both the `temp` and the `dewp` variables. 
-```{r}
-weather %>%
-  summarize(across(c(temp, dewp), mean))
-```
-Again, we encounter `NA` values missing values, and have to set `na.rm = TRUE` as an argument for the `mean()` function. 
-<!-- Explain the  ~ and . thoroughly. --> 
-```{r}
-weather %>%
-  summarize(across(c(temp, dewp), ~ mean(., na.rm = TRUE)))
-```
-
-```{r}
-weather %>%
-  summarize(across(where(is.numeric), ~mean(.x, na.rm = TRUE)))
-```
-
-## Character Vectors
+### Character Vectors
 
 We've spent a lot of time working with big, beautiful data frames. That are clean and wholesome, like the Gapminder and nycflights13 data.
 
@@ -699,15 +877,10 @@ But soon you will want to use regexes to transform the strings in character vect
 
 You can use parentheses inside regexes to define *groups* and you can refer to those groups later with *backreferences*.
 
-For now, this lesson will refer you to other place to read up on this:
+## Variable Types: Factors 
 
-* STAT 545 [2014 Intro to regular expressions](#oldies) by TA Gloria Li
-* The [Strings chapter][r4ds-strings] of [R for Data Science][r4ds] [@wickham2016].
-
-## Lubridate: Dealing with Datetimes
+## Variable Types: Date Times 
 <!-- EWF: Planned topic, will include separate() and unite() fcns --> 
-
-<!-- Planned topic, will include separate() and unite() fcns --> 
 
 ## Combining Data
 
@@ -724,8 +897,6 @@ __Join__ - Here you designate a variable (or a combination of variables) as a **
 A variety of row- and column-wise operations fit into this framework, which implies there are many different flavors of join. The concepts and vocabulary around joins come from the database world. The relevant functions in dplyr follow this convention and all mention `join`. The most relevant base R function is `merge()`.
 
 Let's explore each type of operation with a few examples.
-
-## Bind
 
 ### Row binding
 
@@ -775,7 +946,7 @@ I invite you to experiment with other realistic, challenging scenarios, e.g.:
 
 In conclusion, row binding usually works when it should (especially with `dplyr::bind_rows()`) and usually doesn't when it shouldn't. The biggest risk is being aggravated.
 
-#### Column binding
+### Column binding
 
 Column binding is much more dangerous because it often "works" when it should not. It's **your job** to make sure the rows are aligned and it's all too easy to screw this up.
 
@@ -832,8 +1003,6 @@ gapminder %>%
   left_join(country_codes)
 ```
 
-### Joining
-
 Join (a.k.a. merge) two tables: dplyr join cheatsheet with comic characters and publishers.
 
 ```{r, include = FALSE}
@@ -887,15 +1056,7 @@ make_three_gt <- function(gt_left, gt_mid, gt_right, ...) {
 )
 }
 ```
-
-
-Other great places to read about joins:
-
-* The dplyr vignette on [Two-table verbs][dplyr-vignette-two-table].
-* The [Relational data chapter][r4ds-relational-data] in [R for Data Science][r4ds] [@wickham2016]. Excellent diagrams.
   
-#### The data
-
 Working with two small data frames: `superheroes` and `publishers`.
 
 ```{r, message = FALSE, warning = FALSE}
@@ -1150,8 +1311,6 @@ A visual representation of the `inner_join()` is shown in the figure below [@rds
 knitr::include_graphics("02-tidyverse/images/join-inner.png")
 ```
 
-
-
 ### Different "key" variable names {#diff-key}
 
 Say instead you are interested in the destinations of all domestic flights departing NYC in 2013, and you ask yourself questions like: "What cities are these airports in?", or "Is `"ORD"` Orlando?", or "Where is `"FLL"`?".
@@ -1220,8 +1379,7 @@ This is an important property of what's known as *normal forms* of data.  The pr
 
 Both **dplyr** and [SQL](https://en.wikipedia.org/wiki/SQL) we mentioned in the introduction of this chapter use such *normal forms*. Given that they share such commonalities, once you learn either of these two tools, you can learn the other very easily. 
 
-
-## Tidy {#tidy}
+## "Tidy" data {#tidy-data-ex}
 
 Now, we will explore the topic of "tidy" data, a manner of data formatting particularly suited to the creation of graphics and the manipulation of the dataframe. You will see that having data stored in "tidy" format is about more than just what the everyday definition of the term "tidy" might suggest: having your data "neatly organized." Instead, we define the term "tidy" as it's used by data scientists who use R, outlining a set of rules by which data is saved.
 
@@ -1241,14 +1399,12 @@ library(fivethirtyeight)
 ```{r message=FALSE, warning=FALSE, echo=FALSE}
 # Packages needed internally, but not in text.
 library(knitr)
-library(kableExtra)
 library(stringr)
-library(scales)
+# library(scales)
 ```
 
-## "Tidy" data {#tidy-data-ex}
 
-Let's now switch gears and learn about the concept of "tidy" data format with a motivating example from the `fivethirtyeight` package. The `fivethirtyeight` package [@R-fivethirtyeight] provides access to the datasets used in many articles published by the data journalism website, [FiveThirtyEight.com](https://fivethirtyeight.com/). For a complete list of all `r nrow(data(package = "fivethirtyeight")[[3]])` datasets included in the `fivethirtyeight` package, check out the package webpage by going to: <https://fivethirtyeight-r.netlify.com/articles/fivethirtyeight.html>.
+Let's switch gears and learn about the concept of "tidy" data format with a motivating example from the `fivethirtyeight` package. The `fivethirtyeight` package [@R-fivethirtyeight] provides access to the datasets used in many articles published by the data journalism website, [FiveThirtyEight.com](https://fivethirtyeight.com/). For a complete list of all `r nrow(data(package = "fivethirtyeight")[[3]])` datasets included in the `fivethirtyeight` package, check out the package webpage by going to: <https://fivethirtyeight-r.netlify.com/articles/fivethirtyeight.html>.
 
 Let's focus our attention on the `drinks` data frame and look at its first 5 rows:
 
@@ -1392,7 +1548,9 @@ If however you want to convert a "tidy" data frame to "wide" format, you will ne
 
 You can also view examples of both `pivot_longer()` and `pivot_wider()` on the [tidyverse.org](https://tidyr.tidyverse.org/dev/articles/pivot.html#pew) webpage. There's a nice example to check out the different functions available for data tidying and a case study using data from the World Health Organization on that webpage. Furthermore, each week the R4DS Online Learning Community posts a dataset in the weekly [`#`TidyTuesday event](https://github.com/rfordatascience/tidytuesday) that might serve as a nice place for you to find other data to explore and transform. 
 
-## `tidyverse` package {#tidyverse-package}
+### `tidyverse` package {#tidyverse-package}
+
+<!-- EWF: More useful in Jessica's chapter? --> 
 
 Notice at the beginning of the chapter we loaded the following four packages, which are among four of the most frequently used R packages for data science:
 
@@ -1427,192 +1585,6 @@ library(forcats)
 The `purrr`, `tibble`, `stringr`, and `forcats` are left for a more advanced book; check out [*R for Data Science*](http://r4ds.had.co.nz/) to learn about these packages.
 
 For the remainder of this book, we'll start every chapter by running `library(tidyverse)`, instead of loading the various component packages individually. The `tidyverse` "umbrella" package gets its name from the fact that all the functions in all its packages are designed to have common inputs and outputs: data frames are in "tidy" format. This standardization of input and output data frames makes transitions between different functions in the different packages as seamless as possible. For more information, check out the [tidyverse.org](https://www.tidyverse.org/) webpage for the package.
-
-## Web scraping 
-
-<!-- https://github.com/mdogucu/web-scrape -->
-
-The data we need to answer a question is not always in a spreadsheet ready for us to read. For example, the US murders dataset we used in the R Basics chapter originally comes from [this Wikipedia page](https://en.wikipedia.org/w/index.php?title=Gun_violence_in_the_United_States_by_state): 
-
-```{r}
-url <- paste0("https://en.wikipedia.org/w/index.php?title=",
-              "Gun_violence_in_the_United_States_by_state",
-              "&direction=prev&oldid=810166167")
-```
-
-You can see the data table when you visit the webpage:
-
-```{r, echo=FALSE}
-knitr::include_graphics("02-tidyverse/images/murders-data-wiki-page.png")
-```
-
-
-To get this data, we need to do some _web scraping_. 
-
-_Web scraping_, or _web harvesting_, is the term we use to describe the process of extracting data from a website. The reason we can do this is because the information used by a browser to render webpages is received as a text file from a server. The text is code written in hyper text markup language (HTML). Every browser has a way to show the html source code for a page, each one different. On Chrome, you can use Control-U on a PC and command+alt+U on a Mac. You will see something like this:
-
-```{r, echo=FALSE}
-knitr::include_graphics("02-tidyverse/images/html-code.png")
-```
-
-### HTML
-
-Because this code is accessible, we can download the HTML file, import it into R, and then write programs to extract the information we need from the page. However, once we look at HTML code, this might seem like a daunting task. But we will show you some convenient tools to facilitate the process. To get an idea of how it works, here are a few lines of code from the Wikipedia page that provides the US murders data:
-
-```
-<table class="wikitable sortable">
-<tr>
-<th>State</th>
-<th><a href="/wiki/List_of_U.S._states_and_territories_by_population" 
-title="List of U.S. states and territories by population">Population</a><br />
-<small>(total inhabitants)</small><br />
-<small>(2015)</small> <sup id="cite_ref-1" class="reference">
-<a href="#cite_note-1">[1]</a></sup></th>
-<th>Murders and Nonnegligent
-<p>Manslaughter<br />
-<small>(total deaths)</small><br />
-<small>(2015)</small> <sup id="cite_ref-2" class="reference">
-<a href="#cite_note-2">[2]</a></sup></p>
-</th>
-<th>Murder and Nonnegligent
-<p>Manslaughter Rate<br />
-<small>(per 100,000 inhabitants)</small><br />
-<small>(2015)</small></p>
-</th>
-</tr>
-<tr>
-<td><a href="/wiki/Alabama" title="Alabama">Alabama</a></td>
-<td>4,853,875</td>
-<td>348</td>
-<td>7.2</td>
-</tr>
-<tr>
-<td><a href="/wiki/Alaska" title="Alaska">Alaska</a></td>
-<td>737,709</td>
-<td>59</td>
-<td>8.0</td>
-</tr>
-<tr>
-```
-
-You can actually see the data, except data values are surrounded by html code such as `<td>`. We can also see a pattern of how it is stored. If you know HTML, you can write programs that leverage knowledge of these patterns to extract what we want. We also take advantage of a language widely used to make webpages look "pretty" called Cascading Style Sheets (CSS).
-
-Although we provide tools that make it possible to scrape data without knowing HTML, as a data scientist it is quite useful to learn some HTML and CSS. Not only does this improve your scraping skills, but it might come in handy if you are creating a webpage to showcase your work. 
-
-### The rvest package
-
-The __tidyverse__ provides a web harvesting package called __rvest__. The first step using this package is to import the webpage into R. The package makes this quite simple:
-
-```{r, message=FALSE, warning=FALSE}
-library(tidyverse)
-library(rvest)
-h <- read_html(url)
-```
-
-
-Note that the entire Murders in the US Wikipedia webpage is now contained in `h`. The class of this object is:
-
-```{r}
-class(h)
-```
-
-The __rvest__ package is actually more general; it handles XML documents. XML is a general markup language (that's what the ML stands for) that can be used to represent any kind of data. HTML is a specific type of XML specifically developed for representing webpages. Here we focus on HTML documents.
-
-Now, how do we extract the table from the object `h`? If we print `h`, we don't really see much:
-
-```{r}
-h
-```
-
-We can see all the code that defines the downloaded webpage using the `html_text` function like this:
-
-```{r, eval=FALSE}
-html_text(h)
-```
-
-We don't show the output here because it includes thousands of characters, but if we look at it, we can see the data we are after are stored in an HTML table: you can see this in this line of the HTML code above `<table class="wikitable sortable">`. The different parts of an HTML document, often defined with a message in between  `<` and `>`  are referred to as _nodes_. The __rvest__ package includes functions to extract nodes of an HTML document: `html_nodes` extracts all nodes of different types and `html_node` extracts the first one. To extract the tables from the html code we use:
-
-```{r} 
-tab <- h %>% html_nodes("table")
-```
-
-Now, instead of the entire webpage, we just have the html code for the tables in the page:
-
-```{r}
-tab
-```
-
-The table we are interested is the first one:
-
-```{r}
-tab[[1]]
-```
-
-
-This is clearly not a tidy dataset, not even a data frame. In the code above, you can definitely see a pattern and writing code to extract just the data is very doable. In fact, __rvest__ includes a function just for converting HTML tables into data frames:
-
-
-```{r}
-tab <- tab[[1]] %>% html_table
-class(tab)
-```
-
-We are now much closer to having a usable data table:
-
-```{r}
-tab <- tab %>% setNames(c("state", "population", "total", "murder_rate")) 
-head(tab)
-```
-
-<!-- EF: I think taking this detour below might not actually be the best move. 
-The sections on CSS Selectors and JSON might work better more as an afterthought --> 
-
-We still have some wrangling to do. For example, we need to remove the commas and turn characters into numbers. Before continuing with this, we will learn a more general approach to extracting information from web sites.
-
-
-### CSS selectors {#css-selectors}
-
-The default look of a webpage made with the most basic HTML is quite unattractive. The aesthetically pleasing pages we see today are made using CSS to define the look and style of webpages. The fact that all pages for a company have the same style usually results from their use of the same CSS file to define the style. The general way these CSS files work is by defining how each of the elements of a webpage will look. The title, headings, itemized lists, tables, and links, for example, each receive their own style including font, color, size, and distance from the margin. CSS does this by leveraging patterns used to define these elements, referred to as _selectors_. An example of such a pattern, which we used above, is `table`, but there are many, many more. 
-
-If we want to grab data from a webpage and we happen to know a selector that is unique to the part of the page containing this data, we can use the `html_nodes` function. However, knowing which selector can be quite complicated. 
-In fact, the complexity of webpages has been increasing as they become more sophisticated. For some of the more advanced ones, it seems almost impossible to find the nodes that define a particular piece of data. However, selector gadgets actually make this possible.
-
-SelectorGadget^[http://selectorgadget.com/] is piece of software that allows you to interactively determine what CSS selector you need to extract specific components from the webpage. If you plan on scraping data other than tables from html pages, we highly recommend you install it. A Chrome extension is available which permits you to turn on the gadget and then, as you click through the page, it highlights parts and shows you the selector you need to extract these parts. There are various demos of how to do this including __rvest__ author Hadley Wickham's
-vignette^[https://cran.r-project.org/web/packages/rvest/vignettes/selectorgadget.html] and other tutorials based on the vignette^[https://stat4701.github.io/edav/2015/04/02/rvest_tutorial/] ^[https://www.analyticsvidhya.com/blog/2017/03/beginners-guide-on-web-scraping-in-r-using-rvest-with-hands-on-knowledge/].
-
-### JSON
-
-Sharing data on the internet has become more and more common. Unfortunately, providers use different formats, which makes it harder for data scientists to wrangle data into R. Yet there are some standards that are also becoming more common. Currently, a format that is widely being adopted is the JavaScript Object Notation or JSON. Because this format is very general, it is nothing like a spreadsheet. This JSON file looks more like the code you use to define a list. Here is an example of information stored in a JSON format:
-
-```{r, echo=FALSE}
-library(jsonlite)
-example <- data.frame(name= c("Miguel", "Sofia", "Aya", "Cheng"), student_id = 1:4, exam_1 = c(85, 94, 87, 90), exam_2 = c(86, 93, 88, 91))
-json <- toJSON(example, pretty = TRUE) 
-json
-```
-
-The file above actually represents a data frame. To read it, we can use the function `fromJSON` from the __jsonlite__ package. Note that JSON files are often made available via the internet. Several organizations provide a JSON API or a web service that you can connect directly to and obtain data. Here is an example:
-
-```{r, eval = FALSE}
-library(jsonlite)
-citi_bike <- fromJSON("http://citibikenyc.com/stations/json")
-```
-
-This downloads a list. The first argument tells you when you downloaded it:
-
-```{r, eval = FALSE}
-citi_bike$executionTime
-```
-
-and the second is a data table:
-
-```{r, eval = FALSE}
-citi_bike$stationBeanList %>% as_tibble() 
-```
-
-
-You can learn much more by examining tutorials and help files from the __jsonlite__ package. This package is intended for relatively simple tasks such as converging data into tables. For more flexibility, we recommend `rjson`.
-
 
 ## Other Commands
 
