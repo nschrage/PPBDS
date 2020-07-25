@@ -133,7 +133,7 @@ In this section, we'll keep things simple for now and try to explain differences
 
 ### Exploratory data analysis {#model1EDA}
 
-The data on the Q Guide scores can be found in the `qscores` data frame included in the **PPBDS.data** package. However, to keep things simple, let's `select()` only the subset of the variables we'll consider in this chapter, and save this data in a new data frame called `qscores_ch10`:
+The data on the Q Guide ratings can be found in the `qscores` data frame included in the **PPBDS.data** package. However, to keep things simple, let's `select()` only the subset of the variables we'll consider in this chapter, and save this data in a new data frame called `qscores_ch10`:
 
 ```{r}
 library(PPBDS.data)
@@ -208,7 +208,7 @@ qscores_ch10 %>%
 
 However, what if we want other summary statistics as well, such as the standard deviation (a measure of spread), the minimum and maximum values, and various percentiles? 
 
-Typing out all these summary statistic functions in `summarize()` would be long and tedious. Instead, let's use the convenient `skim()` function from the **skimr** package. This function takes in a data frame, "skims" it, and returns commonly used summary statistics. Let's take our `evals_ch11` data frame, `select()` only the outcome and explanatory variables teaching `score` and `bty_avg`, and pipe them into the `skim()` function:
+Typing out all these summary statistic functions in `summarize()` would be long and tedious. Instead, let's use the convenient `skim()` function from the **skimr** package. This function takes in a data frame, "skims" it, and returns commonly used summary statistics. Let's take our `qscores_ch10` data frame, `select()` only the outcome and explanatory variables teaching `score` and `hours`, and pipe them into the `skim()` function:
 
 ```{r}
 qscores_ch10 %>% 
@@ -353,7 +353,7 @@ qscores_ch10 %>%
 
 <!-- EG: I'll change this section as well after changing the box size. -->
 
-It is now apparent that there are `r evals_ch11 %>% filter(score > 4.5 & bty_avg > 7.5) %>% nrow()` points in the area highlighted in the box and not six as originally suggested. Recall from Subsection \@ref(overplotting) on overplotting that jittering adds a little random "nudge" to each of the points to break up these ties. Furthermore, recall that jittering is strictly a visualization tool; it does not alter the original values in the data frame `evals_ch11`. To keep things simple going forward, however, we'll only present regular scatterplots rather than their jittered counterparts.
+It is now apparent that there are ?? points in the area highlighted in the box and not six as originally suggested. Recall from Subsection \@ref(overplotting) on overplotting that jittering adds a little random "nudge" to each of the points to break up these ties. Furthermore, recall that jittering is strictly a visualization tool; it does not alter the original values in the data frame `qscores_ch10`. To keep things simple going forward, however, we'll only present regular scatterplots rather than their jittered counterparts.
 
 Let's build on the unjittered scatterplot by adding a "best-fitting" line: of all possible lines we can draw on this scatterplot, it is the line that "best" fits through the cloud of points. We do this by adding a new `geom_smooth(method = "lm", se = FALSE)` layer to the `ggplot()` code that created the scatterplot. The `method = "lm"` argument sets the line to be a "`l`inear `m`odel." The `se = FALSE` \index{ggplot2!geom\_smooth()} argument suppresses _standard error_ uncertainty bars. (We defined the concept of _standard error_ in Subsection \@ref(sampling-definitions).)
 
@@ -372,7 +372,7 @@ Furthermore, a regression line is "best-fitting" in that it minimizes some mathe
 
 ### Simple linear regression {#model1table}
 
-<!-- DK: Make this with just one decimal. Indeed, can we make that consistent everywhere? Also, bty_avg should be renamed beauty. We don't really care if it is an average. 
+<!-- DK: Make this with just one decimal. Indeed, can we make that consistent everywhere? Also, hours should be renamed beauty. We don't really care if it is an average. 
 
 The train example? With att_start and att_end? Or some other data set? Which one? Or qscores?
 -->
@@ -387,7 +387,7 @@ However, when defining a regression line, we use slightly different notation: th
 
 <!-- EG: Honestly don't think that this introduction is bad, but certainly think that it could happen much earlier in the book. Many students may already be familiar with hat notation and it is key to regression language. -->
 
-We know that the regression line we plotted has a positive slope $b_1$ corresponding to our explanatory $x$ variable `bty_avg`. Why? Because instructors with higher `bty_avg` scores tend to have higher teaching evaluation `scores`. However, what is the numerical value of the slope $b_1$? What about the intercept $b_0$?  Let's not compute these two values by hand, but rather let's use a computer!
+We know that the regression line we plotted has a positive slope $b_1$ corresponding to our explanatory $x$ variable `hours`. Why? Because instructors with higher `hours` scores tend to have higher teaching evaluation `scores`. However, what is the numerical value of the slope $b_1$? What about the intercept $b_0$?  Let's not compute these two values by hand, but rather let's use a computer!
 
 We can obtain the values of the intercept $b_0$ and the slope for `btg_avg` $b_1$ in two steps:
 
@@ -399,7 +399,7 @@ We can obtain the values of the intercept $b_0$ and the slope for `btg_avg` $b_1
 ```{r, eval=FALSE}
 # Fit regression model:
 
-score_model <- lm(score ~ bty_avg, data = evals_ch11)
+score_model <- lm(rating ~ hours, data = qscores_ch10)
 
 # Get regression table:
 
@@ -407,7 +407,7 @@ score_model %>%
   tidy(conf.int = TRUE)
 ```
 ```{r, echo=FALSE}
-score_model <- lm(score ~ bty_avg, data = evals_ch11)
+score_model <- lm(rating ~ hours, data = qscores_ch10)
 evals_line <- score_model %>%
   tidy() %>%
   pull(estimate)
@@ -419,20 +419,20 @@ tidy(score_model,
 
 Note that we used the argument `conf.int = TRUE` in the `tidy()` function; that will be important for later.
 
-How did this code work?  First, we "fit" the linear regression model to the `data` using the `lm()` \index{lm()} function and saved this as `score_model`. When we say "fit", we mean  "find the best fitting line to this data." `lm()` stands for "linear model" and is used as follows: `lm(y ~ x, data = data_frame_name)` where:
+How did this code work?  First, we "fit" the linear regression model to the `data` using the `lm()` function and saved this as `score_model`. When we say "fit", we mean  "find the best fitting line to this data." `lm()` stands for "linear model" and is used as follows: `lm(y ~ x, data = data_frame_name)` where:
 
 * `y` is the outcome variable, followed by a tilde `~`. In our case, `y` is set to `score`.
-* `x` is the explanatory variable. In our case, `x` is set to `bty_avg`.
-* The combination of `y ~ x` is called a *model formula*. (Note the order of `y` and `x`.) In our case, the model formula is `score ~ bty_avg`.
-* `data_frame_name` is the name of the data frame that contains the variables `y` and `x`. In our case, `data_frame_name` is the `evals_ch11` data frame.
+* `x` is the explanatory variable. In our case, `x` is set to `hours`.
+* The combination of `y ~ x` is called a *model formula*. (Note the order of `y` and `x`.) In our case, the model formula is `rating ~ hours`.
+* `data_frame_name` is the name of the data frame that contains the variables `y` and `x`. In our case, `data_frame_name` is the `qscores_ch10` data frame.
 
 Second, we take the saved model in `score_model` and apply the `tidy()` function from the **broom** package to it to obtain the regression table. 
 
 We can also do this with pipes:
 
 ```{r}
-evals_ch11 %>% 
-  lm(score ~ bty_avg, data = .) %>% 
+qscores_ch10 %>% 
+  lm(rating ~ hours, data = .) %>% 
   tidy(conf.int = TRUE) %>% 
   select(term, estimate, conf.low, conf.high)
 ```
@@ -442,8 +442,8 @@ Recall from our discussion in Chapter \@ref(tidyverse) that we can use "." to re
 You may wonder why this code does not work:
 
 ```{r, eval=FALSE}
-evals_ch11 %>% 
-  lm(score ~ bty_avg) 
+qscores_ch10 %>% 
+  lm(rating ~ hours) 
 ```
 
 <!-- DK: How can we show the error which happens when this code runs? -->
@@ -456,7 +456,7 @@ The answer is that `lm()` is, like many parts of R, an old function, created bef
 
 ### Interpreting regression coefficients
 
-In the `estimate` column are the intercept $b_0$ = `r evals_line[1]` and the slope $b_1$ = `r evals_line[2]` for `bty_avg`. Thus the equation of the regression line follows:
+In the `estimate` column are the intercept $b_0$ = `r evals_line[1]` and the slope $b_1$ = `r evals_line[2]` for `hours`. Thus the equation of the regression line follows:
 
 $$
 \begin{aligned}
@@ -466,23 +466,23 @@ $$
 \end{aligned}
 $$
 
-<!-- DK: "beauty" rather than "bty_avg" would be a better variable name. Don't need to recall that the beauty score is an average. After all, the score is an average also! Also: Need a discussion of potential outcomes and RCM here. Can we manipulate beauty? On one hand, no. On the other hand, yes. Makeup, lighting and so on. Could provide an interesting complex case to discuss. -->
+<!-- DK: "beauty" rather than "hours" would be a better variable name. Don't need to recall that the beauty score is an average. After all, the score is an average also! Also: Need a discussion of potential outcomes and RCM here. Can we manipulate beauty? On one hand, no. On the other hand, yes. Makeup, lighting and so on. Could provide an interesting complex case to discuss. -->
 
 <!-- EG: I agree that RCM and potential outcomes would fit well within this discussion.Took a look at chapter 3 and noticed that the trains example is used there to explain potential outcomes. Should we stick with using the UT data here and simply apply the language of potential outcomes to this example as well? -->
 
-The intercept $b_0$ = `r evals_line[1]` is the average teaching score $\widehat{y}$ = $\widehat{\text{score}}$ for those courses where the instructor had a "beauty" score `bty_avg` of 0. Or in graphical terms, it's where the line intersects the $y$ axis when $x$ = 0. Note, however, that while the \index{regression!equation of a line!intercept} intercept of the regression line has a mathematical interpretation, it has no *practical* interpretation here, since observing a `bty_avg` of 0 is impossible; it is the average of six panelists' "beauty" scores ranging from 1 to 10. Furthermore, looking at the scatterplot with the regression line, no instructors had a "beauty" score anywhere near 0.
+The intercept $b_0$ = `r evals_line[1]` is the average teaching score $\widehat{y}$ = $\widehat{\text{score}}$ for those courses where the instructor had a "beauty" score `hours` of 0. Or in graphical terms, it's where the line intersects the $y$ axis when $x$ = 0. Note, however, that while the \index{regression!equation of a line!intercept} intercept of the regression line has a mathematical interpretation, it has no *practical* interpretation here, since observing a `hours` of 0 is impossible; it is the average of six panelists' "beauty" scores ranging from 1 to 10. Furthermore, looking at the scatterplot with the regression line, no instructors had a "beauty" score anywhere near 0.
 
 <!-- DK: Add discussion of "hat". Recall the p hat which we estimated last time. y hat is like that! It is not a variable that we can observe. It is an estimate. (Indeed, it is an estimate of a potential outcome!) This is different form x, which has no hat, because it is real data, something we can see. Side note: not sure if the hat versus no hat distinction works well with b_0/b_1 being things we can't see and need to estimate, but for which we do not use hat notation. -->
 
 <!-- EG: I'll add a discussion of y hat as I start writing. -->
 
-Of greater interest is the \index{regression!equation of a line!slope} slope $b_1$ = $b_{\text{bty_avg}}$ of `r evals_line[2]`. The "bty_avg" subscript indicates that this number summarizes the relationship between the teaching and average beauty score variables. Note that the sign is positive, suggesting a positive relationship between these two variables, meaning teachers with higher `bty_avg` scores also tend to have higher teaching scores. Recall from earlier that the correlation coefficient is `r cor_ch11`. They both have the same positive sign, but have a different value. Recall further that the correlation's interpretation is the "strength of linear association". The \index{regression!interpretation of the slope} slope's interpretation is a little different:
+Of greater interest is the \index{regression!equation of a line!slope} slope $b_1$ = $b_{\text{hours}}$ of `r evals_line[2]`. The "hours" subscript indicates that this number summarizes the relationship between the teaching and average beauty score variables. Note that the sign is positive, suggesting a positive relationship between these two variables, meaning teachers with higher `hours` scores also tend to have higher teaching scores. Recall from earlier that the correlation coefficient is `r cor_ch10`. They both have the same positive sign, but have a different value. Recall further that the correlation's interpretation is the "strength of linear association". The \index{regression!interpretation of the slope} slope's interpretation is a little different:
 
 <!-- DK: Let's make sure that these interpretations are highly consistent with Gelman and across the book. -->
 
-> For every increase of 1 unit in `bty_avg`, there is an *associated* increase of, *on average*, `r evals_line[2]` units of `score`.
+> For every increase of 1 unit in `hours`, there is an *associated* increase of, *on average*, `r evals_line[2]` units of `score`.
 
-We say that this associated increase is *on average* `r evals_line[2]` units of teaching `score`, because you might have two instructors whose `bty_avg` scores differ by 1 unit, but their difference in teaching scores won't necessarily be exactly `r evals_line[2]`. What the slope of `r evals_line[2]` is saying is that across all possible courses, the *average* difference in teaching score between two instructors whose "beauty" scores differ by one is `r evals_line[2]`.
+We say that this associated increase is *on average* `r evals_line[2]` units of teaching `score`, because you might have two instructors whose `hours` scores differ by 1 unit, but their difference in teaching scores won't necessarily be exactly `r evals_line[2]`. What the slope of `r evals_line[2]` is saying is that across all possible courses, the *average* difference in teaching score between two instructors whose "beauty" scores differ by one is `r evals_line[2]`.
 
 Furthermore, we only state that there is an *associated* increase and not necessarily a *causal* increase. For example, perhaps it's not that higher "beauty" scores directly cause higher teaching scores per se. Instead, the following could hold true: individuals from wealthier backgrounds tend to have stronger educational backgrounds and hence have higher teaching scores, while at the same time these wealthy individuals also tend to have higher "beauty" scores. In other words, just because two variables are strongly associated, it doesn't necessarily mean that one causes the other. This is summed up in the often quoted phrase, "correlation is not necessarily causation."
 
@@ -516,9 +516,9 @@ As you read news stories, be careful not to fall into the trap of thinking that 
 <!--AR: trying to be precise that it is correlation with the treatment and *potential* outcomes that matters, not correlation with the treatment and observed outcomes.  What's a better way to explain this?
 DK: Agreed! Indeed, we need to hit the notion of potential outcomes each chapter. Potential outcomes != observed outcomes! Not mentioning RCM for 4 weeks is a mistake. -->   
 
-Let's say, however, that we were confident that there is no confounding: that is, that there are no variables such as socioeconomic background that correlate both with a teacher's beauty score and the teacher's potential outcomes. (We shouldn't be confident in this, but let's play along for the moment.)  Then, we can interpret the slope in terms of the [Rubin Causal Model](#rubin-causal-model).  The slope coefficient on `bty_avg` of `r evals_line[2]` then means that the *average treatment effect* of increasing a teacher's "beauty" score by 1 is `r evals_line[2]`.  In the absence of randomization, however, this is likely not a good interpretation of this regression!  Adding additional variables, as we'll do in Chapter \@ref{multiple-regression}, may make it more plausible to interpret the regression causally.
+Let's say, however, that we were confident that there is no confounding: that is, that there are no variables such as socioeconomic background that correlate both with a teacher's beauty score and the teacher's potential outcomes. (We shouldn't be confident in this, but let's play along for the moment.)  Then, we can interpret the slope in terms of the [Rubin Causal Model](#rubin-causal-model).  The slope coefficient on `hours` of `r evals_line[2]` then means that the *average treatment effect* of increasing a teacher's "beauty" score by 1 is `r evals_line[2]`.  In the absence of randomization, however, this is likely not a good interpretation of this regression!  Adding additional variables, as we'll do in Chapter \@ref{multiple-regression}, may make it more plausible to interpret the regression causally.
 
-Keeping with the causal interpretation, let's say that a teacher named Joe had a "beauty" score of 7 and a teaching score of 4. We are curious about how much moving from a "beauty" score of 7 versus "beauty" score of 8 would have affected Joe's teaching score.  Thus, we are comparing the *potential outcome* for Joe when `bty_avg` is 7 versus the *potential outcome* when `bty_avg` is 8.  Only one of these potential outcomes was observed.
+Keeping with the causal interpretation, let's say that a teacher named Joe had a "beauty" score of 7 and a teaching score of 4. We are curious about how much moving from a "beauty" score of 7 versus "beauty" score of 8 would have affected Joe's teaching score.  Thus, we are comparing the *potential outcome* for Joe when `hours` is 7 versus the *potential outcome* when `hours` is 8.  Only one of these potential outcomes was observed.
 
 <!-- DK: This is good stuff. Belongs in every chapter. -->
 
@@ -565,7 +565,7 @@ tibble(`Subject` = "Joe",
               border_right = TRUE)
 ```
 
-Thus, our best guess of Joe's potential outcome under the "treatment" of $score = 8$ is $4.067$.
+Thus, our best guess of Joe's potential outcome under the "treatment" of $rating = 8$ is $4.067$.
 
 ## Uncertainty in simple linear regressions
 
@@ -578,14 +578,14 @@ Let's load the **infer** package.  We're going to use the function `rep_sample_n
 ```{r}
 library(infer)
 
-x <- evals_ch11 %>% 
-  select(score, bty_avg) %>% 
-  rep_sample_n(size = nrow(evals_ch11), replace = TRUE, reps = 1000)
+x <- qscores_ch10 %>% 
+  select(rating, hours) %>% 
+  rep_sample_n(size = nrow(qscores_ch10), replace = TRUE, reps = 1000)
 
 x
 ```
 
-For each `replicate`, we have `r nrow(evals_ch11)` resamples of `score` and `bty_avg`.
+For each `replicate`, we have `r nrow(qscores_ch10)` resamples of `score` and `hours`.
 
 Next, we are going to introduce a new function: `nest()`:
 
@@ -609,7 +609,7 @@ Now, we can use `map()` to run our linear regression for each dataset:
 
 ```{r}
 x <- x %>% 
-  mutate(mod = map(data, ~ lm(score ~ bty_avg, data = .)))
+  mutate(mod = map(data, ~ lm(rating ~ hours, data = .)))
 
 x
 ```
@@ -637,7 +637,7 @@ x
 
 ```{r}
 x <- x %>%
-  mutate(disp_coef = map_dbl(reg_results, ~ filter(., term == "bty_avg") %>% pull(estimate)))
+  mutate(disp_coef = map_dbl(reg_results, ~ filter(., term == "hours") %>% pull(estimate)))
 
 x
 ```
@@ -684,101 +684,102 @@ While this process is relatively straightforward, there's a simple shortcut we c
 ```{r}
 score_model %>% 
   tidy(conf.int = TRUE) %>%
-  filter(term == "bty_avg") %>%
+  filter(term == "hours") %>%
   select(estimate, conf.low, conf.high)
 ```
 
 <!-- DK: Don't hard code numbers! -->
 
-The confidence intervals reported by `lm()` and `tidy()` are very similar to our bootstrap confidence intervals.  Thus, we can interpret these confidence intervals the same way we did in Chapter \@ref(confidence-intervals). There is a 95% chance that the true value of the coefficient of `bty_avg` is between, roughly, 0.07 and 0.1.  From now on, we'll just use `lm()` because it is simpler, but when considering how to interpret the confidence intervals, remember that you'd obtain very similar results from the bootstrap method.
+The confidence intervals reported by `lm()` and `tidy()` are very similar to our bootstrap confidence intervals.  Thus, we can interpret these confidence intervals the same way we did in Chapter \@ref(confidence-intervals). There is a 95% chance that the true value of the coefficient of `hours` is between, roughly, 0.07 and 0.1.  From now on, we'll just use `lm()` because it is simpler, but when considering how to interpret the confidence intervals, remember that you'd obtain very similar results from the bootstrap method.
 
 ### Observed/fitted values and residuals {#model1points}
 
-We just saw how to get the value of the intercept and the slope of a regression line from the `estimate` column of a regression table generated by the `tidy()` function. Now instead say we want information on individual observations. For example, let's focus on the 21st of the 463 courses in the `evals_ch11` data frame:
+<!-- We just saw how to get the value of the intercept and the slope of a regression line from the `estimate` column of a regression table generated by the `tidy()` function. Now instead say we want information on individual observations. For example, let's focus on the 21st of the 463 courses in the `qscores_ch10` data frame: -->
 
 ```{r, echo=FALSE}
-index <- which(evals_ch11$bty_avg == 7.333 & evals_ch11$score == 4.9)
-target_point <- score_model %>%
-  augment() %>%
-  slice(index)
-x <- target_point$bty_avg
-y <- target_point$score
-y_hat <- target_point$.fitted
-resid <- target_point$.resid
-evals_ch11 %>%
-  select(-age) %>% 
-  slice(index) %>%
-  knitr::kable(
-    digits = 2,
-    caption = "Data for the 21st course out of 463",
-    booktabs = TRUE,
-    linesep = ""
-  ) %>%
-  kable_styling(font_size = ifelse(knitr:::is_latex_output(), 10, 16),
-                latex_options = c("hold_position"))
+# index <- which(qscores_ch10$hours == 7.333 & qscores_ch10$rating == 4.9)
+# target_point <- score_model %>%
+#   augment() %>%
+#   slice(index)
+# x <- target_point$hours
+# y <- target_point$rating
+# y_hat <- target_point$.fitted
+# resid <- target_point$.resid
+# qscores_ch10 %>%
+#   select(-age) %>% 
+#   slice(index) %>%
+#   knitr::kable(
+#     digits = 2,
+#     caption = "Data for the 21st course out of 463",
+#     booktabs = TRUE,
+#     linesep = ""
+#   ) %>%
+#   kable_styling(font_size = ifelse(knitr:::is_latex_output(), 10, 16),
+#                 latex_options = c("hold_position"))
 ```
 
-What is the value $\widehat{y}$ on the regression line corresponding to this instructor's `bty_avg` "beauty" score of `r x`? We will mark three values corresponding to the instructor for this 21st course and give their statistical names:
+<!-- What is the value $\widehat{y}$ on the regression line corresponding to this instructor's `hours` "beauty" score of ??? We will mark three values corresponding to the instructor for this 21st course and give their statistical names: -->
 
-* Circle: The *observed value* $y$ = `r y` is this course's instructor's actual teaching score.
-* Square: The *fitted value* $\widehat{y}$ is the value on the regression line for $x$ = `bty_avg` = `r x`. This value is computed using the intercept and slope in the previous regression table: 
+<!-- * Circle: The *observed value* $y$ = ?? is this course's instructor's actual teaching score. -->
+<!-- * Square: The *fitted value* $\widehat{y}$ is the value on the regression line for $x$ = `hours` = ??. This value is computed using the intercept and slope in the previous regression table:  -->
 
-$$\widehat{y} = b_0 + b_1 \cdot x = `r evals_line[1]` + `r evals_line[2]` \cdot `r x` = `r y_hat`$$
+<!-- $$\widehat{y} = b_0 + b_1 \cdot x = `r evals_line[1]` + `r evals_line[2]` \cdot `r x` = `r y_hat`$$ -->
 
-* Arrow: The length of this arrow is the *residual* \index{regression!residual} and is computed by subtracting the fitted value $\widehat{y}$ from the observed value $y$. The residual can be thought of as a model's error or "lack of fit" for a particular observation.  In the case of this course's instructor, it is $y - \widehat{y}$ = `r y` - `r y_hat` = `r resid`.
+* Arrow: The length of this arrow is the *residual* \index{regression!residual} and is computed by subtracting the fitted value $\widehat{y}$ from the observed value $y$. The residual can be thought of as a model's error or "lack of fit" for a particular observation.  In the case of this course's instructor, it is $y - \widehat{y}$ = ??
 
 ```{r, echo=FALSE, warning=FALSE, fig.cap="Example of observed value, fitted value, and residual."}
-best_fit_plot <- ggplot(evals_ch11, aes(x = bty_avg, y = score)) +
-  geom_point(color = "grey") +
-  labs(x = "Beauty Score", y = "Teaching Score",
-       title = "Relationship of teaching and beauty scores") +
-  geom_smooth(method = "lm", se = FALSE) +
-  annotate("point", x = x, y = y_hat, col = "red", shape = 15, size = 4) +
-  annotate("segment", x = x, xend = x, y = y, yend = y_hat, color = "blue",
-           arrow = arrow(type = "closed", length = unit(0.04, "npc"))) +
-  annotate("point", x = x, y = y, col = "red", size = 4)
-
-best_fit_plot
+# best_fit_plot <- ggplot(qscores_ch10, aes(x = hours, y = score)) +
+#   geom_point(color = "grey") +
+#   labs(x = "Beauty Score", y = "Teaching Score",
+#        title = "Relationship of teaching and beauty scores") +
+#   geom_smooth(method = "lm", se = FALSE) +
+#   annotate("point", x = x, y = y_hat, col = "red", shape = 15, size = 4) +
+#   annotate("segment", x = x, xend = x, y = y, yend = y_hat, color = "blue",
+#            arrow = arrow(type = "closed", length = unit(0.04, "npc"))) +
+#   annotate("point", x = x, y = y, col = "red", size = 4)
+# 
+# best_fit_plot
 ```
 
-Now say we want to compute both the fitted value $\widehat{y} = b_0 + b_1 \cdot x$ and the residual $y - \widehat{y}$ for *all* 463 courses in the study. Recall that each course corresponds to one of the 463 rows in the `evals_ch11` data frame and also one of the 463 points in the regression plot.
+Now say we want to compute both the fitted value $\widehat{y} = b_0 + b_1 \cdot x$ and the residual $y - \widehat{y}$ for *all* 463 courses in the study. Recall that each course corresponds to one of the 463 rows in the `qscores_ch10` data frame and also one of the 463 points in the regression plot.
 
 We could repeat the previous calculations we performed by hand 463 times, but that would be tedious and time consuming. Instead, let's do this using a computer with the `augment()` function in the **broom** package. Let's apply the `augment()` function to `score_model`, which is where we saved our `lm()` model in the previous section. We present the results of only the 21st through 24th courses for brevity's sake.
 
 ```{r, eval=FALSE}
 regression_points <- score_model %>%
   augment() %>%
-  select(score, bty_avg, .fitted, .resid)
+  select(rating, hours, .fitted, .resid)
 regression_points
 ```
 
 ```{r, echo=FALSE}
 set.seed(76)
 regression_points <- augment(score_model) %>%
-  select(score, bty_avg, .fitted, .resid)
-regression_points %>%
-  slice(c(index, index + 1, index + 2, index + 3)) %>%
-  knitr::kable(
-    digits = 3,
-    caption = "Regression points (for only the 21st through 24th courses)",
-    booktabs = TRUE,
-    linesep = ""
-  )
+  select(rating, hours, .fitted, .resid)
+
+# regression_points %>%
+#   slice(c(index, index + 1, index + 2, index + 3)) %>%
+#   knitr::kable(
+#     digits = 3,
+#     caption = "Regression points (for only the 21st through 24th courses)",
+#     booktabs = TRUE,
+#     linesep = ""
+#   )
 ```
 
 Let's inspect the individual columns and match them with the elements of our regression plot:
 
 * The `score` column represents the observed outcome variable $y$. This is the y-position of the `r nrow(regression_points)` black points.
-* The `bty_avg` column represents the values of the explanatory variable $x$. This is the x-position of the `r nrow(regression_points)` black points.
+* The `hours` column represents the values of the explanatory variable $x$. This is the x-position of the `r nrow(regression_points)` black points.
 * The `.fitted` column represents the fitted values $\widehat{y}$. This is the corresponding value on the regression line for the `r nrow(regression_points)` $x$ values.
 * The `.resid` column represents the residuals $y - \widehat{y}$. This is the `r nrow(regression_points)` vertical distances between the `r nrow(regression_points)` black points and the regression line.
 
-Just as we did for the instructor of the 21st course in the `evals_ch11` dataset (in the first row of the table), let's repeat the calculations for the instructor of the 24th course (in the fourth row):
+Just as we did for the instructor of the 21st course in the `qscores_ch10` dataset (in the first row of the table), let's repeat the calculations for the instructor of the 24th course (in the fourth row):
 
 * `score` = 4.4 is the observed teaching `score` $y$ for this course's instructor.
-* `bty_avg` = 5.50 is the value of the explanatory variable `bty_avg` $x$ for this course's instructor.
+* `hours` = 5.50 is the value of the explanatory variable `hours` $x$ for this course's instructor.
 * `.fitted` = 4.25 = `r evals_line[1]` + `r evals_line[2]` $\cdot$ 5.50 is the fitted value $\widehat{y}$ on the regression line for this course's instructor.
-* `.resid` = 0.153 =  4.4 - 4.25 is the value of the residual for this instructor. In other words, the model's fitted value was off by 0.153 teaching score units for this course's instructor.
+* `.resid` = 0.153 =  4.4 - 4.25 is the value of the residual for this instructor. In other words, the model's fitted value was off by 0.153 teaching rating units for this course's instructor.
 
 
 <!-- DK: Below code was breaking. -->
@@ -788,7 +789,7 @@ Just as we did for the instructor of the 21st course in the `evals_ch11` dataset
 <!-- ```{r} -->
 <!-- score_model %>% -->
 <!--   augment() %>% -->
-<!--   select(score, bty_avg, .fitted, .resid) -->
+<!--   select(score, hours, .fitted, .resid) -->
 <!-- ``` -->
 
 <!-- Now that we have the standard error of the fitted values, we can construct a confidence interval easily: -->
@@ -798,14 +799,14 @@ Just as we did for the instructor of the 21st course in the `evals_ch11` dataset
 <!--   augment() %>% -->
 <!--   mutate(conf.low = .fitted - 2 * .se.fit, -->
 <!--          conf.high = .fitted + 2 * .se.fit) %>% -->
-<!--   select(score, bty_avg, .fitted, conf.low, conf.high, .resid) -->
+<!--   select(score, hours, .fitted, conf.low, conf.high, .resid) -->
 <!-- ``` -->
 
-<!-- Note that the uncertainty for *particular predictions* is higher than the uncertainty for our estimate of the coefficient on `bty_avg`.  We are more confident in the *average* effect of "beauty" scores on teaching evaluations than we are on any predictions we would make for a *particular person*. -->
+<!-- Note that the uncertainty for *particular predictions* is higher than the uncertainty for our estimate of the coefficient on `hours`.  We are more confident in the *average* effect of "beauty" scores on teaching evaluations than we are on any predictions we would make for a *particular person*. -->
 
 <!-- AR: We can't really bring Joe back in here, because we are filling in the
 potential outcome table with estimates of the treatment effect + Joe's observed
-outcome, not with the predicted value for a particular bty_avg.-->
+outcome, not with the predicted value for a particular hours.-->
 
 ## Case study: 2018 gubernatorial forecasts
 
@@ -916,7 +917,7 @@ Regression lines are also known as "best-fitting" lines. But what do we mean by 
 ```{r, echo=FALSE, warning=FALSE, fig.cap="Example of observed value, fitted value, and residual."}
 # First residual
 
-best_fit_plot <- ggplot(evals_ch11, aes(x = bty_avg, y = score)) +
+best_fit_plot <- ggplot(qscores_ch10, aes(x = hours, y = score)) +
   geom_point(size = 0.8, color = "grey") +
   labs(x = "Beauty Score", y = "Teaching Score") +
   geom_smooth(method = "lm", se = FALSE) +
@@ -929,11 +930,11 @@ p1 <- best_fit_plot + labs(title = "First instructor's residual")
 
 # Second residual
 
-index <- which(evals_ch11$bty_avg == 2.333 & evals_ch11$score == 2.7)
+index <- which(qscores_ch10$hours == 2.333 & qscores_ch10$rating == 2.7)
 target_point <- augment(score_model) %>%
   slice(index)
-x <- target_point$bty_avg
-y <- target_point$score
+x <- target_point$hours
+y <- target_point$rating
 y_hat <- target_point$.fitted
 resid <- target_point$.resid
 
@@ -947,12 +948,12 @@ p2 <- best_fit_plot + labs(title = "Adding second instructor's residual")
 
 # Third residual
 
-index <- which(evals_ch11$bty_avg == 3.667 & evals_ch11$score == 4.4)
-score_model <- lm(score ~ bty_avg, data = evals_ch11)
+index <- which(qscores_ch10$hours == 3.667 & qscores_ch10$rating == 4.4)
+score_model <- lm(rating ~ hours, data = qscores_ch10)
 target_point <- augment(score_model) %>%
   slice(index)
-x <- target_point$bty_avg
-y <- target_point$score
+x <- target_point$hours
+y <- target_point$rating
 y_hat <- target_point$.fitted
 resid <- target_point$.resid
 
@@ -964,12 +965,12 @@ best_fit_plot <- best_fit_plot +
            arrow = arrow(type = "closed", length = unit(0.02, "npc")))
 p3 <- best_fit_plot + labs(title = "Adding third instructor's residual")
 
-index <- which(evals_ch11$bty_avg == 6 & evals_ch11$score == 3.8)
-score_model <- lm(score ~ bty_avg, data = evals_ch11)
+index <- which(qscores_ch10$hours == 6 & qscores_ch10$rating == 3.8)
+score_model <- lm(rating ~ hours, data = qscores_ch10)
 target_point <- augment(score_model) %>%
   slice(index)
-x <- target_point$bty_avg
-y <- target_point$score
+x <- target_point$hours
+y <- target_point$rating
 y_hat <- target_point$.fitted
 resid <- target_point$.resid
 
@@ -986,9 +987,9 @@ p1 + p2 + p3 + p4 + plot_layout(nrow = 2)
 
 The three other plots refer to:
 
-1. A course whose instructor had a "beauty" score $x$ = 2.333 and teaching score $y$ = 2.7. The residual in this case is $2.7 - 4.036 = -1.336$, which we mark with a new `r if_else(!knitr::is_latex_output(), "blue", "")` arrow in the top-right plot.
-1. A course whose instructor had a "beauty" score $x = 3.667$ and teaching score $y = 4.4$. The residual in this case is $4.4 - 4.125 = 0.2753$, which we mark with a new `r if_else(!knitr::is_latex_output(), "blue", "")` arrow in the bottom-left plot.
-1. A course whose instructor had a "beauty" score $x = 6$ and teaching score $y = 3.8$. The residual in this case is $3.8 - 4.28 = -0.4802$, which we mark with a new `r if_else(!knitr::is_latex_output(), "blue", "")` arrow in the bottom-right plot.
+1. A course whose instructor had a "beauty" score $x$ = 2.333 and teaching score $y$ = 2.7. The residual in this case is $2.7 - 4.036 = -1.336$, which we mark with a new ?? arrow in the top-right plot.
+1. A course whose instructor had a "beauty" score $x = 3.667$ and teaching score $y = 4.4$. The residual in this case is $4.4 - 4.125 = 0.2753$, which we mark with a new ?? arrow in the bottom-left plot.
+1. A course whose instructor had a "beauty" score $x = 6$ and teaching score $y = 3.8$. The residual in this case is $3.8 - 4.28 = -0.4802$, which we mark with a new ?? arrow in the bottom-right plot.
 
 
 Now say we repeated this process of computing residuals for all 463 courses' instructors, then we squared all the residuals, and then we summed them. We call this quantity the *sum of squared residuals*\index{sum of squared residuals}; it is a measure of the _lack of fit_ of a model. Larger values of the sum of squared residuals indicate a bigger lack of fit. This corresponds to a worse fitting model.
@@ -1006,8 +1007,8 @@ Let's use our data wrangling tools from Chapter \@ref(tidyverse) to compute the 
 ```{r}
 # Fit regression model:
 
-score_model <- lm(score ~ bty_avg, 
-                  data = evals_ch11)
+score_model <- lm(rating ~ hours, 
+                  data = qscores_ch10)
 
 # Get regression points:
 
@@ -1036,15 +1037,15 @@ In this chapter, you have learned how to use `lm()` to model the relationship be
 <!-- fit model in lm() intepret in bayesian way as refresher  -->
 
 ```{r}
-lm_score_model <- lm(score ~ bty_avg, data = evals_ch11)
+lm_score_model <- lm(rating ~ hours, data = qscores_ch10)
 
 lm_score_model %>% 
   tidy(conf.int = TRUE) %>%
-  filter(term == "bty_avg") %>%
+  filter(term == "hours") %>%
   select(estimate, conf.low, conf.high)
 ```
 
-From what we learned in Chapter 7, we intepreted this confidence intervals as a 95% chance that the true value of the coefficient of `bty_avg` is between, roughly, 0.03 and 0.1. Thus, we have taken our simple `lm()` model and interpreted it in a Bayesian way. However, is this a full fledge bayesian analysis? No! For example, `lm()` does not allow the user to incorporate priors. As mentioned before, `lm()` is an old function and to perform bayesian analysis we must use a Bayesian analysis tool. 
+From what we learned in Chapter 7, we intepreted this confidence intervals as a 95% chance that the true value of the coefficient of `hours` is between, roughly, 0.03 and 0.1. Thus, we have taken our simple `lm()` model and interpreted it in a Bayesian way. However, is this a full fledge bayesian analysis? No! For example, `lm()` does not allow the user to incorporate priors. As mentioned before, `lm()` is an old function and to perform bayesian analysis we must use a Bayesian analysis tool. 
 
 <!-- EG: Do students know what Bayesian regression is? How it differs fundamentally from frequentist modeling? Why we might consider using a Bayesian model instead of a frequentist model? If that hasn't already been introduced somewhere else in the book, I think it should happen here. -->
 
@@ -1065,7 +1066,7 @@ We can obtain the values of the intercept $b_0$ and the slope for `btg_avg` $b_1
 
 library(rstanarm)
 
-bayes_score <- stan_glm(score ~ bty_avg, data = evals_ch11, refresh = 0)
+bayes_score <- stan_glm(rating ~ hours, data = qscores_ch10, refresh = 0)
 
 print(bayes_score, digits = 2)
 
@@ -1076,39 +1077,39 @@ First, we "fit" the bayesian regression model to the `data` using the `stan_glm(
 
 * `y` is the outcome variable, followed by a tilde `~`.
 * `x` is the explanatory variable.
-* The model formula is `score ~ bty_avg`.
-* `data_frame_name` is the name of the data frame that contains the variables `y` and `x`. In our case, `data_frame_name` is the `evals_ch11` data frame.
+* The model formula is `rating ~ hours`.
+* `data_frame_name` is the name of the data frame that contains the variables `y` and `x`. In our case, `data_frame_name` is the `qscores_ch10` data frame.
 * `refresh = 0` is optional. Setting refresh equal to 0 suppresses the printing of the sampling algorithm from the model. We will touch more on this later. 
 
 ### Interpreting Regression Coefficients 
 
 Notice, in the `print()` output, the estimates are referred to as the `Median` and the uncertainty as the `MAD_SD`. This is due to the fact that Bayesian Regression does not provide just a point estimate, but a distribution. The `Median` is the chosen summary statistic for the distribution because median-based-summaries are more stable over simulations. However, even though the estimates and uncertainty of the parameters are calculated differently, the coefficients of the `stan_glm()` model can be intepretted in the same manner as they were previously when using `lm()`. 
 
-The intercept $b_0$ = `r bayes_score$coefficient[1]` is the average teaching score $\widehat{y}$ = $\widehat{\text{score}}$ for those courses where the instructor had a "beauty" score `bty_avg` of 0. Again, while the \index{regression!equation of a line!intercept} intercept of the regression line has a mathematical interpretation, it has no *practical* interpretation here, since observing a `bty_avg` of 0 is impossible.
+The intercept $b_0$ = `r bayes_score$coefficient[1]` is the average teaching score $\widehat{y}$ = $\widehat{\text{score}}$ for those courses where the instructor had a "beauty" score `hours` of 0. Again, while the \index{regression!equation of a line!intercept} intercept of the regression line has a mathematical interpretation, it has no *practical* interpretation here, since observing a `hours` of 0 is impossible.
 
 <!-- DK: Add discussion of "hat". Recall the p hat which we estimated last time. y hat is like that! It is not a variable that we can observe. It is an estimate. (Indeed, it is an estimate of a potential outcome!) This is different form x, which has no hat, because it is real data, something we can see. Side note: not sure if the hat versus no hat distinction works well with b_0/b_1 being things we can't see and need to estimate, but for which we do not use hat notation. -->
 
-The slope $b_1$ = $b_{\text{bty_avg}}$ of `r bayes_score$coefficient[2]`. The "bty_avg" subscript indicates that this number summarizes the relationship between the teaching and average beauty score variables. The slope's interpretation is different:
+The slope $b_1$ = $b_{\text{hours}}$ of `r bayes_score$coefficient[2]`. The "hours" subscript indicates that this number summarizes the relationship between the teaching and average beauty score variables. The slope's interpretation is different:
 
 <!-- DK: Let's make sure that these interpretations are highly consistent with Gelman and across the book. -->
 
 <!-- EG: To make sure these interpretations are consistent, who should I talk to/what sections should I look at? -->
 
-> For every increase of 1 unit in `bty_avg`, there is an *associated* increase of, *on average*, `r bayes_score$coefficient[2]` units of `score`.
+> For every increase of 1 unit in `hours`, there is an *associated* increase of, *on average*, `r bayes_score$coefficient[2]` units of `score`.
 
 What the slope of `r bayes_score$coefficient[2]` is saying is that across all possible courses, the *average* difference in teaching score between two instructors whose "beauty" scores differ by one is `r bayes_score$coefficient[2]` when holding all other things equal.
 
-In the output, we are also given another parameter, $sigma$ =  `r round(sigma(bayes_score),2)`. $sigma$ represents the residual standard error, the deviation between the predicted value and the observed value. Thus, it shows us the uncertainity when our model predicts the `score` using `bty_avg`. Our $sigma$ 
+In the output, we are also given another parameter, $sigma$ =  `r round(sigma(bayes_score),2)`. $sigma$ represents the residual standard error, the deviation between the predicted value and the observed value. Thus, it shows us the uncertainity when our model predicts the `score` using `hours`. Our $sigma$ 
 tells us that a teacher's score will be between plus or minus `r round(sigma(bayes_score),2)` the prediction for 68% of the data and between plus or minus two sigma, `r 2*round(sigma(bayes_score),2)`, of the prediction for about 95% of the data. Here is a visual representation:
 
 ```{r, echo=FALSE}
 
 
-evals_ch11 %>%
+qscores_ch10 %>%
   add_predicted_draws(bayes_score) %>%
-  ggplot(aes(x = bty_avg, y = score)) +
+  ggplot(aes(x = hours, y = score)) +
   stat_lineribbon(aes(y = .prediction), .width = c(.99, .95, .68), color = "#08519C") +
-  geom_point(data = evals_ch11, size = 2) +
+  geom_point(data = qscores_ch10, size = 2) +
   scale_fill_brewer() + 
   labs(title = "68% of Data Between +-1 Sigma from Line of Best Fit\n 95% of Data Between +-2 Sigma from Line of Best Fit")
 ```
@@ -1119,7 +1120,7 @@ intervals<-posterior_interval(bayes_score, prob = 0.95)
 
 ```
 
-Finally, for all of the coefficients, we are provided a `MAD_SD`. The `MAD SD`, which equals $1.483 * (\mathbf{median}^n_{i=1} |z_i - M|)$, summarizes the uncertainty in the model parameters. Since we are used to using the standard deviations to measure variation, the MAD SD is rescaled to mirror the standard error of the normal distribution. The `MAD_SD` can be used to retrieve our coefficient's credible intervals for each parameter. Thus, for `bty_avg`, the 95% credible interval is (`r intervals[2,]`). This tells us that there is a 95% probability that the true value of the parameter for `bty_avg` falls within the interval. 
+Finally, for all of the coefficients, we are provided a `MAD_SD`. The `MAD SD`, which equals $1.483 * (\mathbf{median}^n_{i=1} |z_i - M|)$, summarizes the uncertainty in the model parameters. Since we are used to using the standard deviations to measure variation, the MAD SD is rescaled to mirror the standard error of the normal distribution. The `MAD_SD` can be used to retrieve our coefficient's credible intervals for each parameter. Thus, for `hours`, the 95% credible interval is (`r intervals[2,]`). This tells us that there is a 95% probability that the true value of the parameter for `hours` falls within the interval. 
 
 <!-- EG: Should we include an explanation of why the language of posteriors is so important/so heavily used within Bayesian modeling? -->
 
@@ -1145,7 +1146,7 @@ summary(bayes_score)
 
 In the Estimates section, we get the same information as we did from `print()`. However, there is a lot of new information that we have not seen before under Fit Diagnostics and MCMC Diagnostics. We can use this information provided to further assess the model. 
 
-In the Fit Diagnostics section, we are provided information about the `mean_ppd`, the sample mean of the posterior predictive distribution of the outcome variable. A quick check of our model is that we hope the `mean_ppd` is close to the mean of our depedent variable. The mean of the `score` variable is `r mean(evals_ch11$score)`. Thus, the `mean_ppd` is definitely on par with the mean of the `bayes_score` dependent variable. 
+In the Fit Diagnostics section, we are provided information about the `mean_ppd`, the sample mean of the posterior predictive distribution of the outcome variable. A quick check of our model is that we hope the `mean_ppd` is close to the mean of our depedent variable. The mean of the `score` variable is `r mean(qscores_ch10$rating)`. Thus, the `mean_ppd` is definitely on par with the mean of the `bayes_score` dependent variable. 
 
 In MCMC diagnostics, we are provided with:
 
@@ -1160,7 +1161,7 @@ The only thing that you need to be concerned about is the `Rhat`. When we know w
 You may be wondering, what exactly is `stan_glm()` doing? Let us take a look under the hood of `stan_glm()`. This will enable us to further understand the usefulness of Bayesian Regression. Remember that we included `refresh = 0` in the `bayes_score` model. Let us run the same model, but leave out the `refresh` input.
 
 ```{r}
-stan_glm(score ~ bty_avg, data = evals_ch11)
+stan_glm(rating ~ hours, data = qscores_ch10)
 ```
 
 Without `refresh`, the output displays everything `stan_glm()` is doing in the background, which is a sampling algorithm known as Markov Chain Monte Carlo (MCMC). In fact, `stan_glm()` is producing thousands of simulations after sampling from the posterior distribution using this MCMC algorithm. We can conveniently access all of the simulations of the the model parameters (intercept, slope, and sigma) from the posterior distribution as a matrix. Let's take a look at some of these simulations.
@@ -1184,7 +1185,7 @@ apply(sims, 2, median)
 
 These are the exact values of the coefficients of the printed `bayes_score` model. Thus, `stan_glm()` tried 4000 iterations to model the data. All `4000` were summarized using the `Median` to produce point estimates of the parameters.
 
-Now, we understand where the point-estimate comes from when we call `print()` on a `stan_glm()` model; however, a simple linear regression using `lm()` provides us with a point-estimate, or in other words,  a single line of best fit. The power of Bayesian Regression comes from the ability to analyze uncertainty using the entire posterior distribution, all 4000 simulations cumulatively. Again, the posterior distribution is a set of plausible values for each parameter and each observation or row is referred to as a posterior draw. Let us take a look at the posterior distrubtion for the `bty_avg` variable, the slope, by graphing it. Once again we can use the `sims` matrix, but we must convert it into a tibble using `as_tibble()` to graph. 
+Now, we understand where the point-estimate comes from when we call `print()` on a `stan_glm()` model; however, a simple linear regression using `lm()` provides us with a point-estimate, or in other words,  a single line of best fit. The power of Bayesian Regression comes from the ability to analyze uncertainty using the entire posterior distribution, all 4000 simulations cumulatively. Again, the posterior distribution is a set of plausible values for each parameter and each observation or row is referred to as a posterior draw. Let us take a look at the posterior distrubtion for the `hours` variable, the slope, by graphing it. Once again we can use the `sims` matrix, but we must convert it into a tibble using `as_tibble()` to graph. 
 
 
 ```{r, message= FALSE, echo=FALSE}
@@ -1201,19 +1202,19 @@ posterior_draws<-sims%>%as_tibble()
 
 
 posterior_draws%>%
-  ggplot(aes(x = bty_avg)) +
+  ggplot(aes(x = hours)) +
   geom_histogram()+
-   geom_vline(xintercept=median(posterior_draws$bty_avg), color="red", size=1) + labs(y = "Frequency", title = "Posterior Distribution of bty_avg Parameter", subtitle = "The Red Line Represents the Median")
+   geom_vline(xintercept=median(posterior_draws$hours), color="red", size=1) + labs(y = "Frequency", title = "Posterior Distribution of hours Parameter", subtitle = "The Red Line Represents the Median")
 ```
 
-If you noticed, `stan_glm()` does not have any p-values, t-values or degrees of freedom like `lm()`. The crux of Bayesian Modeling is that everything we need to know can be found within the posterior distribution. We can get a point estimate using the `Median` and we saw in the previous section that we can get a 95% credible interval for `bty_avg` using the `posterior_interval` function. We can also graph the posterior distribution of all the other parameters from the model, the intercept and sigma. 
+If you noticed, `stan_glm()` does not have any p-values, t-values or degrees of freedom like `lm()`. The crux of Bayesian Modeling is that everything we need to know can be found within the posterior distribution. We can get a point estimate using the `Median` and we saw in the previous section that we can get a 95% credible interval for `hours` using the `posterior_interval` function. We can also graph the posterior distribution of all the other parameters from the model, the intercept and sigma. 
 
 ```{r echo=FALSE}
 
-bty_avg<-posterior_draws%>%
-  ggplot(aes(x = bty_avg)) +
+hours<-posterior_draws%>%
+  ggplot(aes(x = hours)) +
   geom_histogram()+
-   geom_vline(xintercept=median(posterior_draws$bty_avg), color="red", size=1) + labs(y = "Frequency", title = "Posterior Distribution of bty_avg Parameter", subtitle = "The Red Line Represents the Median")
+   geom_vline(xintercept=median(posterior_draws$hours), color="red", size=1) + labs(y = "Frequency", title = "Posterior Distribution of hours Parameter", subtitle = "The Red Line Represents the Median")
 
 sigma<-posterior_draws%>%
   ggplot(aes(x = sigma)) +
@@ -1226,7 +1227,7 @@ intercept<-posterior_draws%>%
    geom_vline(xintercept=median(posterior_draws$`(Intercept)`), color="red", size=1)
 
 
-cowplot::plot_grid(intercept, bty_avg, sigma, nrow = 1)
+cowplot::plot_grid(intercept, hours, sigma, nrow = 1)
 
 
 
@@ -1238,28 +1239,28 @@ Another way to think of each posterior draw, each row of the `sims` matrix, is t
 
 ```{r}
 
-medians<-tibble(`(Intercept)` = median(posterior_draws$`(Intercept)`), bty_avg = median(posterior_draws$bty_avg))
+medians<-tibble(`(Intercept)` = median(posterior_draws$`(Intercept)`), hours = median(posterior_draws$hours))
 
 posterior_draws%>%
-  ggplot(aes(x = `(Intercept)`, y = bty_avg)) +
+  ggplot(aes(x = `(Intercept)`, y = hours)) +
   geom_point() + geom_point(data = medians, color = "red", size = 5)+ 
-  labs(title = "Every Combination of Intercept and bty_avg From Posterior Distribution", x = "Intercept", subtitle = "Red Dot Represents the Median for Each Parameter")
+  labs(title = "Every Combination of Intercept and hours From Posterior Distribution", x = "Intercept", subtitle = "Red Dot Represents the Median for Each Parameter")
 
 ```
-Each intercept and slope (bty_avg) combination will create a different line. Furthermore, we can view all of these various lines. In doing so, we can again express and understand uncertainty.
+Each intercept and slope (hours) combination will create a different line. Furthermore, we can view all of these various lines. In doing so, we can again express and understand uncertainty.
 
 We will take our first look at the **tidybayes** package. The purpose of the **tidybayes** package is to aid in formating Bayesian modeling outputs in a tidy manner. It also provides **ggplot** geoms to easily plot Bayesian Models.
 
 Now back to the matter at hand of the various posterior draws and the lines they create. If you recall the `augment()` function we used for `lm()`, we were able to retrieve the fitted values yˆ. The `add_fitted_draws()` function from the **tidybayes** package is very similar, but for `stan_glm()`. The `add_fitted_draws()` takes a `stan_glm()` object, such as `bayes_score`, and a `n` parameter, which stands for the number of posterior draws to calculate the fitted values for. Let us try `n=5`.
 
 ```{r}
-five_draws<-evals_ch11%>%
+five_draws<-qscores_ch10%>%
   add_fitted_draws(bayes_score, n = 5)
 
 nrow(five_draws)
 
 ```
-If you recall, the `evals_ch11` dataset has 463 rows. `2315/5 = 463`. Thus, we can see that `add_fitted_draws()` calculated the fitted values 5 times. Let us see what `five_draws` looks like.
+If you recall, the `qscores_ch10` dataset has 463 rows. `2315/5 = 463`. Thus, we can see that `add_fitted_draws()` calculated the fitted values 5 times. Let us see what `five_draws` looks like.
 
 ```{r}
 head(five_draws, n = 10)
@@ -1267,17 +1268,17 @@ head(five_draws, n = 10)
 
 `add_fitted_draws`reports:
 
-* `ID` and `.row` which correspond to the row or specific teacher from the `evals_ch11` dataset.
-* `score`, `bty_avg` and `age` are the observed values for a given teacher. 
+* `ID` and `.row` which correspond to the row or specific teacher from the `qscores_ch10` dataset.
+* `score`, `hours` and `age` are the observed values for a given teacher. 
 * `.draw` is the randomly selected posterior draw used to fit the data. The number corresponds to the row from the `sims` matrix used. 
-* `.value` is the fitted value. In this case, it represents the prediction for the `score` based on a teacher's `bty_avg` for the specific parameters from the `.draw`. 
+* `.value` is the fitted value. In this case, it represents the prediction for the `score` based on a teacher's `hours` for the specific parameters from the `.draw`. 
 
 We are able to plot these different draws.
 
 ```{r}
 
 five_draws%>%
-  ggplot(aes(x = bty_avg, y = score)) +
+  ggplot(aes(x = hours, y = score)) +
   geom_line(aes(y = .value, group = .draw), color = "blue") +
   geom_point()
 
@@ -1287,9 +1288,9 @@ five_draws%>%
 Now, you can see how each posterior draw creates a different line. With just these 5 draws, there is a lot of variability. Let us see what `n=100` looks like.
 
 ```{r}
-evals_ch11%>%
+qscores_ch10%>%
   add_fitted_draws(bayes_score, n = 100)%>%
-  ggplot(aes(x = bty_avg, y = score)) +
+  ggplot(aes(x = hours, y = score)) +
   geom_line(aes(y = .value, group = .draw), alpha = 0.6, color = "blue") +
   geom_point()
   #transition_states(.draw, 0, 1)+
@@ -1300,36 +1301,36 @@ We see a the lines become more concentrated. The power of Bayesian Modeling come
 
 ###Predictions
 
-Finally, the last step of Bayesian Inference is being able to make prediction about new data using our `stan_glm()` model. Let us create a new dataset of teacher's beauty scores that mirrors the range of values in the `eval_ch11` dataset. To do this, we will create a tibble of `bty_avg` and use `seq` to generate a row for each `bty_avg` from 1.5 to 8.5 by 0.5. 
+Finally, the last step of Bayesian Inference is being able to make prediction about new data using our `stan_glm()` model. Let us create a new dataset of teacher's beauty scores that mirrors the range of values in the `eval_ch11` dataset. To do this, we will create a tibble of `hours` and use `seq` to generate a row for each `hours` from 1.5 to 8.5 by 0.5. 
 
 ```{r}
 
-new <- tibble(bty_avg = seq(1.5, 8.5, 0.5))
+new <- tibble(hours = seq(1.5, 8.5, 0.5))
 
 new
 ```
 
-Now, we will start with the simplest prediction, the point prediction. These are based on the fitted model or as we have come to know, the median value for each parameter (intercept, bty_avg, sigma). We will use the `predict` function to find predicted scores for each beauty rating from our `new` dataset. 
+Now, we will start with the simplest prediction, the point prediction. These are based on the fitted model or as we have come to know, the median value for each parameter (intercept, hours, sigma). We will use the `predict` function to find predicted scores for each beauty rating from our `new` dataset. 
 ```{r}
 
 new%>%
   mutate(y_hat = predict(bayes_score, newdata = .))%>%
-  ggplot(aes(x = bty_avg, y = y_hat)) + geom_point() + geom_line()
+  ggplot(aes(x = hours, y = y_hat)) + geom_point() + geom_line()
 
 
 ```
 
-Great! We have predicted values for each  `bty_avg` from the `new` dataset and they follow line created by the fitted model. However, this is nothing special to `stan_glm()`. We can do the exact same thing with an `lm()` model. Recall the `score_model` we created at the beginning of Chapter 10. It is the same as the `bayes_score` model, but it uses `lm()` instead of `stan_glm()`. Here are the point predictions for the `score_model` at each value of `bty_avg`in the `new` dataset.
+Great! We have predicted values for each  `hours` from the `new` dataset and they follow line created by the fitted model. However, this is nothing special to `stan_glm()`. We can do the exact same thing with an `lm()` model. Recall the `score_model` we created at the beginning of Chapter 10. It is the same as the `bayes_score` model, but it uses `lm()` instead of `stan_glm()`. Here are the point predictions for the `score_model` at each value of `hours`in the `new` dataset.
 
 ```{r}
 new%>%
   mutate(y_hat = predict(score_model, newdata = .))%>%
-  ggplot(aes(x = bty_avg, y = y_hat)) + geom_point() + geom_line()
+  ggplot(aes(x = hours, y = y_hat)) + geom_point() + geom_line()
 ```
 
 We get the exact same thing. This is because a point prediction ignores uncertainty. As we have been exploring in this section, where Bayesian Regression differs from Simple Linear Regression is in it's ability to express uncertainty in not only the model, but also it's parameters. Remember we had a `sims` matrix of 4000 rows of parameters. The posterior distributions serves us better and gives us a lot more information than a single point estimate ever could. 
 
-Thus, our predicitions should also take uncertainty into account. The first type is linear predictors. We perform this type of prediction using the `posterior_linepred` function. `posterior_linepred` takes a stan model like our `bayes_score` and a dataset of new points, `new`. With the function, we will be able to represent the distribution of uncertainty in regards to the parameters at each `bty_avg` from the `new` dataset. Let us take a look.
+Thus, our predicitions should also take uncertainty into account. The first type is linear predictors. We perform this type of prediction using the `posterior_linepred` function. `posterior_linepred` takes a stan model like our `bayes_score` and a dataset of new points, `new`. With the function, we will be able to represent the distribution of uncertainty in regards to the parameters at each `hours` from the `new` dataset. Let us take a look.
 
 ```{r}
 linepred<-posterior_linpred(bayes_score, newdata = new)
@@ -1339,15 +1340,15 @@ linepred<-posterior_linpred(bayes_score, newdata = new)
 head(linepred)
 ```
 
-`posterior_linepred` returns a matrix of posterior simulations wher each column of the `linepred` corresponds to each row of the `new` dataset. If we were to take the `mean` of each column, we would get the point prediction corresponding to that `bty_avg`. Also, if we were to take the `sd`, you would get the uncertainty in the fitted model. Thus `posterior_linepred` mimics what we were doing the previous section with the matrix of simulated parameters. In fact, we plot `posterior_linepred` using the same `add_fitted_draws` function without specifying n to factor in all 4000 posterior draws. `added_fitted_draws` from the **tidybayes** package puts the data in a much easier format than the matrix `posterior_linepred` outputs. First, we will recreate the point prediction plot using `add_fitted_draws` and use `mutate` to get the mean prediction for each `bty_avg`. 
+`posterior_linepred` returns a matrix of posterior simulations wher each column of the `linepred` corresponds to each row of the `new` dataset. If we were to take the `mean` of each column, we would get the point prediction corresponding to that `hours`. Also, if we were to take the `sd`, you would get the uncertainty in the fitted model. Thus `posterior_linepred` mimics what we were doing the previous section with the matrix of simulated parameters. In fact, we plot `posterior_linepred` using the same `add_fitted_draws` function without specifying n to factor in all 4000 posterior draws. `added_fitted_draws` from the **tidybayes** package puts the data in a much easier format than the matrix `posterior_linepred` outputs. First, we will recreate the point prediction plot using `add_fitted_draws` and use `mutate` to get the mean prediction for each `hours`. 
 
 ```{r}
 
 new %>%
   add_fitted_draws(model = bayes_score, .)%>%
-  group_by(bty_avg)%>%
+  group_by(hours)%>%
   mutate(point_estimate = mean(.value))%>%
-  ggplot(aes(x = bty_avg, y = point_estimate)) +
+  ggplot(aes(x = hours, y = point_estimate)) +
   geom_point() +
   geom_line() +
   scale_x_continuous(breaks = seq(1.5,8.5,0.5)) +
@@ -1364,17 +1365,17 @@ Now, we will add to this plot using the `stat_interval` geom from the **tidybaye
 ```{r}
 new %>%
   add_fitted_draws(model = bayes_score, .)%>%
-  group_by(bty_avg)%>%
+  group_by(hours)%>%
   mutate(point_estimate = mean(.value))%>%
-  ggplot(aes(x = bty_avg, y = point_estimate)) +
-  stat_interval(aes(x = bty_avg, y = .value), .width = c(0.68, 0.95)) +
-  geom_point(aes(x = bty_avg, y = point_estimate)) +
+  ggplot(aes(x = hours, y = point_estimate)) +
+  stat_interval(aes(x = hours, y = .value), .width = c(0.68, 0.95)) +
+  geom_point(aes(x = hours, y = point_estimate)) +
   geom_line() +
   scale_x_continuous(breaks = seq(1.5,8.5,0.5))+
   labs(y = "Predicted Scores", color = "Uncertainty Level", title = "Posterior Linear Prediction With Uncertainty")
 ```
 
-Linear Predictions can provide us the point estimate predictions while also telling us about the uncertainty in the parameters. As you can see, the intervals get a lot smaller towards the center of the `bty_avg` variable. This is because more data is concentrated towards the center. Furthermore, the predictions are more accurate/less varied because the posterior distribution has more data to draw from. Towards the extremes, we see the bands are a lot wider. Thus, the point predictions are a lot less reliable because the posterior distribution does not have a lot of data from the original `evals_ch11` to be built off of. 
+Linear Predictions can provide us the point estimate predictions while also telling us about the uncertainty in the parameters. As you can see, the intervals get a lot smaller towards the center of the `hours` variable. This is because more data is concentrated towards the center. Furthermore, the predictions are more accurate/less varied because the posterior distribution has more data to draw from. Towards the extremes, we see the bands are a lot wider. Thus, the point predictions are a lot less reliable because the posterior distribution does not have a lot of data from the original `qscores_ch10` to be built off of. 
 
 Finally, the last type of prediction we will cover is the predictive distribution. Whereas linear predictions focused on the uncertainty in the parameters coefficients, the predictive distribution represents uncertainty surrounding the predicted value. In other words, it "is the distribution of the outcome implied by the model after using the observed data to update our beliefs about the unknown parameters in the model." To perform this, we will use the `posterior_predict()` function. It works in the same way as `posterior_linpred`. 
 
@@ -1386,7 +1387,7 @@ head(pred)
 
 ```
 
-Again, in the matrix that is returned, each column corresponds to one new value of  `bty_avg` from the `new` dataset. We can take a quick look at the predictive distribution for one of the `bty_avg` using the `hist()` function. 
+Again, in the matrix that is returned, each column corresponds to one new value of  `hours` from the `new` dataset. We can take a quick look at the predictive distribution for one of the `hours` using the `hist()` function. 
 ```{r}
 hist(pred[,1])
 ```
@@ -1398,13 +1399,13 @@ However, **tidybayes** also has a function to make our lives easier for graphing
 
 new %>%
   add_predicted_draws(., model = bayes_score)%>%
-  ggplot(aes(x = .prediction, y = bty_avg)) +
+  ggplot(aes(x = .prediction, y = hours)) +
   stat_halfeyeh() + 
   scale_y_continuous(breaks = seq(1.5,8.5,0.5)) +
-  labs(x = "Predicted Score", title = "Predictive Distribution for Score at Each Value of bty_avg")
+  labs(x = "Predicted Score", title = "Predictive Distribution for Score at Each Value of hours")
 ```
 
-With `stat_halfh()` we are able to view density plots for all the predictions from the `new` dataset together. Thus, we can compare all the predictive distributions. As you can see, there is a lot of overlap. This signifies there is a lot of uncertainty. Even though the  `bty_avg` has a slightly postive slope, `bty_avg` does not seem to be very predictive when it comes to the teacher's `score`.
+With `stat_halfh()` we are able to view density plots for all the predictions from the `new` dataset together. Thus, we can compare all the predictive distributions. As you can see, there is a lot of overlap. This signifies there is a lot of uncertainty. Even though the  `hours` has a slightly postive slope, `hours` does not seem to be very predictive when it comes to the teacher's `score`.
 
 
 ## Bayesian Regression with Categorical Variable 
