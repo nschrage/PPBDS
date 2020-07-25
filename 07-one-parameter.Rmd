@@ -23,13 +23,13 @@ output_yaml:
 
 <!-- Outline of the Chapter -->
 
-<!-- 0. Question about male height in America in 2009. Ask some questions. -->
+<!-- 0. Question about male height in America in 2009. Ask some questions. Done -->
 
-<!-- 1. Pennies. Calculate the estimate of the mean year and the confidence interval via bootstrap. Explain how lm(year ~ 1) %>% tidy(conf.int = TRUE) produces the same confidence intervals for the mean as the bootstrap does. We don't explain the math. Just show the trick. Note that this only works for a very small subset of problems. If we were curious about the median or the 90th percentile, we would have no choice but to use the bootstrap. -->
+<!-- 1. Pennies. Calculate the estimate of the mean year and the confidence interval via bootstrap. Explain how lm(year ~ 1) %>% tidy(conf.int = TRUE) produces the same confidence intervals for the mean as the bootstrap does. We don't explain the math. Just show the trick. Note that this only works for a very small subset of problems. If we were curious about the median or the 90th percentile, we would have no choice but to use the bootstrap. Done -->
 
 <!-- 2. Exploratory Data Analysis of nhanes. temp <- nhanes %>% select(year, gender, height). Explore all three variables. Note that there are NAs. Then restrict for our use in the models like: ch7 <- %>% drop_na() %>% filter(gender == "male", year == 2009) %>% select(height). In other words, the final data set just has one variable in it. Since we are only estimating a model with one parameter, we can't make use of richer data. -->
 
-<!-- 3. height from the 2,475 men in nhanes in 2009. Pick one sample of size 40, without placement. This can go much faster. Two key differences from pennies. First, we know the truth, so we can examine whether or not the bootstrap works. (That is, we pull a sample of 40 and see if the bootstrap confidence interval from that 40 includes the true 75th percentile of the 2,475.) Second, note that only the bootstrap will allow us to do this. We can't use the lm() trick we learned about for pennies.-->
+<!-- 3. height from the 2,475 men in nhanes in 2009. Pick one sample of size 40, without placement. sample_n(ch7, 40, replace = FALSE). This can go much faster. Two key differences from pennies. First, we know the truth, so we can examine whether or not the bootstrap works. (That is, we pull a sample of 40 and see if the bootstrap confidence interval from that 40 includes the true 75th percentile of the 2,475.) Second, note that only the bootstrap will allow us to do this. We can't use the lm() trick we learned about for pennies.-->
 
 <!-- 4. Prove that the bootstrap works, that our 95% confidence intervals provide correct coverage. We make a game and I give you a sample of like 40. Here's the 40, and you give me a 95% CI using the bootstrap tools we learned. Then I give you another 40. And another. If we do this 1,00 times, and we use the same procedure for calculating a confidence interval each time, then 950 should include the truth. That's how we know bootstraps is correct and I could only demonstrate this to you if we know what the truth is.  -->
 
@@ -40,6 +40,7 @@ output_yaml:
 
 <!-- Turn Standard error method section of coin bootstrap into a four sentence margin note. -->
 
+<!-- TA: Do you want me to do calculations or something for the standard error method or just explain it intuitively? -->
 
 <!-- c) Discuss how this exercise is still useful even if we begin with all our data. That is, don't sample. Just use all 5,000 people. Then, do the bootstrap to get a confidence interval. Note that the interval will be --- how much? --- smaller than the ones we got above, because we are using 116 times as much data. But it is also weird. I know exactly what the mean is! I have the entire Rubin Table! I don't need a confidence interval for the mean.  -->
 
@@ -85,6 +86,7 @@ output_yaml:
 
 ```{r include=FALSE}
 library(patchwork)
+library(dplyr)
 ```
 
 What is the average height of an American male? What is the 75th percentile of the distribution of height for American men? How certain are you are your estimates? If we past 5 men walking down the street, what are the odds that the tallest will be at least 5 centimeters taller than the shortest?
@@ -130,6 +132,8 @@ As we did in Chapter \@ref(sampling), we'll begin with a hands-on tactile activi
 library(PPBDS.data)
 library(rsample)
 library(tidyverse)
+library(dplyr)
+library(gt)
 library(skimr)
 ```
 
@@ -208,7 +212,6 @@ pennies_sample %>%
 x_bar <- pennies_sample %>% 
   summarize(mean_year = mean(year)) 
 ```
-
 
 
 Thus, if we're willing to assume that `pennies_sample` is a representative sample from *all* US pennies, a "good guess" of the average year of minting of all US pennies would be `r x_bar %>% pull(mean_year) %>% round(2)`. In other words, around `r x_bar %>% pull(mean_year) %>% round()`. This should all start sounding similar to what we did previously in Chapter \@ref(sampling)!
@@ -333,7 +336,52 @@ Recall that in the "resampling with replacement" scenario we are illustrating he
 
 Congratulations! You've just constructed your first bootstrap distribution! In the next section, you'll see how to use this bootstrap distribution to construct *confidence intervals*.
 
-## Confidence Intervals using lm
+
+## Measuring uncertainty with confidence intervals {#ci-build-up}
+
+Let's start this section with an analogy involving fishing. Say you are trying to catch a fish. On the one hand, you could use a spear, while on the other you could use a net. Using the net will probably allow you to catch more fish!
+
+Now think back to our pennies exercise where you are trying to estimate the true population mean year $\mu$ of *all* US pennies. \index{confidence interval!analogy to fishing} Think of the value of $\mu$ as a fish.
+
+On the one hand, we could use the appropriate *point estimate/sample statistic* to estimate $\mu$, which we saw in Table \@ref(tab:table-ch8-b) is the sample mean $\overline{x}$. Based on our sample of 50 pennies from the bank, the sample mean was `r x_bar %>% pull(mean_year) %>% round(2)`. Think of using this value as "fishing with a spear."
+
+What would "fishing with a net" correspond to? Look at the bootstrap distribution in Figure \@ref(fig:one-thousand-sample-means) once more. Between which two years would you say that "most" sample means lie?  While this question is somewhat subjective, saying that most sample means lie between 1992 and 2000 would not be unreasonable. Think of this interval as the "net."
+
+What we've just illustrated is the concept of a *confidence interval*, which we'll abbreviate with "CI" throughout this book. As opposed to a point estimate/sample statistic that estimates the value of an unknown population parameter with a single value, a *confidence interval* \index{confidence interval} gives what can be interpreted as a range of plausible values. Going back to our analogy, point estimates/sample statistics can be thought of as spears, whereas confidence intervals can be thought of as nets.
+
+
+```{r, echo=FALSE, fig.align='center', fig.cap="Analogy of difference between point estimates and confidence intervals."}
+knitr::include_graphics("07-one-parameter/images/point_estimate_vs_conf_int.png")
+```
+
+Our proposed interval of 1992 to 2000 was constructed by eye and was thus somewhat subjective. We now introduce two methods for constructing such intervals in a more exact fashion: the *lm method* and the *quantile method*.
+
+Second, they both require you to specify the \index{confidence interval!confidence level} *confidence level*. Commonly used confidence levels include 90%, 95%, and 99%.  All other things being equal, higher confidence levels correspond to wider confidence intervals, and lower confidence levels correspond to narrower confidence intervals. In this book, we'll be mostly using 95% and hence constructing "95% confidence intervals for $\mu$" for our pennies activity.
+
+```{r, echo = FALSE}
+# Maybe another Preceptor table here with the 90% or 95% confidence interval in
+# the last row. Specify that maybe I would answer the question now that if you
+# gave me a random penny in 2019, I would be 95% confident its year is somewhere
+# between x and x. Change the value for year in the second add_row code line to
+# add that confidence interval however you think it best fits in.
+
+pennies_sample %>%
+  slice(1:7, 50) %>%
+  mutate(ID = as.character(ID),
+         year = as.character(year)) %>%
+  add_row(ID = "...", year = "...", .after  = 7) %>%
+  add_row(ID = "X", year = "1995") %>%
+  gt() %>%
+  cols_label(ID = md("**Penny ID**"),
+             year = "Year") %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(ID))) %>%
+  tab_style(cell_text(weight = "bold"),
+            location = cells_body(columns = vars(ID))) %>%
+  cols_align(align = "center", columns = TRUE)
+```
+
+## Confidence Intervals using lm and quantile
 
 Let's now compute the confidence interval for our mean year of pennies in 2019. One way to extract the confidence interval is through using the `lm` method. `lm` means linear model and is generally used in regression modeling; however,`lm` can also used to find the confidence interval for a mean. The catch, though, is that we can only use `lm` to calculate the confidence interval for a mean only! This means that we cannot use `lm` to calculate the condfience interval for a statistic like the median or 75th percentile. 
 
@@ -368,112 +416,169 @@ Let's now calculate the confidence interval by hand using our bootstrap samples,
 quantile(virtual_resamples$year_mean, probs = c(0.025, 0.975))
 ```
 
-Whoa! Noticed how we got `r quantile(virtual_resamples$year_mean, probs = c(0.025, 0.975))` as our confidence interval, which is the same as the `lm` method using pennies_sample. What this shows is that we can essentially use two methods to calculate the confidence interval for the mean: the `lm` method using the origianl data set and by hand using our bootstrap samples!
+Whoa! Noticed how we got `r quantile(virtual_resamples$year_mean, probs = c(0.025, 0.975))` as our confidence interval, which is the same as the `lm` method using pennies_sample. What this shows is that we can essentially use two methods to calculate the confidence interval for the mean: the `lm` method using the original data set and the quantile method using our bootstrap samples! However, if we want to find the confidence interval for any statistic, not including the mean, we have to use the quantile method using our bootstrap samples!
 
-## Measuring uncertainty with confidence intervals {#ci-build-up}
+## EDA for `nhanes`
 
-Let's start this section with an analogy involving fishing. Say you are trying to catch a fish. On the one hand, you could use a spear, while on the other you could use a net. Using the net will probably allow you to catch more fish!
+`r margin_note("Run ?nhanes to get more information about the data from nhanes")`
+Let’s perform an exploratory data analysis (EDA) of the nhanes data set from the **PPBDS.data** package. The nhanes data is the data from National Health and Nutrition Examination Survey conduced by the Centers for Disease Control and Prevention and is about children and adults in America. 
 
-Now think back to our pennies exercise where you are trying to estimate the true population mean year $\mu$ of *all* US pennies. \index{confidence interval!analogy to fishing} Think of the value of $\mu$ as a fish.
+Let’s first load the libraries we will need in this chapter and look at the nhanes data.
 
-On the one hand, we could use the appropriate *point estimate/sample statistic* to estimate $\mu$, which we saw in Table \@ref(tab:table-ch8-b) is the sample mean $\overline{x}$. Based on our sample of 50 pennies from the bank, the sample mean was `r x_bar %>% pull(mean_year) %>% round(2)`. Think of using this value as "fishing with a spear."
+```{r, message=FALSE}
 
-What would "fishing with a net" correspond to? Look at the bootstrap distribution in Figure \@ref(fig:one-thousand-sample-means) once more. Between which two years would you say that "most" sample means lie?  While this question is somewhat subjective, saying that most sample means lie between 1992 and 2000 would not be unreasonable. Think of this interval as the "net."
+knitr::opts_chunk$set(echo = TRUE, tidy = FALSE, cache.extra = packageVersion('tufte'))
 
-What we've just illustrated is the concept of a *confidence interval*, which we'll abbreviate with "CI" throughout this book. As opposed to a point estimate/sample statistic that estimates the value of an unknown population parameter with a single value, a *confidence interval* \index{confidence interval} gives what can be interpreted as a range of plausible values. Going back to our analogy, point estimates/sample statistics can be thought of as spears, whereas confidence intervals can be thought of as nets.
+library(PPBDS.data)
+library(tidyverse)
+library(broom)
+library(rsample)
+library(skimr)
+library(gt)
+library(tidyverse)
+library(tufte)
 
-
-```{r, echo=FALSE, fig.align='center', fig.cap="Analogy of difference between point estimates and confidence intervals."}
-knitr::include_graphics("07-one-parameter/images/point_estimate_vs_conf_int.png")
 ```
-
-Our proposed interval of 1992 to 2000 was constructed by eye and was thus somewhat subjective. We now introduce two methods for constructing such intervals in a more exact fashion: the *percentile method* and the *standard error method*.
-
-Both methods for confidence interval construction share some commonalities. First, they are both constructed from a bootstrap distribution, as you constructed in Subsection \@ref(bootstrap-1000-replicates) and visualized in Figure \@ref(fig:one-thousand-sample-means).
-
-Second, they both require you to specify the \index{confidence interval!confidence level} *confidence level*. Commonly used confidence levels include 90%, 95%, and 99%.  All other things being equal, higher confidence levels correspond to wider confidence intervals, and lower confidence levels correspond to narrower confidence intervals. In this book, we'll be mostly using 95% and hence constructing "95% confidence intervals for $\mu$" for our pennies activity.
-
-```{r, echo = FALSE}
-# Maybe another Preceptor table here with the 90% or 95% confidence interval in
-# the last row. Specify that maybe I would answer the question now that if you
-# gave me a random penny in 2019, I would be 95% confident its year is somewhere
-# between x and x. Change the value for year in the second add_row code line to
-# add that confidence interval however you think it best fits in.
-
-pennies_sample %>%
-  slice(1:7, 50) %>%
-  mutate(ID = as.character(ID),
-         year = as.character(year)) %>%
-  add_row(ID = "...", year = "...", .after  = 7) %>%
-  add_row(ID = "X", year = "1995") %>%
-  gt() %>%
-  cols_label(ID = md("**Penny ID**"),
-             year = "Year") %>%
-  tab_style(cell_borders(sides = "right"),
-            location = cells_body(columns = vars(ID))) %>%
-  tab_style(cell_text(weight = "bold"),
-            location = cells_body(columns = vars(ID))) %>%
-  cols_align(align = "center", columns = TRUE)
-```
-
-## EDA for nhanes
-
-Let’s perform an exploratory data analysis (EDA) of the nhanes data set from the PPBDS.data package. The nhanes data  Let’s load the libraries we will need in this chapter and look at the data.
 
 ```{r}
 glimpse(nhanes)
-ch7 <- nhanes %>% 
-  select(height, age, gender) %>%
-  drop_na()
-#call this nahnes40 and use this for nahnes sample of 40
-sample_n(ch7, 40, replace = FALSE)
 ```
 
-Here, we can see variables that indicate each respondent’s gender, political affiliations, age, and income. Additionally, we have variables that indicate whether a subject was in the control or treatment group, and the their attitudes toward immigration both before or after the treatment. You can type ?trains to read the help page for more information about each variable. Let’s restrict attention to a subset of the variables.
+`glimpse` is a really cool function to use to get a peek at your data. It basically allows your data to be viewed running across rows. `glimpse` gives you a sense of what your data is supposed to look like. Based on the glimpse of nhanes, we see that nhanes has data on a diverse array of things like physical attributes, education, and sleep. 
 
-
-It is always smart to look at a some random samples of the data:
+In our examination of nhanes, however, let's restrict the nhanes data to a subset as demonstrated below. 
 
 ```{r}
-ch7 %>%
+ch7 <- nhanes %>% 
+  select(gender, height, year)
+```
+
+Furthermore, it is always smart to look at random samples of our data set.
+
+```{r}
+ch7 %>% 
   sample_n(5)
 ```
 
-att_end is a measure of person’s attitude toward immigration, a higher number means to a more conservative, i.e., a more exclusionary stance on immigration into the United States. Running glimpse() is another way of exploring a data set.
+We can also run glimpse again to get a quick peek at what our subset of data looks like.
 
 ```{r}
 ch7 %>%
   glimpse()
 ```
 
-Pay attention to the variable “type.” Do they make sense? Perhaps. But there are certainly grounds for suspicion. Why are age and att_end doubles rather than integers? Why is party a character variable and treament a factor variable? It could be that these are intentional choices made by the creator of the tibble, i.e., us. These could be mistakes. Or, most likely, these choices are a mixture of sensible and arbitrary. Regardless, it is your responsibility to notice them. You can’t make a good model without looking closely at the data which you are using.
+Be on the lookout if anything looks suspicious to you. Are there any NA's in your data set? What types of data are the columns, i.e. why is year characterized as integer instead of double? Was most of the data conducted in 2009? Are there more females than males? There will clearly be more questions to answer, but it is important that you ask these types of questions and notice anything suspicious. A good data scientist will always look thoroughly at the data. 
 
-skim from the skimr package is the best way to get an overview of a tibble.
+In addition to `glimpse`, we can use `skim` to look at our data as a tibble. 
 
 ```{r}
-ch7 %>%
+ch7 %>% 
   skim()
 ```
 
-skim() shows us what the different values of treatment are because it is a factor. Unfortunately, it does not do the same for character variables like party. The ranges for age and att_end seem reasonable. Recall that participants were asked three questions about immigration issues, each of which allowed for an answer which was a strength of agreement between 1 and 5, with higher values indicating more agreement with conservative viewpoints. So, the most liberal possible value is 3 and the most conservative is 15.
+Interesting! Noticed how `skim` told us that are 353 missing values of height in our subset of data even though we could not find that out so easily using glimpse. Thus, it's always good to use both `skim` and `glimpse` to get a gyst of what our data entails. 
 
-Plotting some variables from the dataset is another important practice in exploratory data analysis:
+Since we are dealing with NA's then, let's filter out the NA's using `drop_na`. This we will remove out the rows that have NA's in them.
+
+```{r}
+ch7 <- ch7 %>%
+  drop_na()
+```
+
+Furthermore, it is always good to plot our data in order to explore it. Plotting our data can potentially show relations between variables and anything the general trends of our data. 
 
 ```{r}
 ch7 %>%
-  ggplot(aes(x = age, y = height)) + 
-  geom_jitter(width = 0.1, height = 0) + 
-  labs(x = "Age",
+  ggplot(aes(x = gender, y = height)) + 
+  geom_jitter(width = .45, height = 0) + 
+  labs(x = "Gender",
        y = "Height",
-       title = "Height by Age in Nhanes Dataset")
+       title = "Height by Gender in Nhanes Dataset")
 ```
 
 
 
+```{r}
 
-Redo but more quickly, estimating mean income.
+ch7 %>%
+  ggplot(aes(x = height, color = gender)) + 
+  geom_density() + 
+  labs(x = "Height",
+       title = "Height by Gender in Nhanes Dataset")
 
-Estimate median income, or 3rd highest income.
+ch7 %>%
+  ggplot(aes(x = height, color = gender)) + 
+  geom_histogram(bins = 30) + 
+  labs(x = "Height",
+       title = "Height by Gender in Nhanes Dataset")
+
+```
+After plotting three different types of graphs of our data, there is a lot that we can learn. We can see that men are generally taller than women, and what height men and women are generally distributed around. Cool stuff!
+
+## Using Bootstraps with `nhanes`
+
+As we can see that gender and height appears to be related, let's filter our data set to just males and the year 2009 in order to see how we can estimate certain statistics of our further subsetted data set using bootstrap samples. In this example, let's try to estimate the mean 90th percentile of male height in the year 2009. Obviously, we already know what these statistics are since we can easily calculate them by hand. However, the purpose of this example is to show that we can estimate the mean and 75th percentile pretty accurately from our bootstrap samples we will soon create. This section of chapter 7 will essentially show the validity of bootstrap samples. For now, let's focus on subsetting our data even more. 
+
+```{r}
+set.seed(9)
+ch7 <- ch7 %>%
+  filter(gender == "male", year == 2009) %>% select(height)
+```
+By further subsetting our data, we can see that we will only be using one variable. Since we are only estimating a model with one parameter, we can't make use of richer data.
+
+Let's go ahead and run `glimpse` and `skim` of our further subsetted data to get a basic idea of what our data will look like. 
+
+```{r}
+glimpse(ch7)
+```
+
+```{r}
+set.seed(9)
+skim(ch7)
+```
+Boom! So we can see that the mean of male height in 2009 is 168 cm and the 75th percentile of male height in 2009 is 180 cm from when we applied `skim` to our data. 
+
+We are now going to estimate both of these statistics using bootstrap. Remember how in the `pennies_sample` example, we first used a sample of 50 pennies to create our bootstrap samples. Let's do something very similar. In this case, let's take a sample without replacement of 40 of the 2,370 males in our data and look at their heights in 2009. To do so, we run the following command: 
+
+```{r}
+set.seed(9)
+heights_sample <- sample_n(ch7, 40, replace = FALSE)
+```
+Great! So now we have our sample of 40 male heights in 2009. Now you might wonder how this section of this chapter is different from the section with `pennies_samples`. Well, there are two key differences. First, we know the truth in this case, so we can examine whether or not the bootstrap works. (That is, we pull a sample of 40 and see if the bootstrap confidence interval from that 40 includes the true 75th percentile of the 2,370) Second, note that only the bootstrap will allow us to estimate statistics other than the mean. We can't use the lm() trick we learned about for pennies as we will find the confidence interval for the 75th percentile, which is a statistic that isn't the mean.
+
+Let's thus create our bootstrap samples. We already know how to create bootsrap samples from the `pennies_sample` section. Let's use the same code but obviously create the variables we are interested in, which are `height_mean` and `height_75th`. 
+
+```{r}
+set.seed(9)
+virtual_heights <- heights_sample %>%
+  select(height) %>%
+  bootstraps(times = 1000) %>%
+  mutate(boot = map(splits, ~ analysis(.))) %>%
+  mutate(heights = map(boot, ~ pull(., height))) %>% 
+  mutate(height_mean = map_dbl(heights, ~ mean(.))) %>%
+  mutate(height_75th = map_dbl(heights, ~ quantile(., probs = 0.75))) 
+virtual_heights
+```
+
+Cool! We created our bootstrap samples and can see the mean height and 75th percentile of heights for each bootstrap sample. Now that we have our resamples, let's now estimate the mean male height of 2009 and 75th percentile of male height in 2009 using our resamples. We can do the same thing we did in the pennies section by using the `summarize` and `pull` functions. 
+
+```{r}
+set.seed(9)
+mean_of_heightmeans <- virtual_heights %>%
+  select(height_mean) %>%
+  summarize(mean_of_means = mean(height_mean)) %>%
+  pull() %>% 
+  round(2)
+
+mean_of_height75th <- virtual_heights %>%
+  select(height_75th) %>%
+  summarize(mean_of_75th = mean(height_75th)) %>%
+  pull() %>% 
+  round(2)
+
+```
+
+Thus, based on our bootstrap samples, the mean male height in 2009 is `r mean_of_heightmeans` and the 75th percentile of male heights in 2009 is `r mean_of_height75th`. It appears that we are very close to the actual estimates, which was 168 cm and 180 cm, respectively.
 
 ## Parameter Uncertainty and Unmodeled Variation
 
