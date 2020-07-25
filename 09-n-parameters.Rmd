@@ -7,15 +7,39 @@ output_yaml:
 
 <!-- Outline: -->
 
-<!-- The goal of this chapter is to replicate all of the things we have learned in chapter 8, except with models that allow for more than two parameters, which mostly involves have more than one right-hand side variable. We are also going to explicitly avoid discussing some common pitfalls in these problems, saving those pitfalls for chapter 10. So, nothing about overfitting. Nothing about rstanarm. Just two more examples which go through themes.Rmd with more complex models. But nothing fundamentally new or different. -->
+<!-- The goal of this chapter is to replicate all of the things we have learned in chapter 8, except with models that allow for more than two parameters, which mostly involves have more than one right-hand side variable. We go through all of themes.Rmd two more times, once with a causal data set and once with a predictive one. So far, nothing new or different. But we are also going to highlight three major problems. We aren't going to solve those problems, but we are going to hint at them. The problems are: a) How do you decide which model is "better?" (Not an easy question! But the ability to predict new data is certainly a big part of the answer. b) How do you avoid overfitting, not least because it makes your predictions horrible? c) How do you establish causality if you don't have a randomized experiment? -->
 
 <!-- 0) Start with a problem-->
+
+<!-- 1) EDA of `shaming`. I think that hh_size is a good variable to check for interactions with, especially with Control. One approach: Create a new variable called `solo` which is TRUE if the `hh_size` is equal to 1 and FALSE otherwise. In other words, does the state of living alone tell us anything? We will interact this term with treatment in our model. It is cool that the p value for the interaction with Self is 0.06. A perfect example for the evils of testing!  -->
+
+<!-- It may be worth mentioning that general_04 is always "yes", unlike all the other voting history variables which have values of "yes" and "no". Why is that? I *think* that this is caused by their sampling plan. They found all the people who voted in the 2004 general election. Then, the authors found their history. As we would expect, those people had sometimes voted in the past and sometime not. Then, the authors sent the mailing. The key dependent variable, primary_06, is coding 0/1, since that makes doing the statistics easier. -->
+
+<!-- 2) `primary_06` as a function of `treatment` and `solo` and of their interaction. We will build up this model step-by-step, very similar to how we explored the effect of treatment in chapter 8. But we go deeper because  we are learning about interactions. Key thing is to go through all the themes.Rmd issues, at least until prediction. Note that this situation is different from Chapter 8 in that fitted values and predicted values are not the same thing! The fitted value, for a combination of values for treatment and solo, is something 0.30, meaning that 30% of the people in this bucket votes. But the predicted value must be 0 or 1. Either you voted or you didn't. This example is clearly causal and so you need a Rubin Table with 4 potential outcome columns. The key difference in this chapter is that we are using lots of right hand side variables, both continuous and discrete. Unlike last chapter, we go through the entire process in this section, all the way through dgm and predictive uncertainty. -->
+
+<!-- 3) EDA of `nes`. Or maybe something else? Let's discuss. This can be fairly quick. Again, we won't use all the variables. Only discuss the ones we do use. One of the variables should be year. We want to show off Gelman's trick by plotting things by year. -->
+
+<!-- 4) We are making a predictive model of what as a function of what other stuff? Want to use a continuous variable and some discrete variables as well. Interactions too.  -->
+
+<!-- 5) Discussion of the difference between predictive and causal, and how we can interpret a model as causal even if it uses observational data. Apply to the nes example model. -->
+
+<!-- 6) Pitfalls. Discuss model selection and overfitting. Again, we are not solving these problems here. They are hard problems. Instead, we are motivating chapter 10, which should perhaps be re-titled.  -->
+
+
+<!-- Thoughts -->
+
+<!-- * Should we do any Bayesian stuff here. Maybe not? We build the dgm() function by hand, maybe simplifying things a bit by not taking parameter uncertainty seriously. We mentioned that there must be an easier way, and then we do that in chapter 10.  -->
+
+<!-- * Should we discuss overfitting here? I think that the answer is Yes, that we at least have to mention it and why it is a problem. Indeed, we have at least two pages making sure the concepts are clear. Again, we hint at what solutions might look like and promise a resolution in chapter 10. Maybe we mention pooling. Maybe we mention cross-validation. But we don't yet solve the problem.  -->
+
+<!-- * The key part of this chapter is showing the themes.Rmd all the way through two problems, one causal and one not. In that way, it is very similar to chapter 8. Indeed, perhaps we should make these two chapters as alike as possible. -->
+
 
 Imagine you are running for Governor and want to do a better job of getting your voters to vote. You recently read about a large-scale experiment showing the effect of sending out a voting reminder that "shames" citizens who do not vote. You are considering sending out a "shaming" voting reminder yourself. What will happen if you do? Will more voters show up to the polls? Additionally, on the day of the election a female citizen is randomly selected. What is the probability she will vote?
 
 In this chapter, we will consider models with multiple parameters and the complexities that arise from these additions. We will also learn how to make more accurate predictions using Bayesian methods that will provide us with answers to the questions posed above.
 
-<!-- 1) EDA of `shaming`. I think that hh_size is a good variable to check for interactions with, especially with Control. One approach: Create a new variable called `solo` which is TRUE if the `hh_size` is equal to 1 and FALSE otherwise. In other words, does the state of living alone tell us anything? We will interact this term with treatment in our model. It is cool that the p value for the interaction with Self is 0.06. A perfect example for the evils of testing!  -->
+
 
 ## Explorator Data Analysis of `shaming`
 
@@ -63,25 +87,7 @@ shaming %>%
 ```
 
 
-
-<!-- It may be worth mentioning that general_04 is always "yes", unlike all the other voting history variables which have values of "yes" and "no". Why is that? I *think* that this is caused by their sampling plan. They found all the people who voted in the 2004 general election. Then, the authors found their history. As we would expect, those people had sometimes voted in the past and sometime not. Then, the authors sent the mailing. The key dependent variable, primary_06, is coding 0/1, since that makes doing the statistics easier. -->
-
-<!-- 2) `primary_06` as a function of `treatment` and `solo` and of their interaction. We will build up this model step-by-step, very similar to how we explored the effect of treatment in chapter 8. But we go deeper because  we are learning about interactions. Key thing is to go through all the themes.Rmd issues, at least until prediction. Note that this situation is different from Chapter 8 in that fitted values and predicted values are not the same thing! The fitted value, for a combination of values for treatment and solo, is something 0.30, meaning that 30% of the people in this bucket votes. But the predicted value must be 0 or 1. Either you voted or you didn't. This example is clearly causal and so you need a Rubin Table with 4 potential outcome columns. The key difference in this chapter is that we are using lots of right hand side variables, both continuous and discrete. -->
-
-<!-- 3) EDA of `nes`. This can be fairly quick. Again, we won't use all the variables. Only discuss the ones we do use. One of the variables should be year. We want to show off Gelman's trick by plotting things by year. -->
-
-<!-- 4) We are making a predictive model of what as a function of what other stuff? Want to use a continuous variable and some discrete variables as well. Interactions to.  -->
-
-<!-- 5) I don't think we bother with a scenario which requires a bootstrap. Or should we?  -->
-
-<!-- 6) Prediction. How do we use our model to make predictions? Bring the discussion back to the way that we opened the chapter with a problem. -->
-
-
-
 Having created models with one parameter in Chapter \@ref(#one-parameter) and two parameters in Chapter \@ref(#two-parameters), you are now ready to make the jump to $N$ parameters.  The more parameters we include in our models, the more flexible they can become. But we must be careful of *overfitting*, of making models which are inaccurate because they don't use enough data to accurately estimate those parameters. The tension between overfitting and underfitting is central to the practice of data science.
-
-
-
 
 ## Causal Effects of `treament`
 
