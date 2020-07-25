@@ -335,20 +335,40 @@ Congratulations! You've just constructed your first bootstrap distribution! In t
 
 ## Confidence Intervals using lm
 
+Let's now compute the confidence interval for our mean year of pennies in 2019. One way to extract the confidence interval is through using the `lm` method. `lm` means linear model and is generally used in regression modeling; however,`lm` can also used to find the confidence interval for a mean. The catch, though, is that we can only use `lm` to calculate the confidence interval for a mean only! This means that we cannot use `lm` to calculate the condfience interval for a statistic like the median or 75th percentile. 
+
+First, let's type `lm(year ~ 1, data = pennies_sample)` in our code chunk. This alone will get the mean of our dataset for pennies_sample
+
 ```{r}
 set.seed(9)
-  lm(year ~ 1, data = pennies_sample) 
+  lm(year ~ 1, data = pennies_sample)
 
 ```
 
+So we see that the mean of pennies_sample is 1995. Now let's add the line `tidy(conf,int = TRUE)` to our code. `tidy` is from the `rsample` package and this particular function can get the 95% confidence interval for our mean if we set the argument, `conf.int = TRUE`, in our `tidy` function.
+```{r}
+set.seed(9)
+  lm(year ~ 1, data = pennies_sample) %>%
+  tidy(conf.int = TRUE)
+```
+ Great! After running the code, we can clearly see the mean of the of `pennies_sample` as well as other characteristics like the upper and lower levels of our confidence interval. Since we are focused on the confidence interval only, let's just `select(conf.low, estimate, conf.high)`.
 
 ```{r}
 set.seed(9)
-  lm(year_mean ~ 1, data = virtual_resamples) %>%
+  lm(year ~ 1, data = pennies_sample) %>%
   tidy(conf.int = TRUE) %>% 
   select(conf.low, estimate, conf.high)
 ```
 
+Now we have our confidence interval for the mean year of pennies from 2019, which is (1991.127, 1999.753). But noticed that we used `pennies_sample` and not `virtual_resamples` for the `lm` method to calculate the confidence interval. 
+
+Let's now calculate the confidence interval by hand using our bootstrap samples, `virtual_resamples`. To do, type the following code below:
+
+```{r}
+quantile(virtual_resamples$year_mean, probs = c(0.025, 0.975))
+```
+
+Whoa! Noticed how we got `r quantile(virtual_resamples$year_mean, probs = c(0.025, 0.975))` as our confidence interval, which is the same as the `lm` method using pennies_sample. What this shows is that we can essentially use two methods to calculate the confidence interval for the mean: the `lm` method using the origianl data set and by hand using our bootstrap samples!
 
 ## Measuring uncertainty with confidence intervals {#ci-build-up}
 
