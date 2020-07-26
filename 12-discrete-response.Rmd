@@ -45,6 +45,9 @@ output_yaml:
 
 # Discrete Response {#discrete-response}
 
+## Preamble 
+<!-- Change name from preamble -->
+
 Many questions have binary answers. These questions can be answered by any pair of two answers (such as yes/no). Two examples of these questions include: 
   a. Are students with below average grades more likely to binge drink?
   b. Is exposure to a particular chemical associated with a cancer diagnosis?
@@ -55,31 +58,161 @@ All of the new models touched upon in this chapter speak to the wider discussion
 
 In this chapter, we will look at three common techniques of **classification** of binary data.  First, we will consider logistic regression, which is similar conceptually to the linear regression models we considered in Chapters \@ref(pitfalls) and \@ref(continuous-response).  Second, we will consider classification and regression trees (CART).  Third, we will discuss random forests.
 
-<!-- Deal with the ref() thing.  -->
-
-<!-- Only include this section if it uses new/unique packages -->
-
-<!-- tidymodels everywhere -->
-
-### Needed packages {-}
-
-Start with the **tidyverse** as usual. 
-
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 library(tidyverse)
 library(broom)
 library(skimr)
-library(fivethirtyeight)
-```
-
-```{r, message=FALSE, warning=FALSE, echo=FALSE}
-# Packages needed internally, but not in text:
+library(PPBDS.data)
 library(knitr)
 library(kableExtra)
 library(gridExtra)
 library(gt)
 ```
-   
+
+## Exploratory Data Analysis (EDA)
+
+Before we start modelling, let's perform some exploratory analysis on the dataset we'll be working with, cces. Cces stands for the Cooperative Congressional Election Study, a study regarding the approval rating of individual voters to their sitting president. Each row captures one voter, some of their demographic information, and how highly they approve (or disaprprove) of the president. We will tweak the data by only looking at observations recorded in the year 2018 so that all the responses are about the same president.
+
+```{r}
+cces_ch12 <- cces %>%
+  filter(year == 2018)
+```
+
+Let's first look at the raw data values by either looking at `cces_ch12` using RStudio's spreadsheet viewer or by using the `glimpse()` function from the **dplyr** package:
+
+```{r}
+glimpse(cces_ch12)
+```
+
+From this, we can gather that there are 16 variables. Notably, there are 60,000 observations even after filtering only for the year 2018. 
+
+Let's also display a random sample of 5 rows of the 60,000 rows. We will be displaying these 5 random observations using a gt() table. Before that, though, we will select the variables that are currently of interest to us. 
+
+```{r, eval = FALSE}
+cces_ch12 <- cces_ch12 %>%
+  select(state, age, gender, race, education, ideology, approval)
+
+cces_ch12 %>% 
+  sample_n(size = 5)
+```
+
+```{r}
+cces_ch12 %>%
+  sample_n(5) %>%
+  gt() %>%
+  cols_label(
+    state = md("State"),
+    age = md("Age"),
+    gender = md("Gender"),
+    race = md("Race"),
+    education = md("Education"),
+    ideology = md("Ideology"),
+    approval = md("Approval of President")) %>%
+  tab_source_note(md("A random sample of 5 out of the 60,000 voters"))
+
+```
+
+Now that we’ve looked at the raw values in `cces_ch12` and have a sense of the data, let’s compute summary statistics. Let’s use the `skim()` function from the `skimr` package.
+
+```{r}
+cces_ch12 %>% 
+  skim()
+```
+
+You'll notice that we are missing data for our ideology and approval variables. The `complete_rate` column tells us that approval has 3% missing observations and ideology has 0.7% missing observations. 
+
+To complete our exploratory data analysis, let's create some data visualizations. 
+
+The primary response variable left in our dataset is `approval`, a numeric variable from 1-5 with 5 representing the highest approval of the president. So, let's start by looking at the overall distribution of `approval`.
+
+```{r}
+cces_ch12 %>%
+  filter(is.na(approval) == FALSE) %>% #Removing NA observations
+  ggplot(aes(x = approval)) +
+  geom_bar(fill = "red") + 
+  labs(y = "Count",
+       x = "Presidential Approval",
+       title = "Presidential Approval in 2018") 
+```
+
+<!-- MB: Something sus about this distribution -- where are the 3s? -->
+
+According to this graph, the approval of the president in 2018 is very polarized: the peaks are at 1 and 5 and no one reported with a neutral 3. There seems to be more disapproval overall.
+To make things more interesting, let's facet this approval variable by gender and then race.
+
+```{r}
+cces_ch12 %>%
+  filter(is.na(approval) == FALSE) %>%
+  ggplot(aes(x = approval, fill = gender)) +
+  geom_bar() + 
+  labs(y = "Count",
+       x = "Presidential Approval",
+       title = "Presidential Approval in 2018 by Gender") +
+  facet_wrap(~ gender) + 
+  theme(legend.position = "none")
+```
+
+The bimodal, polarized distribution holds across both genders. However, it seems that females have more higher rates of disapproval (more 1s and 2s). 
+
+```{r}
+cces_ch12 %>%
+  filter(is.na(approval) == FALSE) %>%
+  ggplot(aes(x = approval, fill = race)) +
+  geom_bar() + 
+  labs(y = "Count",
+       x = "Presidential Approval",
+       title = "Presidential Approval in 2018 by Race") +
+  facet_wrap(~ race) + 
+  theme(legend.position = "none") +
+  scale_y_log10()
+```
+
+Note the log10 scale on the y-axis; this was done so that we can see clearly the distribution for races that have very few observations compared to white people. We can see here that the bimodel distribution is present across all races, with slight variations from race to race. 
+
+Now, let's take a look at our ideology variable. `ideology` has values "Very Liberal", "Liberal", "Moderate", "Conservative", "Very Conservative", and "Not Sure". Let's make these variables numeric so that they are easier to work with by recoding them to 1, 2, 3, 4, 5, and NA, respectively. 
+
+```{r}
+cces_ch12 <- cces_ch12 %>%
+  mutate(ideology = case_when(
+    ideology == "Very Liberal" ~ 1,
+    ideology == "Liberal" ~ 2,
+    ideology == "Moderate" ~ 3,
+    ideology == "Conservative" ~ 4,
+    ideology == "Very Conservative" ~ 5,
+    ideology == "Not Sure" ~  NA_real_))
+```
+
+Now that we have ideology as a numeric variable, we will make a barplot to get a sense of the distribution.
+
+```{r}
+cces_ch12 %>%
+  filter(is.na(ideology) == FALSE) %>%
+  ggplot(aes(x = ideology)) + 
+  geom_bar(fill = "blue") + 
+  labs(y = "Ideology",
+       title = "Ideology in CCES 2018")
+```
+
+There is a unimodal disitribution in ideology, with most respondents being moderate. This is interesting, considering how polarized the presidential approval was before. Let's create a jitterplot between `ideology` and `approval` to look into this more. 
+
+```{r}
+cces_ch12 %>%
+  filter(is.na(ideology) == FALSE) %>%
+  filter(is.na(approval) == FALSE) %>%
+  ggplot(aes(x = ideology, y = approval)) + 
+  geom_jitter() + 
+  labs(y = "Presidential Approval",
+       x = "Ideology",
+       title = "Presidential Approval by Ideology")
+```
+
+<!-- MB: just need to talk about this to finish EDA. Holding off until we figure out why there are literally no 3s-->
+
+
+
+<!--   ^^^^ NEW WORK    vvvv OLD WORK  -->
+
+
 ## Logistic regression
 
 ### What is logistic regression?
@@ -115,93 +248,7 @@ ggplot(dat, aes(x = x)) +
 
 The mathematical function $log\left(\frac{p}{1 - p}\right)$ is called the *logit function* and it transforms variables from the space $(0, 1)$ (like probabilities) to $(-\infty, \infty)$.  The inverse of that function, the *standard logistic function*, is $\frac{1}{1 + e^{-x}}$ and transforms variables from the space $(-\infty, \infty)$ to $(0, 1)$.  From that latter function's name we get the terminology of *logistic regression*.
 
-### House elections: exploratory data analysis
-
-What affects whether a Democrat or Republican wins a race in the U.S. House of Representatives? This is an example of a binary response: either a Democrat wins (and a Republican loses) or a Republican wins (and a Democrat loses).^[It is rare that third party candidates mount serious bids in U.S. House elections, so it isn't a much of an oversimplication to think of the variable as binary.] In this section, we are going to consider several models predicting Democratic victory in House races. First, we will consider a single categorical variable as a predictor, the region in which a district lies: Midwest, Northeast, South, or West. Second, we will consider a single continuous variable: year. Finally, we fill fit a model that contains both separately, and than also an interaction between the two.
-
-<!-- DK: Too much cognitive load to create these datasets on the fly. They need to be ready to go. -->
-
-The data on House election results from 1976 to 2018 can be found in the `house_results` data frame in **politicaldata** package.  We'll create a version of this data frame called `house_ch12` that creates a new column `dem_win` that notes for each state if the Democratic candidate in a congressional district received more votes than the other candidates.  We'll also join it with the `state_info` data frame in the **fivethirtyeight** package to add the `region` of each state.
-
-```{r}
-library(politicaldata)
-
-house_ch12 <- house_results %>%
-  
-  # Create dem_win variable
-  
-  mutate(dem = ifelse(is.na(dem), 0, dem),
-         other = ifelse(is.na(other), 0, other),
-         rep = ifelse(is.na(rep), 0, rep),
-         dem_win = ifelse(dem > rep & dem > other, 1, 0)) %>%
-  
-  # Rename to join with state_info
-  
-  rename(state_abbrev = state_abb) %>%
-  left_join(fivethirtyeight::state_info) %>%
-  select(region, state, district, year, dem_win)
-```
-
-<!-- DK: We use same dataset from other chapter, we need to modify this. But we won't have looked at everything! So, look at other stuff. Some is obvious, especially our new Y variable. But we can also look at stuff like number of elections per state, per year. Which state had the biggest districting rise and when? Indeed, the data exploration section in each chapter provides an occasion to learn more advanced R tricks. -->
-
-Recall the three common steps in an exploratory data analysis we saw in Subsection \@ref(model1EDA):
-
-1. Looking at the raw data values.
-2. Computing summary statistics.
-3. Creating data visualizations.
-
-Let's first look at the raw data values by either looking at `house_ch12` using RStudio's spreadsheet viewer or by using the `glimpse()` function from the **dplyr** package:
-
-```{r}
-glimpse(house_ch12)
-```
-
-Let's also display a random sample of 5 rows of the 9,557 rows corresponding to different district-years. Remember due to the random nature of the sampling, you will likely end up with a different subset of 5 rows.
-
-```{r, eval = FALSE}
-house_ch12 %>% 
-  sample_n(size = 5)
-```
-
-```{r, echo = FALSE}
-
-house_ch12 %>%
-  sample_n(5) %>%
-  gt() %>%
-  cols_label(
-    region = md("Region"),
-    state = md("State"),
-    district = md("Distrct"),
-    year = md("Year"),
-    dem_win = md("Democrat Win?")) %>%
-  tab_source_note(md("A random sample of 5 out of the 4,201 district-years"))
-
-```
-
-Now that we’ve looked at the raw values in our `house_ch12` data frame and got a sense of the data, let’s compute summary statistics. As we've done in our exploratory data analyses before, let’s use the `skim()` function from the `skimr` package, being sure to only select() the variables of interest in our model:
-
-```{r}
-house_ch12 %>% 
-  select(dem_win, region, year) %>% 
-  skim()
-```
-
-Observe that we have no missing data, that we have 9,557 observations, and that the mean of `dem_win` is 0.54, indicating that Democrats won 54% of the House elections in this period (1976--2018).
-
-Let’s now perform the last of the three common steps in an exploratory data analysis: creating data visualizations.
-
-For our categorical variable, we'll look at histograms of `dem_win` faceted by `region`:
-
-```{r}
-house_ch12 %>%
-  ggplot(aes(x = dem_win)) +
-  geom_histogram(bins = 10, color = "white") +
-  labs(x = "Democratic victory percentage, 1976-2018", 
-       y = "Number of districts",
-       title = "Histogram of distribution of Democratic victories by House district") +
-  facet_wrap(~ region) +
-  theme_minimal()
-```
+## EDA (leftover)
 
 Wait!  That doesn't tell us very much, because our outcome variable only takes two values, 0 and 1.  Let's instead `group_by(district)` and `summarize()` to get a better sense of the distributions:
 
@@ -275,6 +322,8 @@ house_ch12 %>%
 ```
 
 We see roughly linear relationships after the logit transformation within-region as well, although the relationship looks more linear in the Midwest and South than in the Northeast and West.  We see that the Democratic Party's overall decline in House races is driven by the South and to a lesser extent the Midwest; Democratic performance has on average improved in the Northeast and West.  The sharp negative slope in the South will not be surprising if one is familiar with the collapse of the "Solid South."
+
+
 
 ### One categorical explanatory variable
 
