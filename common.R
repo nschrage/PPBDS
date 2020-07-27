@@ -11,7 +11,6 @@
 library(knitr)
 library(tufte)
 library(scales)
-library(skimr)
 library(gt)
 
 options(digits = 2)
