@@ -132,7 +132,6 @@ As we did in Chapter \@ref(sampling), we'll begin with a hands-on tactile activi
 library(PPBDS.data)
 library(rsample)
 library(tidyverse)
-library(dplyr)
 library(gt)
 library(skimr)
 ```
@@ -311,29 +310,18 @@ virtual_resamples <- pennies_sample %>%
 virtual_resamples
 ```
 
-Voila! We were able to create a thousand bootstrap samples and calculate the mean year for each resample. Let's now create a plot to visualize the distribution of the average year for each resample.
+Voila! We were able to create a thousand bootstrap samples and calculate the mean year for each resample. Let's now create a plot to visualizes the posterior distribution for the mean year of American pennies in 2019.
 
 ```{r}
 virtual_resamples %>% 
   ggplot() +
-    geom_histogram(aes(x = year_mean), binwidth = .1, fill = "red") +
-    labs(x = "Estimate in Year",
-         title = "Posterior Distribution for the Mean Year of American Pennies in 2019")
+    geom_histogram(aes(x = year_mean, y=..count../sum(..count..)), binwidth = .5, fill = "red") +
+    labs(x = "Estimate in Year", y = "Probability",
+         title = "Posterior Distribution for the Mean Year of American Pennies in 2019") 
 ```
-fix to make posterior distribution by dividing. elaborate and give intuition here!
+Recall from chapter 5 that posterior distribution is based on beliefs and expectations. In the case of the bootstrap samples we made, the posterior distribution represents our knowledge about the mean year of American Pennies in 2019 after taking into account the the data we gathered from our bootstrap sample means. As demonstrated in the plot above, we can see that the mean year of pennies in 2019 is most likely between 1995 and 1998 from our posterior distribution. 
 
-
-Note here that the bell shape is starting to become much more apparent. We now have a general sense for the range of values that the sample mean may take on. But where is this histogram centered? Let's compute the mean of the 1,000 resample means:
-
-```{r}
-mean_of_means <- virtual_resamples %>%
-  select(year_mean) %>%
-  summarize(mean_of_means = mean(year_mean)) %>%
-  pull() %>% 
-  round(2)
-```
-
-The mean of these 1,000 means is `r mean_of_means`, which is quite close to the mean of our original sample of 50 pennies of `r x_bar %>% pull(mean_year) %>% round(2)`. This is the case since each of the 1,000 resamples is based on the original sample of 50 pennies.
+<!-- TA: I think it would be cool to talk about expectation here by doing the means of means thing I did before. Expectation is a significant probability concept and works well here.  -->
 
 Recall that in the "resampling with replacement" scenario we are illustrating here, this histogram has a special name: the *bootstrap distribution of the sample mean*. Furthermore, recall it is an approximation to the *sampling distribution* of the sample mean, a concept you saw in Chapter \@ref(sampling) on sampling. This distribution allows us to study the effect of sampling variation on our estimates of the true population mean, in this case the true mean year for *all* US pennies. However, unlike in Chapter \@ref(sampling) where we took multiple samples (something one would never do in practice), bootstrap distributions are constructed by taking multiple resamples from a *single* sample: in this case, the 50 original pennies from the bank. 
 
@@ -498,10 +486,7 @@ ch7 %>%
        title = "Height by Gender in Nhanes Dataset")
 
 ```
-It looks like most of the data is here, and that's because they are mostly adults but there are some children. Adults are obvs going to be taller. 
-
-
-
+The plot shows some interesting stuff. Since the distributions of height for both genders are skewed left, we can infer that this data set included children and thus age played a role in our data. Additionally, we can see the the most probable heights for both genders and see that men are generally taller than women. 
 
 ## Using Bootstraps with `nhanes`
 
