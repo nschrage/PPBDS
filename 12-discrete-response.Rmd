@@ -18,8 +18,6 @@ output_yaml:
 
 <!-- 6) ? -->
 
-
-
 <!-- Other stuff: -->
 
 <!-- * Only use gt() -->
@@ -46,7 +44,8 @@ output_yaml:
 # Discrete Response {#discrete-response}
 
 ## Preamble 
-<!-- Change name from preamble -->
+<!-- MB: Change name from preamble? -->
+
 
 Many questions have binary answers. These questions can be answered by any pair of two answers (such as yes/no). Two examples of these questions include: 
   a. Are students with below average grades more likely to binge drink?
@@ -109,7 +108,6 @@ cces_ch12 %>%
     ideology = md("Ideology"),
     approval = md("Approval of President")) %>%
   tab_source_note(md("A random sample of 5 out of the 60,000 voters"))
-
 ```
 
 Now that we’ve looked at the raw values in `cces_ch12` and have a sense of the data, let’s compute summary statistics. Let’s use the `skim()` function from the `skimr` package.
@@ -208,11 +206,6 @@ cces_ch12 %>%
 
 <!-- MB: just need to talk about this to finish EDA. Holding off until we figure out why there are literally no 3s-->
 
-
-
-<!--   ^^^^ NEW WORK    vvvv OLD WORK  -->
-
-
 ## Logistic regression
 
 ### What is logistic regression?
@@ -248,117 +241,82 @@ ggplot(dat, aes(x = x)) +
 
 The mathematical function $log\left(\frac{p}{1 - p}\right)$ is called the *logit function* and it transforms variables from the space $(0, 1)$ (like probabilities) to $(-\infty, \infty)$.  The inverse of that function, the *standard logistic function*, is $\frac{1}{1 + e^{-x}}$ and transforms variables from the space $(-\infty, \infty)$ to $(0, 1)$.  From that latter function's name we get the terminology of *logistic regression*.
 
-## EDA (leftover)
+## Logistic regression
 
-Wait!  That doesn't tell us very much, because our outcome variable only takes two values, 0 and 1.  Let's instead `group_by(district)` and `summarize()` to get a better sense of the distributions:
+### What is logistic regression?
 
-```{r}
-house_ch12 %>%
-  group_by(region, district) %>%
-  summarize(dem_win = mean(dem_win)) %>%
-  ggplot(aes(x = dem_win)) +
-  geom_histogram(bins = 10, color = "white") +
-  labs(x = "Democratic victory percentage, 1976-2018", 
-       y = "Number of districts",
-       title = "Histogram of distribution of Democratic victories by House district") +
-  facet_wrap(~ region) + 
+Now that we know our dataset a little better, let's begin our first way of modelling binary/discrete data: logistic regressions. 
+
+Figure \@ref(fig:OLSlogistic) illustrates a data set with a binary (0 or 1) response ($Y$) and a single continuous predictor ($X$).  The blue line is a linear regression to model the probability of a success ($Y=1$) for a given value of $X$. With a binary response, the linear regression has an obvious problem: it can produce predicted probabilities below 0 and above 1. Probabilities can only range from 0 up to and including 1 as these represent a 0% and 100% chance of an event happening, respectively.
+
+The red curve is the *logistic regression* curve.  Note that its characteristic "S" shape always produces predicted probabilities between 0 and 1.  Here is the formula for a logistic regression:
+
+Where $p$ is the probability of a "yes" or "success" for a given set of predictors $X$.
+
+<!-- Revisit nomenclature after chapter 5 -->
+
+```{r, OLSlogistic, fig.align="center", out.width="60%", fig.cap='Linear vs. logistic regression models for binary response data.', echo=FALSE, warning=FALSE, message=FALSE}
+
+set.seed(0)
+dat <- tibble(x=runif(200, -5, 10),
+                  p=exp(-2+1*x)/(1+exp(-2+1*x)),
+                  y=rbinom(200, 1, p),
+                  logit=log(p/(1-p)))
+
+ggplot(dat, aes(x = x)) +
+  geom_point(aes(y = y)) +
+  geom_smooth(aes(y = y, color = "blue"), method = "lm", se=FALSE) +
+  geom_line(aes(y = p, color = "red")) +
+  scale_color_manual(name = 'Regression model', 
+         values = c('blue', 'red'), 
+         labels = c('Linear', 'Logistic'), guide = 'legend') +
   theme_minimal()
 ```
 
-This is much more informative!  We can see that the Midwest is highly bimodal, with many districts either electing Democrats for every year in this period or for none.  The Northeast and West have many districts that always elect Democrats but few that never do.  The South is the only region with a peak in the middle, indicating that there are many districts in the South that elected Democrats for about half the time during 1976-2018.
+<!-- DK: How does the math work here? log(p/1-p) seems, to me, to map 0,1 to 0,infinity. -->
 
-What happens if we create a scatterplot of our outcome variable `dem_win` and a continuous predictor, `year`?
-
-```{r}
-house_ch12 %>%
-  ggplot(aes(x = year, y = dem_win)) +
-  geom_point() +
-  labs(x = "Year", y = "Democratic Victory") +
-  geom_smooth(method = "lm", se = FALSE)
-```
-
-<!-- DK: The below seems like good stuff, but I don't really understand it. Needs more words. Why is log(p/1-p) an interesting thing. Is it really? -->
-
-<!-- MB: I think I clarified it more, but may need more explaining. p/1-p is just the function that transforms data into logit form, which is why it's so frequently mentioned. Could be abstracted out some more though. -->
-
-This is incomprehensible!  When dealing with binary data, it is more helpful to construct an *empirical logit* plot instead of a regular scatterplot. An *empirical logit* is a linear model on logit-trasnformed data rather than a generalized linear model. The steps for constructing such a plot are as follows:
-
-1. `group_by` your continuous variable.
-2. `summarize` the percentage of successes in your outcome variable.
-3. Calculate the *empirical logit* for each group, using the logit function: $log\left(\frac{p}{1 - p}\right)$. This step transforms the data to fit the form of a logistical regression with a binary outcome. 
-4. Plot the results.
-
-The logit function exists in base R as `qlogis()`. Let's look at the empirical logit plot:
-
-```{r}
-house_ch12 %>%
-  group_by(year) %>%
-  summarize(perc_dem_win = mean(dem_win),
-            emplogit = qlogis(perc_dem_win)) %>%
-  ggplot(aes(x = year, y = emplogit)) +
-  geom_point() +
-  geom_smooth(method = "lm") +
-  labs(x = "Year",
-       y = "Empirical logits") +
-  theme_classic()
-```
-
-Now we see that after the logit transformation, there is roughly a linear relationship between our outcome variable and our explanatory variable `year`.  This means that a logistic regression model makes sense.  Some of the most visually apparent outliers will be familiar to students of American politics: 1994 (the "Republican Revolution"), 2008 (Obama's first election), and 2018. Yet in general it appears that over time the Democrats have performed worse in House elections.
-
-We can follow the same steps to look at this relationship within Census regions (Midwest, Northeast, South and West):
- 
-```{r}
-house_ch12 %>%
-  group_by(region, year) %>%
-  summarize(perc_dem_win = mean(dem_win),
-            emplogit = qlogis(perc_dem_win)) %>%
-  ggplot(aes(x = year, y = emplogit)) +
-  geom_point() +
-  geom_smooth(method = "lm") +
-  labs(x = "Year",
-       y = "Empirical logits") +
-  facet_wrap(~ region) +
-  theme_classic()
-```
-
-We see roughly linear relationships after the logit transformation within-region as well, although the relationship looks more linear in the Midwest and South than in the Northeast and West.  We see that the Democratic Party's overall decline in House races is driven by the South and to a lesser extent the Midwest; Democratic performance has on average improved in the Northeast and West.  The sharp negative slope in the South will not be surprising if one is familiar with the collapse of the "Solid South."
-
-
+The mathematical function $log\left(\frac{p}{1 - p}\right)$ is called the *logit function* and it transforms variables from the space $(0, 1)$ (like probabilities) to $(-\infty, \infty)$.  The inverse of that function, the *standard logistic function*, is $\frac{1}{1 + e^{-x}}$ and transforms variables from the space $(-\infty, \infty)$ to $(0, 1)$.  From that latter function's name we get the terminology of *logistic regression*.
 
 ### One categorical explanatory variable
 
-Let's start our modeling by predicting `dem_win` with a single categorical explanatory variable.  We'll start with a binary variable for whether an observation is in the South and we will progress to the categorical variable `region`.  As we'll see, the syntax for running a logistic regression in R is very similar to that for running a linear regression.  In fact, we'll follow the same basic steps:
-
-1. We first "fit" the logistic regression model using the `glm(y ~ x, family, data)` function and save it in `house_region_model`.
-2. We get the regression table by applying the `tidy()` function from the **broom** package to `house_region_model`.  We'll print the `term`, `estimate`, `conf.low`, and `conf.high` columns.
-
-Note that the key difference is that instead of using `lm()`, we are now using `glm()`.  `glm()` operates very similarly to `lm()`, but it has an additional argument: `family`.  To run a logistic regression, we use `family = binomial`.
-
-Let's create a binary variable for whether an observation is in the South:
+Let's start our modeling by predicting `approval` with a single categorical explanatory variable. However, there's one problem: approval is not a binary variable and, therefore, this wouldn't be a logistic regression. In order to make this a logistic regression, we have to turn approval into a binary variable. 1-2 will be coded to 0 to signify disapproval and 3-5 will be coded to 1 for approval.
 
 ```{r}
-house_ch12 <- house_ch12 %>%
-  mutate(south = 1 * (region == "South"))
+cces_ch12 <- cces_ch12 %>%
+  mutate(approval_num = case_when(
+    approval == 1 ~ 0,
+    approval == 2 ~ 0,
+    approval == 3 ~ 1,
+    approval == 4 ~ 1,
+    approval == 5 ~ 1))
 ```
+
+<!-- MB: Jumping straight to multiple categories here rather than just a binary one. But then where do we introduce plogis? -->
+
+We'll start by modeling our new binary `approval_num` with the categorical variable `race`.  As we'll see, the syntax for running a logistic regression in R is very similar to that for running a linear regression.  In fact, we'll follow the same basic steps:
+
+1. We first "fit" the logistic regression model using the `glm(y ~ x, family, data)` function and save it in `race_model`.
+2. We get the regression table by applying the `tidy()` function from the **broom** package to `race_model`.  We'll print the `term`, `estimate`, `conf.low`, and `conf.high` columns.
+
+Note that the key difference is that instead of using `lm()`, we are now using `glm()`.  `glm()` operates very similarly to `lm()`, but it has an additional argument: `family`.  To run a logistic regression, we use `family = binomial`. This means that it will be modelled along the red line in Figure \@ref(fig:OLSlogistic) rather than the blue line.
 
 Next, let's fit a model and `tidy()` it:
 
 ```{r, eval=FALSE}
-house_south_model <- glm(dem_win ~ south, family = binomial, data = house_ch12)
-house_south_model %>%
+race_model <- glm(approval_num ~ race, family = binomial, data = cces_ch12)
+race_model %>%
   tidy(conf.int = TRUE) %>%
-  select(term, estimate)
+  select(term, estimate, conf.low, conf.high)
 ```
 
 ```{r, echo=FALSE}
 
-house_south_model <- glm(dem_win ~ south, family = binomial, data = house_ch12)
-
-tidy(house_south_model) %>%
+tidy(race_model) %>%
   select(term, estimate) %>%
   gt()
 
 ```
+The intercept here is the omitted category, Asian.
 
 How can we interpret the coefficients?  Unlike linear regressions, these coefficients aren't directly interpretable.  Recall our logistic regression model equation:
 
@@ -366,23 +324,29 @@ How can we interpret the coefficients?  Unlike linear regressions, these coeffic
 \log\left(\frac{p}{1 - p}\right)=\beta_0+\beta_1X 
 \]
 
-A one-unit change in $X$ thus is associated with a one-unit change in $log\left(\frac{p}{1 - p}\right)$, where $p$ is the predicted probability of success. It is hard to understand intuitively what this means.
-
-However, with only two possible values for the predictors (`south` = 0 or `south` = 1), we can directly calculate all the possible values of $p$ this model by using the *standard logistic function*:
+A one-unit change in $X$ thus is associated with a one-unit change in $log\left(\frac{p}{1 - p}\right)$, where $p$ is the predicted probability of success. It is hard to understand intuitively what this means. We can directly calculate all the possible values of $p$ this model by using the *standard logistic function*:
 
 \[
 p = \frac{1}{1 + e^{-(\beta_0+\beta_1X)}} 
 \]
 
-This can easily be done using the `plogis()` function in R. 
-
-Thus, for our example, we have:
+We can first use this formula to fill $b_0$ with the intercept (representing Asians) and omit the $b_1$ as we are solving for the probability of an Asian American approving of the President.
 
 \[
-p_{dem\_win} = \frac{1}{1 + e^{-(0.230 - 0.249 \times south)}} 
+p_{pres\_approve} = \frac{1}{1 + e^{-(-1.06)}} = 0.257
 \]
 
-Therefore, the predicted probability for an observation in the South is $\frac{1}{1 + e^{-(0.230 - 0.249)}}$ (`r round(plogis(0.230 - 0.249), 3)`) and the predicted probability for an observation outside the South is $\frac{1}{1 + e^{-(0.230)}}$ (`r round(plogis(0.230), 3)`) a difference of `r round(plogis(0.230 - 0.249) - plogis(0.230), 3)`.  Thus, an observation being the South is associated with a `r round(plogis(0.230 - 0.249) - plogis(0.230), 3)` decrease in the predicted probability of a Democratic victory.
+We can then fill in the $b_1$ term to calculate the probabilities of all races:
+- White: $\frac{1}{1 + e^{-(-1.06 + 0.99)}} = 0.482$
+- Black: $\frac{1}{1 + e^{-(-1.06-1.01)}} = 0.112$
+- Hispanic: $\frac{1}{1 + e^{-(-1.06 + 0.036)}} = 0.264$
+- Middle Eastern: $\frac{1}{1 + e^{-(-1.06 + 0.007)}} = 0.259$
+- Native American: $\frac{1}{1 + e^{-(-1.06 + 1.1)}} = 0.51$
+- Mixed: $\frac{1}{1 + e^{-(-1.06 + 0.071)}} = 0.271$
+- Other: $\frac{1}{1 + e^{-(-1.06 + 1.3)}} = 0.559$
+
+<!--   ^^^^ NEW WORK    vvvv OLD WORK  -->
+
 
 Note that you could also estimate this value through the so-called **"divide by 4" rule**: $-0.249 / 4 \approx 0.062$.  We'll discuss this further when we talk about interpreting the coefficiences of continuous predictors in logistic regression models.
 
@@ -983,7 +947,7 @@ But which tree is better?  We can answer that question using the `tune_grid()` f
 <!-- AR: material below commented out; can be deleted unless it may be
 repurposed for a discussion of the tune package at another time -->
 
-<!-- The basic idea is that we want to test out various values of $c_p$. and select the model that performs best.  We will provide code on how to decide which model is best by calculating the accuracy on 25 bootstrapped samples of our data.  (We wouldn't want to calculate the accuracy on our full data, because a lower value of $c_p$ will always perform best on any particular dataset, but the resulting model may not perform well on out-of-sample observations; this is an example of a general phenomenon called *overfitting*.)
+<!-- The basic idea is that we want to test out various values of $c_p$. and select the model that performs best.  We will provide code on how to decide which model is best by calculating the accuracy on 25 bootstrapped samples of our data.  (We wouldn't want to calculate the accuracy on our full data, because a lower value of $c_p$ will always perform best on any particular dataset, but the resulting model may not perform well on out-of-sample observations; this is an example of a general phenomenon called *overfitting*.) -->
 
 First, we need to update the model specification to note that we are tuning the `cost_complexity` parameter.  We can do that using the `update()` function and setting `cost_complexity = tune()`:
 
@@ -1336,3 +1300,219 @@ tibble(logistic = mean(house_2018_preds$logistic == house_2018_preds$dem_win),
 ```
 
 Here we see that when fitting the models on pre-2018 data and testing them on 2018 data, the random forest specification performs the best and the classification tree the worse, with the logistic regression in-between.
+
+
+## EDA / empirical logit (leftover)
+
+Wait!  That doesn't tell us very much, because our outcome variable only takes two values, 0 and 1.  Let's instead `group_by(district)` and `summarize()` to get a better sense of the distributions:
+
+```{r}
+house_ch12 %>%
+  group_by(region, district) %>%
+  summarize(dem_win = mean(dem_win)) %>%
+  ggplot(aes(x = dem_win)) +
+  geom_histogram(bins = 10, color = "white") +
+  labs(x = "Democratic victory percentage, 1976-2018", 
+       y = "Number of districts",
+       title = "Histogram of distribution of Democratic victories by House district") +
+  facet_wrap(~ region) + 
+  theme_minimal()
+```
+
+This is much more informative!  We can see that the Midwest is highly bimodal, with many districts either electing Democrats for every year in this period or for none.  The Northeast and West have many districts that always elect Democrats but few that never do.  The South is the only region with a peak in the middle, indicating that there are many districts in the South that elected Democrats for about half the time during 1976-2018.
+
+What happens if we create a scatterplot of our outcome variable `dem_win` and a continuous predictor, `year`?
+
+```{r}
+house_ch12 %>%
+  ggplot(aes(x = year, y = dem_win)) +
+  geom_point() +
+  labs(x = "Year", y = "Democratic Victory") +
+  geom_smooth(method = "lm", se = FALSE)
+```
+
+<!-- DK: The below seems like good stuff, but I don't really understand it. Needs more words. Why is log(p/1-p) an interesting thing. Is it really? -->
+
+<!-- MB: I think I clarified it more, but may need more explaining. p/1-p is just the function that transforms data into logit form, which is why it's so frequently mentioned. Could be abstracted out some more though. -->
+
+This is incomprehensible!  When dealing with binary data, it is more helpful to construct an *empirical logit* plot instead of a regular scatterplot. An *empirical logit* is a linear model on logit-trasnformed data rather than a generalized linear model. The steps for constructing such a plot are as follows:
+
+1. `group_by` your continuous variable.
+2. `summarize` the percentage of successes in your outcome variable.
+3. Calculate the *empirical logit* for each group, using the logit function: $log\left(\frac{p}{1 - p}\right)$. This step transforms the data to fit the form of a logistical regression with a binary outcome. 
+4. Plot the results.
+
+The logit function exists in base R as `qlogis()`. Let's look at the empirical logit plot:
+
+```{r}
+house_ch12 %>%
+  group_by(year) %>%
+  summarize(perc_dem_win = mean(dem_win),
+            emplogit = qlogis(perc_dem_win)) %>%
+  ggplot(aes(x = year, y = emplogit)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  labs(x = "Year",
+       y = "Empirical logits") +
+  theme_classic()
+```
+
+Now we see that after the logit transformation, there is roughly a linear relationship between our outcome variable and our explanatory variable `year`.  This means that a logistic regression model makes sense.  Some of the most visually apparent outliers will be familiar to students of American politics: 1994 (the "Republican Revolution"), 2008 (Obama's first election), and 2018. Yet in general it appears that over time the Democrats have performed worse in House elections.
+
+We can follow the same steps to look at this relationship within Census regions (Midwest, Northeast, South and West):
+ 
+```{r}
+house_ch12 %>%
+  group_by(region, year) %>%
+  summarize(perc_dem_win = mean(dem_win),
+            emplogit = qlogis(perc_dem_win)) %>%
+  ggplot(aes(x = year, y = emplogit)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  labs(x = "Year",
+       y = "Empirical logits") +
+  facet_wrap(~ region) +
+  theme_classic()
+```
+
+We see roughly linear relationships after the logit transformation within-region as well, although the relationship looks more linear in the Midwest and South than in the Northeast and West.  We see that the Democratic Party's overall decline in House races is driven by the South and to a lesser extent the Midwest; Democratic performance has on average improved in the Northeast and West.  The sharp negative slope in the South will not be surprising if one is familiar with the collapse of the "Solid South."
+
+## Plogis and diivide by 4 and binary categorical
+
+
+How can we interpret the coefficients?  Unlike linear regressions, these coefficients aren't directly interpretable.  Recall our logistic regression model equation:
+
+\[
+\log\left(\frac{p}{1 - p}\right)=\beta_0+\beta_1X 
+\]
+
+A one-unit change in $X$ thus is associated with a one-unit change in $log\left(\frac{p}{1 - p}\right)$, where $p$ is the predicted probability of success. It is hard to understand intuitively what this means.
+
+However, with only two possible values for the predictors (`south` = 0 or `south` = 1), we can directly calculate all the possible values of $p$ this model by using the *standard logistic function*:
+
+\[
+p = \frac{1}{1 + e^{-(\beta_0+\beta_1X)}} 
+\]
+
+This can easily be done using the `plogis()` function in R. 
+
+Thus, for our example, we have:
+
+\[
+p_{dem\_win} = \frac{1}{1 + e^{-(0.230 - 0.249 \times south)}} 
+\]
+
+Therefore, the predicted probability for an observation in the South is $\frac{1}{1 + e^{-(0.230 - 0.249)}}$ (`r round(plogis(0.230 - 0.249), 3)`) and the predicted probability for an observation outside the South is $\frac{1}{1 + e^{-(0.230)}}$ (`r round(plogis(0.230), 3)`) a difference of `r round(plogis(0.230 - 0.249) - plogis(0.230), 3)`.  Thus, an observation being the South is associated with a `r round(plogis(0.230 - 0.249) - plogis(0.230), 3)` decrease in the predicted probability of a Democratic victory.
+
+Note that you could also estimate this value through the so-called **"divide by 4" rule**: $-0.249 / 4 \approx 0.062$.  We'll discuss this further when we talk about interpreting the coefficiences of continuous predictors in logistic regression models.
+
+<!-- Here would be a good place to begin a discusssion of validity --> 
+
+Let's now estimate the uncertainty around our coefficients.  We'll start by showing how you can do this through the bootstrap.  We'll begin by loading the **infer** package.  We're going to use the function `rep_sample_n()` to resample from our data 1,000 times:
+
+```{r}
+library(infer)
+
+x <- house_ch12 %>% 
+  select(dem_win, south) %>% 
+  rep_sample_n(size = nrow(house_ch12), replace = TRUE, reps = 4)
+
+x
+```
+
+For each `replicate`, we have `r nrow(house_ch12)` resamples of `dem_win` and `south`.
+
+Next, we are going to `nest()` our data by `replicate`:
+
+```{r}
+x <- x %>% 
+  group_by(replicate) %>% 
+  nest()
+
+x
+```
+
+After grouping by `replicate` and using `nest()`, we now have a dataset of 1,000 rows and a list column named `data`.  Each element of `data` is a tibble consisting of one of the resampled datasets we created using `rep_sample_n()`.
+
+Now, we can use `map()` to run our logistic regression for each dataset:
+
+```{r}
+x <- x %>% 
+  mutate(mod = map(data, ~ glm(dem_win ~ south, family = binomial, data = .)))
+
+x
+```
+
+Now we have a new list column, `mod`, that contains the model objects created by `glm()`.  We will now want to `tidy()` the object created by `glm()`:
+
+```{r}
+x <- x %>% 
+  mutate(reg_results = map(mod, ~ tidy(.)))
+
+x
+```
+
+`tidy()` stores the coefficients in the `estimate` column, with each coefficient named in the `term` column.  Thus, if we `filter()` by `term` and `pull(estimate)`, we can get the logistic regression coefficient for each bootstrap sample:
+
+```{r}
+x <- x %>%
+  mutate(disp_coef = map_dbl(reg_results, ~ filter(., term == "south") %>% pull(estimate)))
+
+x
+```
+
+Now that we have 1,000 estimates from our bootstrap samples, we can construct a percentile-based confidence interval easily:
+
+```{r}
+x %>%
+ pull(disp_coef) %>%
+ quantile(c(0.025, 0.5, 0.975))
+```
+
+As we've seen before, these are very similar to what we observe using `tidy(conf.int = TRUE)`:
+
+```{r, eval=FALSE}
+house_south_model %>%
+  tidy(conf.int = TRUE) %>%
+  select(term, estimate, conf.low, conf.high)
+```
+
+```{r, echo=FALSE}
+tidy(house_south_model, conf.int = TRUE) %>%
+  select(term, estimate, conf.low, conf.high) %>%
+  gt() %>%
+  tab_source_note(md("Logistical Regression Table"))
+```
+
+Thus, from now on, we'll just use `tidy(conf.int = TRUE)` when working with `glm()`, just as we did with `lm()`.
+
+Let's try running a slightly more complicated version of the above model, where we use `region` as a predictor instead of `south`.
+
+```{r, eval=FALSE}
+house_region_model <- glm(dem_win ~ region, family = binomial, data = house_ch12)
+house_region_model %>%
+  tidy(conf.int = TRUE) %>%
+  select(term, estimate, conf.low, conf.high)
+```
+
+```{r, echo=FALSE}
+
+house_region_model <- glm(dem_win ~ region, family = binomial, data = house_ch12)
+
+tidy(house_region_model,
+     conf.int = TRUE) %>%
+  select(term, estimate, conf.low, conf.high) %>%
+  gt() %>%
+  tab_source_note(md("Logistical Regression Table"))
+```
+
+The intercept here is the omitted category, the Midwest.  We can calculate the predicted probabilities for each category:
+
+- Midwest: $\frac{1}{1 + e^{-(-0.076)}} = 0.481$
+- Northeast: $\frac{1}{1 + e^{-(-0.076 + 0.657)}} = 0.641$
+- South: $\frac{1}{1 + e^{-(-0.076 + 0.056)}} = 0.495$
+- West: $\frac{1}{1 + e^{-(-0.076 + 0.333)}} = 0.564$
+
+We can then interpret the effect of moving from one category to another.  For example, the effect of being in the Northeast as opposed to the Midwest is 0.16; the predicted probability of a Democratic victory in the Northeast is 0.16 greater than in the Midwest. Note too that we could have obtained this through the "divide by 4" rule:  $0.657 / 4 \approx 0.16$.
+
+
