@@ -6,11 +6,10 @@ output_yaml:
 
 <!-- TO-DO: -->
 
-<!-- 1. Read Chapter 5 and zoom with Vivian about the connection between the two chapters. And don't stop talking unytil you can explain to her satisfaction what a posterior distrubution is, and until she can explain, to your satisfaction, what the bootstrap that you are using in chapter 7 is doing.  You are estimating $\tau$, which is the true mean height of the population. It is a parameter you don't know. Vivian was estimating $p$, the true likelihood of a specific coin coming up heads. It is also a parameter we can't know. She uses data (like 8 heads out of 20), to construct a posterior probability for $p$. You use data (like the height of 2,475 men) to construct a posterior probability for $\tau$. It is the same thing, although your tools, whether bootstrap or lm() are easier to work with than her tools. This is a key connection to make when we are discussing parameter uncertainty. Read the set of notes at the start of chapter 6. Should we create the joint distribution of models and data like we did in chapter 5? How would we? Or is it enough just to claim that this is what lm() does for us? -->
+<!-- 1. Read Chapter 5 and zoom with Vivian about the connection between the two chapters. And don't stop talking until you can explain to her satisfaction what a posterior distribution is, and until she can explain, to your satisfaction, what the bootstrap that you are using in chapter 7 is doing.  You are estimating $\tau$, which is the true mean height of the population. It is a parameter you don't know. Vivian was estimating $p$, the true likelihood of a specific coin coming up heads. It is also a parameter we can't know. She uses data (like 8 heads out of 20), to construct a posterior probability for $p$. You use data (like the height of 2,475 men) to construct a posterior probability for $\tau$. It is the same thing, although your tools, whether bootstrap or lm() are easier to work with than her tools. This is a key connection to make when we are discussing parameter uncertainty. Read the set of notes at the start of chapter 6. Should we create the joint distribution of models and data like we did in chapter 5? How would we? Or is it enough just to claim that this is what lm() does for us? -->
 
-<!-- 2. Fix summarize warnings. I think you just need to provide a value for the `.groups` argument, perhaps just `.groups = "drop_last"`, which is the default. Of course, you also need to explain what this does. But why do we need to specify the default? Done -->
 
-<!-- 3. Find a place for this quote somewhere as a sidemargin note. -->
+<!-- 2. Find a place for this quote somewhere as a sidemargin note. -->
 
 <!-- > In this sense, the bootstrap distribution represents an (approximate) -->
 <!-- nonparametric, noninformative posterior distribution for our parameter. -->
@@ -21,26 +20,29 @@ output_yaml:
 <!-- the Bayesian effect of perturbing the parameters, and is typically -->
 <!-- much simpler to carry out. --- Elements of Statistical Learning, 2nd edition, by Hastie et al, page 271. -->
 
-<!-- Outline of the Chapter -->
+<!-- 3. Get rid of all \index() -->
 
-<!-- 0. Question about male height in America in 2009. Ask some questions. Done -->
-
-
-
-<!-- 2. Exploratory Data Analysis of nhanes. temp <- nhanes %>% select(year, gender, height). Explore all three variables. Note that there are NAs. Then restrict for our use in the models like: ch7 <- %>% drop_na() %>% filter(gender == "male", year == 2009) %>% select(height). In other words, the final data set just has one variable in it. Since we are only estimating a model with one parameter, we can't make use of richer data. TA: Almost done -->
+<!-- 4. Get rid of library(moderndive) and pennies_sample. Make your own pennies sample by hand in the code. -->
 
 
+<!-- Remaining Outline of the Chapter -->
 
-<!-- 4. Prove that the bootstrap works, that our 95% confidence intervals provide correct coverage. We make a game and I give you a sample of like 40. Here's the 40, and you give me a 95% CI using the bootstrap tools we learned. Then I give you another 40. And another. If we do this 1,00 times, and we use the same procedure for calculating a confidence interval each time, then 950 should include the truth. That's how we know bootstraps is correct and I could only demonstrate this to you if we know what the truth is.  -->
+
+<!-- 4. Prove that the bootstrap works, that our 95% confidence intervals provide correct coverage. We make a game and I give you a sample of like 40. Here's the 40, and you give me a 95% CI using the bootstrap tools we learned. Then I give you another 40. And another. If we do this 1,00 times, and we use the same procedure for calculating a confidence interval each time, then 950 should include the truth. That's how we know bootstraps is correct and I could only demonstrate this to you if we know what the truth is.  
+
+Plan: create function called create_ci(), which takes a tibble with a single variable called height and returns the 95% confidence interval --- i.e., a numeric vector of length 2 --- for the 75th percentile.  Note that you get to hard code everything.
+
+Then, create a tibble, first column is ID. Second column is height_sample, which is created by running sample(ch7$height, size = 40, replace = FALSE). Third column is ci, which is result mutate(ci = map(height_sample, ~ create_ci(.)). Fourth column is within_ci, which is TRUE if ci includes the TRUE value and FALSE otherwise. (If you want to have two columns, one for each limit, that is fine.)
+-->
+
 
 <!-- 5. height in the US, using all 2,475 men for 2009. Let's skip the bootstrap here. (We have seen it twice already.) Instead, we just go straight to lm(), tidy() to calculate the mean and its confidence interval. Note that, unlike with 2, we can never know the truth. Then, use this as an example to discuss parameter uncertainty.  -->
 
 <!-- 6. Prediction. What can we use this model for? We think we know p(mean height for 2009), call it p(height). So what? What can we do with this and what do we need to be careful about? This is where we can discuss all our other topics from themes.Rmd. Build a data generating mechanism. With it, we can answer any question we like!  -->
 
 
-<!-- Turn Standard error method section of coin bootstrap into a four sentence margin note. -->
+<!-- Turn Standard error method section of coin bootstrap into a four sentence margin note. Show formula. Note that the 95% confidence interval from the bootstrap will generally be the same thing as +/- two times the standard error. But not always! -->
 
-<!-- TA: Do you want me to do calculations or something for the standard error method or just explain it intuitively? -->
 
 <!-- c) Discuss how this exercise is still useful even if we begin with all our data. That is, don't sample. Just use all 5,000 people. Then, do the bootstrap to get a confidence interval. Note that the interval will be --- how much? --- smaller than the ones we got above, because we are using 116 times as much data. But it is also weird. I know exactly what the mean is! I have the entire Rubin Table! I don't need a confidence interval for the mean.  -->
 
@@ -84,15 +86,12 @@ output_yaml:
 
 # One Parameter {#one-parameter}
 
-```{r include=FALSE}
-library(patchwork)
-library(dplyr)
-```
+
 
 What is the average height of an American male? What is the 75th percentile of the distribution of height for American men? How certain are you are your estimates? If we past 5 men walking down the street, what are the odds that the tallest will be at least 5 centimeters taller than the shortest?
 
 
-## Pennies activity {#resampling-tactile}
+## Pennies example {#resampling-tactile}
 
 In Chapter \@ref(sampling), we studied sampling. We started with a "tactile" exercise where we wanted to know the proportion of balls in the urn that are red. While we could have performed an exhaustive count, this would have been a tedious process. So instead, we used a shovel to extract a sample of 50 balls and used the resulting proportion that were red as an *estimate*. Furthermore, we made sure to mix the urn's contents before every use of the shovel. Because of the randomness created by the mixing, different uses of the shovel yielded different proportions red and hence different estimates of the proportion of the urn's balls that are red. 
 
@@ -128,15 +127,14 @@ As we did in Chapter \@ref(sampling), we'll begin with a hands-on tactile activi
 <!-- DK: Why can't we stick a margin note in here about how to install PPBDS.data? I can't even leave a commented out version of the note without crashing any knitting attempt. -->
 
 
-```{r, message=FALSE, warning=FALSE}
+```{r, message=FALSE}
 library(PPBDS.data)
 library(rsample)
 library(tidyverse)
-library(gt)
 library(skimr)
 ```
 
-**PPBDS.data** includes the data sets for this book. **rsample** includes functions for bootstrapping, the main statistical tool which will we use in this chapter
+**PPBDS.data** includes the data sets for this book. **rsample** includes functions for bootstrapping, the main statistical tool which will we use in this chapter.
 
 ### What is the average year on US pennies in 2019?
 
@@ -154,7 +152,7 @@ An image of these 50 pennies can be seen in Figure \@ref(fig:resampling-exercise
 knitr::include_graphics("07-one-parameter/images/3.jpg")
 ```
 
-The **moderndive** \index{moderndive!pennies\_sample} package contains this data on our 50 sampled pennies in the `pennies_sample` data frame:
+The **moderndive**  package contains this data on our 50 sampled pennies in the `pennies_sample` data frame:
 
 ```{r}
 library(moderndive)
@@ -213,7 +211,7 @@ x_bar <- pennies_sample %>%
 ```
 
 
-Thus, if we're willing to assume that `pennies_sample` is a representative sample from *all* US pennies, a "good guess" of the average year of minting of all US pennies would be `r x_bar %>% pull(mean_year) %>% round(2)`. In other words, around `r x_bar %>% pull(mean_year) %>% round()`. This should all start sounding similar to what we did previously in Chapter \@ref(sampling)!
+Thus, if we're willing to assume that `pennies_sample` is a representative sample from *all* US pennies, a "good guess" of the average year of minting of all US pennies would be `r x_bar %>% dplyr::pull(mean_year) %>% round(2)`. In other words, around `r x_bar %>% pull(mean_year) %>% round()`. This should all start sounding similar to what we did previously in Chapter \@ref(sampling)!
 
 ```{r, echo = FALSE}
 # Here I am using the exact same code but adding your good guess value. Any
@@ -321,18 +319,16 @@ virtual_resamples %>%
 ```
 Recall from chapter 5 that posterior distribution is based on beliefs and expectations. In the case of the bootstrap samples we made, the posterior distribution represents our knowledge about the mean year of American Pennies in 2019 after taking into account the the data we gathered from our bootstrap sample means. As demonstrated in the plot above, we can see that the mean year of pennies in 2019 is most likely between 1995 and 1998 from our posterior distribution. 
 
-<!-- TA: I think it would be cool to talk about expectation here by doing the means of means thing I did before. Expectation is a significant probability concept and works well here.  -->
-
 Recall that in the "resampling with replacement" scenario we are illustrating here, this histogram has a special name: the *bootstrap distribution of the sample mean*. Furthermore, recall it is an approximation to the *sampling distribution* of the sample mean, a concept you saw in Chapter \@ref(sampling) on sampling. This distribution allows us to study the effect of sampling variation on our estimates of the true population mean, in this case the true mean year for *all* US pennies. However, unlike in Chapter \@ref(sampling) where we took multiple samples (something one would never do in practice), bootstrap distributions are constructed by taking multiple resamples from a *single* sample: in this case, the 50 original pennies from the bank. 
 
 Congratulations! You've just constructed your first bootstrap distribution! In the next section, you'll see how to use this bootstrap distribution to construct *confidence intervals*.
 
 
-## Measuring uncertainty with confidence intervals {#ci-build-up}
+### Measuring uncertainty with confidence intervals {#ci-build-up}
 
 Let's start this section with an analogy involving fishing. Say you are trying to catch a fish. On the one hand, you could use a spear, while on the other you could use a net. Using the net will probably allow you to catch more fish!
 
-Now think back to our pennies exercise where you are trying to estimate the true population mean year $\mu$ of *all* US pennies. \index{confidence interval!analogy to fishing} Think of the value of $\mu$ as a fish.
+Now think back to our pennies exercise where you are trying to estimate the true population mean year $\mu$ of *all* US pennies. Think of the value of $\mu$ as a fish.
 
 On the one hand, we could use the appropriate *point estimate/sample statistic* to estimate $\mu$, which we saw in Table \@ref(tab:table-ch8-b) is the sample mean $\overline{x}$. Based on our sample of 50 pennies from the bank, the sample mean was `r x_bar %>% pull(mean_year) %>% round(2)`. Think of using this value as "fishing with a spear."
 
@@ -347,7 +343,7 @@ knitr::include_graphics("07-one-parameter/images/point_estimate_vs_conf_int.png"
 
 Our proposed interval of 1992 to 2000 was constructed by eye and was thus somewhat subjective. We now introduce two methods for constructing such intervals in a more exact fashion: the *lm method* and the *quantile method*.
 
-Second, they both require you to specify the \index{confidence interval!confidence level} *confidence level*. Commonly used confidence levels include 90%, 95%, and 99%.  All other things being equal, higher confidence levels correspond to wider confidence intervals, and lower confidence levels correspond to narrower confidence intervals. In this book, we'll be mostly using 95% and hence constructing "95% confidence intervals for $\mu$" for our pennies activity.
+Second, they both require you to specify the *confidence level*. Commonly used confidence levels include 90%, 95%, and 99%.  All other things being equal, higher confidence levels correspond to wider confidence intervals, and lower confidence levels correspond to narrower confidence intervals. In this book, we'll be mostly using 95% and hence constructing "95% confidence intervals for $\mu$" for our pennies activity.
 
 ```{r, echo = FALSE}
 # Maybe another Preceptor table here with the 90% or 95% confidence interval in
@@ -372,7 +368,7 @@ pennies_sample %>%
   cols_align(align = "center", columns = TRUE)
 ```
 
-## Confidence Intervals using lm and quantile
+### Confidence Intervals using lm and quantile
 
 Let's now compute the confidence interval for our mean year of pennies in 2019. One way to extract the confidence interval is through using the `lm` method. `lm` means linear model and is generally used in regression modeling; however,`lm` can also used to find the confidence interval for a mean. The catch, though, is that we can only use `lm` to calculate the confidence interval for a mean only! This means that we cannot use `lm` to calculate the condfience interval for a statistic like the median or 75th percentile. 
 
