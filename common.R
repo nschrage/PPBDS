@@ -6,7 +6,8 @@
 
 # This is caused by the setting of "before_chapter_script" in _bookdown.yml.
 
-# Packages used by almost all chapters
+# Packages used by almost all chapters, and which we don't choose to show to
+# students since the code they see does not make use of them.
 
 library(knitr)
 library(tufte)
@@ -22,10 +23,12 @@ options(digits = 2)
 # cache to persist, at least in the book-builders home directory. I don't think
 # that using a common directory will cause conflicts across chapters . . .
 
-knitr::opts_chunk$set(cache=TRUE)
-knitr::opts_chunk$set(cache.path = "cache-directory/")
+# Critical question is whether or not to use/require cache and, if so, where. I
+# am concerned that the cache stuff may cause weird errors when people are just
+# trying to knit their chapters. That makes me nervous . . .
 
-# Critical question is whether or not to use/require cache and, if so, where.
+# knitr::opts_chunk$set(cache=TRUE)
+# knitr::opts_chunk$set(cache.path = "cache-directory/")
 
 # invalidate cache when the tufte version changes. Useful? Necessary?
 # knitr::opts_chunk$set(cache.extra = packageVersion('tufte'))
