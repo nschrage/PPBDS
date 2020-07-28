@@ -41,6 +41,9 @@ output_yaml:
 <!-- * Do we have time to do a model which predicts a category with more than 0/1 possible values? I am not sure. If we were going to, we would want to pick something that is not an ordered category, I think. In this data, ony race would meet that criteria. Let's revisit this later. -->
 
 
+<!-- MB: Using augment() for future predictions in this chapter? Works poorly with example -->
+
+
 # Discrete Response {#discrete-response}
 
 
@@ -130,8 +133,6 @@ cces_ch12 %>%
        title = "Presidential Approval in 2018") 
 ```
 
-<!-- MB: Something sus about this distribution -- where are the 3s? -->
-
 According to this graph, the approval of the president in 2018 is very polarized: the peaks are at 1 and 5 and no one reported with a neutral 3. There seems to be more disapproval overall.
 To make things more interesting, let's facet this approval variable by gender and then race.
 
@@ -162,7 +163,7 @@ cces_ch12 %>%
   scale_y_log10()
 ```
 
-Note the log10 scale on the y-axis; this was done so that we can see clearly the distribution for races that have very few observations compared to white people. We can see here that the bimodel distribution is present across all races, with slight variations from race to race. 
+Note the log10 scale on the y-axis; this was done so that we can see clearly the distribution for races that have very few observations compared to white individuals. We can see here that the bimodel distribution is present across all races, with slight variations from race to race. 
 
 Now, let's take a look at our ideology variable. `ideology` has values "Very Liberal", "Liberal", "Moderate", "Conservative", "Very Conservative", and "Not Sure". Let's make these variables numeric so that they are easier to work with by recoding them to 1, 2, 3, 4, 5, and NA, respectively. 
 
@@ -245,7 +246,7 @@ Let's start our modeling by predicting `approval` with a single categorical expl
 
 ```{r}
 cces_ch12 <- cces_ch12 %>%
-  mutate(approval_num = case_when(
+  mutate(approval = case_when(
     approval == 1 ~ 0,
     approval == 2 ~ 0,
     approval == 3 ~ 1,
@@ -253,9 +254,9 @@ cces_ch12 <- cces_ch12 %>%
     approval == 5 ~ 1))
 ```
 
-<!-- MB: Jumping straight to multiple categories here rather than just a binary one. -->
+<!-- MB: Jumping straight to multiple categories here rather than just a binary one. Should I do one for gender? -->
 
-We'll start by modeling our new binary `approval_num` with the categorical variable `race`.  As we'll see, the syntax for running a logistic regression in R is very similar to that for running a linear regression.  In fact, we'll follow the same basic steps:
+We'll start by modeling our new binary `approval` with the categorical variable `race`.  As we'll see, the syntax for running a logistic regression in R is very similar to that for running a linear regression.  In fact, we'll follow the same basic steps:
 
 1. We first "fit" the logistic regression model using the `glm(y ~ x, family, data)` function and save it in `race_model`.
 2. We get the regression table by applying the `tidy()` function from the **broom** package to `race_model`.  We'll print the `term`, `estimate`, `conf.low`, and `conf.high` columns.
@@ -265,14 +266,14 @@ Note that the key difference is that instead of using `lm()`, we are now using `
 Next, let's fit a model and `tidy()` it:
 
 ```{r, eval=FALSE}
-race_model <- glm(approval_num ~ race, family = binomial, data = cces_ch12)
+race_model <- glm(approval ~ race, family = binomial, data = cces_ch12)
 race_model %>%
   tidy(conf.int = TRUE) %>%
   select(term, estimate, conf.low, conf.high)
 ```
 
 ```{r, echo=FALSE}
-race_model <- glm(approval_num ~ race, family = binomial, data = cces_ch12)
+race_model <- glm(approval ~ race, family = binomial, data = cces_ch12)
 tidy(race_model) %>%
   select(term, estimate) %>%
   gt()
@@ -308,24 +309,121 @@ We can then fill in the $b_1$ term to calculate the probabilities of all races:
 - Mixed: $\frac{1}{1 + e^{-(-1.06 + 0.071)}} = 0.271$
 - Other: $\frac{1}{1 + e^{-(-1.06 + 1.3)}} = 0.559$
 
-<!-- Observed fitted values / residuals in here--> 
+<!-- We can then interpret the effect of moving from one category to another.  For example, the predicted probability of a White voter approving of the President is 0.225 greater than an Asian voter. Note that we could have obtained this through the *divide by 4 rule*:  $0.482 / 4 \approx 0.16$. -->
+<!-- MB: Hold off until numeric variable for divide by 4?-->
+
+However, there is a way to calculate these predicted probabilities using R without doing all of the math of the standard logistic function..
+
+We have previously defined the following three concepts for a linear regression:
+
+1. Observed values $y$, or the observed value of the outcome variable
+2. Fitted values $\widehat{y}$, or the value on the regression line for a given $x$ value
+3. Residuals $y - \widehat{y}$, or the error between the observed value and the fitted value
+
+We obtained these values and other values using the `augment()` function from the **broom** package. Recall too that we used the `.se.fit` column to construct confidence intervals.  We'll see here how we can apply these same concepts to logistic regression.
+
+<!-- MB: .se.fit into cooksd???-->
+```{r, eval=FALSE}
+regression_points <- race_model %>%
+  augment() %>%
+  mutate(conf.low = .fitted - 2 * .cooksd,
+         conf.high = .fitted + 2 * .cooksd) %>%
+  select(approval, race, .fitted, conf.low, conf.high, .resid)
+regression_points
+```
+
+```{r, echo=FALSE}
+regression_points <- augment(race_model) %>%
+  mutate(conf.low = .fitted - 2 * .cooksd,
+         conf.high = .fitted + 2 * .cooksd) %>%
+  select(approval, race,  .fitted, conf.low, conf.high, .resid)
+regression_points %>%
+  slice(1:10) %>%
+  gt() %>%
+  tab_source_note(md("Regression points (First 10 out of 60,000 voters)"))
+```
+
+The syntax is the same, but the interpretation has to change, since the `.fitted`, `conf.low`, and `conf.high` columns are all on the logit scale.  While we could try to interpret these values, `augment()` has the argument `type.predict = "response"` that allow us to present the results in terms of *predicted probabilities*:
+
+```{r, eval=FALSE}
+regression_points <- race_model %>%
+  augment(type.predict = "response") %>%
+  mutate(conf.low = .fitted - 2 * .cooksd,
+         conf.high = .fitted + 2 * .cooksd) %>%
+  select(approval, race, .fitted, conf.low, conf.high, .resid)
+regression_points
+```
+
+```{r, echo=FALSE}
+regression_points <- augment(race_model,
+                             type.predict = "response") %>%
+  mutate(conf.low = .fitted - 2 * .cooksd,
+         conf.high = .fitted + 2 * .cooksd) %>%
+  select(approval, race, .fitted, conf.low, conf.high, .resid)
+regression_points %>%
+  slice(1:10) %>%
+  gt() %>%
+  tab_source_note(md("Regression points (First 10 out of 60,000 voters)"))
+```
+
+Now each of the `.fitted` values is a *predicted probability* of a Democratic victory from our model for a particular district and the confidence intervals are confidence intervals around that predicted probability. You'll notice how the fitted value in this table is the same as the probabilities we calculated by hand using the standard logistical function.
+
+You may be wondering how to interpret the residuals.  The residuals reported by `augment()` for a logistic regression are called *deviance residuals*.  A deviance residual can be calculated for each observation using:
+
+\[
+\textrm{d}_i = 
+\textrm{sign}(Y_i-\hat{p_i})\sqrt{-2 [ Y_i \text{log} \hat{p_i} + (1 - Y_i) \text{log} (1 - \hat{p_i}) ]}
+\]
+
+where $Y_i$ is the actual outcome and $p_i$ is the predicted probability from the logistic regression model.
+
+The sum of the individual deviance residuals is referred to as the **deviance** or **residual deviance**. The deviance is used to assess the model. As the name suggests, a model with a small deviance is preferred.
+
+However, you can also have `augment()` report residuals as differences between the observed outcome and the predicted probabilities by using `type.residuals = "deviance"`:
+
+<!-- type.residuals from response to deviance -->
+
+```{r, eval=FALSE}
+regression_points <- race_model %>%
+  augment(type.predict = "response",
+          type.residuals = "deviance") %>%
+  mutate(conf.low = .fitted - 2 * .cooksd,
+         conf.high = .fitted + 2 * .cooksd) %>%
+  select(approval, race, .fitted, conf.low, conf.high, .resid)
+regression_points
+```
+
+```{r, echo=FALSE}
+regression_points <- augment(race_model,
+                             type.predict = "response",
+                             type.residuals = "deviance") %>%
+  mutate(conf.low = .fitted - 2 * .cooksd,
+         conf.high = .fitted + 2 * .cooksd) %>%
+  select(approval, race, .fitted, conf.low, conf.high, .resid)
+regression_points %>%
+  slice(1:10) %>%
+  gt() %>%
+  tab_source_note(md("Regression points (First 10 out of 60,000 voters)"))
+```
+
+Now, the `.resid` value is the difference between the actual outcome (`approval`) and the predicted probability.
 
 ### One numerical explanatory variable
 
-We'll now predict `approval_num` with a single numerical explanatory variable, `age`. 
+We'll now predict `approval` with a single numerical explanatory variable, `age`. 
 
 1. We first "fit" the logistic regression model using the `glm(y ~ x, family, data)` function and save it in `age_model`.
 2. We get the regression table by applying the `tidy()` function from the **broom** package to `age_model`.  We'll print the `term`, `estimate`, `conf.low`, and `conf.high` columns.
 
 ```{r, eval=FALSE}
-age_model <- glm(approval_num ~ age, family = binomial, data = cces_ch12)
+age_model <- glm(approval ~ age, family = binomial, data = cces_ch12)
 age_model %>%
   tidy(conf.int = TRUE) %>%
   select(term, estimate, conf.low, conf.high)
 ```
 
 ```{r, echo=FALSE}
-age_model <- glm(approval_num ~ age, family = binomial, data = cces_ch12)
+age_model <- glm(approval ~ age, family = binomial, data = cces_ch12)
 tidy(age_model,
      conf.int = TRUE) %>%
   select(term, estimate, conf.low, conf.high) %>%
@@ -359,39 +457,201 @@ ggplot(dat, aes(x = x)) +
   theme_minimal()
 ```
 
-A linear regression line (in blue) has a constant slope, which means that no matter what $x$ you start with, the effect of going from $x$ to $x + 1$ on $y$ is the same number.  
-
-However, take a look at the logistic regression curve (in red).  The value of the slope for very high or very low values of $x$ is smaller (approaching 0 as $x$ tends to negative or positive infinity), while the slope in the middle of the curve is highest.  The steepest part of the curve corresponds to that part of the curve where the predicted probability equals 0.5.  That is, the effect of a one-unit change in $x$ is the highest when the predicted probability for that $x$ is close to 0.5 and smallest when the predicted probability for that $x$ is close to 0 or 1.
+A linear regression line (in blue) has a constant slope, which means that no matter what $x$ you start with, the effect of going from $x$ to $x + 1$ on $y$ is the same number.  However, take a look at the logistic regression curve (in red).  The value of the slope for very high or very low values of $x$ is smaller (approaching 0 as $x$ tends to negative or positive infinity), while the slope in the middle of the curve is highest.  The steepest part of the curve corresponds to that part of the curve where the predicted probability equals 0.5.  That is, the effect of a one-unit change in $x$ is the highest when the predicted probability for that $x$ is close to 0.5 and smallest when the predicted probability for that $x$ is close to 0 or 1.
 
 You can always use R to calculate the predicted probabilities for any value of $x$ and thus calculate the effect of moving from a particular $x$ to $x + 1$.  But this can get complicated.  In particular, once you start employing logistic regression with multiple predictors, the effect of a one-unit change in a predictor $x$ depends not only on $x$, but on the values of all the other predictors in your model!  You can always plug in all the coefficients and values of your predictors into the logistic function to calculate predicted probabilities, but if you don't do that, how can you interpret the coefficients?
 
-Here is where we can use the *divide by 4 rule* that we discussed before.  A logistic regression coefficient divided by 4 is the effect of that variable at the steepest part of the logistic regression curve, which, as we saw, corresponds to where the predicted probability is 0.5.
+Here is where we can use the *divide by 4 rule* that we discussed before.  A logistic regression coefficient divided by 4 is the effect of that variable at the steepest part of the logistic regression curve, which, as we just saw, corresponds to where the predicted probability is 0.5.
 
-Therefore, you can divide a logistic regression coefficient by 4 to get an upper bound on the effect a one-unit change in that predictor will have on the predicted probability of your outcome.  In this case, the approximation tells us that each additional year is associated with about a $-0.004$ decrease in the predicted probability of a Democratic victory.  Since the predicted probability of a Democratic victory in this model never strays far from 0.5, this is a pretty good approximation.^[Indeed, it is almost identical to the coefficient you would obtain in a linear regression--try it out!]
+Therefore, you can divide a logistic regression coefficient by 4 to get an upper bound on the effect a one-unit change in that predictor will have on the predicted probability of your outcome.  In this case, the approximation tells us that each additional year of age is associated with about a $0.023 / 4 = 0.005$ increase in the predicted probability of a voter approving of the President.
 
 While `race_model` and `age_model` both tell us something interesting, we could learn more with an *interaction model* that includes both of our predictors.
 
 ### One numerical and one categorical explanatory variable
 
-We'll now predict `approval_num` with two variables, `race` and `age`, as well as the interaction between the two.
+We'll now predict `approval` with two variables, `race` and `age`, as well as the interaction between the two.
 
-1. We first "fit" the logistic regression model using the `glm(y ~ x1 * x2, family, data)` function and save it in `interact_model`.
-2. We get the regression table by applying the `tidy()` function from the **broom** package to `interact_model`.  We'll print the `term`, `estimate`, `conf.low`, and `conf.high` columns.
+This time, we'll do it slightly differently. Rather than using `glm()` like we did in the last two examples, we'll instead be using tools from a package called **tidymodels**. Rather than having to use a different function each time we construct a model (choosing between lm(), glm(), and other modelling function), **tidymodels** streamlines the synthax for any model we want to construct.
+
+```{r, message = FALSE}
+library(tidymodels)
+```
+
+**tidymodels** includes many packages, but we'll start by showing how to use **parsnip** to fit a logistic regression. 
+
+First, in the **tidymodels** workflow, we have to save the *model specification*.  We do that using two functions: `logistic_reg()` and `set_engine()`.
+
+```{r}
+logistic_mod <- logistic_reg() %>%
+  set_engine("glm")
+```
+
+`logistic_reg()` says that we want to fit a logistic regression, and `set_engine("glm")` specifies that we want to do it using `glm()`.  Behind the scenes, **parsnip** uses many other packages to fit its models, but by unifying the syntax, it means that you don't have to memorize how a lot of different functions work.
+
+Note that our new object, `logistic_mod`, doesn't contain our data or a formula.  In order actually to fit our model, we need to feed `logistic_mod` to a function called `fit()`.  `fit()` is the general purpose function in **parsnip** for fitting any model specification.  It takes as its first argument the model specification, but otherwise it operates similarly to `lm()` and `glm()`. We have to wrap `approval` in `factor()`, because `fit()` is more careful than `glm()` in requiring that classification models actually have categorical outcomes.
+
+
+```{r}
+logistic_fit <- fit(logistic_mod,
+                    factor(approval) ~ race * age,
+                    data = cces_ch12)
+```
+
+One we have fit the model, how can we use it?  The `glm` object is still stored in `logistic_fit$fit`, so we can access that and use `tidy()`, just like we did before:
+
+```{r}
+logistic_fit$fit %>%
+  tidy(conf.int = TRUE) %>%
+  select(term, estimate, conf.low, conf.high) %>%
+  gt()
+```
+
+As you can see, this generates the same results as when we used `glm()` directly. Now we can see how the effect of `age` varies by `race`. Looking at predicted probabilities of these numbers can put this model in perspective.  Let's use `augment()` to generate the predictions.  Remember that `type.predict = "response"` and `type.residuals = "deviance"` put the fitted values and the residuals on the probability scale.
+
+
+<!-- MB: This doesn't work, yoou need to find a way to do it in tidymodels. It is a dataframe not a model -->
 
 ```{r, eval=FALSE}
-interact_model <- glm(approval_num ~ race * age, family = binomial, data = cces_ch12)
-interact_model %>%
+
+interact_model <- logistic_fit$fit %>%
   tidy(conf.int = TRUE) %>%
   select(term, estimate, conf.low, conf.high)
+
+# regression_points <- interact_model %>%
+#   augment(type.predict = "response",
+#           type.residuals = "deviance") %>%
+#   mutate(conf.low = .fitted - 2 * .cooksd,
+#          conf.high = .fitted + 2 * .cooksd) %>%
+#   select(approval, race, age, .fitted, conf.low, conf.high, .resid)
+# regression_points
+
 ```
 
 ```{r, echo=FALSE}
-interact_model <- glm(approval_num ~ race * age, family = binomial, data = cces_ch12)
-tidy(interact_model,
-     conf.int = TRUE) %>%
-  select(term, estimate, conf.low, conf.high) %>%
-  gt() %>%
-  tab_source_note(md("Logistical Regression Table"))
+# 
+# regression_points <- augment(interact_model,
+#                              type.predict = "response",
+#                              type.residuals = "deviance") %>%
+#   mutate(conf.low = .fitted - 2 * .cooksd,
+#          conf.high = .fitted + 2 * .cooksd) %>%
+#   select(approval, race, age, .fitted, conf.low, conf.high, .resid)
+# regression_points %>%
+#   slice(1:10) %>%
+#   knitr::kable(
+#     digits = 3,
+#     caption = "Regression points (First 10 out of 60,000 voters)",
+#     booktabs = TRUE,
+#     linesep = ""
+#   ) %>%
+#   gt()
+
+```
+
+## Classification and regression trees (CART)
+
+```{r, echo=FALSE}
+img_path <- "images"
+```
+
+### What is CART?
+
+We have learned how to fit models for binary responses using logistic regression.  However, logistic regression is just one of many methods we can use to model binary responses.  CART is another approach, which we'll learn about in this section.  In the next section, we'll learn about random forests.
+
+<!-- Validity/model fitting the world. bias/variance  overfitting/underfitting. goal of the model -->
+
+A **tree** is basically a flow chart of yes or no questions. The general idea of the methods we are describing is to define an algorithm that uses data to create these trees with predictions at the ends, referred to as _nodes_. Decision trees predict an outcome variable $Y$ by *partitioning* the predictors.
+
+Decision trees like this are often used in practice. For example, to decide on a person's risk of poor outcome after having a heart attack, doctors use the following:
+
+```{r, echo=FALSE, out.width="50%"}
+# source https://www.researchgate.net/profile/Douglas_Walton/publication/228297479/figure/fig1/AS:301828123185152@1448972840090/Decision-Tree-for-Heart-Attack-Victim-adapted-from-Gigerenzer-et-al-1999-4.png
+#knitr::include_graphics(file.path(img_path,"Decision-Tree-for-Heart-Attack-Victim-adapted-from-Gigerenzer-et-al-1999-4.png"))
+```
+
+(Source: Walton 2010 Informal Logic, Vol. 30, No. 2, pp. 159-184^[https://papers.ssrn.com/sol3/Delivery.cfm/SSRN_ID1759289_code1486039.pdf?abstractid=1759289&mirid=1&type=2].)
+
+Here, the binary outcome is whether a patient is "High Risk" or "Low Risk."  We have three predictors: minimum systolic blood pressure over the initial 24-hour period, age, and presence of sinus tachycardia.  The tree presents a series of yes or no questions that allow us to use the predictors to classify a patient's risk level.
+
+**Classification trees**, or decision trees, are used in prediction problems where the outcome is categorical.  (When the outcome is numerical, they are called **regression trees**; hence the acronym **CART**, standing for Classification and Regression Trees.)  The general idea here is to build a decision tree and, at the end of each _node_, obtain a predictor $\hat{y}$. A mathematical way to describe this is to say that we are partitioning the *predictor space* into $J$ non-overlapping regions, $R_1, R_2, \ldots, R_J$, and then for any predictor $x$ that falls within region $R_j$, we estimate $f(x)$ with the class that is the most common among the data within the partition for which the associated predictor $x_i$ is also in $R_j$.
+
+But how do we decide on which partitions to make  ($R_1, R_2, \ldots, R_J$) and how do we choose $J$, the total number of partitions? Here is where the algorithm gets a bit complicated.
+
+Classification trees create partitions recursively. We start the algorithm with one partition, the entire predictor space (i.e., every observation is classified as 0 or 1). But after the first step we will have two partitions. After the second step we will split one of these partitions into two and will have three partitions, then four, then five, and so on. (We will describe how we decide when to stop later.)
+
+Once we select a partition $\mathbf{x}$ to split in order to create the new partitions, we find a predictor $j$ and value $s$ that define two new partitions, which we will call $R_1(j,s)$ and $R_2(j,s)$, that split our observations in the current partition by asking if $x_j$ is bigger than $s$ (or if $x_j$ falls into a particular category $s$, if the predictor $j$ is categorical):
+
+$$
+R_1(j,s) = \{\mathbf{x} \mid x_j < s\} \mbox{  and  } R_2(j,s) = \{\mathbf{x} \mid x_j \geq s\}
+$$
+
+Now, after we define the new partitions $R_1$ and $R_2$, and we decide to stop the partitioning process, we compute predictors by taking the most common category of all the observations $y$ for which the associated $\mathbf{x}$ is in $R_1$ and $R_2$. We refer to these two as $\hat{y}_{R_1}$ and $\hat{y}_{R_2}$ respectively. 
+
+But how do we pick the predictor $j$ and the value $s$? One of the more popular ways for categorical data is the _Gini Index_.
+
+In a perfect scenario, the outcomes in each of our partitions are all of the same category since this will permit perfect accuracy. The _Gini Index_ is going to be 0 in this scenario, and become larger the more we deviate from this scenario. To define the Gini Index, we define $\hat{p}_{j,k}$ as the proportion of observations in partition $j$ that are of class $k$. The Gini Index is defined as 
+
+$$
+\mbox{Gini}(j) = \sum_{k=1}^K \hat{p}_{j,k}(1-\hat{p}_{j,k})
+$$
+
+If you study the formula carefully you will see that it is in fact 0 in the perfect scenario described above, since $\hat{p}_{j,k}(1-\hat{p}_{j,k}) = 0$ for all $k$.
+
+Once we are done partitioning the predictor space into regions, in each region a prediction is made using the observations in that region. 
+
+But when do we stop partitioning?  Every time we split and define two new partitions, the Gini Index improves. This is because with more partitions, our model has more flexibility to adapt to our data.  However, our model may therefore perform worse when exposed to new data (this problem is called *overfitting*). This connects to our discussion of validity and models, as the conditions used to create the model will be too specific to accurately extrapolate to new data points. To avoid this, the algorithm sets a minimum for how much the Gini Index must improve for another partition to be added. This parameter is referred to as the _complexity parameter_ ($c_p$). The measure of fit must improve by a factor of $c_p$ for the new partition to be added. Large values of $c_p$ will therefore force the algorithm to stop earlier which results in fewer nodes.
+
+<!-- MB: Use overfitting to discuss validity/model fitting the world-->
+
+Classification trees have certain advantages that make them very useful. They are highly interpretable, even more so than linear models. They are easy to visualize (if small enough).  Finally, they can model human decision processes. However, in terms of accuracy, they are rarely the best performing method since they are not very flexible. Random forests, explained in the next section, improve on some of the shortcomings of classification trees.
+
+### One categorical explanatory variable
+
+To create classification trees, we'll use the `decision_tree()` model specification and the `"rpart"` engine.  The syntax is very similar to when we used `logistic_reg()`.  Note that our binary response variable has to be a factor, just like with `logistic_reg()`. 
+
+```{r}
+library(parsnip)
+tree_mod <- decision_tree() %>%
+  set_engine("rpart",
+             model = TRUE) %>%
+  set_mode("classification")
+```
+
+(Note that we added the argument `model = TRUE` to `set_engine()`.  This saves the model frame, which we will need to avoid a warning when we plot the trees later.)
+
+The function `set_mode()` wasn't necessary when we did logistic regression.  Here it clarifies that we want a *classification* tree rather than a *regression* tree.
+
+Now that we have the object `tree_mod`, we can use `fit()` in the **parsnip** package.  We'll start by predicting `approval` with `region`:
+
+```{r}
+race_tree <- fit(tree_mod,
+                         factor(approval) ~ race, 
+                         data = cces_ch12)
+```
+
+See how when using **tidymodels**, this is exactly the same as how we would fit a logistic regression, but with our model specification saved in `tree_mod` rather than the model specification we saved in `logistic_fit`.
+
+What was the result of our tree?
+
+```{r}
+race_tree
+```
+
+It's not especially helpful to look at the results of a tree as text.  In order to visualize the tree, we'll use the `prp()` function in the **rpart.plot** package.  Remember that the model object is stored in `race_tree$fit`.
+
+```{r, message = FALSE}
+library(rpart.plot)
+
+race_tree$fit %>%
+  prp(extra = 6, varlen = 0, faclen = 0)
+```
+
+The arguments `varlen = 0` and `faclen = 0` ensure that the full variable names and factor levels are printed.  The argument `extra = 6` shows the proportion of "yes" outcomes within a given partition. Since we'll be using these same arguments throughout the chapter, we'll create a new function that calls `prp()` but with these options as defaults:
+
+```{r}
+prp_ch13 <- function(x, ...) prp(x, extra = 6, varlen = 0, faclen = 0, ...)
+
+race_tree$fit %>%
+  prp_ch13()
 ```
 
 
