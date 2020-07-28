@@ -5,7 +5,7 @@ output_yaml:
 
 # Functions
 
-<!-- 1. Functions are cool. Not teaching you to write one yet though! An especially cool type of function is map function. Play with map functions. Oh! What happens when a map function causes a list column to appear. Oh no! -->
+<!-- 1. Functions are cool. Not teaching you to write one yet though! An especially cool type of function is map function. Play with map functions. Oh! What happens when a map function causes a list column to appear. Oh no! Done -->
 
 <!-- 2. Reminder about lists. How we work with lists. And how we work with list columns. -->
 
@@ -73,31 +73,19 @@ The goal of this chapter is to reveal the __process__ a long-time useR employs f
 
 ## Introduction to Functions
 
-First, let's introduce the concept of functions. A function is a piece of code that is packaged in a way that makes it easy to reuse. Functions make it easy for you to `filter()`, `sort()`, `select()`, and create a `data.frame()`, as you have seen in the last few chapters. Functions also allow you to transform variables and perform a bunch of useful mathematical calculations, such as finding the `min()`, `max()`, and `quantile()`s of a dataset. Functions are also important in generating data and values, such as using `rnorm()` to randomly generate a normal distribution.
+First, let's introduce the concept of functions. A function is a piece of code that is packaged in a way that makes it easy to reuse. Functions make it easy for you to `filter()`, `arrange()`, `select()`, and create a `tibble()`, as you have seen in the last few chapters. Functions also allow you to transform variables and perform a bunch of useful mathematical calculations, such as finding the `min()`, `max()`, and `quantile()`s of a dataset. Functions are also important in generating data and values, such as using `rnorm()` to randomly generate a normal distribution.
 
 Note that every time we mention a function, we include the parentheses. This is because you call a function by including its parentheses and any necessary arguments in those parentheses. If you run the function name without its parentheses, R will return the code that makes up the function. 
 
 ```{r echo = TRUE}
-Sys.Date
+rnorm(1)
 ```
+
+If you run the function name without its parentheses, R will return the code that makes up the function. 
 
 ```{r echo = TRUE}
-Sys.Date()
+rnorm
 ```
-
-There are plenty of built-in functions in R, such as the ones mentioned above. You can also create your own custom functions, which may look something like this:
-
-```{r eval=FALSE}
-my_function <- function(x) x + 1
-```
-
-This code creates a function named `my_function()` that takes in in a value `x` and return a value `x + 1`. Alternatively, you could leave the function unnamed, as such:
-
-```{r eval=FALSE}
-function(x) x + 1
-```
-
-These nameless functions are called [anonymous functions.](https://coolbutuseless.github.io/2019/03/13/anonymous-functions-in-r-part-1/) We can create functions that do operations "on the fly" without bothering to give them a name.
 
 Functions can do all sorts of things. Below, `sample()` takes a vector of values and spits out a number of random values from that vector. You can specify the number of random values with the argument `size`. Let's take it for a spin. This is the equivalent of rolling a die!
 
@@ -111,22 +99,59 @@ Functions can also take in other functions as arguments. For example, `replicate
 replicate(10, sample(1:6, 1))
 ```
 
-We will dive into functions more in depth soon, but next we will discuss of list-columns and `map_*` functions. 
+An especially useful type of function is the family of `map_*` functions. `map_*` functions come from the **purrr** package, which you will have loaded if you have loaded **tidyverse**. These functions which applies the same function to every row in a tibble.
 
-## List-columns and `map_*` functions
+Let's create a tibble with 3 values: 3, 7, and 2.
 
-We are now going to learn about [**list columns**](https://r4ds.had.co.nz/many-models.html#list-columns-1) and [**`map_*` functions**](https://jennybc.github.io/purrr-tutorial/ls01_map-name-position-shortcuts.html), powerful tools that we will be using throughout the book.^[If I were going to give a lecture on these topics, it would look like [this one](https://resources.rstudio.com/webinars/how-to-work-with-list-columns-garrett-grolemund).]
+```{r}
+library(tidyverse)
+tibble(x = c(4, 9, 1))
+```
 
+What if we wanted to take the square root of each value?
 
-### What are list columns?
+```{r map_simple}
+tibble(x = c(4, 9, 1)) %>% 
+  mutate(new = map_dbl(x, sqrt))
+```
 
-Recall our previous discussion on lists.
+`map_dbl()` (pronounced "map-double") took the function `sqrt()` and applied it to each element of `x`. Note that, when we passed the function `sqrt()` to `map_dbl()`, we passed in just its name, without the closing parentheses. This code fails:
 
-Now that we understand what a list is, what is a list-column? A list column is a column of your data which is a [list](https://adv-r.hadley.nz/vectors-chap.html#lists) rather than an atomic vector. Atomic vectors are familiar to us: each element of the vector has one value, and thus if an atomic vector is a column in your dataset, each observation gets a single value.  Lists, however, can contain vectors as elements. The best way to understand this is by creating a list column yourself and inspecting the results.  `str()` is a helpful function for looking at the contents of a tibble with list columns:
+```{r, error=TRUE}
+tibble(x = c(4, 9, 1)) %>% 
+  mutate(new = map_dbl(x, sqrt()))
+```
+
+`sqrt()` with the parentheses is a call to the function. So, the first thing R tries to do is to run the function. Doing so fails because `sqrt()` requires an argument `x`, which is empty. 
+
+```{marginfigure, echo = TRUE, fig.margin = TRUE}
+Lesson: When passing a function in to `map_*` functions, pass just the name.
+```
+
+We called these `map_*` *functions* (plural) before.  If you know the expected output of your function, you can specify that kind of vector:
+
+- `map()`: list  
+- `map_lgl()`: logical
+- `map_int()`: integer
+- `map_dbl()`: double (numeric)
+- `map_chr()`: character
+- `map_df()`: data frame
+
+So, since our example produces numeric output, we use `map_dbl()` instead of `map()`.
+
+Now, you may be wondering, what's the difference between using `mutate()` and `map_*` functions? The answer lies in iteration, which is the specialization of the **purrr** package. `map_*` functions are powerful because of their ability to create list-columns and to apply functions to every single element of a list, which `mutate()` cannot handle. Need a quick refresher on what lists are? You're in luck.
+
+## List-columns
+
+ Let's quickly refresh on what lists are and functions that commonly deal with lists.
+
+Now that we've discussed lists, let's dive into list-columns.
+
+We are now going to learn about [**list columns**](https://r4ds.had.co.nz/many-models.html#list-columns-1).^[If I were going to give a lecture on these topics, it would look like [this one](https://resources.rstudio.com/webinars/how-to-work-with-list-columns-garrett-grolemund).]
+
+A list column is a column of your data which is a [list](https://adv-r.hadley.nz/vectors-chap.html#lists) rather than an atomic vector. Atomic vectors are familiar to us: each element of the vector has one value, and thus if an atomic vector is a column in your dataset, each observation gets a single value.  Lists, however, can contain vectors as elements. The best way to understand this is by creating a list column yourself and inspecting the results.  `str()` is a helpful function for looking at the contents of a tibble with list columns:
 
 ```{r simple_list_col, message=FALSE}
-library(tidyverse)
-
 tibble(new_col = list(1:2, 3:5)) %>%
   str()
 ```
@@ -159,11 +184,9 @@ tibble(new_col = list(1:2,
   str()
 ```
 
-### Creating list columns with `mutate()`
-
 Any function that returns multiple values can be used to create a list column.  For example, consider the following tibble:
 
-```{r alice_and_bob, eval = FALSE}
+```{r alice_and_bob}
 tibble(col_1 = c("Alice and Bob", "Carol and Dan"))
 ```
 
@@ -175,18 +198,23 @@ tibble(col_1 = c("Alice and Bob", "Carol and Dan")) %>%
   str()
 ```
 
+```{marginfigure}
+*Note*: `str_split()` was a particularly easy function for using with `mutate()` and `summarize()` because it returns a list.  You can check this by running `typeof()` on the output of `str_split()`: e.g., `str_split("Alice and Bob", " and ") %>% typeof()`.  If a function returns multiple values as a vector, like `quantile()` does, you can't use it directly in `mutate()` or `summarize()`, but you can wrap `list()` around it in order to get the same behavior.
+```
+
 After using `str_split()` within `mutate()`, we have created a new column, and that new column is a list column. 
 
-This is often how we will go about creating list columns.  Let's practice with the `kenya` dataset.  How could we add a column to the dataset that included the quantiles of the `poverty` variable?
+This is often how we will go about creating list columns.  Let's practice with the `kenya` dataset. How could we add a column to the dataset that included the quantiles of the `poverty` variable?
+
+First, we load the necessary `PPBDS.data` library, select the relevant variables, and group by `block`.
 
 ```{r kenya_list_column}
 library(PPBDS.data)
 kenya %>%
+  select(block, poverty) %>%
   group_by(block) %>%
   mutate(povertyQuantile = list(quantile(poverty)))
 ```
-
-*Note*: `str_split()` was a particularly easy function for using with `mutate()` and `summarize()` because it returns a list.  You can check this by running `typeof()` on the output of `str_split()`: e.g., `str_split("Alice and Bob", " and ") %>% typeof()`.  If a function returns multiple values as a vector, like `quantile()` does, you can't use it directly in `mutate()` or `summarize()`, but you can wrap `list()` around it in order to get the same behavior.
 
 <!-- DK: The above bit should be explained at the beginning when we review lists. -->
 
@@ -211,39 +239,7 @@ tibble(start = c(3, 2.5, 6)) %>%
 
 ```
 
-Or, we can use `map_dbl()` to apply this to our input variable.  `map_dbl()` --- pronounced "map double" --- comes from the **purrr** package, which you will have loaded if you have loaded **tidyverse**.  `map_dbl()` is just one member of a family of `map_*` functions which applies the same function to every row in a tibble. The "dbl" suffix indicates that the function returns a "double," meaning a numeric value.
 
-
-```{r map_simple}
-tibble(start = c(3, 2.5, 6)) %>% 
-  mutate(new = map_dbl(start, sqrt))
-```
-
-`map_dbl()` took the function `sqrt()` and applied it to each element of `start`. Note that, when we passed the function `sqrt()` to `map_dbl()`, we passed in just its name, without the closing parentheses. This code fails:
-
-```{r, error=TRUE}
-tibble(start = c(3, 2.5, 6)) %>% 
-  mutate(new = map_dbl(start, sqrt()))
-```
-
-`sqrt()` with the parentheses is a call to the function. So, the first thing R tries to do is to run the function. Doing so fails because `sqrt()` requires an argument `x`, which is empty. 
-
-```{marginfigure, echo = TRUE, fig.margin = TRUE}
-Lesson: When passing a function in to `map_*` functions, pass just the name.
-```
-
-We called these `map_*` *functions* (plural) before.  If you know the expected output of your function, you can specify that kind of vector:
-
-- `map()`: list  
-- `map_lgl()`: logical
-- `map_int()`: integer
-- `map_dbl()`: double (numeric)
-- `map_chr()`: character
-- `map_df()`: data frame
-
-So, since our example produces numeric output, we use `map_dbl()` instead of `map()`.
-
-Now, you may be wondering, what's the difference between using `mutate()` and `map_*` functions? After all, the example above demonstrated a use case in which both were used interchangeably. The answer lies in iteration, which is the specialization of the **purrr** package. `map_*` functions are powerful because of their ability to create list-columns and to apply functions to every single element of a list, which `mutate()` cannot handle. We'll show you exactly what we mean in the next example.
 
 ### Using `map_*` functions to create list-columns
 
@@ -308,14 +304,25 @@ See how we chained the `map_*` functions:
 2) `log_weights` was used as the input to `map()` to create `sorted_log_weights`
 3) `sorted_log_weights` was used as the input to `map()` to create `top5_log_weights`
 
-Later on, we will practice using map functions to create list columns with custom functions, not just built-in R functions. You will see that `map_*` functions are highly versatile!
+Until now, we have practiced using map functions and built-in R functions such as `log()` and `sort()` to create list columns. Next, we will show you how to write your very own functions!
 
-
-<!-- This is where we need to fill in the gap between map functions and functions in general -->
-
-## Built-In Functions and Custom Functions
+## Custom Functions
 
 ### Building your first custom function
+
+There are plenty of built-in functions in R, such as the ones mentioned above. You can also create your own custom functions, which may look something like this:
+
+```{r eval=FALSE}
+my_function <- function(x) {
+  x + 1
+}
+```
+
+This code creates a function named `my_function()` that takes in in a value `x` and return a value `x + 1`. Alternatively, you could leave the function unnamed, as such:
+
+```{r eval=FALSE}
+function(x) x + 1
+```
 
 <!-- EC: I still like the basic introducton to building a function, so I replaced gapminder with `kenya`. Thoughts? -->
 
