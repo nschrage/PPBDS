@@ -6,7 +6,7 @@ output_yaml:
 
 <!-- Outline: -->
 
-<!-- 1) Preamble: Intro paragraph to classification in general, both 0/1 and multiple categories. Discuss different, all for solving the same problem. -->
+<!-- 1) Preamble: Intro paragraph to classification in general, both 0/1 and multiple categories. Discuss different approaches, all for solving the same problem. -->
 
 <!-- 2) EDA of cces (meaning just the columns we care about). Start with the usual EDA of the subset of cces data which we are using (only 2018 for now), which will be state, age, gender, race, education.   -->
 
@@ -30,7 +30,7 @@ output_yaml:
 
 <!-- * Let's use cces and create a new variable which is 1 if you are Conservative or Very Conservative and 0 otherwise. We want to explore what things are associated with being Conservative. -->
 
-<!-- * First a regression using just data from 2018 with rstanarm with conservative ~ age, gender, race, education. (Maybe leave out education because it is an ordered factor?) Within just this example, we can go through all of our themes.Rmd issues. First do gender, then age, then multivariate. Make the model, discuss meaning of the coefficients. Then, after multivariate, you are doing posterior_linpred(), posterior_pred(). -->
+<!-- * First a regression using just data from 2018 with rstanarm with conservative ~ age, gender, race, education. (Maybe leave out education because it is an ordered factor?) Within just this example, we can go through all of our themes.Rmd issues. First do gender, then age, then multivariate. Make the model, discuss meaning of the coefficients. Then, after multivariate, you are doing posterior_linpred(), posterior_pred(). Then place the whole thing within the context of tidymodels. -->
 
 <!-- * Then CART using tidymodels on exactly this data and this problem. Maybe we go slowly, showing how CART works with one variable (numeric and categorical) first. Or maybe we just go straight to the full model.  -->
 
@@ -38,39 +38,35 @@ output_yaml:
 
 <!-- * Do we have time to explore Gelman's magic trick: Showing the values of key coefficients when the model is refit to each year separately? That is, how much is age associated with being conservative over time? I hope so! But maybe not. -->
 
-<!-- * Do we have time to do a model which predicts a category with more than 0/1 possible values? I am not sure. If we were going to, we would want to pick something that is not an ordered category, I think. In this data, ony race would meet that criteria. Let's revisit this later. -->
+<!-- * Do we have time to do a model which predicts a category with more than 0/1 possible values? I am not sure. If we were going to, we would want to pick something that is not an ordered category, I think. In this data, only race would meet that criteria. Let's revisit this later. -->
 
 
-<!-- MB: Using augment() for future predictions in this chapter? Works poorly with example -->
+<!-- MB: Using augment() for future predictions in this chapter? Works poorly with example DK: No. Only use tidymodels approach. -->
+
+<!-- DK: table(cces$year, cces$approval) is concerning. I fixed. -->
 
 
 # Discrete Response {#discrete-response}
 
+**Binary responses** take on only two values: success ($Y=1$) or failure ($Y=0$), yes ($Y=1$) or no ($Y=0$), et cetera. Binary responses are one of the most common types of data that statisticians encounter.  We are often interested in modeling the probability of success, $p$, based on a set of covariates. As with regression, there are two broad categories of problems: *modeling for prediction* and *modeling for causation*. Although terminology varies across fields, "regression" is generally used for situations in which our *dependent variable* is continuous, as in Chapter \@ref(continuous-response). "Classification" applies to cases in which the dependent variable takes on discrete values, the simplest of which is the binary case.
 
-Many questions have binary answers. These questions can be answered by any pair of two answers (such as yes/no). Two examples of these questions include: 
-  a. Are students with below average grades more likely to binge drink?
-  b. Is exposure to a particular chemical associated with a cancer diagnosis?
- 
-**Binary responses** take on only two values: success ($Y=1$) or failure ($Y=0$), yes ($Y=1$) or no ($Y=0$), et cetera. Examples (a) and (b) above have binary responses (Does a student binge drink?  Was a patient diagnosed with cancer?). Binary responses are one of the most common types of data that statisticians encounter.  We are often interested in modeling the probability of success, $p$, based on a set of covariates. As with regression, there are two broad categories of problems: *modeling for explanation* and *modeling for prediction*. Although terminology varies across fields, "regression" is generally used for situations in which our *dependent variable* is continuous. "Classification" applies to cases in which the dependent variable is binary.
+In this chapter, we will look at three common techniques of **classification** of binary data.  First, we will consider logistic regression, which is similar conceptually to the linear regression models we considered in Chapters \@ref(pitfalls) and \@ref(continuous-response).  Second, we will consider classification and regression trees (CART).  Third, we will discuss random forests. We use the **tidymodels** tools for all examples.
 
-All of the new models touched upon in this chapter speak to the wider discussion of fitting our model structures to better fit what is being measured in the world. Using logistical regressions of any type more accurately describe the measured effect when dealing with binary variables.  
+<!-- DK: Need to end with precise question. -->
 
-In this chapter, we will look at three common techniques of **classification** of binary data.  First, we will consider logistic regression, which is similar conceptually to the linear regression models we considered in Chapters \@ref(pitfalls) and \@ref(continuous-response).  Second, we will consider classification and regression trees (CART).  Third, we will discuss random forests.
+## Exploratory Data Analysis (EDA)
 
-```{r, echo=FALSE, message=FALSE, warning=FALSE}
+Begin with our usual libraries:
+
+```{r, message=FALSE}
 library(tidyverse)
 library(broom)
 library(skimr)
 library(PPBDS.data)
-library(knitr)
-library(kableExtra)
-library(gridExtra)
-library(gt)
 ```
 
-## Exploratory Data Analysis (EDA)
 
-Before we start modelling, let's perform some exploratory analysis on the dataset we'll be working with, cces. Cces stands for the Cooperative Congressional Election Study, a study regarding the approval rating of individual voters to their sitting president. Each row captures one voter, some of their demographic information, and how highly they approve (or disaprprove) of the president. We will tweak the data by only looking at observations recorded in the year 2018 so that all the responses are about the same president.
+Before we start modeling, let's perform some exploratory analysis on the dataset we'll be working with, cces. Cces stands for the Cooperative Congressional Election Study, a study regarding the approval rating of individual voters to their sitting president. Each row captures one voter, some of their demographic information, and how highly they approve (or disaprprove) of the president. We will tweak the data by only looking at observations recorded in the year 2018 so that all the responses are about the same president.
 
 ```{r}
 cces_ch12 <- cces %>%
