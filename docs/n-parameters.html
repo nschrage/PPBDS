@@ -5,7 +5,7 @@
 <meta charset="utf-8" />
 <meta name="generator" content="pandoc" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<meta property="og:title" content="Chapter 9 N Parameters | Preceptor’s Primer for Bayesian Data Science" />
+<meta property="og:title" content="Chapter 9 N Parameters | We R Who We R: Preceptor’s Primer for Bayesian Data Science" />
 <meta property="og:type" content="book" />
 
 
@@ -14,7 +14,7 @@
 
 <meta name="author" content="David Kane" />
 
-<meta name="date" content="2020-07-25" />
+<meta name="date" content="2020-07-27" />
 
 <script type="text/x-mathjax-config">
 MathJax.Hub.Config({
@@ -23,9 +23,9 @@ MathJax.Hub.Config({
 </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML-full" type="text/javascript"></script>
 
-<meta name="description" content="Chapter 9 N Parameters | Preceptor’s Primer for Bayesian Data Science">
+<meta name="description" content="Chapter 9 N Parameters | We R Who We R: Preceptor’s Primer for Bayesian Data Science">
 
-<title>Chapter 9 N Parameters | Preceptor’s Primer for Bayesian Data Science</title>
+<title>Chapter 9 N Parameters | We R Who We R: Preceptor’s Primer for Bayesian Data Science</title>
 
 <link href="libs/tufte-css-2015.12.29/tufte.css" rel="stylesheet" />
 <link href="libs/tufte-css-2015.12.29/envisioned.css" rel="stylesheet" />
@@ -134,7 +134,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <div class="col-sm-12">
 <div id="TOC">
 <ul class="navbar">
-<li class="msmb"><p class="title">Preceptor's Primer for Bayesian Data Science<p><p class="author">David Kane</p>
+<li class="msmb"><p class="title">We R Who We R: Preceptor's Primer for Bayesian Data Science<p><p class="author">David Kane</p>
 <li class="dropdown" style="float:right">
 <a href="javascript:void(0)" class="dropbtn">&#x25BE; Chapters</a>
 <div class="dropdown-content">
@@ -196,6 +196,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <!-- * Should we do any Bayesian stuff here. Maybe not? We build the dgm() function by hand, maybe simplifying things a bit by not taking parameter uncertainty seriously. We mentioned that there must be an easier way, and then we do that in chapter 10.  -->
 <!-- * Should we discuss overfitting here? I think that the answer is Yes, that we at least have to mention it and why it is a problem. Indeed, we have at least two pages making sure the concepts are clear. Again, we hint at what solutions might look like and promise a resolution in chapter 10. Maybe we mention pooling. Maybe we mention cross-validation. But we don't yet solve the problem.  -->
 <!-- * The key part of this chapter is showing the themes.Rmd all the way through two problems, one causal and one not. In that way, it is very similar to chapter 8. Indeed, perhaps we should make these two chapters as alike as possible. -->
+<p>Having created models with one parameter in Chapter @ref(#one-parameter) and two parameters in Chapter @ref(#two-parameters), you are now ready to make the jump to <span class="math inline">\(N\)</span> parameters.</p>
 <p>Imagine you are running for Governor and want to do a better job of getting your voters to vote. You recently read about a large-scale experiment showing the effect of sending out a voting reminder that “shames” citizens who do not vote. You are considering sending out a “shaming” voting reminder yourself. What will happen if you do? Will more voters show up to the polls? Additionally, on the day of the election a female citizen is randomly selected. What is the probability she will vote?</p>
 <p>In this chapter, we will consider models with multiple parameters and the complexities that arise from these additions. We will also learn how to make more accurate predictions using Bayesian methods that will provide us with answers to the questions posed above.</p>
 <div id="explorator-data-analysis-of-shaming" class="section level2">
@@ -203,14 +204,22 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <span class="header-section-number">9.1</span> Explorator Data Analysis of <code>shaming</code>
 </h2>
 <p>Begin by loading packages which we have used in previous chapters.</p>
-<p>We will start off this chapter introducing a new data set from the <strong>PPBDS.data</strong> package: shaming. This data set corresponds to an experiment carried out by Gerber, Green, and Larimer (2008) titled “Social Pressure and Voter Turnout: Evidence from a Large-Scale Field Experiment”. This experiment used several hundred thousand registered voters and a series of mailings to determine the effect of social pressure on voter turnout. Four types of treatments were used in the experiment, with voters receiving one type of mailing. All of the mailing treatments carried the message, “DO YOUR CIVIC DUTY - VOTE!”.</p>
+<div class="sourceCode" id="cb778"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb778-1"><a href="n-parameters.html#cb778-1"></a><span class="kw">library</span>(PPBDS.data)</span>
+<span id="cb778-2"><a href="n-parameters.html#cb778-2"></a><span class="kw">library</span>(skimr)</span>
+<span id="cb778-3"><a href="n-parameters.html#cb778-3"></a><span class="kw">library</span>(broom)</span>
+<span id="cb778-4"><a href="n-parameters.html#cb778-4"></a><span class="kw">library</span>(tidyverse)</span></code></pre></div>
+<p>We will start off this chapter introducing a new data set from the <strong>PPBDS.data</strong> package: <code>shaming</code>. This data set corresponds to an experiment carried out by Gerber, Green, and Larimer (2008) titled “Social Pressure and Voter Turnout: Evidence from a Large-Scale Field Experiment”. This experiment used several hundred thousand registered voters and a series of mailings to determine the effect of social pressure on voter turnout.</p>
+<!-- DK: Do glimpse and maybe other discussion here -->
+<!-- Then mention treatment and run shaming %>% count(treatment), and then you discuss what these are. -->
+<p>Four types of treatments were used in the experiment, with voters receiving one type of mailing. All of the mailing treatments carried the message, “DO YOUR CIVIC DUTY - VOTE!”.</p>
 <p>The first treatment, Civic Duty, also read, “Remember your rights and responsibilities as a citizen. Remember to vote.” This message acted as a baseline for the other treatments, since it carried a message very similar to the one displayed on all the mailings.</p>
 <p>In the second type of treatment, households received a mailing called the Hawthorne effect that told the voters that they were being studied and their voting behavior would be examined through public records. This adds a small amount of social pressure to the households receiving this mailing.</p>
 <p>The third type of treatment is Self, in which the mailing includes the recent voting record of each member of the household, placing the word “Voted” next to their name if they did in fact vote in the 2004 election or places a blank space next to the name if they did not. In this mailing, the households were also told, “we intend to mail an updated chart” with the voting record of the members after the 2006 election. By emphasizing the public nature of voting records, this type of mailing exerts more social pressure on voting than the Hawthorne treatment.</p>
 <p>The final type of mailing is the Neighbors treatment, which follows the Self mailing by listing the household members’ voting records, as well as the voting records of those who live nearby. This mailing also told recipients, “we intend to mail an updated chart” of who voted in the 2006 election. This “shaming” treatment exerts the most social pressure of all the treatments and broadcasts individuals’ voting habits.</p>
-<p>Having created models with one parameter in Chapter @ref(#one-parameter) and two parameters in Chapter @ref(#two-parameters), you are now ready to make the jump to <span class="math inline">\(N\)</span> parameters.</p>
-<p>Consider the <code>shaming</code> tibble from <strong>PPBDS.data</strong>.</p>
+<p>In addition to the treatments, the data set also consists of variables such as <code>primary_02</code>, <code>general_02</code>, <code>primary_04</code>, and <code>general_04</code> which tell us whether or not respondents voted in these primary and general elections. We are also given information about the respondents’ backgrounds such as <code>sex</code>, <code>birth_year</code>, and household size (<code>hh_size</code>).</p>
+<p>Consider the <code>shaming</code> tibble from <strong>PPBDS.data</strong>. Let’s explore the variables and observations contained within this data set by performing an Exploratory Data Analysis (EDA). EDAs help us summarize the data, identify patterns, spot outliers or anomalies, and more. We can start by running some summarizing commands such as <code>glimpse()</code>, <code>sample_n()</code>, and <code>summary()</code>.</p>
 <!-- Provide a EDA of the shaming tibble, perhaps restricting it to a subset of the provided columns. Follow the lead of chapter 10. Make sure to use `glimpse()`, `sample_n()` and `skim()`. Readers need to know understand what the dependent variable means, along with left-hand side variables like treatment. -->
+<div class="sourceCode" id="cb779"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb779-1"><a href="n-parameters.html#cb779-1"></a><span class="kw">glimpse</span>(shaming)</span></code></pre></div>
 <pre><code>## Rows: 344,084
 ## Columns: 10
 ## $ sex         &lt;chr&gt; "Male", "Female", "Male", "Female", "Female", "Male", "Fe…
@@ -223,283 +232,190 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 ## $ primary_06  &lt;int&gt; 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 0, 1, …
 ## $ hh_size     &lt;int&gt; 2, 2, 3, 3, 3, 3, 3, 3, 2, 2, 1, 2, 2, 1, 2, 2, 2, 2, 1, …
 ## $ no_of_names &lt;int&gt; 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 2…</code></pre>
-<pre><code>## # A tibble: 5 x 10
-##   sex   birth_year primary_02 general_02 primary_04 general_04 treatment
-##   &lt;chr&gt;      &lt;int&gt; &lt;chr&gt;      &lt;chr&gt;      &lt;chr&gt;      &lt;chr&gt;      &lt;fct&gt;    
-## 1 Male        1979 No         No         No         Yes        Civic Du…
-## 2 Fema…       1937 Yes        Yes        No         Yes        Self     
-## 3 Fema…       1964 Yes        Yes        No         Yes        Neighbors
-## 4 Male        1948 Yes        Yes        No         Yes        Hawthorne
-## 5 Male        1955 No         Yes        Yes        Yes        Control  
+<p>Here we see that <code>glimpse()</code> gives us a look at the raw data contained within the <code>shaming</code> data set. At the very top of the output, we can see the number of rows and columns, or observations and variables respectively. We see that there are 344,084 observations, with each row corresponding to a unique respondent. The “Columns: 10” tells us that there are 10 variables within this data set. Below this, we see a cutoff version of the entire data set that has the variables on the left as rows and the observations as a list separated by commas, as compared to the tibble output that presents with the variables as columns and the observations as rows running horizontally.</p>
+<p>While <code>glimpse()</code> gives us a good look at the possible values for the variables, it is difficult to read it in terms of individual observations. Recall that the <em>observational unit</em> is what is being measured. With the <code>shaming</code> data set, the observational unit would be the voter respondent. To get a better sense of some respondents’ information, let’s use <code>sample_n()</code> to gather a random sample of <em>n</em> observations from the data set.</p>
+<div class="sourceCode" id="cb781"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb781-1"><a href="n-parameters.html#cb781-1"></a>shaming <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb781-2"><a href="n-parameters.html#cb781-2"></a><span class="st">  </span><span class="kw">sample_n</span>(<span class="dv">10</span>)</span></code></pre></div>
+<pre><code>## # A tibble: 10 x 10
+##    sex   birth_year primary_02 general_02 primary_04 general_04 treatment
+##    &lt;chr&gt;      &lt;int&gt; &lt;chr&gt;      &lt;chr&gt;      &lt;chr&gt;      &lt;chr&gt;      &lt;fct&gt;    
+##  1 Male        1979 No         No         No         Yes        Civic Du…
+##  2 Fema…       1937 Yes        Yes        No         Yes        Self     
+##  3 Fema…       1964 Yes        Yes        No         Yes        Neighbors
+##  4 Male        1948 Yes        Yes        No         Yes        Hawthorne
+##  5 Male        1955 No         Yes        Yes        Yes        Control  
+##  6 Male        1966 Yes        Yes        No         Yes        Control  
+##  7 Fema…       1962 Yes        Yes        No         Yes        Control  
+##  8 Male        1955 No         No         No         Yes        Control  
+##  9 Fema…       1972 No         Yes        Yes        Yes        Control  
+## 10 Male        1983 Yes        Yes        Yes        Yes        Control  
 ## # … with 3 more variables: primary_06 &lt;int&gt;, hh_size &lt;int&gt;, no_of_names &lt;int&gt;</code></pre>
-<table style="width: auto;" class="table table-condensed">
-<caption>
-<span id="tab:unnamed-chunk-558">TABLE 9.1: </span>Data summary
-</caption>
-<thead><tr>
-<th style="text-align:left;">
-</th>
-<th style="text-align:left;">
-</th>
-</tr></thead>
-<tbody>
-<tr>
-<td style="text-align:left;">
-Name
-</td>
-<td style="text-align:left;">
-Piped data
-</td>
+<p>Now we have a table with 5 random observations and the respondents’ information in a regular table output. By taking a few random samples, we may start to see some patterns within the data. Do you notice anything in particular about the variable <code>treatment</code>?
+<!-- HV: Is it okay to pose these questions here? -->
+<!-- HV: The no_of_names variable is supposed to give an integer with the number of names listed *IF* the respondent was in the "Neighbors" group but for all other treatments it is listed as 21. Should I just mutate this or have it dealt with in the data set as a whole? --></p>
+<p>To get a more in-depth summary of the variables and their components, we can run <code>summary()</code> on the data set.</p>
+<div class="sourceCode" id="cb783"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb783-1"><a href="n-parameters.html#cb783-1"></a><span class="kw">summary</span>(shaming)</span></code></pre></div>
+<pre><code>##      sex              birth_year    primary_02         general_02       
+##  Length:344084      Min.   :1900   Length:344084      Length:344084     
+##  Class :character   1st Qu.:1947   Class :character   Class :character  
+##  Mode  :character   Median :1956   Mode  :character   Mode  :character  
+##                     Mean   :1956                                        
+##                     3rd Qu.:1965                                        
+##                     Max.   :1986                                        
+##   primary_04         general_04             treatment        primary_06  
+##  Length:344084      Length:344084      Civic Duty: 38218   Min.   :0.00  
+##  Class :character   Class :character   Hawthorne : 38204   1st Qu.:0.00  
+##  Mode  :character   Mode  :character   Control   :191243   Median :0.00  
+##                                        Self      : 38218   Mean   :0.32  
+##                                        Neighbors : 38201   3rd Qu.:1.00  
+##                                                            Max.   :1.00  
+##     hh_size     no_of_names  
+##  Min.   :1.0   Min.   : 1.0  
+##  1st Qu.:2.0   1st Qu.:21.0  
+##  Median :2.0   Median :21.0  
+##  Mean   :2.2   Mean   :20.9  
+##  3rd Qu.:2.0   3rd Qu.:21.0  
+##  Max.   :8.0   Max.   :21.0</code></pre>
+<p>For numerical variables, the <code>summary()</code> output provides us with the minimum, maximum, mean, and quartiles. For variables such as <code>treatment</code>, we are given a list of the various treatments along with counts of how many observations are within each group. In this case, the character variables do not provide us with any information other than the number of observations for each.</p>
+<p>One other helpful summarizing technique we can use is <code>skim()</code>. To make the information it contains simpler, we will only be looking at three variables: <code>primary_06</code>, <code>treatment</code>, and <code>sex</code>.</p>
+<div class="sourceCode" id="cb785"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb785-1"><a href="n-parameters.html#cb785-1"></a>shaming <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb785-2"><a href="n-parameters.html#cb785-2"></a><span class="st">  </span><span class="kw">select</span>(primary_<span class="dv">06</span>, treatment, sex) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb785-3"><a href="n-parameters.html#cb785-3"></a><span class="st">  </span><span class="kw">skim</span>()</span></code></pre></div>
+<p><!--
+<caption>--><span class="marginnote shownote"><span id="tab:unnamed-chunk-582">TABLE 9.1: </span>Data summary</span><!--</caption>--></p>
+<table><tbody>
+<tr class="odd">
+<td align="left">Name</td>
+<td align="left">Piped data</td>
 </tr>
-<tr>
-<td style="text-align:left;">
-Number of rows
-</td>
-<td style="text-align:left;">
-344084
-</td>
+<tr class="even">
+<td align="left">Number of rows</td>
+<td align="left">344084</td>
 </tr>
-<tr>
-<td style="text-align:left;">
-Number of columns
-</td>
-<td style="text-align:left;">
-3
-</td>
+<tr class="odd">
+<td align="left">Number of columns</td>
+<td align="left">3</td>
 </tr>
-<tr>
-<td style="text-align:left;">
-_______________________
-</td>
-<td style="text-align:left;">
-</td>
+<tr class="even">
+<td align="left">_______________________</td>
+<td align="left"></td>
 </tr>
-<tr>
-<td style="text-align:left;">
-Column type frequency:
-</td>
-<td style="text-align:left;">
-</td>
+<tr class="odd">
+<td align="left">Column type frequency:</td>
+<td align="left"></td>
 </tr>
-<tr>
-<td style="text-align:left;">
-character
-</td>
-<td style="text-align:left;">
-1
-</td>
+<tr class="even">
+<td align="left">character</td>
+<td align="left">1</td>
 </tr>
-<tr>
-<td style="text-align:left;">
-factor
-</td>
-<td style="text-align:left;">
-1
-</td>
+<tr class="odd">
+<td align="left">factor</td>
+<td align="left">1</td>
 </tr>
-<tr>
-<td style="text-align:left;">
-numeric
-</td>
-<td style="text-align:left;">
-1
-</td>
+<tr class="even">
+<td align="left">numeric</td>
+<td align="left">1</td>
 </tr>
-<tr>
-<td style="text-align:left;">
-________________________
-</td>
-<td style="text-align:left;">
-</td>
+<tr class="odd">
+<td align="left">________________________</td>
+<td align="left"></td>
 </tr>
-<tr>
-<td style="text-align:left;">
-Group variables
-</td>
-<td style="text-align:left;">
-None
-</td>
+<tr class="even">
+<td align="left">Group variables</td>
+<td align="left">None</td>
 </tr>
-</tbody>
-</table>
+</tbody></table>
 <p><strong>Variable type: character</strong></p>
 <table>
-<thead><tr>
-<th style="text-align:left;">
-skim_variable
-</th>
-<th style="text-align:right;">
-n_missing
-</th>
-<th style="text-align:right;">
-complete_rate
-</th>
-<th style="text-align:right;">
-min
-</th>
-<th style="text-align:right;">
-max
-</th>
-<th style="text-align:right;">
-empty
-</th>
-<th style="text-align:right;">
-n_unique
-</th>
-<th style="text-align:right;">
-whitespace
-</th>
+<thead><tr class="header">
+<th align="left">skim_variable</th>
+<th align="right">n_missing</th>
+<th align="right">complete_rate</th>
+<th align="right">min</th>
+<th align="right">max</th>
+<th align="right">empty</th>
+<th align="right">n_unique</th>
+<th align="right">whitespace</th>
 </tr></thead>
-<tbody><tr>
-<td style="text-align:left;">
-sex
-</td>
-<td style="text-align:right;">
-0
-</td>
-<td style="text-align:right;">
-1
-</td>
-<td style="text-align:right;">
-4
-</td>
-<td style="text-align:right;">
-6
-</td>
-<td style="text-align:right;">
-0
-</td>
-<td style="text-align:right;">
-2
-</td>
-<td style="text-align:right;">
-0
-</td>
+<tbody><tr class="odd">
+<td align="left">sex</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">4</td>
+<td align="right">6</td>
+<td align="right">0</td>
+<td align="right">2</td>
+<td align="right">0</td>
 </tr></tbody>
 </table>
 <p><strong>Variable type: factor</strong></p>
 <table>
-<thead><tr>
-<th style="text-align:left;">
-skim_variable
-</th>
-<th style="text-align:right;">
-n_missing
-</th>
-<th style="text-align:right;">
-complete_rate
-</th>
-<th style="text-align:left;">
-ordered
-</th>
-<th style="text-align:right;">
-n_unique
-</th>
-<th style="text-align:left;">
-top_counts
-</th>
+<thead><tr class="header">
+<th align="left">skim_variable</th>
+<th align="right">n_missing</th>
+<th align="right">complete_rate</th>
+<th align="left">ordered</th>
+<th align="right">n_unique</th>
+<th align="left">top_counts</th>
 </tr></thead>
-<tbody><tr>
-<td style="text-align:left;">
-treatment
-</td>
-<td style="text-align:right;">
-0
-</td>
-<td style="text-align:right;">
-1
-</td>
-<td style="text-align:left;">
-FALSE
-</td>
-<td style="text-align:right;">
-5
-</td>
-<td style="text-align:left;">
-Con: 191243, Civ: 38218, Sel: 38218, Haw: 38204
-</td>
+<tbody><tr class="odd">
+<td align="left">treatment</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="left">FALSE</td>
+<td align="right">5</td>
+<td align="left">Con: 191243, Civ: 38218, Sel: 38218, Haw: 38204</td>
 </tr></tbody>
 </table>
 <p><strong>Variable type: numeric</strong></p>
 <table>
-<thead><tr>
-<th style="text-align:left;">
-skim_variable
-</th>
-<th style="text-align:right;">
-n_missing
-</th>
-<th style="text-align:right;">
-complete_rate
-</th>
-<th style="text-align:right;">
-mean
-</th>
-<th style="text-align:right;">
-sd
-</th>
-<th style="text-align:right;">
-p0
-</th>
-<th style="text-align:right;">
-p25
-</th>
-<th style="text-align:right;">
-p50
-</th>
-<th style="text-align:right;">
-p75
-</th>
-<th style="text-align:right;">
-p100
-</th>
-<th style="text-align:left;">
-hist
-</th>
+<thead><tr class="header">
+<th align="left">skim_variable</th>
+<th align="right">n_missing</th>
+<th align="right">complete_rate</th>
+<th align="right">mean</th>
+<th align="right">sd</th>
+<th align="right">p0</th>
+<th align="right">p25</th>
+<th align="right">p50</th>
+<th align="right">p75</th>
+<th align="right">p100</th>
+<th align="left">hist</th>
 </tr></thead>
-<tbody><tr>
-<td style="text-align:left;">
-primary_06
-</td>
-<td style="text-align:right;">
-0
-</td>
-<td style="text-align:right;">
-1
-</td>
-<td style="text-align:right;">
-0.32
-</td>
-<td style="text-align:right;">
-0.46
-</td>
-<td style="text-align:right;">
-0
-</td>
-<td style="text-align:right;">
-0
-</td>
-<td style="text-align:right;">
-0
-</td>
-<td style="text-align:right;">
-1
-</td>
-<td style="text-align:right;">
-1
-</td>
-<td style="text-align:left;">
-▇▁▁▁▃
-</td>
+<tbody><tr class="odd">
+<td align="left">primary_06</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">0.32</td>
+<td align="right">0.46</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">▇▁▁▁▃</td>
 </tr></tbody>
 </table>
-<p>Having created models with one parameter in Chapter @ref(#one-parameter) and two parameters in Chapter @ref(#two-parameters), you are now ready to make the jump to <span class="math inline">\(N\)</span> parameters. The more parameters we include in our models, the more flexible they can become. But we must be careful of <em>overfitting</em>, of making models which are inaccurate because they don’t use enough data to accurately estimate those parameters. The tension between overfitting and underfitting is central to the practice of data science.</p>
+<p>By running the <code>skim()</code> command, we get a summary of the data set as a whole, as well as the types of variables and individual variable summaries. At the top we see the number of columns and rows within the selected data set. Below this we are given a list with the different types of variables, or columns, and how often they appear within the data we are skimming. Following this, the variables are then separated by their column type, and we are given individual summaries based on the type.</p>
+<p>There are a few things to note while exploring this data set. You may – or may not – have noticed that the only response to the <code>general_04</code> variable is “Yes”. In their published article, the authors note that “Only registered voters who voted in November 2004 were selected for our sample” (Gerber, Green, Larimer, 2008). After this, the authors found their history then sent out the mailings.</p>
+<p>It is also important to identify the dependent variable and its meaning. In this shaming experiment, the dependent variable is <code>primary_06</code>, which is a variable coded either 0 or 1 for whether or not the respondent voted in the 2006 primary election. This is the dependent variable because the authors are trying to measure the effect that the treatments have on the proportion of people who vote.</p>
+<!-- HV: Should I include discussion of the left-hand variable (treatment?) here? Or wait until we move into the regressions? -->
+<!-- It may be worth mentioning that general_04 is always "yes", unlike all the other voting history variables which have values of "yes" and "no". Why is that? I *think* that this is caused by their sampling plan. They found all the people who voted in the 2004 general election. Then, the authors found their history. As we would expect, those people had sometimes voted in the past and sometime not. Then, the authors sent the mailing. The key dependent variable, primary_06, is coding 0/1, since that makes doing the statistics easier. -->
+<!-- 2) `primary_06` as a function of `treatment` and `solo` and of their interaction. We will build up this model step-by-step, very similar to how we explored the effect of treatment in chapter 8. But we go deeper because  we are learning about interactions. Key thing is to go through all the themes.Rmd issues, at least until prediction. Note that this situation is different from Chapter 8 in that fitted values and predicted values are not the same thing! The fitted value, for a combination of values for treatment and solo, is something 0.30, meaning that 30% of the people in this bucket votes. But the predicted value must be 0 or 1. Either you voted or you didn't. This example is clearly causal and so you need a Rubin Table with 4 potential outcome columns. The key difference in this chapter is that we are using lots of right hand side variables, both continuous and discrete. -->
+<!-- 3) EDA of `nes`. This can be fairly quick. Again, we won't use all the variables. Only discuss the ones we do use. One of the variables should be year. We want to show off Gelman's trick by plotting things by year. -->
+<!-- 4) We are making a predictive model of what as a function of what other stuff? Want to use a continuous variable and some discrete variables as well. Interactions to.  -->
+<!-- 5) I don't think we bother with a scenario which requires a bootstrap. Or should we?  -->
+<!-- 6) Prediction. How do we use our model to make predictions? Bring the discussion back to the way that we opened the chapter with a problem. -->
+<p>Having created models with one parameter in Chapter @ref(#one-parameter) and two parameters in Chapter @ref(#two-parameters), you are now ready to make the jump to <span class="math inline">\(N\)</span> parameters. The more parameters we include in our models, the more flexible they can become. But we must be careful of <em>overfitting</em>, of making models which are inaccurate because they don’t use enough data to accurately estimate those parameters. The tension between overfitting and underfitting is central to the practice of data science.
+<!-- HV: Where does this belong? --></p>
 </div>
 <div id="causal-effects-of-treament" class="section level2">
 <h2>
 <span class="header-section-number">9.2</span> Causal Effects of <code>treament</code>
 </h2>
 <!-- This follows the discussion in chapter 8 very closely. See below for some key R code, which must be explained. (Obviously, you can use other code as well.) -->
+<div class="sourceCode" id="cb786"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb786-1"><a href="n-parameters.html#cb786-1"></a>shaming <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb786-2"><a href="n-parameters.html#cb786-2"></a><span class="st">  </span><span class="kw">lm</span>(<span class="dt">data =</span> ., primary_<span class="dv">06</span> <span class="op">~</span><span class="st"> </span>treatment <span class="op">-</span><span class="st"> </span><span class="dv">1</span>)</span></code></pre></div>
 <pre><code>## 
 ## Call:
 ## lm(formula = primary_06 ~ treatment - 1, data = .)
@@ -509,14 +425,23 @@ primary_06
 ##               0.315                0.322                0.297  
 ##       treatmentSelf   treatmentNeighbors  
 ##               0.345                0.378</code></pre>
-<pre><code>## # A tibble: 5 x 7
-##   term                estimate std.error statistic p.value conf.low conf.high
-##   &lt;chr&gt;                  &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;   &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;
-## 1 treatmentCivic Duty    0.315   0.00237      132.       0    0.310     0.319
-## 2 treatmentHawthorne     0.322   0.00237      136.       0    0.318     0.327
-## 3 treatmentControl       0.297   0.00106      280.       0    0.295     0.299
-## 4 treatmentSelf          0.345   0.00237      145.       0    0.340     0.350
-## 5 treatmentNeighbors     0.378   0.00237      159.       0    0.373     0.383</code></pre>
+<!-- Talk about what these results mean.  Then, create the same model but with a different structure. -->
+<div class="sourceCode" id="cb788"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb788-1"><a href="n-parameters.html#cb788-1"></a>shaming <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb788-2"><a href="n-parameters.html#cb788-2"></a><span class="st">  </span><span class="kw">lm</span>(<span class="dt">data =</span> ., primary_<span class="dv">06</span> <span class="op">~</span><span class="st"> </span>treatment)</span></code></pre></div>
+<pre><code>## 
+## Call:
+## lm(formula = primary_06 ~ treatment, data = .)
+## 
+## Coefficients:
+##        (Intercept)  treatmentHawthorne    treatmentControl       treatmentSelf  
+##            0.31454             0.00784            -0.01790             0.03061  
+## treatmentNeighbors  
+##            0.06341</code></pre>
+<!-- Explain how these two models are the same, except in how they define the parameters. Show us the math like Gelman does. Write down the math. For simple. -->
+<div class="sourceCode" id="cb790"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb790-1"><a href="n-parameters.html#cb790-1"></a>shaming <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb790-2"><a href="n-parameters.html#cb790-2"></a><span class="st">  </span><span class="kw">lm</span>(<span class="dt">data =</span> ., primary_<span class="dv">06</span> <span class="op">~</span><span class="st"> </span>treatment <span class="op">-</span><span class="st"> </span><span class="dv">1</span>) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb790-3"><a href="n-parameters.html#cb790-3"></a><span class="st">  </span><span class="kw">tidy</span>(<span class="dt">conf.int =</span> <span class="ot">TRUE</span>, <span class="dt">conf.level =</span> <span class="fl">0.99</span>) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb790-4"><a href="n-parameters.html#cb790-4"></a><span class="st">  </span><span class="kw">select</span>(term, conf.low, estimate, conf.high)</span></code></pre></div>
 <pre><code>## # A tibble: 5 x 4
 ##   term                conf.low estimate conf.high
 ##   &lt;chr&gt;                  &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;
@@ -531,6 +456,10 @@ primary_06
 <span class="header-section-number">9.2.1</span> Interactions</h3>
 <!-- This is new. With only two parameters, we can't really look at interaction effects. Need to discuss interaction effects in general. Also, note that heterogenous treatment effects are the same thing as interaction effects that involve a treatment effect as one of the variables.  -->
 <!-- Feel free to build up this code, and other examples, more slowly than I am doing it here. -->
+<div class="sourceCode" id="cb792"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb792-1"><a href="n-parameters.html#cb792-1"></a>shaming <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb792-2"><a href="n-parameters.html#cb792-2"></a><span class="st">  </span><span class="kw">lm</span>(<span class="dt">data =</span> ., primary_<span class="dv">06</span> <span class="op">~</span><span class="st"> </span>sex<span class="op">*</span>treatment <span class="op">-</span><span class="st"> </span><span class="dv">1</span>) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb792-3"><a href="n-parameters.html#cb792-3"></a><span class="st">  </span><span class="kw">tidy</span>() <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb792-4"><a href="n-parameters.html#cb792-4"></a><span class="st">  </span><span class="kw">select</span>(term, estimate)</span></code></pre></div>
 <pre><code>## # A tibble: 10 x 2
 ##    term                       estimate
 ##    &lt;chr&gt;                         &lt;dbl&gt;
@@ -575,6 +504,7 @@ What problems do we face? All the things that make modeling difficult. Why is th
 <span class="header-section-number">9.3</span> Formatting Linear Models in R</h2>
 <p>In the previous chapter, linear models were created using the general format of <code>dependent variable ~ -1 + independent variable</code>. After running the regression on a model of this type, the resulting table would show coefficients for both parameters of the independent variable, for example Democrat and Republican. This method works fine when there are only one or two parameters in consideration, however now we will be moving onto <em>n</em> parameters and we will have to change the formula we use; specifically, we will be removing the -1 from the lm formula.</p>
 <p>In order to remove the -1, we first have to understand the function of it in the linear regression formulas that you have seen previously. Using the Enos (2014) <code>trains</code> data, when we use -1 in our formula and regress party on income, the table output lists both parameters and estimates their mean income values.</p>
+<div class="sourceCode" id="cb794"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb794-1"><a href="n-parameters.html#cb794-1"></a><span class="kw">lm</span>(<span class="dt">data =</span> trains, income <span class="op">~</span><span class="st"> </span><span class="dv">-1</span> <span class="op">+</span><span class="st"> </span>party) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">tidy</span>(<span class="dt">conf.int =</span> <span class="ot">TRUE</span>)</span></code></pre></div>
 <pre><code>## # A tibble: 2 x 7
 ##   term            estimate std.error statistic  p.value conf.low conf.high
 ##   &lt;chr&gt;              &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;
@@ -584,18 +514,21 @@ What problems do we face? All the things that make modeling difficult. Why is th
 <!-- HV: Should I start off introducing rstanarm and use stan_glm for all models in this chapter? -->
 <p>This table tells us that Democrats have an average income of $136,755.20, while Republicans have an average income of $167,368.40.</p>
 <p>Once we remove the -1 from the formula, the the regression table replaces one of the parameter terms with “(Intercept)”. For example, if we use the same regression as above but remove the -1, the output table changes to this:</p>
+<div class="sourceCode" id="cb796"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb796-1"><a href="n-parameters.html#cb796-1"></a><span class="kw">lm</span>(<span class="dt">data =</span> trains, income <span class="op">~</span><span class="st"> </span>party) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">tidy</span>(<span class="dt">conf.int =</span> <span class="ot">TRUE</span>)</span></code></pre></div>
 <pre><code>## # A tibble: 2 x 7
 ##   term            estimate std.error statistic  p.value conf.low conf.high
 ##   &lt;chr&gt;              &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;
 ## 1 (Intercept)      136755.     7545.     18.1  3.12e-35  121808.   151702.
 ## 2 partyRepublican   30613.    18561.      1.65 1.02e- 1   -6160.    67386.</code></pre>
 <p>Although the coefficients in this regression table are different than the ones above, the interpretation stays the same. The intercept still represents the average income of democrats, the default parameter, however the partyRepulican coefficient is now the difference between the mean income of republicans and democrats. The value of the mean republican income remains the same, however, but it is now calculated by adding the partyRepublican coefficient to the intercept estimate.</p>
+<div class="sourceCode" id="cb798"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb798-1"><a href="n-parameters.html#cb798-1"></a><span class="fl">136755.21</span> <span class="op">+</span><span class="st"> </span><span class="fl">30613.21</span></span></code></pre></div>
 <pre><code>## [1] 167368</code></pre>
 </div>
 <div id="adding-parameters" class="section level2">
 <h2>
 <span class="header-section-number">9.4</span> Adding parameters</h2>
 <p>We will now begin adding parameters to our regression models. The simplest way to do so is by adding another independent variable to the regression formula. For example, we can add gender to the same formula we used previously.</p>
+<div class="sourceCode" id="cb800"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb800-1"><a href="n-parameters.html#cb800-1"></a><span class="kw">lm</span>(<span class="dt">data =</span> trains, income <span class="op">~</span><span class="st"> </span>party <span class="op">+</span><span class="st"> </span>gender) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">tidy</span>(<span class="dt">conf.int =</span> <span class="ot">TRUE</span>)</span></code></pre></div>
 <pre><code>## # A tibble: 3 x 7
 ##   term            estimate std.error statistic  p.value conf.low conf.high
 ##   &lt;chr&gt;              &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;
@@ -684,7 +617,7 @@ confidence interval gives the range of uncertainty
 <a href="continuous-response.html"><button class="btn btn-default">Next</button></a>
 </p>
 <p class="build-date">Page built: 
-2020-07-25
+2020-07-27
 </p>
 </div>
 </div>
