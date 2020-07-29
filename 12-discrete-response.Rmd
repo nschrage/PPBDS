@@ -33,6 +33,9 @@ output_yaml:
 <!-- * Do we have time to do a model which predicts a category with more than 0/1 possible values? I am not sure. If we were going to, we would want to pick something that is not an ordered category, I think. In this data, only race would meet that criteria. Let's revisit this later. -->
 
 
+<!-- MB: Using augment() for future predictions in this chapter? Works poorly with example -->
+
+
 # Discrete Response {#discrete-response}
 
 **Binary responses** take on only two values: success ($Y=1$) or failure ($Y=0$), yes ($Y=1$) or no ($Y=0$), et cetera. Binary responses are one of the most common types of data that statisticians encounter.  We are often interested in modeling the probability of success, $p$, based on a set of covariates. As with regression, there are two broad categories of problems: *modeling for prediction* and *modeling for causation*. Although terminology varies across fields, "regression" is generally used for situations in which our *dependent variable* is continuous, as in Chapter \@ref(continuous-response). "Classification" applies to cases in which the dependent variable takes on discrete values, the simplest of which is the binary case.
@@ -53,17 +56,18 @@ library(PPBDS.data)
 ```
 
 
-Before we start modeling, let's perform some exploratory analysis on the dataset we'll be working with, cces. Cces stands for the Cooperative Congressional Election Study, a study regarding the approval rating of individual voters to their sitting president. Each row captures one voter, some of their demographic information, and how highly they approve (or disaprprove) of the president. We will tweak the data by only looking at observations recorded in the year 2018 so that all the responses are about the same president.
+Before we start modeling, let's perform some exploratory analysis on the dataset we'll be working with, cces. Cces stands for the Cooperative Congressional Election Study, a study regarding the approval rating of individual voters to their sitting president. Each row captures one voter, some of their demographic information, and how highly they approve (or disaprprove) of the president. Let's first look at the raw data values by either looking at `cces` using RStudio's spreadsheet viewer or by using the `glimpse()` function from the **dplyr** package:
 
 ```{r}
-cces_ch12 <- cces %>%
-  filter(year == 2018)
+glimpse(cces)
 ```
 
-Let's first look at the raw data values by either looking at `cces_ch12` using RStudio's spreadsheet viewer or by using the `glimpse()` function from the **dplyr** package:
+We will tweak the data by only looking at observations recorded in the year 2018 so that all the responses are about the same president. We will also drop all NA values in the dataset.
 
 ```{r}
-glimpse(cces_ch12)
+ch12 <- cces %>%
+  filter(year == 2018) %>%
+  drop_na()
 ```
 
 From this, we can gather that there are 16 variables. Notably, there are 60,000 observations even after filtering only for the year 2018. 
@@ -71,15 +75,15 @@ From this, we can gather that there are 16 variables. Notably, there are 60,000 
 Let's also display a random sample of 5 rows of the 60,000 rows. We will be displaying these 5 random observations using a gt() table. Before that, though, we will select the variables that are currently of interest to us. 
 
 ```{r, eval = FALSE}
-cces_ch12 <- cces_ch12 %>%
+ch12 <- ch12 %>%
   select(state, age, gender, race, education, ideology, approval)
 
-cces_ch12 %>% 
+ch12 %>% 
   sample_n(size = 5)
 ```
 
-```{r}
-cces_ch12 %>%
+```{r, echo = FALSE}
+ch12 %>%
   sample_n(5) %>%
   gt() %>%
   cols_label(
@@ -93,10 +97,22 @@ cces_ch12 %>%
   tab_source_note(md("A random sample of 5 out of the 60,000 voters"))
 ```
 
-Now that we’ve looked at the raw values in `cces_ch12` and have a sense of the data, let’s compute summary statistics. Let’s use the `skim()` function from the `skimr` package.
+Now that we’ve looked at the raw values in `ch12`, let's make another tweak to the data. Because this chapter will be dealing with logistic regressions, we want to convert the numeric `approval` variable into a binary variable. `approval` is a numeric variable from 1-5 with 5 representing the highest approval of the president. In order to do this, we have to turn approval into a binary variable. 1-2 will be coded to 0 to signify disapproval and 3-5 will be coded to 1 for approval.
 
 ```{r}
-cces_ch12 %>% 
+ch12 <- ch12 %>%
+  mutate(approval = case_when(
+    approval == 1 ~ 0,
+    approval == 2 ~ 0,
+    approval == 3 ~ 1,
+    approval == 4 ~ 1,
+    approval == 5 ~ 1))
+```
+
+Now, let’s compute summary statistics. Let’s use the `skim()` function from the `skimr` package.
+
+```{r}
+ch12 %>% 
   skim()
 ```
 
@@ -104,11 +120,10 @@ You'll notice that we are missing data for our ideology and approval variables. 
 
 To complete our exploratory data analysis, let's create some data visualizations. 
 
-The primary response variable left in our dataset is `approval`, a numeric variable from 1-5 with 5 representing the highest approval of the president. So, let's start by looking at the overall distribution of `approval`.
+The primary response variable left in our dataset is `approval`, a (newly) binary variable with 0 representing disapproval of the President and 1 representing approval. So, let's start by looking at the overall distribution of `approval`.
 
 ```{r}
-cces_ch12 %>%
-  filter(is.na(approval) == FALSE) %>% #Removing NA observations
+ch12 %>%
   ggplot(aes(x = approval)) +
   geom_bar(fill = "red") + 
   labs(y = "Count",
@@ -116,12 +131,11 @@ cces_ch12 %>%
        title = "Presidential Approval in 2018") 
 ```
 
-According to this graph, the approval of the president in 2018 is very polarized: the peaks are at 1 and 5 and no one reported with a neutral 3. There seems to be more disapproval overall.
+According to this graph, there are roughly 10,000 more voters who disapprove of Trump.
 To make things more interesting, let's facet this approval variable by gender and then race.
 
 ```{r}
-cces_ch12 %>%
-  filter(is.na(approval) == FALSE) %>%
+ch12 %>%
   ggplot(aes(x = approval, fill = gender)) +
   geom_bar() + 
   labs(y = "Count",
@@ -131,11 +145,10 @@ cces_ch12 %>%
   theme(legend.position = "none")
 ```
 
-The bimodal, polarized distribution holds across both genders. However, it seems that females have more higher rates of disapproval (more 1s and 2s). 
+It seems that females have higher rates of disapproval. 
 
 ```{r}
-cces_ch12 %>%
-  filter(is.na(approval) == FALSE) %>%
+ch12 %>%
   ggplot(aes(x = approval, fill = race)) +
   geom_bar() + 
   labs(y = "Count",
@@ -146,46 +159,19 @@ cces_ch12 %>%
   scale_y_log10()
 ```
 
-Note the log10 scale on the y-axis; this was done so that we can see clearly the distribution for races that have very few observations compared to white individuals. We can see here that the bimodel distribution is present across all races, with slight variations from race to race. 
+Note the log10 scale on the y-axis; this was done so that we can see clearly the distribution for races that have very few observations compared to white individuals. We can see that slight the disapproving majority is present across most races.
 
-Now, let's take a look at our ideology variable. `ideology` has values "Very Liberal", "Liberal", "Moderate", "Conservative", "Very Conservative", and "Not Sure". Let's make these variables numeric so that they are easier to work with by recoding them to 1, 2, 3, 4, 5, and NA, respectively. 
-
-```{r}
-cces_ch12 <- cces_ch12 %>%
-  mutate(ideology = case_when(
-    ideology == "Very Liberal" ~ 1,
-    ideology == "Liberal" ~ 2,
-    ideology == "Moderate" ~ 3,
-    ideology == "Conservative" ~ 4,
-    ideology == "Very Conservative" ~ 5,
-    ideology == "Not Sure" ~  NA_real_))
-```
-
-Now that we have ideology as a numeric variable, we will make a barplot to get a sense of the distribution.
+Now, let's use our ideology variable. `ideology` has values "Very Liberal", "Liberal", "Moderate", "Conservative", "Very Conservative", and "Not Sure". Let's create a jitterplot with `approval` to see hoow approval varied across political affiliations.
 
 ```{r}
-cces_ch12 %>%
-  filter(is.na(ideology) == FALSE) %>%
-  ggplot(aes(x = ideology)) + 
-  geom_bar(fill = "blue") + 
-  labs(y = "Ideology",
-       title = "Ideology in CCES 2018")
-```
-
-There is a unimodal disitribution in ideology, with most respondents being moderate. This is interesting, considering how polarized the presidential approval was before. Let's create a jitterplot between `ideology` and `approval` to look into this more. 
-
-```{r}
-cces_ch12 %>%
-  filter(is.na(ideology) == FALSE) %>%
-  filter(is.na(approval) == FALSE) %>%
+ch12 %>%
   ggplot(aes(x = ideology, y = approval)) + 
   geom_jitter() + 
   labs(y = "Presidential Approval",
        x = "Ideology",
        title = "Presidential Approval by Ideology")
 ```
-
-<!-- MB: just need to talk about this to finish EDA. Holding off until we figure out why there are literally no 3s-->
+As one would expect, approval is denser for conservative and very conservative voters while disapproval is denser for liberal and very liberal voters. 
 
 ## Logistic regression
 
@@ -225,21 +211,7 @@ The mathematical function $log\left(\frac{p}{1 - p}\right)$ is called the *logit
 
 ### One categorical explanatory variable
 
-Let's start our modeling by predicting `approval` with a single categorical explanatory variable. However, there's one problem: approval is not a binary variable and, therefore, this wouldn't be a logistic regression. In order to make this a logistic regression, we have to turn approval into a binary variable. 1-2 will be coded to 0 to signify disapproval and 3-5 will be coded to 1 for approval.
-
-```{r}
-cces_ch12 <- cces_ch12 %>%
-  mutate(approval = case_when(
-    approval == 1 ~ 0,
-    approval == 2 ~ 0,
-    approval == 3 ~ 1,
-    approval == 4 ~ 1,
-    approval == 5 ~ 1))
-```
-
-<!-- MB: Jumping straight to multiple categories here rather than just a binary one. Should I do one for gender? -->
-
-We'll start by modeling our new binary `approval` with the categorical variable `race`.  As we'll see, the syntax for running a logistic regression in R is very similar to that for running a linear regression.  In fact, we'll follow the same basic steps:
+Let's start our modeling by predicting `approval` with a single categorical explanatory variable. We'll start by modeling our new binary `approval` with the categorical variable `race`.  As we'll see, the syntax for running a logistic regression in R is very similar to that for running a linear regression.  In fact, we'll follow the same basic steps:
 
 1. We first "fit" the logistic regression model using the `glm(y ~ x, family, data)` function and save it in `race_model`.
 2. We get the regression table by applying the `tidy()` function from the **broom** package to `race_model`.  We'll print the `term`, `estimate`, `conf.low`, and `conf.high` columns.
@@ -249,14 +221,14 @@ Note that the key difference is that instead of using `lm()`, we are now using `
 Next, let's fit a model and `tidy()` it:
 
 ```{r, eval=FALSE}
-race_model <- glm(approval ~ race, family = binomial, data = cces_ch12)
+race_model <- glm(approval ~ race, family = binomial, data = ch12)
 race_model %>%
   tidy(conf.int = TRUE) %>%
   select(term, estimate, conf.low, conf.high)
 ```
 
 ```{r, echo=FALSE}
-race_model <- glm(approval ~ race, family = binomial, data = cces_ch12)
+race_model <- glm(approval ~ race, family = binomial, data = ch12)
 tidy(race_model) %>%
   select(term, estimate) %>%
   gt()
@@ -300,8 +272,8 @@ However, there is a way to calculate these predicted probabilities using R witho
 We have previously defined the following three concepts for a linear regression:
 
 1. Observed values $y$, or the observed value of the outcome variable
-2. Fitted values $\hat{y}$, or the value on the regression line for a given $x$ value
-3. Residuals $y - \hat{y}$, or the error between the observed value and the fitted value
+2. Fitted values $\widehat{y}$, or the value on the regression line for a given $x$ value
+3. Residuals $y - \widehat{y}$, or the error between the observed value and the fitted value
 
 We obtained these values and other values using the `augment()` function from the **broom** package. Recall too that we used the `.se.fit` column to construct confidence intervals.  We'll see here how we can apply these same concepts to logistic regression.
 
@@ -399,14 +371,14 @@ We'll now predict `approval` with a single numerical explanatory variable, `age`
 2. We get the regression table by applying the `tidy()` function from the **broom** package to `age_model`.  We'll print the `term`, `estimate`, `conf.low`, and `conf.high` columns.
 
 ```{r, eval=FALSE}
-age_model <- glm(approval ~ age, family = binomial, data = cces_ch12)
+age_model <- glm(approval ~ age, family = binomial, data = ch12)
 age_model %>%
   tidy(conf.int = TRUE) %>%
   select(term, estimate, conf.low, conf.high)
 ```
 
 ```{r, echo=FALSE}
-age_model <- glm(approval ~ age, family = binomial, data = cces_ch12)
+age_model <- glm(approval ~ age, family = binomial, data = ch12)
 tidy(age_model,
      conf.int = TRUE) %>%
   select(term, estimate, conf.low, conf.high) %>%
@@ -473,11 +445,10 @@ logistic_mod <- logistic_reg() %>%
 
 Note that our new object, `logistic_mod`, doesn't contain our data or a formula.  In order actually to fit our model, we need to feed `logistic_mod` to a function called `fit()`.  `fit()` is the general purpose function in **parsnip** for fitting any model specification.  It takes as its first argument the model specification, but otherwise it operates similarly to `lm()` and `glm()`. We have to wrap `approval` in `factor()`, because `fit()` is more careful than `glm()` in requiring that classification models actually have categorical outcomes.
 
-
 ```{r}
 logistic_fit <- fit(logistic_mod,
                     factor(approval) ~ race * age,
-                    data = cces_ch12)
+                    data = ch12)
 ```
 
 One we have fit the model, how can we use it?  The `glm` object is still stored in `logistic_fit$fit`, so we can access that and use `tidy()`, just like we did before:
@@ -589,6 +560,7 @@ Classification trees have certain advantages that make them very useful. They ar
 
 ### One categorical explanatory variable
 
+
 To create classification trees, we'll use the `decision_tree()` model specification and the `"rpart"` engine.  The syntax is very similar to when we used `logistic_reg()`.  Note that our binary response variable has to be a factor, just like with `logistic_reg()`. 
 
 ```{r}
@@ -608,7 +580,7 @@ Now that we have the object `tree_mod`, we can use `fit()` in the **parsnip** pa
 ```{r}
 race_tree <- fit(tree_mod,
                          factor(approval) ~ race, 
-                         data = cces_ch12)
+                         data = ch12)
 ```
 
 See how when using **tidymodels**, this is exactly the same as how we would fit a logistic regression, but with our model specification saved in `tree_mod` rather than the model specification we saved in `logistic_fit`.
@@ -637,5 +609,209 @@ race_tree$fit %>%
   prp_ch13()
 ```
 
+(Note that we added the argument `model = TRUE` to `set_engine()`.  This saves the model frame, which we will need to avoid a warning when we plot the trees later.)
 
-<!--   ^^^^ NEW WORK    vvvv OLD WORK  -->
+The function `set_mode()` wasn't necessary when we did logistic regression.  Here it clarifies that we want a *classification* tree rather than a *regression* tree.
+
+Now that we have the object `tree_mod`, we can use `fit()` in the **parsnip** package.  We'll start by predicting `approval` with `ideology` as our categorical right side variable. Note that our binary response variable has to be a factor, just like with `logistic_reg()`. 
+
+```{r}
+race_tree <- fit(tree_mod,
+                 factor(approval) ~ ideology,
+                 data = ch12)
+```
+
+See how when using **tidymodels**, this is exactly the same as how we would fit a logistic regression, but with our model specification saved in `tree_mod` rather than the model specification we saved in `logistic_fit`.
+
+What was the result of our tree?
+
+```{r}
+race_tree
+```
+
+It's not helpful to look at the results of a tree as text.  In order to visualize the tree, we'll use the `prp()` function in the **rpart.plot** package.  Remember that the model object is stored in `race_tree$fit`.
+
+```{r, message = FALSE}
+library(rpart.plot)
+
+race_tree$fit %>%
+  prp(extra = 6, varlen = 0, faclen = 0)
+```
+
+The arguments `varlen = 0` and `faclen = 0` ensure that the full variable names and factor levels are printed.  The argument `extra = 6` shows the proportion of "yes" outcomes within a given partition. Since we'll be using these same arguments throughout the chapter, we'll create a new function that calls `prp()` but with these options as defaults:
+
+```{r}
+prp_ch12 <- function(x, ...) prp(x, extra = 6, varlen = 0, faclen = 0, ...)
+
+race_tree$fit %>%
+  prp_ch12()
+```
+So, how do we interpret this tree? We are given two partitions; the first is for voters that identify as very liberal, liberal moderate, or not sure, the second is for voters that identify as conservative or very conservative. The first partition classifies its observations as not approving of the President while the second partition classifies its observations as approving of the President.
+
+The decimal numbers mean that 21% of observations in the first node approved of the President while 86% of observatins in the second node approved of the President.
+
+The algorithm is very simple when you have one categorical explanatory variable. It just classifies every observation based on the most common response per category. Take a look at the following table:
+
+```{r}
+ch12 %>%
+  select(ideology, approval) %>%
+  group_by(ideology) %>%
+  summarise(average_approval = sum(approval)/n()) %>%
+  gt()
+```
+The two partitions just divide the observations by ideology into a) those ideologies where the majority approve of the President and b) those ideologies where the majority does not approve of the President.
+
+### One numerical explanatory variable
+
+Once we have created our model specification `tree_mod`, it is easy to use it to fit new models with different formulae and data.  We can use the same approach to create a classification tree predicting `approval` with `age`:
+
+```{r}
+age_tree <- fit(tree_mod,
+                factor(approval) ~ age,
+                data = ch12)
+
+age_tree$fit %>%
+  prp_ch12()
+```
+
+Now, the algorithm creates cutpoints in the `age` variable in order to classify observations.  This tree will classify observations younger than 44 or between 44 and 51 as disapproving of the president. It classifies observations older than 71 as approval of the president. The decimal within each box tells us how many observations within each node approved of the president.
+
+<!-- MB: Complexity parameter -- how do i make this work for my example -->
+
+
+## Random forests
+
+### What are random forests?
+
+Random forests are a very popular machine learning approach that addresses the shortcomings of decision trees using a clever idea. The goal is to improve prediction performance and reduce instability by _averaging_ multiple decision trees (a forest of trees constructed with randomness). It has two features that help accomplish this.
+
+The first step is _bootstrap aggregation_ or _bagging_. The general idea is to generate many predictors, each using classification trees, and then forming a final prediction based on the average prediction of all these trees. To assure that the individual trees are not the same, we use the bootstrap to induce randomness. These two features combined explain the name: the bootstrap makes the individual trees **randomly** different, and the combination of trees is the **forest**. The specific steps are as follows.
+
+<!-- AR: do we explain training set/test set before this? -->
+
+1\. Build $B$ decision trees using the training set. We refer to the fitted models as $T_1, T_2, \dots, T_B$. We later explain how we ensure they are different.
+
+2\. For every observation in the test set, form a prediction $\hat{y}_j$ using tree $T_j$.
+
+3\. For categorical data classification, predict $\hat{y}$ with majority vote (most frequent class among $\hat{y}_1, \dots, \hat{y}_T$).
+     
+So how do we get different decision trees from a single training set? For this, we use randomness in two ways which we explain in the steps below. Let $N$ be the number of observations in the training set. To create $T_j, \, j=1,\ldots,B$ from the training set we do the following:
+
+1\. Create a bootstrap training set by sampling $N$ observations from the training set **with replacement**. This is the first way to induce randomness. 
+    
+2\. A large number of features is typical in machine learning challenges. Often, many features can be informative but including them all in the model may result in overfitting. The second way random forests induce randomness is by randomly selecting features to be included in the building of each tree. A different random subset is selected for each tree. This reduces correlation between trees in the forest, thereby improving prediction accuracy. 
+
+### Fitting random forests
+
+<!-- MB: getting some error that I need some package installs for the engine randomForest but every package is installed -->
+
+We will demonstrate by fitting a random forest to the House elections data, predicting `approval` with `state`, `gender`, and `age`.  We will use the `rand_forest()` function to create our model specification, setting the engine to `"randomForest"` and the mode to `"classification"`.
+
+```{r, message=FALSE, warning=FALSE}
+library(tidymodels)
+library(parsnip)
+#forest_mod <- rand_forest() %>%
+#  set_engine("randomForest") %>%
+#  set_mode("classification")
+
+#approval_forest <- fit(forest_mod,
+#                    factor(approval) ~ state + gender + age,
+#                    data = ch12)
+
+#approval_forest
+```
+
+We see under "OOB estimate of error rate" that this model has an error rate of 36% (or, looking at it the other way, an accuracy of 64%). We can see how the error rate of our algorithm changes as we add trees by looking at `house_forest$fit$err.rate[, "OOB"]`.  By default, `randomForest()` (the engine we specified) grows 500 trees.
+
+```{r}
+#tibble(`Error rate` = house_forest$fit$err.rate[, "OOB"],
+#       Trees = 1:500) %>%
+#  ggplot(aes(x = Trees, y = `Error rate`)) +
+#  geom_line() +
+#  theme_classic()
+```
+
+We can see that in this case, the accuracy improves as we add more trees until about 300 trees where accuracy stabilizes.
+
+Random forests often perform better than other methods. However, a disadvantage of random forests is that we lose interpretability---we don't get anything like the coefficients from a logistic regression or the single tree from CART.
+
+## Machine Learning
+
+<!-- MB: insert whole section INTRO -->
+For this chapter, we'll consider x possible models.  We have some intuitions about what should be in a useful model for presidential approval.  First, since the effect of all the predictors likely vary based on whether the president is a Democrat or Republican, all predictors should be interacted with `pres_gop`.  Also, party identification is likely a large predictor of presidential approval, and thus should be included.  But what about the other variables?  Let's consider the following combinations:
+
+1. `race` alone
+2. `race` and `age`
+3. `state` plus demographic variables (`race`, `female`, `educ`, and `age`)
+4. Same as above, but with all two-way interactions between the demographic variables
+
+Of course, these are a small subset of the possible models we could consider, either with the variables we have selected or with the larger set of all the variables in the `cces`.  But we'll use these as examples for the machine learning techniques in this chapter; if you'd like, you can use the methods we learn here to test additional models.
+
+Let's save these as `formula` objects in R, so we can easily access them later.  We'll start with the simplest model we'll consider, as `basic_form`:
+
+```{r}
+basic_form <- formula(approval ~ age * ideology)
+```
+
+Next, we can use `update()` to create the more complicated formulas.  `update()` takes as its first argument a formula and as its second argument the additions you want to make.  To keep all the predictors from the first formula and add more, you will start with `~ . + ` and then add more predictors, like so:
+
+```{r}
+ideo_form <- update(basic_form,
+                    ~ age * ideology)
+
+demo_form <- update(basic_form,
+                    ~ . + race * gender + 
+                      age * gender  + 
+                      education * gender + 
+                      state * gender)
+
+demo_interact_form <- update(basic_form,
+                             ~ . + race * education * gender + 
+                               gender * age * race)
+```
+
+Since the last model is the same as `demo_interact_form` but with `ideo5 * pres_gop` added, we'll use `update(demo_interact_form)` rather than `update(basic_form)` here:
+
+```{r}
+#full_form <- update(demo_interact_form,
+#                    ~ . + ideo5 * pres_gop)
+```
+
+Now we have five `formula` objects we can use to fit models.
+
+So we can access them easily, we'll save them in a tibble and give them easy-to-remember names:
+
+```{r}
+#cces_formulas <- tibble(formula = c(basic_form,
+#                                    ideo_form,
+#                                    demo_form,
+#                                    demo_interact_form,
+#                                    full_form),
+#                       group = c("Basic model",
+#                                 "Ideology model",
+#                                 "Demographic model",
+#                                 "Demographic interaction model",
+#                                 "Full model"))
+```
+
+## **parsnip**: build the model
+
+This step is really three, using only the [**parsnip** package](https://tidymodels.github.io/parsnip/). In this setp, we can choose the *model*, the *engine* to run the model in R, and, for some models, the *mode*.  Here, our model will be linear regression, the engine `lm`, and the mode "regression" (the only possible mode for a linear regression).
+
+```{r}
+lm_spec <- 
+  
+  # Pick model
+  
+  linear_reg() %>%
+  
+  # Set engine
+  
+  set_engine("lm") %>%
+  
+  # Set mode
+  
+  set_mode("regression") 
+
+lm_spec
+```
