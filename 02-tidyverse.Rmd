@@ -4,13 +4,12 @@ output_yaml: _output.yml
 
 # Tidyverse {#tidyverse}
 
-```{r, include=FALSE}
-library(ggrepel)
-```
-
 <!-- Do we really need all these data packages? -->
 
 Start by loading the packages which we will need in this chapter.
+```{r message=FALSE, warning=FALSE, echo=FALSE}
+library(ggrepel)
+```
 
 ```{r, message=FALSE}
 library(gapminder)
@@ -18,6 +17,7 @@ library(nycflights13)
 library(fivethirtyeight)
 library(PPBDS.data)
 library(tidyverse)
+library(lubridate)
 library(gt)
 ```
 
@@ -88,7 +88,7 @@ gender_data
 Now suppose we want to change the data type of one of more of the columns. The `col_type` argument allows us to do this. Without the `col_type` argument, the `division` column is read in as a character column. Instead, we want it to be read in as a factor.  
 
 ```{r}
-# gender_data <- read_csv(file = url, skip = 1, col_type = cols(division = col_factor()))
+gender_data <- read_csv(file = url, skip = 1, col_type = cols(division = col_factor()))
 ```
 
 Now that the new dataset has been read in, explore it using the `View()` and `glimpse()` functions and the `$` operator from the previous chapter. 
@@ -125,8 +125,6 @@ gender_data <- gender_data %>%
 tail(gender_data)
 ```
 
-<!-- https://github.com/mdogucu/web-scrape -->
-
 The data we need to answer a question is not always in a spreadsheet ready for us to read. For example, the US murders dataset we used in the R Basics chapter originally comes from [this Wikipedia page](https://en.wikipedia.org/w/index.php?title=Gun_violence_in_the_United_States_by_state): 
 
 ```{r}
@@ -140,7 +138,6 @@ You can see the data table when you visit the webpage:
 ```{r, echo=FALSE}
 knitr::include_graphics("02-tidyverse/images/murders-data-wiki-page.png")
 ```
-
 
 To get this data, we need to do some _web scraping_. 
 
@@ -316,7 +313,7 @@ knitr::include_graphics("01-visualization/images/group_summary.png")
 
 The next common task when working with data frames is to compute *summary statistics*. Summary statistics are single numerical values that summarize a large number of values. Commonly known examples of summary statistics include the mean (also called the average) and the median (the middle value). Other examples of summary statistics that might not immediately come to mind include the *sum*, the smallest value also called the *minimum*, the largest value also called the *maximum*, and the *standard deviation*.
 
-Return to a familiar dataset. Let's calculate two summary statistics of the `temp` temperature variable in the `weather` data frame: the mean and standard deviation (recall from Section \@ref(nycflights13) that the `weather` data frame is included in the `nycflights13` package). To compute these summary statistics, we need the `mean()` and `sd()` *summary functions* in R. Summary functions in R take in many values and return a single value.
+Return to a familiar dataset. Let's calculate two summary statistics of the `temp` temperature variable in the `weather` data frame: the mean and standard deviation. To compute these summary statistics, we need the `mean()` and `sd()` *summary functions* in R. Summary functions in R take in many values and return a single value.
 
 Recall the output of the `summary()` function. 
 ```{r, echo = FALSE}
@@ -352,14 +349,47 @@ Notice how the `na.rm = TRUE` are used as arguments to the `mean()` and `sd()` s
 
 However, one needs to be cautious whenever ignoring missing values as we've just done. There are possible ramifications of blindly sweeping rows with missing values "under the rug." This is in fact why the `na.rm` argument to any summary statistic function in R is set to `FALSE` by default. In other words, R does not ignore rows with missing values by default. R is alerting you to the presence of missing data and you should be mindful of this missingness and any potential causes of this missingness throughout your analysis.
 
-What are other summary functions we can use inside the `summarize()` verb to compute summary statistics? You ou can use any function in R that takes many values and returns just one. Here are just a few:
+### Basic statistical terms
 
-* `mean()`: the average
-* `sd()`: the standard deviation, which is a measure of spread
-* `min()` and `max()`: the minimum and maximum values, respectively
-* `IQR()`: interquartile range
-* `sum()`: the total amount when adding multiple numbers
-* `n()`: a count of the number of rows in each group.
+What are other summary functions we can use inside the `summarize()` verb to compute summary statistics? You can use any function in R that takes many values and returns just one. Here are just a few:
+
+* mean(): the average
+* sd(): the standard deviation, which is a measure of spread
+* min() and max(): the minimum and maximum values, respectively
+* IQR(): interquartile range
+* sum(): the total amount when adding multiple numbers
+* n(): a count of the number of rows in each group. This particular summary function will make more sense when group_by() is covered
+
+Note that all the following statistical terms apply only to *numerical* variables, except the *distribution* which can exist for both numerical and categorical variables. 
+
+**`mean()`**
+
+The *mean* is the most commonly reported measure of center.  It is commonly called the *average* though this term can be a little ambiguous.  The mean is the sum of all of the data elements divided by how many elements there are. If we have $n$ data points, the mean is given by: 
+
+$$Mean = \frac{x_1 + x_2 + \cdots + x_n}{n}$$
+
+**`median()`**
+
+The median is calculated by first sorting a variable's data from smallest to largest.  After sorting the data, the middle element in the list is the *median*.  If the middle falls between two values, then the median is the mean of those two middle values.
+
+**`sd()`**
+
+We will next discuss the *standard deviation* ($sd$) of a variable.  The formula can be a little intimidating at first but it is important to remember that it is essentially a measure of how far we expect a given data value will be from its mean:
+
+$$sd = \sqrt{\frac{(x_1 - Mean)^2 + (x_2 - Mean)^2 + \cdots + (x_n - Mean)^2}{n - 1}}$$
+
+**Five-number summary**
+
+The *five-number summary* consists of five summary statistics: the minimum, the first quantile AKA 25th percentile, the second quantile AKA median or 50th percentile, the third quantile AKA 75th, and the maximum. The five-number summary of a variable is used when constructing boxplots.
+
+The quantiles are calculated as
+
+- first quantile ($Q_1$): the median of the first half of the sorted data
+- third quantile ($Q_3$): the median of the second half of the sorted data
+
+The *interquartile range (IQR)*\index{interquartile range (IQR)} is defined as $Q_3 - Q_1$ and is a measure of how spread out the middle 50% of values are. The IQR corresponds to the length of the box in a boxplot.
+
+The median and the IQR are not influenced by the presence of outliers in the ways that the mean and standard deviation are. They are, thus, recommended for skewed datasets. We say in this case that the median and IQR are more *robust to outliers*.
 
 Let's return to the `gain` variable from the previous chapter and look at some summary statistics by considering multiple summary functions at once in the same `summarize()` code:
 
@@ -394,7 +424,7 @@ Again, we encounter `NA` values missing values, and have to set `na.rm = TRUE` a
 <!-- Explain the  ~ and . thoroughly. --> 
 ```{r}
 weather %>%
-  summarize(across(c(temp, dewp), ~ mean(., na.rm = TRUE)))
+  summarize(across(c(temp, dewp), ~mean(., na.rm = TRUE)))
 ```
 
 ```{r}
@@ -416,7 +446,7 @@ summary_monthly_temp
 
 This code is identical to the previous code that created `summary_temp`, but with an extra `group_by(month)` added before the `summarize()`. Grouping the `weather` dataset by `month` and then applying the `summarize()` functions yields a data frame that displays the mean and standard deviation temperature split by the 12 months of the year.
 
-It is important to note that the \index{dplyr!group\_by()} `group_by()` function doesn't change data frames by itself. Rather it changes the *meta-data*\index{meta-data}, or data about the data, specifically the grouping structure. It is only after we apply the `summarize()` function that the data frame changes. 
+It is important to note that the `group_by()` function doesn't change data frames by itself. Rather it changes the *meta-data*, or data about the data, specifically the grouping structure. It is only after we apply the `summarize()` function that the data frame changes. 
 
 Run this code (do not forget to load its package `nycflights13` in your console if you
 have not already):
@@ -425,7 +455,7 @@ have not already):
 flights
 ```
 
-Observe that the first line of the output reads `# A tibble: 336,776 x 19`. This is an example of meta-data, in this case the number of observations/rows and variables/columns in `flights`. The actual data itself are the subsequent table of values. Now let's pipe the `flights` data frame into `group_by(origin)`:
+Observe that the first line of the output reads `# A tibble: 336,776 x 20`. This is an example of meta-data, in this case the number of observations/rows and variables/columns in `flights`. The actual data itself are the subsequent table of values. Now let's pipe the `flights` data frame into `group_by(origin)`:
 
 ```{r, eval=TRUE}
 flights %>% 
@@ -436,7 +466,7 @@ Observe that now there is additional meta-data: `# Groups: origin [3]` indicatin
 
 Only by combining a `group_by()` with another data wrangling operation, in this case `summarize()`, will the data actually be transformed. 
 
-Let's revisit the `n()` \index{dplyr!n()} counting summary function we briefly introduced previously. Recall that the `n()` function counts rows. This is opposed to the `sum()` summary function that returns the sum of a numerical variable. For example, suppose we'd like to count how many flights departed each of the three airports in New York City:
+Let's revisit the `n()` counting summary function we briefly introduced previously. Recall that the `n()` function counts rows. This is opposed to the `sum()` summary function that returns the sum of a numerical variable. For example, suppose we'd like to count how many flights departed each of the three airports in New York City:
 
 ```{r, eval=TRUE}
 by_origin <- flights %>% 
@@ -447,7 +477,7 @@ by_origin
 
 We see that Newark (`"EWR"`) had the most flights departing in 2013 followed by `"JFK"` and lastly by LaGuardia (`"LGA"`). Note there is a subtle but important difference between `sum()` and `n()`; while `sum()` returns the sum of a numerical variable, `n()` returns a count of the number of rows/observations. 
 
-If you would like to remove this grouping structure meta-data, we can pipe the resulting data frame into the \index{dplyr!ungroup()} `ungroup()` function:
+If you would like to remove this grouping structure meta-data, we can pipe the resulting data frame into the `ungroup()` function:
 
 ```{r, eval=TRUE}
 flights %>% 
@@ -494,49 +524,9 @@ But real life will be much nastier. You will bring data into R from the outside 
 * [Regexes to validate/match email addresses][email-regex]
 * [Fixing an Atom bug][fix-atom-bug]
 
-<!-- EF: Here I might make the distinction between strings and characters a little bit
-clearer because that is a pretty important basic CS principle -->
-
 Here we discuss common remedial tasks for cleaning and transforming character data, also known as "strings". A data frame or tibble will consist of one or more *atomic vectors* of a certain class. This lesson deals with things you can do with vectors of class `character`.
 
-Here are some resources:
-
-### Manipulating character vectors
-
-* [stringr package][stringr-web].
-  - A core package in the `tidyverse.` It is installed via `install.packages("tidyverse")` and also loaded via `library(tidyverse)`. Of course, you can also install or load it individually.
-  - Main functions start with `str_`. Auto-complete is your friend.
-  - Replacements for base functions re: string manipulation and regular expressions (see below).
-  - Main advantages over base functions: greater consistency about inputs and outputs. Outputs are more ready for your next analytical task. 
-* [tidyr package][tidyr-web].
-  - Especially useful for functions that split one character vector into many and *vice versa*: `separate()`, `unite()`, `extract()`.
-* The [glue package][glue-web] is fantastic for string interpolation. If `stringr::str_interp()` doesn't get your job done, check out the glue package.
-
-### Regular expressions resources
-
-A God-awful and powerful language for expressing patterns to match in text or for search-and-replace. Frequently described as "write only", because regular expressions (or regex) are easier to write than to read/understand. And they are not particularly easy to write.
-
-* We again prefer the [stringr package][stringr-cran] over base functions. Why?
-  - Wraps [stringi][stringi-cran], which is a great place to look if stringr isn't powerful enough.
-  - Standardized on [ICU regular expressions][icu-regex], so you can stop toggling `perl = TRUE/FALSE` at random.
-  - Results come back in a form that is much friendlier for downstream work.
-* The [Strings chapter][r4ds-strings] of [R for Data Science][r4ds] [@wickham2016] is a great resource.
-* RStudio Cheat Sheet on [Regular Expressions in R][rstudio-regex-cheatsheet].
-* Regex testers:
-  - [regex101.com][regex101]
-  - [regexr.com][regexr]
-
-### Character encoding resources
-
-* [Strings subsection of data import chapter][r4ds-readr-strings] in [R for Data Science][r4ds] [@wickham2016].
-* Screeds on the Minimum Everyone Needs to Know about encoding:
-  - [The Absolute Minimum Every Software Developer Absolutely, Positively Must Know About Unicode and Character Sets (No Excuses!)][unicode-no-excuses]
-  - [What Every Programmer Absolutely, Positively Needs To Know About Encodings And Character Sets To Work With Text][programmers-encoding]
-
-### Character vectors that live in a data frame
-
-Load the tidyverse, which includes stringr
-
+Load the `tidyverse`, which includes `stringr`. The functions included in `stringr` begin with `str_`.
 
 ### Regex-free string manipulation with stringr and tidyr
 
@@ -880,9 +870,6 @@ You can use parentheses inside regexes to define *groups* and you can refer to t
 
 ## Variable Types: Factors 
 
-## Variable Types: Date Times 
-<!-- EWF: Planned topic, will include separate() and unite() fcns --> 
-
 ## Variable Types: Lists
 <!-- EC: Added this section from R4DS -->
 
@@ -933,12 +920,9 @@ knitr::include_graphics("02-tidyverse/images/lists-structure.png")
 
 There are three principles:
 
-1.  Lists have rounded corners. Atomic vectors have square corners.
-  
-1.  Children are drawn inside their parent, and have a slightly darker
-    background to make it easier to see  the hierarchy.
-  
-1.  The orientation of the children (i.e. rows or columns) isn't important, so I'll pick a row or column orientation to either save space or illustrate an important property in the example.
+- Lists have rounded corners. Atomic vectors have square corners.
+- Children are drawn inside their parent, and have a slightly darker background to make it easier to see  the hierarchy.
+- The orientation of the children (i.e. rows or columns) isn't important, so I'll pick a row or column orientation to either save space or illustrate an important property in the example.
 
 ### Subsetting
 
@@ -948,33 +932,30 @@ There are three ways to subset a list, which I'll illustrate with a list named `
 a <- list(a = 1:3, b = "a string", c = pi, d = list(-1, -5))
 ```
 
-*   `[` extracts a sub-list. The result will always be a list.
+`[` extracts a sub-list. The result will always be a list.
 
-    ```{r}
-    str(a[1:2])
-    str(a[4])
-    ```
+```{r}
+str(a[1:2])
+str(a[4])
+```
+
+Like with vectors, you can subset with a logical, integer, or character vector.
     
-    Like with vectors, you can subset with a logical, integer, or character
-    vector.
+`[[` extracts a single component from a list. It removes a level of hierarchy from the list.
+
+```{r}
+str(a[[1]])
+str(a[[4]])
+```
+
+`$` is a shorthand for extracting named elements of a list. It works similarly to `[[` except that you don't need to use quotes.
     
-*   `[[` extracts a single component from a list. It removes a level of 
-    hierarchy from the list.
+```{r}
+a$a
+a[["a"]]
+```
 
-    ```{r}
-    str(a[[1]])
-    str(a[[4]])
-    ```
-
-*   `$` is a shorthand for extracting named elements of a list. It works
-    similarly to `[[` except that you don't need to use quotes.
-    
-    ```{r}
-    a$a
-    a[["a"]]
-    ```
-
-The distinction between `[` and `[[` is really important for lists, because `[[` drills down into the list while `[` returns a new, smaller list. Compare the code and output above with the visual representation in Figure \@ref(fig:lists-subsetting).
+The distinction between `[` and `[[` is really important for lists, because `[[` drills down into the list while `[` returns a new, smaller list. Compare the code and output above with the visual representation.
 
 ```{r lists-subsetting, echo = FALSE, out.width = "75%", fig.cap = "Subsetting a list, visually."}
 knitr::include_graphics("02-tidyverse/images/lists-subsetting.png")
@@ -1007,6 +988,339 @@ If you wanted to get the content of the pepper package, you'd need `x[[1]][[1]]`
 ```{r, out.width = "25%", echo = FALSE}
 knitr::include_graphics("02-tidyverse/images/pepper-3.jpg")
 ```
+
+## Variable Types: Date-Times 
+<!-- EWF: Planned topic, will include separate() and unite() fcns --> 
+At first glance, dates and times seem simple. You use them all the time in your regular life, and they don't seem to cause much confusion. However, the more you learn about dates and times, the more complicated they seem to get. To warm up, try these three seemingly simple questions:
+
+* Does every year have 365 days?
+* Does every day have 24 hours?
+* Does every minute have 60 seconds?
+
+I'm sure you know that not every year has 365 days, but do you know the full rule for determining if a year is a leap year? (It has three parts.) You might have remembered that many parts of the world use daylight savings time (DST), so that some days have 23 hours, and others have 25. You might not have known that some minutes have 61 seconds because every now and then leap seconds are added because the Earth's rotation is gradually slowing down.
+
+Dates and times are hard because they have to reconcile two physical phenomena (the rotation of the Earth and its orbit around the sun) with a whole raft of geopolitical phenomena including months, time zones, and DST. This chapter won't teach you every last detail about dates and times, but it will give you a solid grounding of practical skills that will help you with common data analysis challenges.
+
+In this chapter, we will manipulate date-times using the __lubridate__ package, which makes it easier to work with dates and times in R. `lubridate` is not part of core tidyverse because you only need it when you're working with dates/times.
+
+##W Creating date/times
+
+There are three types of date/time data that refer to an instant in time:
+
+* A `date`. Tibbles print this as `<date>`.
+
+* A `time` within a day. Tibbles print this as `<time>`.
+
+* A `date-time` is a date plus a time: it uniquely identifies an
+  instant in time (typically to the nearest second). Tibbles print this
+  as `<dttm>`. Elsewhere in R these are called POSIXct, but I don't think
+  that's a very useful name.
+
+You should always use the simplest possible data type that works for your needs. That means if you can use a date instead of a date-time, you should. Date-times are substantially more complicated because of the need to handle time zones, which we'll come back to at the end of the chapter.
+
+To get the current date or date-time you can use `today()` or `now()`:
+
+```{r}
+today()
+now()
+```
+
+Otherwise, there are three ways you're likely to create a date/time:
+
+* From a string.
+* From individual date-time components.
+* From an existing date/time object.
+
+They work as follows.
+
+### From strings
+
+Date/time data often comes as strings. The lubridate functions automatically work out the format once you specify the order of the component. To use them, identify the order in which year, month, and day appear in your dates, then arrange "y", "m", and "d" in the same order. That gives you the name of the lubridate function that will parse your date. For example:
+
+```{r}
+ymd("2017-01-31")
+mdy("January 31st, 2017")
+dmy("31-Jan-2017")
+```
+
+These functions also take unquoted numbers. This is the most concise way to create a single date/time object, as you might need when filtering date/time data. `ymd()` is short and unambiguous:
+
+```{r}
+ymd(20170131)
+```
+
+`ymd()` and friends create dates. To create a date-time, add an underscore and one or more of "h", "m", and "s" to the name of the parsing function:
+
+```{r}
+ymd_hms("2017-01-31 20:11:59")
+mdy_hm("01/31/2017 08:01")
+```
+
+You can also force the creation of a date-time from a date by supplying a timezone:
+
+```{r}
+ymd(20170131, tz = "UTC")
+```
+
+### From individual components
+
+Instead of a single string, sometimes you'll have the individual components of the date-time spread across multiple columns. This is what we have in the flights data:
+
+```{r}
+flights %>% 
+  select(year, month, day, hour, minute)
+```
+
+To create a date/time from this sort of input, use `make_date()` for dates, or `make_datetime()` for date-times:
+
+```{r}
+flights %>% 
+  select(year, month, day, hour, minute) %>% 
+  mutate(departure = make_datetime(year, month, day, hour, minute))
+```
+
+Let's do the same thing for each of the four time columns in `flights`. The times are represented in a slightly odd format, so we use modulus arithmetic to pull out the hour and minute components. Once I've created the date-time variables, I focus in on the variables we'll explore in the rest of the chapter.
+
+```{r}
+make_datetime_100 <- function(year, month, day, time) {
+  make_datetime(year, month, day, time %/% 100, time %% 100)
+}
+flights_dt <- flights %>% 
+  filter(!is.na(dep_time), !is.na(arr_time)) %>% 
+  mutate(
+    dep_time = make_datetime_100(year, month, day, dep_time),
+    arr_time = make_datetime_100(year, month, day, arr_time),
+    sched_dep_time = make_datetime_100(year, month, day, sched_dep_time),
+    sched_arr_time = make_datetime_100(year, month, day, sched_arr_time)
+  ) %>% 
+  select(origin, dest, ends_with("delay"), ends_with("time"))
+flights_dt
+```
+
+With this data, I can visualise the distribution of departure times across the year:
+
+```{r}
+flights_dt %>% 
+  ggplot(aes(dep_time)) + 
+  geom_freqpoly(binwidth = 86400) # 86400 seconds = 1 day
+```
+
+Or within a single day:
+
+```{r}
+flights_dt %>% 
+  filter(dep_time < ymd(20130102)) %>% 
+  ggplot(aes(dep_time)) + 
+  geom_freqpoly(binwidth = 600) # 600 s = 10 minutes
+```
+
+Note that when you use date-times in a numeric context (like in a histogram), 1 means 1 second, so a binwidth of 86400 means one day. For dates, 1 means 1 day.
+
+### From other types
+
+You may want to switch between a date-time and a date. That's the job of `as_datetime()` and `as_date()`:
+
+```{r}
+as_datetime(today())
+as_date(now())
+```
+
+Sometimes you'll get date/times as numeric offsets from the "Unix Epoch", 1970-01-01. If the offset is in seconds, use `as_datetime()`; if it's in days, use `as_date()`.
+
+```{r}
+as_datetime(60 * 60 * 10)
+as_date(365 * 10 + 2)
+```
+
+### Date-time components
+
+Now that you know how to get date-time data into R's date-time data structures, let's explore what you can do with them. This section will focus on the accessor functions that let you get and set individual components. The next section will look at how arithmetic works with date-times.
+
+### Getting components
+
+You can pull out individual parts of the date with the accessor functions `year()`, `month()`, `mday()` (day of the month), `yday()` (day of the year), `wday()` (day of the week), `hour()`, `minute()`, and `second()`. 
+
+```{r}
+datetime <- ymd_hms("2016-07-08 12:34:56")
+year(datetime)
+month(datetime)
+mday(datetime)
+yday(datetime)
+wday(datetime)
+```
+
+For `month()` and `wday()` you can set `label = TRUE` to return the abbreviated name of the month or day of the week. Set `abbr = FALSE` to return the full name.
+
+```{r}
+month(datetime, label = TRUE)
+wday(datetime, label = TRUE, abbr = FALSE)
+```
+
+We can use `wday()` to see that more flights depart during the week than on the weekend:
+
+```{r}
+flights_dt %>% 
+  mutate(wday = wday(dep_time, label = TRUE)) %>% 
+  ggplot(aes(x = wday)) +
+    geom_bar()
+```
+
+There's an interesting pattern if we look at the average departure delay by minute within the hour. It looks like flights leaving in minutes 20-30 and 50-60 have much lower delays than the rest of the hour!
+
+```{r}
+flights_dt %>% 
+  mutate(minute = minute(dep_time)) %>% 
+  group_by(minute) %>% 
+  summarise(
+    avg_delay = mean(arr_delay, na.rm = TRUE),
+    n = n()) %>% 
+  ggplot(aes(minute, avg_delay)) +
+    geom_line()
+```
+
+Interestingly, if we look at the scheduled departure time we don't see such a strong pattern:
+
+```{r}
+sched_dep <- flights_dt %>% 
+  mutate(minute = minute(sched_dep_time)) %>% 
+  group_by(minute) %>% 
+  summarise(
+    avg_delay = mean(arr_delay, na.rm = TRUE),
+    n = n())
+ggplot(sched_dep, aes(minute, avg_delay)) +
+  geom_line()
+```
+
+So why do we see that pattern with the actual departure times? Well, like much data collected by humans, there's a strong bias towards flights leaving at "nice" departure times. Always be alert for this sort of pattern whenever you work with data that involves human judgement!
+
+```{r}
+ggplot(sched_dep, aes(minute, n)) +
+  geom_line()
+```
+
+### Rounding
+
+An alternative approach to plotting individual components is to round the date to a nearby unit of time, with `floor_date()`, `round_date()`, and `ceiling_date()`. Each function takes a vector of dates to adjust and then the name of the unit round down (floor), round up (ceiling), or round to. This, for example, allows us to plot the number of flights per week:
+
+```{r}
+flights_dt %>% 
+  count(week = floor_date(dep_time, "week")) %>% 
+  ggplot(aes(week, n)) +
+    geom_line()
+```
+
+Computing the difference between a rounded and unrounded date can be particularly useful.
+
+### Setting components
+
+You can also use each accessor function to set the components of a date/time: 
+
+```{r}
+(datetime <- ymd_hms("2016-07-08 12:34:56"))
+year(datetime) <- 2020
+datetime
+month(datetime) <- 01
+datetime
+hour(datetime) <- hour(datetime) + 1
+datetime
+```
+
+Alternatively, rather than modifying in place, you can create a new date-time with `update()`. This also allows you to set multiple values at once.
+
+```{r}
+update(datetime, year = 2020, month = 2, mday = 2, hour = 2)
+```
+
+If values are too big, they will roll-over:
+
+```{r}
+ymd("2015-02-01") %>% 
+  update(mday = 30)
+ymd("2015-02-01") %>% 
+  update(hour = 400)
+```
+
+You can use `update()` to show the distribution of flights across the course of the day for every day of the year: 
+
+```{r}
+flights_dt %>% 
+  mutate(dep_hour = update(dep_time, yday = 1)) %>% 
+  ggplot(aes(dep_hour)) +
+    geom_freqpoly(binwidth = 300)
+```
+
+Setting larger components of a date to a constant is a powerful technique that allows you to explore patterns in the smaller components.
+
+### Time zones 
+
+Time zones are an enormously complicated topic because of their interaction with geopolitical entities. Fortunately we don't need to dig into all the details as they're not all important for data analysis, but there are a few challenges we'll need to tackle head on.
+
+The first challenge is that everyday names of time zones tend to be ambiguous. For example, if you're American you're probably familiar with EST, or Eastern Standard Time. However, both Australia and Canada also have EST! To avoid confusion, R uses the international standard IANA time zones. These use a consistent naming scheme "<area>/<location>", typically in the form "\<continent\>/\<city\>" (there are a few exceptions because not every country lies on a continent). Examples include "America/New_York", "Europe/Paris", and "Pacific/Auckland".
+
+You might wonder why the time zone uses a city, when typically you think of time zones as associated with a country or region within a country. This is because the IANA database has to record decades worth of time zone rules. In the course of decades, countries change names (or break apart) fairly frequently, but city names tend to stay the same. Another problem is that name needs to reflect not only to the current behaviour, but also the complete history. For example, there are time zones for both "America/New_York" and "America/Detroit". These cities both currently use Eastern Standard Time but in 1969-1972 Michigan (the state in which Detroit is located), did not follow DST, so it needs a different name. It's worth reading the raw time zone database (available at <http://www.iana.org/time-zones>) just to read some of these stories!
+
+You can find out what R thinks your current time zone is with `Sys.timezone()`:
+
+```{r}
+Sys.timezone()
+```
+
+(If R doesn't know, you'll get an `NA`.)
+
+And see the complete list of all time zone names with `OlsonNames()`:
+
+```{r}
+length(OlsonNames())
+head(OlsonNames())
+```
+
+In R, the time zone is an attribute of the date-time that only controls printing. For example, these three objects represent the same instant in time:
+
+```{r}
+(x1 <- ymd_hms("2015-06-01 12:00:00", tz = "America/New_York"))
+(x2 <- ymd_hms("2015-06-01 18:00:00", tz = "Europe/Copenhagen"))
+(x3 <- ymd_hms("2015-06-02 04:00:00", tz = "Pacific/Auckland"))
+```
+
+You can verify that they're the same time using subtraction:
+
+```{r}
+x1 - x2
+x1 - x3
+```
+
+Unless otherwise specified, lubridate always uses UTC. UTC (Coordinated Universal Time) is the standard time zone used by the scientific community and roughly equivalent to its predecessor GMT (Greenwich Mean Time). It does not have DST, which makes a convenient representation for computation. Operations that combine date-times, like `c()`, will often drop the time zone. In that case, the date-times will display in your local time zone:
+
+```{r}
+x4 <- c(x1, x2, x3)
+x4
+```
+
+You can change the time zone in two ways:
+
+*   Keep the instant in time the same, and change how it's displayed.
+    Use this when the instant is correct, but you want a more natural
+    display.
+  
+    ```{r}
+    x4a <- with_tz(x4, tzone = "Australia/Lord_Howe")
+    x4a
+    x4a - x4
+    ```
+    
+    (This also illustrates another challenge of times zones: they're not
+    all integer hour offsets!)
+
+*   Change the underlying instant in time. Use this when you have an
+    instant that has been labelled with the incorrect time zone, and you
+    need to fix it.
+
+    ```{r}
+    x4b <- force_tz(x4, tzone = "Australia/Lord_Howe")
+    x4b
+    x4b - x4
+    ```
+ 
 
 ## Combining Data
 
@@ -1535,8 +1849,8 @@ Let's switch gears and learn about the concept of "tidy" data format with a moti
 Let's focus our attention on the `drinks` data frame and look at its first 5 rows:
 
 ```{r, echo=FALSE}
-drinks %>%  
-  head(5)
+# drinks %>%  
+#   head(5)
 ```
 
 After reading the help file by running `?drinks`, you'll see that `drinks` is a data frame containing results from a survey of the average number of servings of beer, spirits, and wine consumed in 193 countries. This data was originally reported on FiveThirtyEight.com in Mona Chalabi's article: ["Dear Mona Followup: Where Do People Drink The Most Beer, Wine And Spirits?"](https://fivethirtyeight.com/features/dear-mona-followup-where-do-people-drink-the-most-beer-wine-and-spirits/).
@@ -1551,9 +1865,9 @@ and save the resulting data frame in `drinks_smaller`:
 
 ```{r}
 # drinks_smaller <- drinks %>%
-#   filter(country %in% c("USA", "China", "Italy", "Saudi Arabia")) %>%
-#   select(-total_litres_of_pure_alcohol) %>%
-#   rename(beer = beer_servings, spirit = spirit_servings, wine = wine_servings)
+#  filter(country %in% c("USA", "China", "Italy", "Saudi Arabia")) %>%
+#  select(-total_litres_of_pure_alcohol) %>%
+#  rename(beer = beer_servings, spirit = spirit_servings, wine = wine_servings)
 # drinks_smaller
 ```
 
@@ -1674,44 +1988,6 @@ If however you want to convert a "tidy" data frame to "wide" format, you will ne
 
 You can also view examples of both `pivot_longer()` and `pivot_wider()` on the [tidyverse.org](https://tidyr.tidyverse.org/dev/articles/pivot.html#pew) webpage. There's a nice example to check out the different functions available for data tidying and a case study using data from the World Health Organization on that webpage. Furthermore, each week the R4DS Online Learning Community posts a dataset in the weekly [`#`TidyTuesday event](https://github.com/rfordatascience/tidytuesday) that might serve as a nice place for you to find other data to explore and transform. 
 
-### `tidyverse` package {#tidyverse-package}
-
-<!-- EWF: More useful in Jessica's chapter? --> 
-
-Notice at the beginning of the chapter we loaded the following four packages, which are among four of the most frequently used R packages for data science:
-
-```{r, eval=FALSE}
-library(ggplot2)
-library(dplyr)
-library(readr)
-library(tidyr)
-```
-
-Recall that **ggplot2** is for data visualization, **dplyr** is for data wrangling, **readr** is for importing spreadsheet data into R, and **tidyr** is for converting data to "tidy" format. There is a much quicker way to load these packages than by individually loading them: by installing and loading the `tidyverse` package. The `tidyverse` package acts as an "umbrella" package whereby installing/loading it will install/load multiple packages at once for you. 
-
-Running:
-
-```{r, eval=FALSE}
-library(tidyverse)
-```
-
-would be the same as running:
-
-```{r, eval=FALSE}
-library(ggplot2)
-library(dplyr)
-library(readr)
-library(tidyr)
-library(purrr)
-library(tibble)
-library(stringr)
-library(forcats)
-```
-
-The `purrr`, `tibble`, `stringr`, and `forcats` are left for a more advanced book; check out [*R for Data Science*](http://r4ds.had.co.nz/) to learn about these packages.
-
-For the remainder of this book, we'll start every chapter by running `library(tidyverse)`, instead of loading the various component packages individually. The `tidyverse` "umbrella" package gets its name from the fact that all the functions in all its packages are designed to have common inputs and outputs: data frames are in "tidy" format. This standardization of input and output data frames makes transitions between different functions in the different packages as seamless as possible. For more information, check out the [tidyverse.org](https://www.tidyverse.org/) webpage for the package.
-
 ## Other Commands
 
 Here are some commands which will prove useful for the rest of the book.
@@ -1754,7 +2030,7 @@ sd(1:5)
 
 <!-- DK: Maybe we put this down below, after we introduce rnorm()? -->
 
-Let's next discuss one particular kind of distribution: \index{distribution!normal} *normal distributions*. Such bell-shaped distributions are defined by two values: (1) the *mean* $\mu$ ("mu") which locates the center of the distribution and (2) the *standard deviation* $\sigma$ ("sigma") which determines the variation of the distribution. In Figure \@ref(fig:normal-curves), we plot three normal distributions where:
+Let's next discuss one particular kind of distribution: *normal distributions*. Such bell-shaped distributions are defined by two values: (1) the *mean* $\mu$ ("mu") which locates the center of the distribution and (2) the *standard deviation* $\sigma$ ("sigma") which determines the variation of the distribution. In the figure below, we plot three normal distributions where:
 
 1. The solid normal curve has mean $\mu = 5$ \& standard deviation $\sigma = 2$.
 1. The dotted normal curve has mean $\mu = 5$ \& standard deviation $\sigma = 5$.
