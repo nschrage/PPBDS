@@ -53,6 +53,7 @@ library(tidyverse)
 library(broom)
 library(skimr)
 library(PPBDS.data)
+library(gt)
 ```
 
 
@@ -62,25 +63,23 @@ Before we start modeling, let's perform some exploratory analysis on the dataset
 glimpse(cces)
 ```
 
-We will tweak the data by only looking at observations recorded in the year 2018 so that all the responses are about the same president. We will also drop all NA values in the dataset.
+We will tweak the data by only looking at observations recorded in the year 2018 so that all the responses are about the same president. We'll also select the variables that are currently of interest to us. Finally, because this chapter will be dealing with logistic regressions, we want to convert the numeric `approval` variable into a binary variable. `approval` is a numeric variable from 1-5 with 5 representing the highest approval of the president. In order to do this, we have to turn approval into a binary variable. 1-2 will be coded to 0 to signify disapproval and 3-5 will be coded to 1 for approval. We will also cast `approval` as a factor variable rather than a number, which is useful information for models.
 
 ```{r}
 ch12 <- cces %>%
   filter(year == 2018) %>%
-  drop_na()
+  select(state, age, gender, race, education, ideology, approval) %>%
+  mutate(approval = as.factor(case_when(
+    approval == 1 ~ 0,
+    approval == 2 ~ 0,
+    approval == 3 ~ 1,
+    approval == 4 ~ 1,
+    approval == 5 ~ 1)))
 ```
 
 From this, we can gather that there are 16 variables. Notably, there are 60,000 observations even after filtering only for the year 2018. 
 
-Let's also display a random sample of 5 rows of the 60,000 rows. We will be displaying these 5 random observations using a gt() table. Before that, though, we will select the variables that are currently of interest to us. 
-
-```{r, eval = FALSE}
-ch12 <- ch12 %>%
-  select(state, age, gender, race, education, ideology, approval)
-
-ch12 %>% 
-  sample_n(size = 5)
-```
+Let's also display a random sample of 5 rows of the 60,000 rows. We will be displaying these 5 random observations using a gt() table. . 
 
 ```{r, echo = FALSE}
 ch12 %>%
@@ -97,18 +96,6 @@ ch12 %>%
   tab_source_note(md("A random sample of 5 out of the 60,000 voters"))
 ```
 
-Now that we’ve looked at the raw values in `ch12`, let's make another tweak to the data. Because this chapter will be dealing with logistic regressions, we want to convert the numeric `approval` variable into a binary variable. `approval` is a numeric variable from 1-5 with 5 representing the highest approval of the president. In order to do this, we have to turn approval into a binary variable. 1-2 will be coded to 0 to signify disapproval and 3-5 will be coded to 1 for approval.
-
-```{r}
-ch12 <- ch12 %>%
-  mutate(approval = case_when(
-    approval == 1 ~ 0,
-    approval == 2 ~ 0,
-    approval == 3 ~ 1,
-    approval == 4 ~ 1,
-    approval == 5 ~ 1))
-```
-
 Now, let’s compute summary statistics. Let’s use the `skim()` function from the `skimr` package.
 
 ```{r}
@@ -116,7 +103,12 @@ ch12 %>%
   skim()
 ```
 
-You'll notice that we are missing data for our ideology and approval variables. The `complete_rate` column tells us that approval has 3% missing observations and ideology has 0.7% missing observations. 
+You'll notice that we are missing data for our ideology and approval variables. The `complete_rate` column tells us that approval has 3% missing observations and ideology has 0.7% missing observations. Let's use the function `drop_na()` to get rid of these missing observations so they don't interfere with our models later in the chapter:
+
+```{r}
+ch12 <- ch12 %>%
+  drop_na()
+```
 
 To complete our exploratory data analysis, let's create some data visualizations. 
 
@@ -131,8 +123,7 @@ ch12 %>%
        title = "Presidential Approval in 2018") 
 ```
 
-According to this graph, there are roughly 10,000 more voters who disapprove of Trump.
-To make things more interesting, let's facet this approval variable by gender and then race.
+According to this graph, there are roughly 10,000 more voters who disapprove of Trump. To make things more interesting, let's look at `approval` across gender and then race.
 
 ```{r}
 ch12 %>%
@@ -145,21 +136,18 @@ ch12 %>%
   theme(legend.position = "none")
 ```
 
-It seems that females have higher rates of disapproval. 
+It seems that females have higher rates of disapproval of the President males.
 
 ```{r}
 ch12 %>%
-  ggplot(aes(x = approval, fill = race)) +
-  geom_bar() + 
-  labs(y = "Count",
+  ggplot(aes(fill = approval, x = race, y = age)) +
+  geom_bar(position="fill", stat="identity") + 
+  labs(y = "Percentage",
        x = "Presidential Approval",
-       title = "Presidential Approval in 2018 by Race") +
-  facet_wrap(~ race) + 
-  theme(legend.position = "none") +
-  scale_y_log10()
+       title = "Presidential Approval in 2018 by Race")
 ```
 
-Note the log10 scale on the y-axis; this was done so that we can see clearly the distribution for races that have very few observations compared to white individuals. We can see that slight the disapproving majority is present across most races.
+This segmented bar graph shows us the percentage of each race that approved of the president.We can see that the disapproving majority in the overall data is present across most races.
 
 Now, let's use our ideology variable. `ideology` has values "Very Liberal", "Liberal", "Moderate", "Conservative", "Very Conservative", and "Not Sure". Let's create a jitterplot with `approval` to see hoow approval varied across political affiliations.
 
@@ -171,6 +159,7 @@ ch12 %>%
        x = "Ideology",
        title = "Presidential Approval by Ideology")
 ```
+
 As one would expect, approval is denser for conservative and very conservative voters while disapproval is denser for liberal and very liberal voters. 
 
 ## Logistic regression
@@ -509,54 +498,35 @@ img_path <- "images"
 
 ### What is CART?
 
-We have learned how to fit models for binary responses using logistic regression.  However, logistic regression is just one of many methods we can use to model binary responses.  CART is another approach, which we'll learn about in this section.  In the next section, we'll learn about random forests.
-
-<!-- Validity/model fitting the world. bias/variance  overfitting/underfitting. goal of the model -->
+Logistic regression is just one of many methods we can use to model binary responses.  CART is another approach, which we'll learn about in this section.
 
 A **tree** is basically a flow chart of yes or no questions. The general idea of the methods we are describing is to define an algorithm that uses data to create these trees with predictions at the ends, referred to as _nodes_. Decision trees predict an outcome variable $Y$ by *partitioning* the predictors.
 
-Decision trees like this are often used in practice. For example, to decide on a person's risk of poor outcome after having a heart attack, doctors use the following:
-
-```{r, echo=FALSE, out.width="50%"}
-# source https://www.researchgate.net/profile/Douglas_Walton/publication/228297479/figure/fig1/AS:301828123185152@1448972840090/Decision-Tree-for-Heart-Attack-Victim-adapted-from-Gigerenzer-et-al-1999-4.png
-#knitr::include_graphics(file.path(img_path,"Decision-Tree-for-Heart-Attack-Victim-adapted-from-Gigerenzer-et-al-1999-4.png"))
-```
-
-(Source: Walton 2010 Informal Logic, Vol. 30, No. 2, pp. 159-184^[https://papers.ssrn.com/sol3/Delivery.cfm/SSRN_ID1759289_code1486039.pdf?abstractid=1759289&mirid=1&type=2].)
-
-Here, the binary outcome is whether a patient is "High Risk" or "Low Risk."  We have three predictors: minimum systolic blood pressure over the initial 24-hour period, age, and presence of sinus tachycardia.  The tree presents a series of yes or no questions that allow us to use the predictors to classify a patient's risk level.
-
-**Classification trees**, or decision trees, are used in prediction problems where the outcome is categorical.  (When the outcome is numerical, they are called **regression trees**; hence the acronym **CART**, standing for Classification and Regression Trees.)  The general idea here is to build a decision tree and, at the end of each _node_, obtain a predictor $\hat{y}$. A mathematical way to describe this is to say that we are partitioning the *predictor space* into $J$ non-overlapping regions, $R_1, R_2, \ldots, R_J$, and then for any predictor $x$ that falls within region $R_j$, we estimate $f(x)$ with the class that is the most common among the data within the partition for which the associated predictor $x_i$ is also in $R_j$.
+**Classification trees**, or decision trees, are used in prediction problems where the outcome is categorical.  When the outcome is numerical, they are called **regression trees**; hence the acronym **CART**, standing for Classification and Regression Trees.  The general idea here is to build a decision tree and, at the end of each _node_, obtain a predictor $\hat{y}$. In this case, $\hat{y}$ would identify the likelihood of a voter in that node approving of the President.  
 
 But how do we decide on which partitions to make  ($R_1, R_2, \ldots, R_J$) and how do we choose $J$, the total number of partitions? Here is where the algorithm gets a bit complicated.
 
-Classification trees create partitions recursively. We start the algorithm with one partition, the entire predictor space (i.e., every observation is classified as 0 or 1). But after the first step we will have two partitions. After the second step we will split one of these partitions into two and will have three partitions, then four, then five, and so on. (We will describe how we decide when to stop later.)
-
-Once we select a partition $\mathbf{x}$ to split in order to create the new partitions, we find a predictor $j$ and value $s$ that define two new partitions, which we will call $R_1(j,s)$ and $R_2(j,s)$, that split our observations in the current partition by asking if $x_j$ is bigger than $s$ (or if $x_j$ falls into a particular category $s$, if the predictor $j$ is categorical):
-
-$$
-R_1(j,s) = \{\mathbf{x} \mid x_j < s\} \mbox{  and  } R_2(j,s) = \{\mathbf{x} \mid x_j \geq s\}
-$$
+Classification trees create partitions recursively. We start the algorithm with one partition in which every observation is classified as either 0 or 1. But after the first step we will have two partitions. After the second step we will split one of these partitions into two and will have three partitions, then four, then five, and so on.
 
 Now, after we define the new partitions $R_1$ and $R_2$, and we decide to stop the partitioning process, we compute predictors by taking the most common category of all the observations $y$ for which the associated $\mathbf{x}$ is in $R_1$ and $R_2$. We refer to these two as $\hat{y}_{R_1}$ and $\hat{y}_{R_2}$ respectively. 
 
-But how do we pick the predictor $j$ and the value $s$? One of the more popular ways for categorical data is the _Gini Index_.
+```{r, include = FALSE}
 
-In a perfect scenario, the outcomes in each of our partitions are all of the same category since this will permit perfect accuracy. The _Gini Index_ is going to be 0 in this scenario, and become larger the more we deviate from this scenario. To define the Gini Index, we define $\hat{p}_{j,k}$ as the proportion of observations in partition $j$ that are of class $k$. The Gini Index is defined as 
+library(tufte)
 
-$$
-\mbox{Gini}(j) = \sum_{k=1}^K \hat{p}_{j,k}(1-\hat{p}_{j,k})
-$$
+margin_note("But how do we pick the predictor $j$ and the value $s$? One of the more popular ways for categorical data is the _Gini Index_. In a perfect scenario, the outcomes in each of our partitions are all of the same category since this will permit perfect accuracy. The _Gini Index_ is going to be 0 in this scenario, and become larger the more we deviate from this scenario. To define the Gini Index, we define $\hat{p}_{j,k}$ as the proportion of observations in partition $j$ that are of class $k$. The Gini Index is defined as $\mbox{Gini}(j) = \sum_{k=1}^K \hat{p}_{j,k}(1-\hat{p}_{j,k})$
+If you study the formula carefully you will see that it is in fact 0 in the perfect scenario described above, since $\hat{p}_{j,k}(1-\hat{p}_{j,k}) = 0$ for all $k$.")
 
-If you study the formula carefully you will see that it is in fact 0 in the perfect scenario described above, since $\hat{p}_{j,k}(1-\hat{p}_{j,k}) = 0$ for all $k$.
+```
 
 Once we are done partitioning the predictor space into regions, in each region a prediction is made using the observations in that region. 
 
-But when do we stop partitioning?  Every time we split and define two new partitions, the Gini Index improves. This is because with more partitions, our model has more flexibility to adapt to our data.  However, our model may therefore perform worse when exposed to new data (this problem is called *overfitting*). This connects to our discussion of validity and models, as the conditions used to create the model will be too specific to accurately extrapolate to new data points. To avoid this, the algorithm sets a minimum for how much the Gini Index must improve for another partition to be added. This parameter is referred to as the _complexity parameter_ ($c_p$). The measure of fit must improve by a factor of $c_p$ for the new partition to be added. Large values of $c_p$ will therefore force the algorithm to stop earlier which results in fewer nodes.
-
-<!-- MB: Use overfitting to discuss validity/model fitting the world-->
+<!-- But when do we stop partitioning?  Every time we split and define two new partitions, the Gini Index improves. This is because with more partitions, our model has more flexibility to adapt to our data.  However, our model may therefore perform worse when exposed to new data (this problem is called *overfitting*). This connects to our discussion of validity and models, as the conditions used to create the model will be too specific to accurately extrapolate to new data points. To avoid this, the algorithm sets a minimum for how much the Gini Index must improve for another partition to be added. This parameter is referred to as the _complexity parameter_ ($c_p$). The measure of fit must improve by a factor of $c_p$ for the new partition to be added. Large values of $c_p$ will therefore force the algorithm to stop earlier which results in fewer nodes. -->
 
 Classification trees have certain advantages that make them very useful. They are highly interpretable, even more so than linear models. They are easy to visualize (if small enough).  Finally, they can model human decision processes. However, in terms of accuracy, they are rarely the best performing method since they are not very flexible. Random forests, explained in the next section, improve on some of the shortcomings of classification trees.
+
+<!-- Validity/model fitting the world. bias/variance  overfitting/underfitting. goal of the model -->
+<!-- MB: Use overfitting to discuss validity/model fitting the world-->
 
 ### One categorical explanatory variable
 
@@ -571,16 +541,16 @@ tree_mod <- decision_tree() %>%
   set_mode("classification")
 ```
 
-(Note that we added the argument `model = TRUE` to `set_engine()`.  This saves the model frame, which we will need to avoid a warning when we plot the trees later.)
+Note that we added the argument `model = TRUE` to `set_engine()`.  This saves the model frame, which we will need to avoid a warning when we plot the trees later.
 
 The function `set_mode()` wasn't necessary when we did logistic regression.  Here it clarifies that we want a *classification* tree rather than a *regression* tree.
 
-Now that we have the object `tree_mod`, we can use `fit()` in the **parsnip** package.  We'll start by predicting `approval` with `region`:
+Now that we have the object `tree_mod`, we can use `fit()` in the **parsnip** package.  We'll start by predicting `approval` with `ideology` as our categorical right side variable. Note that our binary response variable has to be a factor, just like with `logistic_reg()`. 
 
 ```{r}
-race_tree <- fit(tree_mod,
-                         factor(approval) ~ race, 
-                         data = ch12)
+ideo_tree <- fit(tree_mod,
+                 factor(approval) ~ ideology,
+                 data = ch12)
 ```
 
 See how when using **tidymodels**, this is exactly the same as how we would fit a logistic regression, but with our model specification saved in `tree_mod` rather than the model specification we saved in `logistic_fit`.
@@ -588,25 +558,212 @@ See how when using **tidymodels**, this is exactly the same as how we would fit 
 What was the result of our tree?
 
 ```{r}
-race_tree
+ideo_tree
 ```
 
-It's not especially helpful to look at the results of a tree as text.  In order to visualize the tree, we'll use the `prp()` function in the **rpart.plot** package.  Remember that the model object is stored in `race_tree$fit`.
+It's not helpful to look at the results of a tree as text.  In order to visualize the tree, we'll use the `prp()` function in the **rpart.plot** package.  Remember that the model object is stored in `race_tree$fit`.
 
 ```{r, message = FALSE}
 library(rpart.plot)
 
-race_tree$fit %>%
+ideo_tree$fit %>%
   prp(extra = 6, varlen = 0, faclen = 0)
 ```
 
 The arguments `varlen = 0` and `faclen = 0` ensure that the full variable names and factor levels are printed.  The argument `extra = 6` shows the proportion of "yes" outcomes within a given partition. Since we'll be using these same arguments throughout the chapter, we'll create a new function that calls `prp()` but with these options as defaults:
 
 ```{r}
-prp_ch13 <- function(x, ...) prp(x, extra = 6, varlen = 0, faclen = 0, ...)
+prp_ch12 <- function(x, ...) prp(x, extra = 6, varlen = 0, faclen = 0, ...)
 
-race_tree$fit %>%
-  prp_ch13()
+ideo_tree$fit %>%
+  prp_ch12()
+```
+
+So, how do we interpret this tree? We are given two partitions; the first is for voters that identify as very liberal, liberal moderate, or not sure, the second is for voters that identify as conservative or very conservative. The first partition classifies its observations as not approving of the President while the second partition classifies its observations as approving of the President.
+
+The decimal numbers mean that 21% of observations in the first node approved of the President while 86% of observatins in the second node approved of the President.
+
+The algorithm is very simple when you have one categorical explanatory variable. It just classifies every observation based on the most common response per category. Take a look at the following table:
+
+```{r}
+ch12 %>%
+  select(ideology, approval) %>%
+  group_by(ideology) %>%
+  summarise(average_approval = sum(approval)/n()) %>%
+  gt()
+```
+
+The two partitions just divide the observations by ideology into a) those ideologies where the majority approve of the President and b) those ideologies where the majority does not approve of the President.
+
+### One numerical explanatory variable
+
+Once we have created our model specification `tree_mod`, it is easy to use it to fit new models with different formulae and data.  We can use the same approach to create a classification tree predicting `approval` with `age`:
+
+```{r}
+age_tree <- fit(tree_mod,
+                factor(approval) ~ age,
+                data = ch12)
+
+age_tree$fit %>%
+  prp_ch12()
+```
+
+Now, the algorithm creates cutpoints in the `age` variable in order to classify observations.  This tree will classify observations younger than 44 or between 44 and 51 as disapproving of the president. It classifies observations older than 71 as approval of the president. The decimal within each box tells us how many observations within each node approved of the president.
+
+### Multivariate CART
+
+To create a CART using multiple variables, we'll use the `decision_tree()` model specification and the `"rpart"` engine.  The syntax is very similar to when we used `logistic_reg()`.  Note that our binary response variable has to be a factor, just like with `logistic_reg()`. 
+
+```{r}
+library(parsnip)
+tree_mod <- decision_tree() %>%
+  set_engine("rpart",
+             model = TRUE) %>%
+  set_mode("classification")
+```
+
+Note that we added the argument `model = TRUE` to `set_engine()`.  This saves the model frame, which we will need to avoid a warning when we plot the trees later.
+
+The function `set_mode()` wasn't necessary when we did logistic regression.  Here it clarifies that we want a *classification* tree rather than a *regression* tree.
+
+Now that we have the object `tree_mod`, we can use `fit()` in the **parsnip** package.  We'll start by predicting `approval` with `ideology` as our categorical right side variable. Note that our binary response variable has to be a factor, just like with `logistic_reg()`. 
+
+```{r}
+approval_tree <- fit(tree_mod,
+                 factor(approval) ~ ideology + age,
+                 data = ch12)
+```
+
+See how when using **tidymodels**, this is exactly the same as how we would fit a logistic regression, but with our model specification saved in `tree_mod` rather than the model specification we saved in `logistic_fit`.
+
+What was the result of our tree?
+
+```{r}
+approval_tree
+```
+
+It's not helpful to look at the results of a tree as text.  In order to visualize the tree, we'll use the `prp()` function in the **rpart.plot** package.  Remember that the model object is stored in `approval_tree$fit`.
+
+```{r, message = FALSE}
+library(rpart.plot)
+
+approval_tree$fit %>%
+  prp(extra = 6, varlen = 0, faclen = 0)
+```
+
+The arguments `varlen = 0` and `faclen = 0` ensure that the full variable names and factor levels are printed.  The argument `extra = 6` shows the proportion of "yes" outcomes within a given partition. Since we'll be using these same arguments throughout the chapter, we'll create a new function that calls `prp()` but with these options as defaults:
+
+```{r}
+prp_ch12 <- function(x, ...) prp(x, extra = 6, varlen = 0, faclen = 0, ...)
+
+approval_tree$fit %>%
+  prp_ch12()
+```
+
+
+## Random forests
+
+### What are random forests?
+
+Random forests are a very popular machine learning approach that addresses the shortcomings of decision trees using a clever idea. The goal is to improve prediction performance and reduce instability by _averaging_ multiple decision trees (a forest of trees constructed with randomness). It has two features that help accomplish this.
+
+The first step is _bootstrap aggregation_ or _bagging_. The general idea is to generate many predictors, each using classification trees, and then forming a final prediction based on the average prediction of all these trees. To assure that the individual trees are not the same, we use the bootstrap to induce randomness. These two features combined explain the name: the bootstrap makes the individual trees **randomly** different, and the combination of trees is the **forest**. The specific steps are as follows.
+
+<!-- AR: do we explain training set/test set before this? -->
+
+1. Build decision trees using a portion of the data called the training set. We refer to the fitted models as $T_1, T_2, \dots, T_B$. We later explain how we ensure they are different.
+
+2. For every observation in the test set, form a prediction $\hat{y}_j$ using tree $T_j$.
+
+3. For categorical data classification, predict $\hat{y}$ with majority vote (most frequent class among $\hat{y}_1, \dots, \hat{y}_T$).
+     
+So how do we get different decision trees from a single training set? For this, we use randomness in two ways which we explain in the steps below. Let $N$ be the number of observations in the training set. To create $T_j, \, j=1,\ldots,B$ from the training set we do the following:
+
+4. Create a bootstrap training set by sampling $N$ observations from the training set **with replacement**. This is the first way to induce randomness. 
+    
+5. A large number of features is typical in machine learning challenges. Often, many features can be informative but including them all in the model may result in overfitting. The second way random forests induce randomness is by randomly selecting features to be included in the building of each tree. A different random subset is selected for each tree. This reduces correlation between trees in the forest, thereby improving prediction accuracy. 
+
+### Fitting random forests
+
+We will demonstrate by fitting a random forest to the House elections data, predicting `approval` with `ideology`, `age`, and `gender`.  We will use the `rand_forest()` function to create our model specification, setting the engine to `"randomForest"` and the mode to `"classification"`.
+
+```{r, message=FALSE, warning=FALSE}
+library(parsnip)
+library(tidymodels)
+library(randomForest)
+forest_mod <- rand_forest() %>%
+  set_engine("randomForest") %>%
+  set_mode("classification")
+
+approval_forest <- fit(forest_mod,
+                    factor(approval) ~ ideology + gender + age,
+                    data = ch12)
+
+approval_forest
+
+```
+
+We see under "OOB estimate of error rate" that this model has an error rate of 18.67% (or, looking at it the other way, an accuracy of 81.33%). We can see how the error rate of our algorithm changes as we add trees by looking at `house_forest$fit$err.rate[, "OOB"]`.  By default, `randomForest()` (the engine we specified) grows 500 trees.
+
+```{r}
+tibble(`Error rate` = approval_forest$fit$err.rate[, "OOB"],
+       Trees = 1:500) %>%
+  ggplot(aes(x = Trees, y = `Error rate`)) +
+  geom_line() +
+  theme_classic()
+```
+
+```{r}
+library(rpart.plot)
+approval_forest$fit %>%
+  prp_ch12()
+```
+
+
+We can see that in this case, the accuracy improves as we add more trees until about 50 trees where accuracy stabilizes.
+
+Random forests often perform better than other methods. However, a disadvantage of random forests is that we lose interpretability---we don't get anything like the coefficients from a logistic regression or the single tree from CART.
+
+## Machine Learning
+
+<!-- MB: insert whole section INTRO -->
+For this chapter, we'll consider x possible models.  We have some intuitions about what should be in a useful model for presidential approval.  First, since the effect of all the predictors likely vary based on whether the president is a Democrat or Republican, all predictors should be interacted with `pres_gop`.  Also, party identification is likely a large predictor of presidential approval, and thus should be included.  But what about the other variables?  Let's consider the following combinations:
+
+1. `race` alone
+2. `race` and `age`
+3. `state` plus demographic variables (`race`, `female`, `educ`, and `age`)
+4. Same as above, but with all two-way interactions between the demographic variables
+
+Of course, these are a small subset of the possible models we could consider, either with the variables we have selected or with the larger set of all the variables in the `cces`.  But we'll use these as examples for the machine learning techniques in this chapter; if you'd like, you can use the methods we learn here to test additional models.
+
+Let's save these as `formula` objects in R, so we can easily access them later.  We'll start with the simplest model we'll consider, as `basic_form`:
+
+```{r}
+basic_form <- formula(approval ~ age * ideology)
+```
+
+Next, we can use `update()` to create the more complicated formulas.  `update()` takes as its first argument a formula and as its second argument the additions you want to make.  To keep all the predictors from the first formula and add more, you will start with `~ . + ` and then add more predictors, like so:
+
+```{r}
+ideo_form <- update(basic_form,
+                    ~ age * ideology)
+
+demo_form <- update(basic_form,
+                    ~ . + race * gender + 
+                      age * gender  + 
+                      education * gender + 
+                      state * gender)
+
+demo_interact_form <- update(basic_form,
+                             ~ . + race * education * gender + 
+                               gender * age * race)
+```
+
+Since the last model is the same as `demo_interact_form` but with `ideo5 * pres_gop` added, we'll use `update(demo_interact_form)` rather than `update(basic_form)` here:
+
+```{r}
+#full_form <- update(demo_interact_form,
+#                    ~ . + ideo5 * pres_gop)
 ```
 
 (Note that we added the argument `model = TRUE` to `set_engine()`.  This saves the model frame, which we will need to avoid a warning when we plot the trees later.)
@@ -710,25 +867,25 @@ We will demonstrate by fitting a random forest to the House elections data, pred
 ```{r, message=FALSE, warning=FALSE}
 library(tidymodels)
 library(parsnip)
-#forest_mod <- rand_forest() %>%
-#  set_engine("randomForest") %>%
-#  set_mode("classification")
+forest_mod <- rand_forest() %>%
+  set_engine("randomForest") %>%
+  set_mode("classification")
 
-#approval_forest <- fit(forest_mod,
-#                    factor(approval) ~ state + gender + age,
-#                    data = ch12)
+approval_forest <- fit(forest_mod,
+                    factor(approval) ~ state + gender + age,
+                    data = ch12)
 
-#approval_forest
+approval_forest
 ```
 
 We see under "OOB estimate of error rate" that this model has an error rate of 36% (or, looking at it the other way, an accuracy of 64%). We can see how the error rate of our algorithm changes as we add trees by looking at `house_forest$fit$err.rate[, "OOB"]`.  By default, `randomForest()` (the engine we specified) grows 500 trees.
 
 ```{r}
-#tibble(`Error rate` = house_forest$fit$err.rate[, "OOB"],
-#       Trees = 1:500) %>%
-#  ggplot(aes(x = Trees, y = `Error rate`)) +
-#  geom_line() +
-#  theme_classic()
+tibble(`Error rate` = house_forest$fit$err.rate[, "OOB"],
+       Trees = 1:500) %>%
+  ggplot(aes(x = Trees, y = `Error rate`)) +
+  geom_line() +
+  theme_classic()
 ```
 
 We can see that in this case, the accuracy improves as we add more trees until about 300 trees where accuracy stabilizes.
