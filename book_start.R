@@ -27,8 +27,8 @@ options(digits = 2)
 # am concerned that the cache stuff may cause weird errors when people are just
 # trying to knit their chapters. That makes me nervous . . .
 
-knitr::opts_chunk$set(cache=TRUE)
-knitr::opts_chunk$set(cache.path = "cache-directory/")
+# knitr::opts_chunk$set(cache=TRUE)
+# knitr::opts_chunk$set(cache.path = "cache-directory/")
 
 # Question: Should I delete the cache each time I build the book for release?
 
