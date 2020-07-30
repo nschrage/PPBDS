@@ -97,20 +97,20 @@ Let's create a tibble with 3 values: 3, 7, and 2.
 
 ```{r}
 library(tidyverse)
-tibble(x = c(4, 9, 1))
+tibble(x = c(3, 7, 2))
 ```
 
 What if we wanted to take the square root of each value?
 
-```{r map_simple}
-tibble(x = c(4, 9, 1)) %>% 
+```{r}
+tibble(x = c(3, 7, 2)) %>% 
   mutate(new = map_dbl(x, sqrt))
 ```
 
 `map_dbl()` (pronounced "map-double") took the function `sqrt()` and applied it to each element of `x`. Note that, when we passed the function `sqrt()` to `map_dbl()`, we passed in just its name, without the closing parentheses. This code fails:
 
 ```{r error=TRUE}
-tibble(x = c(4, 9, 1)) %>% 
+tibble(x = c(3, 7, 2)) %>% 
   mutate(new = map_dbl(x, sqrt()))
 ```
 
@@ -131,16 +131,24 @@ We called these `map_*` *functions* (plural) before.  If you know the expected o
 
 So, since our example produces numeric output, we use `map_dbl()` instead of `map()`.
 
-Now, you may be wondering, what's the difference between using `mutate()` and `map_*` functions? The answer lies in iteration, which is the specialization of the **purrr** package. `map_*` functions are powerful because of their ability to create list-columns and to apply functions to every single element of a list, which `mutate()` cannot handle.
+Now, you may be wondering, what's the difference between using `mutate()` and `map_*` functions? The answer lies in iteration, which is the specialization of the **purrr** package. `map_*` functions are powerful because of their ability to apply functions to every single element of a list, which `mutate()` cannot handle.
 
-Speaking of lists, `map_*` functions are known to take in list inputs, and sometimes even create list outputs depending on the specific `map_*` function.
+Speaking of lists, `map_*` functions are known to take in list inputs, and sometimes even create list-columns depending on the specific `map_*` function.
 
-```{r error=TRUE}
-tibble(x = c(4, 9, 1)) %>% 
+```{r}
+tibble(x = c(3, 7, 2)) %>% 
   mutate(new = map(x, sqrt))
 ```
 
-Notice that we changed the `map_dbl()` to `map()`, which returns a list-column. Yikes... what exactly is a list-column? Our next section will give you a quick refresher on lists, then dive into how lists, list-columns, and `map_*` functions relate.
+Notice that we changed the `map_dbl()` to `map()`, which returns a list-column. You can use `str` to easily view the contents of a list-column.
+
+```{r}
+tibble(x = c(3, 7, 2)) %>% 
+  mutate(new = map(x, sqrt)) %>%
+  str()
+```
+
+Only... what exactly is a list-column? Our next section will give you a quick refresher on lists, then dive into how lists, list-columns, and `map_*` functions relate.
 
 ## Lists and List-columns
 
@@ -157,7 +165,7 @@ The above object, x, contains a numeric vector as an element. How do we extract 
 x[[1]][1]
 ```
 
-Right! Recall the example from Chapter 2 in which lists are a pepper jar that contain more pepper packets. Don't forget the indices, or square brackets!
+Right! Recall the example from Chapter 2 in which lists are a pepper jar that contain more pepper packets. Don't forget the square brackets!
 
 Let's index through more lists to make sure it works. Remember that lists can contain a multitude of data types. First, let's create a few new lists. Pay attention to the placement of `list()`.
 
@@ -170,7 +178,7 @@ list_2 %>% str()
 x %>% str()
 ```
 
-As you can see, the two objects defined above are lists. Adding `str()` makes it easier to read the elements of a list. It also displays the data type of each element. Note that the `[1:3]` denotes a numeric vector of length 3 for `x`.
+As you can see, the two objects defined above are lists. It also displays the data type of each element. `list_1` is a list of length 3, with a character, a numeric, and a character. `list_2` is also a list of length 3, with a numeric, a character, and a numeric. Note that the `[1:3]` denotes a numeric vector of length 3 for `x`.
 
 Now, let's extract the first element of each of the new lists.
 
@@ -179,14 +187,16 @@ list_1[[1]][1]
 list_2[[1]][1]
 ```
 
-You might be wondering, how is the list `x` different from the lists `list_1` and `list_2`? We wanted to demonstrate how there are various ways to create lists. You can directly input values inside `list()`, or wrap the values in `c()` first to create a vector element.
+You might be wondering, how is the list `x` different from the lists `list_1` and `list_2`? Besides the contents of the lists, we wanted to demonstrate how there are various ways to create lists. You can directly input values inside `list()`, or wrap the values in `c()` first to create a vector element.
 
 There are a number of built-in R functions that output lists. For example, the ***ggplot***s you have been making store all of the graph information in lists.
+
+<!-- EC: Keep thing about ggplot? -->
 
 ```{r}
 y <- ggplot(mtcars, aes(x = cyl, y = mpg)) +
   geom_col()
-class(y[1])
+y %>% str()
 ```
 
 Any function that returns multiple values can be used to create a list output.  For example, consider the following list `x` again:
@@ -333,7 +343,9 @@ See how we chained the `map_*` functions:
 
 Until now, we have practiced using map functions and built-in R functions such as `log()` and `sort()` to create list columns. Next, we will show you how to write your very own functions!
 
-## Anonymous Functions
+## Custom Functions
+
+### Anonymous functions with `map_*` functions
 
 We can create functions that do operations "on the fly" without bothering to give them a name. These nameless functions are called [anonymous functions.](https://coolbutuseless.github.io/2019/03/13/anonymous-functions-in-r-part-1/)
 
@@ -346,35 +358,64 @@ tibble(old = c(3, 7, 2)) %>%
   mutate(new = map_dbl(old, ~ (. + 1)))
 ```
 
-Note that the parentheses are not necessary. As long as everything after the `~` works as R code, the anonymous function should work, each time replace the `.` with the value of the `.x` variable --- which is `start` in this case --- with its value in that row.
+Note that the parentheses are not necessary. As long as everything after the `~` works as R code, the anonymous function should work, each time replace the `.` with the value of the `.x` variable --- which is `old` in this case --- with its value in that row.
 
 ```{r}
 tibble(old = c(3, 7, 2)) %>% 
   mutate(new = map_dbl(old, ~ . + 1))
 ```
 
-The `~ ` shorthand is very convenient once you get used to it.  Let's see it in an example. We'll use the `weather` dataset in the `nycflights13` package. Let's say that we want to return a list-column with all the recorded temperatures in a day in Celsius.
+The `~ ` shorthand is very convenient once you get used to it.  Let's see it in an example. We'll use the `weather` dataset in the `nycflights13` package. Let's say that we want to return a list-column with all the recorded temperatures in a day in Celsius and basic summary statistics.
 
-First, let's wrangle the data so each observation is a day rather than an hour.  We'll create a list column `temps_F` that consists of all the temperatures recorded that day at a particular origin.
+First, let's wrangle the data so each observation is a day rather than an hour. We will do so by selecting for the necessary variables and grouping by `origin`, `year`, `month`, and `day`.
+
+```{r echo=FALSE}
+library(nycflights13)
+```
 
 ```{r eval=FALSE}
 weather %>%
+  select(origin, year, month, day, temp) %>%
+  group_by(origin, year, month, day)
+```
+
+Next, we'll create a list column `temps_F` that consists of all the temperatures recorded that day at a particular origin. Note that the temperatures are Fahrenheit by default.
+
+```{r}
+weather %>%
+  select(origin, year, month, day, temp) %>%
   group_by(origin, year, month, day) %>%
   summarize(temps_F = list(c(temp)))
 ```
 
-Now that we have a list-column, we can use it as the input to `map()`, outputting another list-column.  Let's say we wanted a new list-column, `temps_C`, which records the temperature in Celsius:
+Now that we have a list-column, we can use it as the input to `map()`, outputting another list-column.  Let's say we wanted a new list-column, `temps_C`, which records the temperature in Celsius.
 
-```{r eval=FALSE}
+The formula to convert from Fahrenheit to Celsius is $\frac{(F-32)*5}{9}$. Let's "eyeball" the results using `str()`.
+
+```{r}
 weather %>%
+  select(origin, year, month, day, temp) %>%
   group_by(origin, year, month, day) %>%
   summarize(temps_F = list(c(temp))) %>%
   mutate(temps_C = map(temps_F, ~ (. - 32) * 5/9))
 ```
 
+Let's "eyeball" the first few results using `str()`.
+
+```{r}
+weather %>%
+  select(origin, year, month, day, temp) %>%
+  group_by(origin, year, month, day) %>%
+  summarize(temps_F = list(c(temp))) %>%
+  mutate(temps_C = map(temps_F, ~ (. - 32) * 5/9)) %>%
+  ungroup() %>%
+  slice(1:5) %>%
+  str()
+```
+
 That was an anonymous function! As you can see, anonymous functions used in a `map_*` function context cannot get too complex. The next section will teach you how to write your own custom functions with flexibility.
 
-## Custom Functions
+### Creating your own functions
 
 There are plenty of built-in functions in R, such as the ones mentioned above. You can also create your own custom functions, which may look something like this:
 
@@ -738,12 +779,13 @@ test_that('invalid args are detected', {
 
 No news is good news! Let's see what test failure would look like. Let's revert to a version of our function that does not check for a positive `n` value and test it. We can watch it fail.
 
-```{r}
+```{r error=TRUE}
 add_dice <- function(n = 2) {
   stopifnot(is.numeric(n))
   sum(sample(1:6, n, replace = TRUE))
 }
-# show_failure(add_dice(-1))
+
+show_failure(add_dice(-1))
 ```
 
 Similar to the advice to use assertions in data analytical scripts, I recommend you use unit tests to monitor the behavior of functions you (or others) will use often. If your tests cover the function's important behavior, then you can edit the internals freely. You'll rest easy in the knowledge that, if you broke anything important, the tests will fail and alert you to the problem. A function that is important enough for unit tests probably also belongs in a package, where there are obvious mechanisms for running the tests as part of overall package checks.
