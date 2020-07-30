@@ -53,7 +53,6 @@ library(tidyverse)
 library(broom)
 library(skimr)
 library(PPBDS.data)
-library(gt)
 ```
 
 
@@ -79,21 +78,11 @@ ch12 <- cces %>%
 
 From this, we can gather that there are 16 variables. Notably, there are 60,000 observations even after filtering only for the year 2018. 
 
-Let's also display a random sample of 5 rows of the 60,000 rows. We will be displaying these 5 random observations using a gt() table. . 
+Let's also display a random sample of 5 rows of the 60,000 rows. 
 
-```{r, echo = FALSE}
+```{r}
 ch12 %>%
-  sample_n(5) %>%
-  gt() %>%
-  cols_label(
-    state = md("State"),
-    age = md("Age"),
-    gender = md("Gender"),
-    race = md("Race"),
-    education = md("Education"),
-    ideology = md("Ideology"),
-    approval = md("Approval of President")) %>%
-  tab_source_note(md("A random sample of 5 out of the 60,000 voters"))
+  sample_n(5)
 ```
 
 Now, let’s compute summary statistics. Let’s use the `skim()` function from the `skimr` package.
@@ -106,7 +95,15 @@ ch12 %>%
 You'll notice that we are missing data for our ideology and approval variables. The `complete_rate` column tells us that approval has 3% missing observations and ideology has 0.7% missing observations. Let's use the function `drop_na()` to get rid of these missing observations so they don't interfere with our models later in the chapter:
 
 ```{r}
-ch12 <- ch12 %>%
+ch12 <- cces %>%
+  filter(year == 2018) %>%
+  select(state, age, gender, race, education, ideology, approval) %>%
+  mutate(approval = as.factor(case_when(
+    approval == 1 ~ 0,
+    approval == 2 ~ 0,
+    approval == 3 ~ 1,
+    approval == 4 ~ 1,
+    approval == 5 ~ 1))) %>% 
   drop_na()
 ```
 
@@ -117,10 +114,10 @@ The primary response variable left in our dataset is `approval`, a (newly) binar
 ```{r}
 ch12 %>%
   ggplot(aes(x = approval)) +
-  geom_bar(fill = "red") + 
-  labs(y = "Count",
-       x = "Presidential Approval",
-       title = "Presidential Approval in 2018") 
+    geom_bar() + 
+    labs(y = "Count",
+         x = "Presidential Approval",
+         title = "Presidential Approval in 2018") 
 ```
 
 According to this graph, there are roughly 10,000 more voters who disapprove of Trump. To make things more interesting, let's look at `approval` across gender and then race.
@@ -136,7 +133,7 @@ ch12 %>%
   theme(legend.position = "none")
 ```
 
-It seems that females have higher rates of disapproval of the President males.
+It seems that females have higher rates of disapproval of the President than males have.
 
 ```{r}
 ch12 %>%
