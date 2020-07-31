@@ -5,11 +5,13 @@ output_yaml:
 
 # Probability
 
-<!-- 1) The "p" in p() is always lower case. It is fine if p sometimes has subscripts, but be careful not to confuse students. Example $p_H$ could be used to refer to the probability of heads, which we can also write as p(H) or p(Heads). Note that there is a difference between p(H) and p(Coin).  The p(H) refers to a singel number, the probability of Heads, which must be a number between zero and one. The p(Coin) refers to the entire probability distribution, the probability of both Heads and of Coins. -->
+<!-- 1) The "p" in p() is always lower case. It is fine if p sometimes has subscripts, but be careful not to confuse students. Example $p_H$ could be used to refer to the probability of heads, which we can also write as p(H) or p(Heads). Note that there is a difference between p(H) and p(Coin).  The p(H) refers to a singel number, the probability of Heads, which must be a number between zero and one. The p(Coin) refers to the entire probability distribution, the probability of both Heads and of Coins. 
+
+done VZ (changed to small p, added a section at the start of the probability distribution section on the difference between p(H) and p(Coin)-->
 
 <!-- Add joint probability discussion in Tree part. That is, explain what p(A, B) is now that they understand p(A). Entire purpose of Tree section is to explain joint probability and conditional probability. That is, p(A, B) and p(A | B). -->
 
-<!-- Add ### in first section for Flipping a coin; Rolling two die, and  -->
+<!-- Add ### in first section for Flipping a coin; Rolling two die, and  done, VZ-->
 
 <!-- Add 4th subsubpart to first part explaining Joint Distributions. Example is one die with 50% likelihood of coming up 6 (and other faces at 10%) and second die 50% likelihood. Don't only care about the total. In this situation, you need a 3d plot. p(A, B) is p(Result of Die 1, Result of Die 2). Just one empirical plot of 100 roles. -->
 
@@ -304,13 +306,6 @@ ggplot(mydata, aes(x = sum)) +
 
 ```
 
-```{r, echo=FALSE}
-
-mydata %>%
-  group_by(sum) %>%
-  count()
-
-```
 The *posterior distribution* for rolling one dice a hundred times will vary based on your expectations. If you take the dice from your Monopoly set, you have reason to believe that the mathematical distribution is true. However, if you walk into a crooked casino and a host asks you to play craps, you might be suspicious. You win by rolling 7's and 11's. You might expect those numbers to very rarely occur. You might also expect values like 2, which are statistically less probable, to occur more frequently.
 
 ```{r, echo=FALSE}
@@ -343,11 +338,11 @@ ggplot(mydata, aes(x = results)) +
   theme_classic()
 
 ```
+### Presidential Elections
+
 Now we let's say we are building probability distributions for political events, like a presidential election. We want to know p(Candidate A wins the election).
 
 It would be incredibly naive to create the following *mathematical distribution*.
-
-<!-- VZ: Could we review this section? Not sure this is what I should say about the mathematical distribution -->
 
 ```{r, echo = FALSE}
 
@@ -371,9 +366,24 @@ ggplot(mydata, aes(x = results)) +
 ```
 We know that campaign platforms, donations, charisma, and many other factors will contribute to a candidate's likeability. Elections are more complicated than coin tosses. Some polticial scientists may try to create algorithms to calculate mathematical probability distributions.
 
-The *empirical distribution* in this case could involve looking into past elections in the United States and counting the number of elections that each party has won.
+The *empirical distribution* in this case could involve looking into past elections in the United States and counting the number of elections that each party has won. Perhaps we're interested specifically in the electoral votes that the Democrats receive. For the empirical distribution, we would create a tibble from past elections. Looking at elections since 1964, we can observe that the number of electoral votes that the Democrats received in each one is different. Given that we only have 14 entries, it is difficult to draw conclusions or make predictions based off of this empirical distribution.
 
-The *posterior distribution* in the election case is something many data scientists actually devote a lot of time to. Consider this projection from The Economist, which uses various assumptions to generate a forecast. The analysts have developed an algorithm that considers their expectations for each outcome.
+```{r, echo = FALSE}
+
+mydata <- tibble(
+  electoral_votes = c(486,191,17,297,49,13,111,370,379,
+                      271,286,365,332,304))
+
+ggplot(mydata, aes(x = electoral_votes)) +
+  geom_histogram(aes(y=..count../sum(..count..)), bins = 100, fill = "light blue", color = "white") +
+  labs(title = "Mathematical Probability Distribution",
+       subtitle = "Probability of Parties Winning",
+       x = "Outcomes",
+       y = "Probability")
+
+```
+
+The *posterior distribution* in the election case is something many data scientists actually devote a lot of time to. Consider this projection from The Economist, which uses various assumptions to generate a forecast. The analysts have developed an algorithm that considers their expectations for each outcome. In this case, the analysts at the Economist have chosen to merge two axes (i.e. the number of Republican votes and the number of Democrat votes) together.
 
 ```{r, echo=FALSE, fig.fullwidth = TRUE}
 
@@ -386,70 +396,6 @@ There are many political science questions you could explore with posterior dist
 * Past: How many electoral votes would Hilary Clinton have won if she picked a different VP?
 * Present: What is the median height of Harvard students?
 * Future: How many electoral votes will a presidential candidate win?
-
-<!-- VZ: Do we still want this? I deleted the part about histograms-->
-
-Using our knowledge of PDFs and simulations, we can solve a problem.
-
-What are the odds of that the sum of two die will be seven? We could figure this out analytically, but a simulation in R is a easy way to predict and confirm our expected probability.
-
-We create a dice and set the number of simulations. Next, we build a tibble and filter for observations where the sum of the die equals 7.
-
-```{marginfigure}
-Note that we could have hard-coded the `sims` value into the tibble call in step 3 by 
-setting size = 10000. However, it is good practice to create a separate variable.
-This way, if we want to change the number of simulations, we do not need to 
-manually change all of our code.
-```
-
-```{r}
-
-dice <- c(1:6)
-
-sims <- 10000
-
-mydata <- tibble(dice_1 = sample(dice, size = sims, replace = TRUE),
-                 dice_2 = sample(dice, size = sims, replace = TRUE))
-
-count <- mydata %>%
-  filter((dice_1 + dice_2) %in% 7) %>%
-  count() %>%
-  pull(n)
-
-probability <- count/sims
-
-```
-
-
-In this simulation, we calculated a final probability of `r probability`. 
-
-To visualize the probability of different outcomes, we can build a histogram using the tibble we just created.
-
-First, we create a column in our tibble containing the sum of the two die that we rolled.
-
-```{r}
-
-mydata <- mydata %>%
-  mutate(sum = (dice_1 + dice_2))
-
-ggplot(mydata, aes(x = sum)) +
-  geom_histogram(aes(y=..count../sum(..count..)), binwidth = 1, 
-                 fill = "dark green", color = "white") +
-  labs(title = "Histogram Probability Distribution of Sum for Rolling 2 Die 10000 Times",
-       x = "Value of dice roll",
-       y = "Probability") +
-  scale_x_continuous(breaks = seq(0,12,1), labels = 0:12) +
-  theme_classic()
-
-```
-
-
-Similarly, we could create a more complicated simulation of the fall election
-and count the number of observations involving Trump's re-election. We could
-simulate different weather patterns and count the number of observations involving
-rain today.
-
-Takeaway: we want to simulate a scenario as many times as possible, then count the number of observations with the desired outcome.
 
 ## Tree Diagrams
 
@@ -555,7 +501,7 @@ Now the tree branches out.
 
 We decide to go down the top branch *if* our random person has the disease. We go down the bottom branch *if* they do not. This is called **conditional probability**. The probability of testing positive is **dependent** on whether the person has the disease.
 
-How would you express this in statistical notation? P(A|B) is the same thing as the probability of A *given* B. P(A|B) essentially means the probability of A *if* we know for sure that B is true.
+How would you express this in statistical notation? p(A|B) is the same thing as the probability of A *given* B. p(A|B) essentially means the probability of A *if* we know for sure that B is true. You should also remember that p(A|B) is not the same thing as p(B|A).
 
 ```{marginfigure}
 **Positive:** The test results suggest that the patient has the disease.
@@ -659,8 +605,6 @@ text(340,150,"P(Positive | No Disease)",cex=.5)
 ```
 
 This concept of conditional probability is relevant in our everyday lives. For example, the probability of Trump's re-election might be different than the probability of Trump's re-election *given* that we are in a recession. The probability of you reading a textbook might vary, *depending* on the likelihood of your instructor cold-calling you in class. Whenever you encounter a question involving conditional probability, drawing a tree diagram is a very useful approach to visualization.
-
-<!-- EC: This could be a good section to include a disclaimer about not mixing up P(B|A) and P(A|B). Alternatively, could add more examples to the section below that mentions they are different, since it is mentioned in passing -->
 
 ### Two Diagrams for One Set of Coin Flips
 
@@ -799,15 +743,34 @@ plot(rEG, edgeAttrs=eAttrs, attrs=attributes)
 
 ```
 
-<!-- # Section 2: Trees as a formal structure for probability -->
+### Joint Probability
 
-<!-- 2 a) Describe trees. Show some diagrams. (Maybe save making these for later? Are their R packages for this?) This is the basic structure which we will use for everything in the chapter. We can make trees for the examples above. We can discuss important statistical concepts: like conditional probability, marginal probability in the context of a tree. We can highlight subtle cases: Like throw two dice together versus throw one dice and then a second dice. These make for different tree structures, but the same set of leaves. Show an unbalanced tree, in which one branch is a different length, like a craps game or maybe blackjack. Again, no mathematical formalism. Also, no Bayesian stuff. We are just taking the same examples from above and making them a little more structured.  -->
+Now that we understand both p(A) and p(A|B), let's talk about what it means to calculate p(A, B). With p(A|B), we are considering the probability of A assuming event B has already occurred. p(A, B) is the chance that both events will occur at the same point in time.
 
-<!--https://github.com/YuLab-SMU/treedata-book is useful for tree diagrams-->
+Let's say that you are rolling two six-sided die simultaneously. One is weighted so that there is a 50% chance of rolling a 6 and a 10% chance of each of the other values. The other is weighted so there is a 50% chance of rolling a 5 and a 10% chance of rolling each of the other values. Let's roll both die 1000 times. If we were to visualize this, it would look different because the domain is a plane instead of a line.
 
-<!-- Discuss conditional probability and marginal probability using a simple tree with 0.6/0.4 first branch, and then next branches slightly different: 0.8/0.2 and 0.1/0.9. -->
+```{r, echo=FALSE}
 
-<!-- We a tree, we can explain total probability, conditional probability and marginal probabity. Explain the meaning of p(A, B), p(A), p(B) and p(B|A). But that is it. Nothing more mathematical than that. Focus on words, directly connected to the tree images. -->
+mydata <- tibble(die.1 = sample(1:6, size = 1000, prob =
+                                  c(0.1,0.1,0.1,0.1,0.1,0.5), replace = TRUE),
+                 die.2 = sample(1:6, size = 1000, prob =
+                                  c(0.1,0.1,0.1,0.1,0.5,0.1), replace = TRUE)) %>%
+  group_by(die.1, die.2) %>%
+  summarize(total = n()) %>%
+  ungroup() %>%
+  mutate(probability = total/sum(total))
+
+mydata
+
+```
+
+The fact that we're talking about joint distributions where we roll two die doesn't change the meaning of a probability distribution. As you can see through the tibble, the sum of the probabilities of all the outcomes is 1.
+
+```{r}
+
+sum(mydata$probability)
+
+```
 
 <!-- 2 b) Another coding session, but this time with list-columns and map_functions. These do not have to be long. We just want to re-iterate the points we made in words. Maybe we don't need list-columns. Maybe just show map functions here. Again, the point of this section is ONLY to understand the key probabity concepts: joint, total, conditional and marginal. -->
 
@@ -834,14 +797,6 @@ Now that we understand trees, we can do some Bayes' Theorem examples by hand. We
 <!-- Then, with those ideas fixed, we make a Bayes Scatterplot with just two rows on the y-axis: have the disease or don't have the disease. (Or maybe we use another exmaple each time.) Since these two models have no fixed numeric meaning, we can just place them at 0 and 1 on the y-axis, which sort of corresponds to FALSE and TRUE. Then, we can x-axis we have the actual data. Which, in this case, is also a TRUE/FAlSE value: Either you tested positive or you tested negative, so also 0 and 1. Then, we can simulate. Put a 100,000 people through, fill out the values. There are only 4 possibilities, so we will need to jittter. (See below for an example of how to do this. And then explore the marginal distributions. Show how this gives you the same answer, roughly, as the math we did before.) -->
 
 <!-- 3 b) Code up a full featured simulation exercise, like the cookie problem but with more complexity. See the old 1005 problem set. Connect this to how 538 does things. 99.99% of real world problems are solved with simulation, not analytically. -->
-
-<!-- This prediction by 538 is really interesting: (https://projects.fivethirtyeight.com/2020-march-madness-predictions/), especially
-pre-game. Is this what you mean by how 538 does things? Potentially link something
-like this into the textbook to illustrate how simulations are used?  webshot() -->
-
-<!-- Do we like all the words below? I am not sure. -->
-
-<!-- adding my own version of this - looking for feedback IB -->
 
 Imagine you wake up one morning and feel a little bit under the weather. Not sick, just not 100%.
 So, you go to your doctor and your doctor is confused. So, she runs a slew of tests and in a couple of days, one of them comes back positive. You've tested positive for a rare disease, called $X$. Only *.1%* of the population has this disease. And the test correctly identifies you as positive *99%* of the time!
@@ -898,6 +853,42 @@ Now, let's switch back to proportion-based probabilities and think about it. Jus
 
 
 ## Comparing Three Models
+
+Now, imagine that your friend gives you a bag with two marbles. There could either be two white marbles, two black marbles, or one of each color. We can formalize this by setting three different values of p, where p represents the proportion of white marbles. The bag could contain 0% white marbles, 50% white marbles, or 100% white marbles. Therefore, p could only be 0, 0.5, or 1. If you take a marble out of the bag, would it be black or white? Let's make what we call a Bayes scatterplot out of this.
+
+<!-- Could we talk about what this scatterplot should look like? -->
+
+```{r, echo=FALSE}
+
+all_white <- tibble(
+  results = c(rep(2, 1000)),
+  model = c(rep(1, 1000)))
+
+all_black <- tibble(
+  results = c(rep(0, 1000)),
+  model = c(rep(0, 1000))
+)
+
+mixed_bw <- tibble(
+  results = sample(0:1, size = 1000, prob = c(0.5, 0.5), replace = TRUE),
+  model = c(rep(0.5, 1000))
+)
+
+# all_marbles <- merge(all_white, all_black, all.x = TRUE, all.y = TRUE) %>%
+#   merge(mixed_bw, all.x = TRUE, all.y = TRUE)
+# 
+# ggplot(all_marbles, aes(x = results, y = model)) + 
+#   geom_point() +
+#   geom_jitter(alpha = 0.4) +
+#   labs(
+#     title = "Sampling Distributions of Bags of Margles",
+#     subtitle = "Taking a Marble out of the Bag",
+#     x = "Number of White Marbles",
+#     y = "Proportion of White Marbles in the Bag"
+#   )
+
+```
+
 
 <!-- # Section 4: Three Models (use the the Two Marble Example) and Scatterplots -->
 
@@ -966,7 +957,6 @@ school_b <- tibble(
 
 ggplot(school_b, aes(x = prop_yes)) + 
   geom_histogram(binwidth = .01) + 
-  theme_tufte() + 
   labs(
     title = "Sampling Distribution from High School B", 
     subtitle = "1000 samples of 20 students taken",
@@ -1006,7 +996,7 @@ school_j <- tibble(
 
 ggplot(school_j, aes(x = prop_yes)) + 
   geom_histogram(binwidth = .01) + 
-  theme_tufte() + 
+  # theme_tufte() + 
   labs(
     title = "Sampling Distribution from High School J", 
     subtitle = "1000 samples of 20 students taken",
@@ -1115,7 +1105,7 @@ all_school <- merge(school_b, school_c, all.x = TRUE, all.y = TRUE) %>%
 ggplot(all_school, aes(x = prop_yes, y = school_prop)) + 
   geom_point() +
   geom_jitter(alpha = .2) +
-  theme_tufte() + 
+  # theme_tufte() + 
   labs(
     title = "Sampling Distributions of Different Proportion High Schools",
     subtitle = "1000 Samples Taken per High School (Population Proportion Level)",
