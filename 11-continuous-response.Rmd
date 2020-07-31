@@ -162,7 +162,7 @@ We usually try to select a small piece of the dataset so that we have as much da
 
 Remember, we cannot touch the testing set! One way we can check whether the model we created works is to use cross-validation, which avoids the problem of overtraining by splitting the data into smaller sections. We'll show you how to do using the ***rsample*** package.
 
-<!-- EC: How do you select what value of `v` to use? -->
+<!-- EC: How do you select what value of `v` to use? Discussion here. -->
 
 ```{r}
 nes_folds <- nes_training %>%
@@ -173,18 +173,18 @@ How can we work with the `nes_folds` object?  **tidymodels** makes it easy by us
 
 ```{r}
 fit_resamples(lm_model,
-              lm_formula,
+              recipe(lm_formula, data = nes_training),
               nes_folds)
 ```
 
-<!-- EC: Getting an error? https://github.com/cimentadaj/tidyflow/issues/12-->
+<!-- EC: Getting an error? https://github.com/cimentadaj/tidyflow/issues/12. Insert new paragraph that explains what recipe does. -->
 
 To inspect the average metrics across all the folds, we can use the `collect_metrics()` function:
 
 ```{r}
-lm_model %>%
-  fit_resamples(preprocessor = lm_formula,
-                resamples = nes_folds) %>%
+fit_resamples(lm_model,
+              recipe(lm_formula, data = nes_training),
+              nes_folds) %>%
   collect_metrics()
 ```
 
@@ -206,9 +206,72 @@ lm_model %>%
   rmse(truth = ideology, estimate = .pred)
 ```
 
+<!-- EC: Insert additional interpretation. -->
 
 ## Using `stan_glm()`
 
+The ***rstanarm*** package contains a lot of powerful functions that conduct Bayesian data analysis by using priors. One such function is `stan_glm()`, which you can think of as the Bayesian way of fitting a regression model. 
+
+We will be following the exact same steps as before. First, we will construct a ***parsnip*** model that uses the "stan" engine.
+
+```{r}
+library(rstanarm)
+
+stan_model <-
+    linear_reg() %>%
+    set_engine("stan") %>%
+    set_mode("regression")
+```
+
+```{r}
+fit(stan_model, lm_formula, nes_training) %>%
+  tidy(conf.int = TRUE) %>%
+  select(term, estimate, std.error)
+```
+
+### Cross Validation
+
+```{r echo=FALSE, cache=TRUE}
+fit_resamples(stan_model,
+              recipe(lm_formula, data = nes_training),
+              nes_folds)
+```
+
+<!-- EC: Bulk Effective Samples Size (ESS) is too low error -->
+
+To inspect the average metrics across all the folds, we can use the `collect_metrics()` function:
+
+```{r cache=TRUE}
+fit_resamples(stan_model,
+              recipe(lm_formula, data = nes_training),
+              nes_folds) %>%
+  collect_metrics()
+```
+Discussion of CV results: the rmse values for both models `stan_model` and `lm_model` are both high, with a lower R-squared. This means that our model is not doing well at mapping the predictor variables to the outcome variable. Recall that there are seven different predictor variables; one of them being `state`, which has fifty different levels. 
+
+What if we created a bunch of different models that used different permutations of predictor variables? For example, ones that would potentially exclude `state`.
+
+First, let's create a basic formula that only takes in `age`.
+
+```{r}
+basic_form <- formula(ideology ~ age)
+```
+
+Next, we can use `update()` to create the more complicated formulas.  `update()` takes as its first argument a formula and as its second argument the additions you want to make.  To keep all the predictors from the first formula and add more, you will start with `~ . + ` and then add more predictors, like so:
+
+```{r}
+age_gender_form <- update(basic_form,
+                    ~ . + gender)
+
+demo_form <- update(age_gender_form,
+                    ~ . + race + income)
+
+demo_interact_form <- update(basic_form,
+                             ~ . + race * educ * pres_gop + 
+                               female * age * pres_gop)
+```
+
+<!-- EC: Is there a better way to test different permutations of the formula besides manually?  -->
 
 ## Using a neural network
 
