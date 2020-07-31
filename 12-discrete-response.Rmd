@@ -33,9 +33,6 @@ output_yaml:
 <!-- * Do we have time to do a model which predicts a category with more than 0/1 possible values? I am not sure. If we were going to, we would want to pick something that is not an ordered category, I think. In this data, only race would meet that criteria. Let's revisit this later. -->
 
 
-<!-- MB: Using augment() for future predictions in this chapter? Works poorly with example -->
-
-
 # Discrete Response {#discrete-response}
 
 **Binary responses** take on only two values: success ($Y=1$) or failure ($Y=0$), yes ($Y=1$) or no ($Y=0$), et cetera. Binary responses are one of the most common types of data that statisticians encounter.  We are often interested in modeling the probability of success, $p$, based on a set of covariates. As with regression, there are two broad categories of problems: *modeling for prediction* and *modeling for causation*. Although terminology varies across fields, "regression" is generally used for situations in which our *dependent variable* is continuous, as in Chapter \@ref(continuous-response). "Classification" applies to cases in which the dependent variable takes on discrete values, the simplest of which is the binary case.
@@ -53,6 +50,7 @@ library(tidyverse)
 library(broom)
 library(skimr)
 library(PPBDS.data)
+library(tidymodels)
 ```
 
 
@@ -446,6 +444,30 @@ logistic_fit$fit %>%
   gt()
 ```
 
+### Cross-Validation
+
+```{r}
+log_split <- initial_split(ch12)
+
+log_training <- log_split %>% training()
+log_testing <- log_split %>% testing()
+
+log_folds <- log_training %>%
+  vfold_cv(v = 5)
+
+log_recipe <- recipe(approval ~ age + gender + race, data = ch12) %>%
+  step_normalize(all_numeric()) %>%
+  step_knnimpute(all_predictors())
+
+fit_resamples(logistic_mod,
+              log_recipe,
+              log_folds) %>%
+  collect_metrics()
+```
+
+
+### Prediction
+
 As you can see, this generates the same results as when we used `glm()` directly. Now we can see how the effect of `age` varies by `race`. Looking at predicted probabilities of these numbers can put this model in perspective.  Let's use `augment()` to generate the predictions.  Remember that `type.predict = "response"` and `type.residuals = "deviance"` put the fitted values and the residuals on the probability scale.
 
 
@@ -525,7 +547,6 @@ Classification trees have certain advantages that make them very useful. They ar
 To create a CART using multiple variables, we'll use the `decision_tree()` model specification and the `"rpart"` engine.  The syntax is very similar to when we used `logistic_reg()`.  Note that our binary response variable has to be a factor, just like with `logistic_reg()`. 
 
 ```{r}
-library(parsnip)
 tree_mod <- decision_tree() %>%
   set_engine("rpart",
              model = TRUE) %>%
@@ -576,6 +597,29 @@ So, how do we interpret this tree? We are given two partitions; the first is for
 
 The decimal numbers within each box identify how many observations in that node approved of the President. This means that only 20% of observations in the first node approved of the President, 37% in the second node, and 54% in the third node.
 
+### Cross-Validation
+
+```{r}
+cart_split <- initial_split(ch12)
+
+cart_training <- cart_split %>% training()
+cart_testing <- cart_split %>% testing()
+
+cart_folds <- cart_training %>%
+  vfold_cv(v = 5)
+
+cart_recipe <- recipe(approval ~ age + race, data = ch12) %>%
+  step_normalize(all_numeric()) %>%
+  step_knnimpute(all_predictors())
+
+fit_resamples(tree_mod,
+              cart_recipe,
+              cart_folds) %>%
+  collect_metrics()
+```
+
+### Prediction
+
 Let's now use our tree to make some predictions. When used on trees, the `predict()` function takes in the tree object and new observations containing the explanatory variables. In this case, we'll be passing in a 54-year-old Asian voter, a 41-year-old Black voter, a 56-year-old White voter, and a 70-year-old Native American voter.
 
 ```{r}
@@ -614,12 +658,12 @@ So how do we get different decision trees from a single training set? For this, 
 ### Fitting random forests
 
 <!-- MB: http://www.rebeccabarter.com/blog/2020-03-25_machine_learning/#evaluate-the-model-on-the-test-set
+https://s3.amazonaws.com/assets.datacamp.com/production/course_7215/slides/chapter3.pdf
 -->
 
 We will demonstrate by fitting a random forest to the House elections data. Before we even write our model formula, we need to split the data to create a *training set* and a *testing set*. The training dataset will be used to create our model and the testing dataset will be used to test our final model’s performance.
 
 ```{r}
-library(parsnip)
 library(randomForest)
 
 approval_split <- initial_split(ch12, 
@@ -627,9 +671,6 @@ approval_split <- initial_split(ch12,
 
 approval_train <- training(approval_split)
 approval_test <- testing(approval_split)
-
-approval_cv <- vfold_cv(approval_train) # MB: parameter tuning, do more with this
-
 ```
 
 Next, we will use the `rand_forest()` function to create our model specification, setting the engine to `"randomForest"` and the mode to `"classification"`. 
@@ -715,6 +756,23 @@ test_predictions %>%
 final_model <- fit(approval_workflow, ch12)
 ```
 
+### Cross-validation
+
+Now that we have our model, let's use the `vfold_cv` to cross-validate it. To see the average metrics for all the folds, we can use the `collect_metrics()` function:
+
+```{r}
+
+approval_cv <- vfold_cv(approval_train, v = 3) 
+
+fit_resamples(approval_forest,
+              approval_recipe,
+              approval_cv) %>%
+  collect_metrics()
+
+```
+
+### Prediction
+
 Let's use our final forest model to make some predictions. We'll be passing in the same observations as with the CART example: a 54-year-old Asian voter, a 41-year-old Black voter, a 56-year-old White voter, and a 70-year-old Native American voter. However, our forest also includes a gender variable. We'll make the first and third observations female.
 
 ```{r}
@@ -728,8 +786,6 @@ predict(final_model, new_data = newdata)
 ```
 
 Our forest predicted that the first three voters would disaprove of the President and that our final voter would approve. These predictions differ from our CART predictions most likely because of the added variable: gender. Because females disapproved of the President at higher rates, the third voter was predicted to disapprove instead.
-
-
 
 
 ## Machine Learning
