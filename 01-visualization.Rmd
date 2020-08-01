@@ -3,8 +3,6 @@ output_yaml:
   - _output.yml
 ---
 
-
-
 <!-- 0) Remove downloads of random Google docs. Either delete table or use the contents to make your own gt table.  -->
 
 <!-- 1) Mention variable types: factor, character, numeric, date. No need to shgow how to make them. But must understand them. Plots are ordered alphabetically if it is a character and by levels if it is a factor. Dates appear differently in plots. reorder() is useful. Cover this at start of advanced plotting. -->
@@ -203,7 +201,7 @@ g) Customizing a plot with more layers (labels, themes, legends, scales, positio
    adding text to plot)
 -->
 
-## Creating data visualizations
+## Basic Plots
 
 ### Components of a graphic and the grammar of graphics
 
@@ -242,13 +240,11 @@ After we've specified these components, we then add *layers* to the plot using t
 gapminder_2007 <- gapminder %>% 
   filter(year == 2007) %>% 
   select(-year) %>% 
-  rename(
-    Country = country,
-    Continent = continent,
-    `Life Expectancy` = lifeExp,
-    `Population` = pop,
-    `GDP per Capita` = gdpPercap
-  )
+  rename(Country = country,
+         Continent = continent,
+         `Life Expectancy` = lifeExp,
+         `Population` = pop,
+         `GDP per Capita` = gdpPercap)
 ```
 
 In February 2006, a Swedish physician and data advocate named Hans Rosling gave a TED talk titled ["The best stats you've ever seen"](https://www.ted.com/talks/hans_rosling_shows_the_best_stats_you_ve_ever_seen) where he presented global economic, health, and development data from the website [gapminder.org](http://www.gapminder.org/tools/#_locale_id=en;&chart-type=bubbles). For example, for data on `r nrow(gapminder_2007)` countries in 2007, let's consider only a few countries in the following table as a peak into the data.
@@ -296,11 +292,10 @@ We'll see shortly that `data` corresponds to the particular data frame where our
 Let's summarize the three essential components of a graphic:
 
 ```{r echo=FALSE}
-tibble(
-  `data variable` = c("GDP per Capita", "Life Expectancy", "Population", "Continent"),
-  aes = c("x", "y", "size", "color"),
-  geom = c("point", "point", "point", "point")
-)
+tibble(`data variable` = c("GDP per Capita", "Life Expectancy", 
+                           "Population", "Continent"),
+       aes = c("x", "y", "size", "color"),
+       geom = c("point", "point", "point", "point"))
 ```
 
 This table summarizes the differences among the `geom`s, or visual marks that represent data points, covered in this chapter. Using them, you'll be able to visualize the distributions and relationships of variables contained in a wide array of datasets. This will be even more the case as we start to map more variables to more of each `geom`etric object's `aes`thetic attribute options, further unlocking the awesome power of the **ggplot2** package.
@@ -331,9 +326,8 @@ summary_table_ch2 %>%
 ```
 :::
 
-### Scatterplots
+### `geom_point()`
 
-<!-- ::: {.fullwidth} -->
 *Scatterplots*, also called *bivariate plots*, allow you to visualize the *relationship* between two numerical variables. Specifically, we will visualize the relationship between the following two numerical variables in the `flights` data frame included in the `nycflights13` package:
 
 1. `dep_delay`: departure delay on the horizontal "x" axis and
@@ -445,9 +439,8 @@ In order to specify how much jitter to add, we adjusted the `width` and `height`
 As can be seen in the resulting plot, in this case jittering doesn't really provide much new insight. In this particular case, it can be argued that changing the transparency of the points by setting `alpha` proved more effective.  When would it be better to use a jittered scatterplot? When would it be better to alter the points' transparency? There is no single right answer that applies to all situations. You need to make a subjective choice and own that choice. At the very least when confronted with overplotting, however, we suggest you make both types of plots and see which one better emphasizes the point you are trying to make. 
 <!-- ::: -->
 
-### Linegraphs
+### `geom_line()`
 
-<!-- ::: {.fullwidth} -->
 Linegraphs show the relationship between two numerical variables when the variable on the x-axis, also called the *explanatory* variable, is of a sequential nature. In other words, there is an inherent ordering to the variable. 
 
 The most common examples of linegraphs have some notion of time on the x-axis: hours, days, weeks, years, etc. Since time is sequential, we connect consecutive observations of the variable on the y-axis with a line. Linegraphs that have some notion of time on the x-axis are also called *time series* plots. Let's illustrate linegraphs using another dataset in the `nycflights13` package: the `weather` data frame. 
@@ -464,9 +457,6 @@ early_january_weather <- weather %>%
 ```
 <!-- ::: -->
 
-#### Linegraphs via `geom_line`
-
-<!-- ::: {.fullwidth} -->
 Let's create a time series plot of the hourly temperatures saved in the `early_january_weather` data frame by using `geom_line()` to create a linegraph, instead of using `geom_point()` like we used previously to create scatterplots:
 
 ```{r fig.align="center"}
@@ -483,11 +473,10 @@ Within the `ggplot()` function call, we specify two of the components of the gra
 1. The `aes`thetic `mapping` by setting `mapping = aes(x = time_hour, y = temp)`. Specifically, the variable `time_hour` maps to the `x` position aesthetic, while the variable `temp` maps to the `y` position aesthetic.
 
 We add a layer to the `ggplot()` function call using the `+` sign. The layer in question specifies the third component of the grammar:  the `geom`etric object in question. In this case, the geometric object is a `line` set by specifying `geom_line()`. 
-<!-- ::: -->
 
-### Histograms
 
-<!-- ::: {.fullwidth} -->
+### `geom_histogram()`
+
 Let's consider the `temp` variable in the `weather` data frame once again, but unlike with the linegraphs, let's say we don't care about its relationship with time, but rather we only care about how the values of `temp` *distribute*. In other words:
 
 1. What are the smallest and largest values?
@@ -596,11 +585,9 @@ hist_2 <- ggplot(data = weather, mapping = aes(x = temp)) +
   labs(title = "With binwidth = 10 degrees F")
 hist_1 + hist_2
 ```
-<!-- ::: -->
 
-### Boxplots
 
-<!-- ::: {.fullwidth} -->
+### `geom_boxplot()`
 
 ```{r, echo=FALSE}
 n_nov <- weather %>% 
@@ -622,15 +609,14 @@ quartiles <- weather %>%
   quantile(prob = c(0.25, 0.5, 0.75)) %>% 
   round(0)
 five_number_summary <- tibble(
-  temp = c(min_nov, quartiles, max_nov)
-)
+  temp = c(min_nov, quartiles, max_nov))
 ```
 
 While faceted histograms are one type of visualization used to compare the distribution of a numerical variable split by the values of another variable, another type of visualization that achieves this same goal is a *side-by-side boxplot*. A boxplot is constructed from the information provided in the *five-number summary* of a numerical variable.
 
 To keep things simple for now, let's only consider the `r n_nov` hourly temperature recordings for the month of November, each represented as a jittered point. 
 
-```{r echo=FALSE, fig.align="center"}
+```{r echo=FALSE}
 base_plot <- weather %>% 
   filter(month %in% c(11)) %>% 
   ggplot(mapping = aes(x = factor(month), y = temp)) +
@@ -649,7 +635,7 @@ These `r n_nov` observations have the following *five-number summary*:
 
 In the leftmost plot, let's mark these 5 values with dashed horizontal lines on top of the `r n_nov` points. In the middle plot, let's add the *boxplot*. In the rightmost plot, let's remove the points and the dashed horizontal lines for clarity's sake.
 
-```{r echo=FALSE, fig.align="center"}
+```{r echo=FALSE}
 boxplot_1 <- base_plot +
   geom_hline(data = five_number_summary, aes(yintercept=temp), linetype = "dashed") +
   geom_jitter(width = 0.075, height = 0.5, alpha = 0.1)
@@ -672,8 +658,6 @@ What the boxplot does is visually summarize the `r weather %>% filter(month == 1
 
 Furthermore, in the rightmost plot, we see the *whiskers* of the boxplot. The whiskers stick out from either end of the box all the way to the minimum and maximum observed temperatures of `r min_nov`&deg;F and `r max_nov`&deg;F, respectively. However, the whiskers don't always extend to the smallest and largest observed values as they do here. They in fact extend no more than 1.5 $\times$ the interquartile range from either end of the box. In this case of the November temperatures, no more than 1.5 $\times$ `r (quartiles[3] - quartiles[1]) %>% round(3)`&deg;F = `r (1.5*(quartiles[3] - quartiles[1])) %>% round(3)`&deg;F from either end of the box. Any observed values outside this range get marked with points called *outliers*, which we'll see in the next section.
 <!-- ::: -->
-
-#### Boxplots via `geom_boxplot`
 
 Let's now create a side-by-side boxplot of hourly temperatures split by the 12 months as we did previously with the faceted histograms. We do this by mapping the `month` variable to the x-position aesthetic, the `temp` variable to the y-position aesthetic, and by adding a `geom_boxplot()` layer:
 
@@ -700,7 +684,9 @@ The resulting plot shows 12 separate "box and whiskers" plots similar to the rig
 
 It is important to keep in mind that the definition of an outlier is somewhat arbitrary and not absolute. In this case, they are defined by the length of the whiskers, which are no more than $1.5 \times IQR$ units long for each boxplot. Looking at this side-by-side plot we can see, as expected, that summer months (6 through 8) have higher median temperatures as evidenced by the higher solid lines in the middle of the boxes. We can easily compare temperatures across months by drawing imaginary horizontal lines across the plot. Furthermore, the heights of the 12 boxes as quantified by the interquartile ranges are informative too; they tell us about variability, or spread, of temperatures recorded in a given month. 
 
-### Barplots
+### `geom_bar()` and `geom_col()`
+
+<!-- DK: Really ought to have separate sections for these two -->
 
 Both histograms and boxplots are tools to visualize the distribution of numerical variables. Another commonly desired task is to visualize the distribution of a categorical variable. This is a simpler task, as we are simply counting different categories within a categorical variable, also known as the *levels* of the categorical variable. Often the best way to visualize these different counts, also known as *frequencies*, is with barplots (also called barcharts).
 
@@ -730,8 +716,6 @@ fruits_counted
 
 Depending on how your categorical data is represented, you'll need to add a different `geom`etric layer type to your `ggplot()` to create a barplot, as we now explore. 
 
-#### Barplots via `geom_bar` or `geom_col`
-
 Let's generate barplots using these two different representations of the same basket of fruit: 3 apples and 2 oranges. Using the `fruits` data frame where all 5 fruits are listed individually in 5 rows, we map the `fruit` variable to the x-position aesthetic and add a `geom_bar()` layer:
 
 ```{r}
@@ -753,14 +737,16 @@ Compare these barplots. They are identical because they reflect counts of the sa
 
 Let's now go back to the `flights` data frame in the `nycflights13` package and visualize the distribution of the categorical variable `carrier`. In other words, let's visualize the number of domestic flights out of New York City each airline company flew in 2013. Recall from Subsection \@ref(exploredataframes) when you first explored the `flights` data frame, you saw that each row corresponds to a flight. In other words, the `flights` data frame is more like the `fruits` data frame than the `fruits_counted` data frame because the flights have not been pre-counted by `carrier`. Thus we should use `geom_bar()` instead of `geom_col()` to create a barplot. Much like a `geom_histogram()`, there is only one variable in the `aes()` aesthetic mapping: the variable `carrier` gets mapped to the `x`-position. As a difference though, histograms have bars that touch whereas bar graphs have white space between the bars going from left to right.
 
-(ref:geombar) Number of flights departing NYC in 2013 by airline using geom_bar().
 
-```{r fig.cap='(ref:geombar)'}
+
+```{r fig.cap='Number of flights departing NYC in 2013 by airline using `geom_bar()`.'}
 ggplot(data = flights, mapping = aes(x = carrier)) +
   geom_bar()
 ```
 
 Observe that United Airlines (UA), JetBlue Airways (B6), and ExpressJet Airlines (EV) had the most flights depart NYC in 2013. If you don't know which airlines correspond to which carrier codes, then run `View(airlines)` to see a directory of airlines. For example, B6 is JetBlue Airways. Alternatively, say you had a data frame where the number of flights for each `carrier` was pre-counted.
+
+<!-- DK: We should not be using group_by()/summarize() yet. And, when we do them, we can't set message=FALSE -->
 
 ```{r message=FALSE, echo=FALSE}
 flights_counted <- flights %>% 
@@ -771,7 +757,7 @@ flights_counted <- flights %>%
 In order to create a barplot visualizing the distribution of the categorical variable `carrier` in this case, we would now use `geom_col()` instead of `geom_bar()`, with an additional `y = number` in the aesthetic mapping on top of the `x = carrier`. The resulting barplot would be identical to the previous barplot.
 
 
-#### Must avoid pie charts!
+#### No pie charts!
 
 One of the most common plots used to visualize the distribution of categorical data is the pie chart. While they may seem harmless enough, pie charts actually present a problem in that humans are unable to judge angles well. As Naomi Robbins describes in her book, *Creating More Effective Graphs* [@robbins2013], we overestimate angles greater than 90 degrees and we underestimate angles less than 90 degrees. In other words, it is difficult for us to determine the relative size of one piece of the pie compared to another.  
 
@@ -867,6 +853,8 @@ ggplot(data = flights, mapping = aes(x = carrier, fill = origin)) +
   geom_bar(position = position_dodge(preserve = "single"))
 ```
 
+<!-- DK: Should we do facets here? No! Not yet. That gets saved. -->
+
 Lastly, another type of barplot is a *faceted barplot*. Recall in Section \@ref(facets) we visualized the distribution of hourly temperatures at the 3 NYC airports *split* by month using facets. We apply the same principle to our barplot visualizing the frequency of `carrier` split by `origin`: instead of mapping `origin` to `fill` we include it as the variable to create small multiples of the plot across the levels of `origin`.
 
 ```{r eval=FALSE}
@@ -883,7 +871,7 @@ month_facet_ncol <- ggplot(data = flights, mapping = aes(x = carrier)) +
 month_facet_ncol
 ```
 
-### More Layers
+## Advanced Plots
 
 ```{r, echo=FALSE, fig.cap="Data Visualization with ggplot2 Cheat Sheet", fig.margin = TRUE}
 knitr::include_graphics("01-visualization/images/ggplot2-cheatsheet.jpg")
@@ -961,18 +949,7 @@ Observe in both Figures \@ref(fig:facethistogram) and \@ref(fig:facethistogram2)
 - `ggtext`
 
 
-<!-- 4) Introducing the Tidyverse!
-a) (Intro) Tidyverse, list of functions
-b) the pipe operator: %>%
-c) Pick out specific observations within a data frame: 
-   filter(), select(), slice() and pull(), 
-   and "bracket" operator []
-f) arrange and sort rows
-g) mutate existing variables
-h) group_by() and summarize()
--->
-
-## Introducing the Tidyverse!
+## The Tidyverse
 
 Let's go over some important points about specifying the arguments (i.e., inputs) to functions. Run the following two segments of code:
 
@@ -999,8 +976,7 @@ Data "in the wild" is never ready for visualization. We can't use all the beauti
 1. `arrange()` its rows. For example, sort the rows of `weather` in ascending or descending order of `temp`.
 1. `group_by()` its rows. In other words, assign different rows to be part of the same *group*. We can then combine `group_by()` with `summarize()` to report summary statistics for each group *separately*. For example, say you don't want a single overall average departure delay `dep_delay` for all three `origin` airports combined, but rather three separate average departure delays, one computed for each of the three `origin` airports.
 1. `mutate()` its existing columns/variables to create new ones. For example, convert hourly temperature recordings from degrees Fahrenheit to degrees Celsius.
-1. `join()` it with another data frame by matching along a "key" variable. In other words, merge these two data frames together.
-1. `tail()`
+
 
 Notice how we used `computer_code` font to describe the actions we want to take on our data frames. This is because the **dplyr** package, one of the packages in the **tidyverse**, has intuitively verb-named functions that are easy to remember. 
 
