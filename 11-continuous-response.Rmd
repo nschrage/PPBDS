@@ -124,6 +124,8 @@ lm_model <-
     set_mode("regression")
 ```
 
+Here, we are using the ***parsnip*** package to create an engine that can run this linear regression model easily and repeatedly. `linear_reg()` tells the engine that this is a linear regression. `set_engine("lm")` tells the engine to use the `lm()` function. `set_mode()` has to options, "regression" and "classification". Since our left-hand variable is a continuous one, we will set it to "regression". If it were categorical, we would set the mode to "classification".
+
 Fit the model to the data. We will first create a regression formula and save it as an R object for future recall.
 
 ```{r}
@@ -247,6 +249,7 @@ fit_resamples(stan_model,
               nes_folds) %>%
   collect_metrics()
 ```
+
 Discussion of CV results: the rmse values for both models `stan_model` and `lm_model` are both high, with a lower R-squared. This means that our model is not doing well at mapping the predictor variables to the outcome variable. Recall that there are seven different predictor variables; one of them being `state`, which has fifty different levels. 
 
 What if we created a bunch of different models that used different permutations of predictor variables? For example, ones that would potentially exclude `state`.
@@ -266,9 +269,45 @@ age_gender_form <- update(basic_form,
 demo_form <- update(age_gender_form,
                     ~ . + race + income)
 
-demo_interact_form <- update(basic_form,
-                             ~ . + race * educ * pres_gop + 
-                               female * age * pres_gop)
+edu_form <- update(age_gender_form,
+                   ~ . + education)
+
+interact_form <- update(basic_form,
+                        ~ . + gender * race + income)
+```
+
+Next, we will save these different formulas, along with the original `lm_formula`, in a tibble to easily remember and recall the formulas.
+
+```{r}
+nes_formulas <- tibble(formula = c(lm_formula,
+                                   age_gender_form,
+                                   demo_form,
+                                   edu_form,
+                                   interact_form),
+                       group = c("Full model",
+                                 "Age and gender model",
+                                 "Demographic model",
+                                 "Demographic and education model",
+                                 "Demographic model with interaction"))
+```
+
+Now, we can use `map_*` to apply all of these models and view their metrics to see which ones have the lowest rmse values.
+
+```{r cache=TRUE}
+folds_metrics <- nes_formulas %>%
+  mutate(metrics = map(formula, ~ fit_resamples(stan_model,
+                                                recipe(lm_formula, data = nes_training),
+                                                nes_folds) %>%
+                         collect_metrics()))
+```
+
+Let's present the results stored in our `folds_metrics` object:
+
+```{r}
+folds_metrics %>%
+  mutate(mean_rmse = map_dbl(metrics, ~ filter(., .metric == "rmse") %>% pull(mean)),
+         se_rmse = map_dbl(metrics, ~ filter(., .metric == "rmse") %>% pull(std_err))) %>%
+  select(group, mean_rmse, se_rmse)
 ```
 
 <!-- EC: Is there a better way to test different permutations of the formula besides manually?  -->
