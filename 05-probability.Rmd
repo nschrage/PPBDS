@@ -42,9 +42,13 @@ output_yaml:
 
 <!-- Other Stuff -->
 
+<!-- DK: heads or Heads? -->
+
 <!-- DK: It is clear that the concept of a posterior is tricky. So, after each of our three examples, we need to discuss what the posterior means. Recall: The posterior is our belief about the future. The two most common ways to think about this: First, what will the next roll of the dice bring? Most likely outcome is a 2. But there is a 15% chance of a 3. There is a 5% chance of a 7 or an 11. And so on. Second, what would the empirical distribution look like if we rolled the dice 10,000 times. Again, these are the same things, almost by definition. But they are different conceptions, both of which you should explain each time. -->
 
 <!-- DK: We need a single example of a continuous distribution after Electoral Votes. It will also have math. And empirical. And posterior. -->
+
+<!-- DK: We need an example of an unnormalized posterior in the first section. -->
 
 <!-- Zoom with Tahmid and make sure that he understands the posterior distribution and that you agree with how he describes the posterior distribution in chapter 7. Will students understand his description, even though the last time they thought about this was two weeks earlier in your chapter. -->
 
@@ -907,324 +911,146 @@ mixed_bw <- tibble(
 <!-- # Section 5: 11 and the 1001 models. Same as coin example with unknown p as used in Albert example. First, p is 0, 0.1, 0.2, ... 0.9, 1.0. Make Bayes Scatterplot. Show marginals. Then, extend it so p takes on 1,001 values. This is how we go from discrete to continuous. All the same tricks apply. -->
 
 
-## Comparing N Models
+## N Models
 
 <!-- 5 a) Now go on to Rethinking approach. I think that chapter 2 is just genius. Bayesian is really just counting. Maybe we do a very similar example to what he does? Maybe different? I am still pondering this myself. I think that there is a deep relationship here. In the simple Bayes rule decision trees, we know all the probabilities. But what if we don't? Instead, we get to observe lots of data (which are counts!) and then, from that data, figure out the probabilities. (Note that Rethinking does not talk like this --- after all, we know all the probabilities since each marble has a 20% chance of being drawn --- but I think it is implicit in his approach.) Key issue: Can we connect this in a sensible way to Bayesian scatterplot. There is always the data and the model and the relationship between the two. (And "the model" means, mainly, the parameter estimates thereof.) Tell me the data, and I will tell you the model. Tell me the model, and I will tell you the model. -->
 
 <!-- Note the connection between the marbles from Rethinking and the Bayesian scatterplot. In figure 2.2 in Rethinking represents the model where p = 0.25, where p is the proportion of blue marbles in the total collection. The y-axis models would be labeled with p = 0, 0.25, 0.5, 0.75, and 1. With the tree marble diagram in figure 2.2, we would be taking random samples with 3 marbles. The number of blue marbles we get each time would be plotted along p = 0.25. This is another example of model on the y-axis and data on the x-axis. -->
 
-Imagine there are 10 high schools in your district. Each high school has 1000 students. You are the statistics teacher at high school *A* and the rest of the 
-high schools are *B* through *J*. You're really into statistics and you have a 
-deep burning desire to know:
+<!-- DK: Should we cut out p = 0 and p = 1 as too annoying to deal with? -->
 
-* What portion of high school students at my lovely school of $A$ love statistics?
-
-The easy way to answer this question would be to ask all 1000 of the students at $A$  whether they love statistics. You count up the "Yes" answers and divide by 1000 and  boom! There's your answer. However, the statistics department at $A$ is extremely underfunded and you only have the power to ask 20 random students this question. So, you ask 20 random students and you get 8 "Yes" answers. Is the proportion of students that love statistics at high school $A$ equal to $8\div20 = .4$? 
-
-The correct answer is ... you don't know. Rather, this is information that may help you better understand the true (unknown) answer. So, where do you go from here? 
-
-The next question you ask is "well ... how likely is it to get a sample of 20 with a  sample proportion of .4 for various population proportions?" That is, if the population proportion is $500\div1000 = .5$, how likely is it I get a sample of 20 with 8 "Yes" answers. 
-
-Or, if the population proportion is .3, how likely is it I get a sample of 20 with 8 "Yes" answers?
-
-You contact all your other statistics teacher friends at high schools $B$ through $J$. Those statistics teacher are much more fortunate than you and have plenty of resources! They tell you that they were able to ask each one of the students the question and get a precise answer for the proportion of their students who love statistics! Great for them, but how does this help you.
-
-Well, incidentally, each of the other high schools has a distinct and exact proportion of students. At $B$, the teacher discovered that $100\div1000 = .1$ students love statistics. At $C$, the teacher discovered that $200\div1000 = .2$ students love statistics. This goes on and it turns out high school $J$ has $900\div1000 = .9$ students that love statistics.
-
-Well, each of these schools can serve as a *model* for sampling from a population with a given proportion. 
-
-You're pretty smart and so you ask each of your friends to repeatedly choose 20 random students at their schools and ask them if they love statistics. Your helpful teacher friends record the answers.
-
-* To clarify, the teacher at $B$ is asking random samples of 20 students whether they love statistics from a population in which 10% of the students love statistics. 
-
-So, at high school $B$, if the teacher asked 1000 groups of 20 random students, the distribution of the proportions of each group the teacher asked look like this: 
-
-
-```{r, echo = FALSE}
-# Do a simulation in which you count what you get.
-
-# x <- tibble(results = rbinom(n = 10000, size = 20, p = 0.8))
-
-
-# Look at the counts. This is just the results. 
-
-# ggplot(data = x, aes(results)) +
-#   geom_bar()
-
-# Transform the results so that it is a probability distribution. But you really
-# don't have to turn this into a probability distribution until the end. You can
-# just keep this as the results of the experiment.
-
-# x %>%
-#   group_by(results) %>% 
-#   summarize(total = n(), .groups = "drop") %>%
-#   mutate(prob = total/sum(total)) %>% 
-#   ggplot(aes(results, prob)) +
-#     geom_col()
-
-# Do that for 9 values of p from 0.1 to 0.9. But this is not convenient.
-
-# tibble(p = seq(0.1, 0.9, 0.1)) %>% 
-#   mutate(experiment = map(p, ~ rbinom(n = 10000, size = 20, p = .))) %>% 
-#   mutate(mean_heads = map_dbl(experiment, ~mean(.)))
-
-# This is convenient because tidy data is convenient for plotting.
-
-# x <- tibble(p = rep(seq(0.1, 0.9, 0.1), 10000)) %>% 
-#   mutate(heads = map_int(p, ~ rbinom(n = 1, size = 20, p = .)))
-
+```{marginfigure}
+Isn't it annoying that we use the same letter, "p", to mean two totally different things? At the start of the chapter, "p" is the symbol used for a probability distribution. Here, we are also using it to mean the probability of a coin coming up heads. Sadly, there are only so many letters we can use, so you need to be mentally flexible enough to keep track of both meanings. When "p" is used for an unknown parameter, it will written in italics as $p$, which is always the case for parameters. The "p" which is the symbol for a probability distribution is in regular text: p. Putting these together, p($p$) is the probability distribution for the probability of a flipped-coin coming up heads.
 ```
 
-This means that with a population proportion of .1, the teacher is likely to get answers that range from [.05, .5]. You, at your high school, with a sample proportion of .4, could easily fall into this. It could be the case that your population proportion is actually .1.
+Assume that there is a coin with probability $p$ of coming up heads. I guarantee that there are only 11 possible values of $p$: $0, 0.1, 0.2, ..., 0.9, 1$. In other words, there are 11 possible models, 11 things which might be true about the world. This is just like situations we have previously discussed, except that there are more models to consider.
 
-Suppose the teacher at high school $J$ did this? Remember, $J$ has a 90% proportion of yes answers.
+We are going to run an experiment in which you flip the coin 20 times and record the number of heads. What does this result tell you about the value of $p$? Ultimately, we will want to calculate a posterior distribution of $p$, which is written as p($p$). 
 
+To start, it is useful to consider all the things which might happen if, for example, $p = 0.4$. Fortunately, the R functions for simulating random variables makes this easy
 
-```{r, echo = FALSE}
-# 
-# # Create a school with 20% yes answers.
-# 
-# school_j <- tibble(
-#   school = "j",
-#   school_prop = .9, 
-#   students = c(rep("Yes", 900), rep("No", 100))) %>%
-# 
-# # Draw a bunch of samples of 20 from it and summarize the
-# # percent that said yes. 
-# 
-#   rep_sample_n(20, replace = TRUE, reps = 1000) %>%
-#   filter(students == "Yes") %>%
-#   group_by(replicate) %>%
-#   count() %>%
-#   mutate(prop_yes = n/20) %>%
-#   mutate(school_prop = .9)
-# 
-# 
-# # Display your findings!
-# 
-# ggplot(school_j, aes(x = prop_yes)) + 
-#   geom_histogram(binwidth = .01) + 
-#   # theme_tufte() + 
-#   labs(
-#     title = "Sampling Distribution from High School J", 
-#     subtitle = "1000 samples of 20 students taken",
-#     x = "Proportion of Yes Answers",
-#     y = "Number of Samples"
-#   )
-# 
+```{r}
+set.seed(9)
 
+x <- tibble(heads = rbinom(n = 1000, size = 20, p = 0.4))
+
+x %>%
+  group_by(heads) %>%
+  summarize(total = n(), .groups = "drop") %>%
+  mutate(prob = total/sum(total)) %>%
+  ggplot(aes(heads, prob)) +
+    geom_col() + 
+    labs(title = "Empirical Distribution of Number of Heads",
+         subtitle = "Based on 1,000 simulations with p = 0.4",
+         x = "Number of Heads out of 20 Tosses",
+         y = "Probability")
 ```
 
-Then, your answers range from [.65, 1]! 
+First, notice that many different things can happen! Even if we *know*, for certain, that $p = 0.4$, many outcomes are possible. Life is remarkably random. Second, the most likely result of the experiment is 8 heads, as we would expect. Third, we have transformed the raw counts of how many times each total appeared into a probability distribution. Sometimes, however, it is convenient to just keep track of the raw counts. The shape of the figure is the same in both cases.
 
-So at your high school (where you got a sample proportion of .4), you can probabaly conclude your population percentage is not .9. That is, it's very unlikely 900 out of 1000 students at your high school $A$ love statistics. Why? Because your sample from $A$ gave you a proportion of .4 and when we sampled from high school $J$ (where we're sure the actual population proportion is .9), we got zero samples that had a proportion of .4. 
-
-This is how each of these other high schools is a model you can use to update your understanding of where your high school is. That's because you can use them to determine what samples look like if the population you are sampling from had various proportions.
-
-What if we did this for every high school $B$ through $J$?
-
-
-```{r, echo = FALSE}
-# 
-# # Create every school with the right proportions.
-# 
-# school_c <- tibble(
-#   students = c(rep("Yes", 200), rep("No", 800))
-# ) %>%
-#   rep_sample_n(20, replace = TRUE, reps = 1000) %>%
-#   filter(students == "Yes") %>%
-#   group_by(replicate) %>%
-#   count() %>%
-#   mutate(prop_yes = n/20) %>%
-#   mutate(school_prop = .2)
-# 
-# school_d <- tibble(
-#   students = c(rep("Yes", 300), rep("No", 700))
-# ) %>%
-#   rep_sample_n(20, replace = TRUE, reps = 1000) %>%
-#   filter(students == "Yes") %>%
-#   group_by(replicate) %>%
-#   count() %>%
-#   mutate(prop_yes = n/20) %>%
-#   mutate(school_prop = .3)
-#  
-# school_e <- tibble(
-#   students = c(rep("Yes", 400), rep("No", 600))
-# ) %>%
-#   rep_sample_n(20, replace = TRUE, reps = 1000) %>%
-#   filter(students == "Yes") %>%
-#   group_by(replicate) %>%
-#   count() %>%
-#   mutate(prop_yes = n/20) %>%
-#   mutate(school_prop = .4)
-# 
-# school_f <- tibble(
-#   students = c(rep("Yes", 500), rep("No", 500))
-# ) %>%
-#   rep_sample_n(20, replace = TRUE, reps = 1000) %>%
-#   filter(students == "Yes") %>%
-#   group_by(replicate) %>%
-#   count() %>%
-#   mutate(prop_yes = n/20) %>%
-#   mutate(school_prop = .5)
-# 
-# school_g <- tibble(
-#   students = c(rep("Yes", 600), rep("No", 400))
-# ) %>%
-#   rep_sample_n(20, replace = TRUE, reps = 1000) %>%
-#   filter(students == "Yes") %>%
-#   group_by(replicate) %>%
-#   count() %>%
-#   mutate(prop_yes = n/20) %>%
-#   mutate(school_prop = .6)
-#  
-# school_h <- tibble(
-#   students = c(rep("Yes", 700), rep("No", 300))
-# ) %>%
-#   rep_sample_n(20, replace = TRUE, reps = 1000) %>%
-#   filter(students == "Yes") %>%
-#   group_by(replicate) %>%
-#   count() %>%
-#   mutate(prop_yes = n/20) %>%
-#   mutate(school_prop = .7)
-# 
-# school_i <- tibble(
-#   students = c(rep("Yes", 800), rep("No", 200))
-# ) %>%
-#   rep_sample_n(20, replace = TRUE, reps = 1000) %>%
-#   filter(students == "Yes") %>%
-#   group_by(replicate) %>%
-#   count() %>%
-#   mutate(prop_yes = n/20) %>%
-#   mutate(school_prop = .8)
-# 
-# # Combine them all.
-# 
-# all_school <- merge(school_b, school_c, all.x = TRUE, all.y = TRUE) %>%
-#   merge(school_d, all.x = TRUE, all.y = TRUE) %>%
-#   merge(school_e, all.x = TRUE, all.y = TRUE) %>%
-#   merge(school_f, all.x = TRUE, all.y = TRUE) %>%
-#   merge(school_g, all.x = TRUE, all.y = TRUE) %>%
-#   merge(school_h, all.x = TRUE, all.y = TRUE) %>%
-#   merge(school_i, all.x = TRUE, all.y = TRUE) %>%
-#   merge(school_j, all.x = TRUE, all.y = TRUE) %>%
-#   arrange(school_prop)
-# 
-# ggplot(all_school, aes(x = prop_yes, y = school_prop)) + 
-#   geom_point() +
-#   geom_jitter(alpha = .2) +
-#   # theme_tufte() + 
-#   labs(
-#     title = "Sampling Distributions of Different Proportion High Schools",
-#     subtitle = "1000 Samples Taken per High School (Population Proportion Level)",
-#     x = "Proportion of Sample who Said Yes",
-#     y = "Proportion of Population who Say Yes"
-#   ) + 
-#   scale_y_continuous(breaks = c(.1, .2, .3, .4, .5, .6, .7, .8, .9)) + 
-#   scale_x_continuous(breaks = c(.1, .2, .3, .4, .5, .6, .7, .8, .9))
-
+```{r}
+x %>%
+  group_by(heads) %>%
+  summarize(total = n(), .groups = "drop") %>%
+  ggplot(aes(heads, total)) +
+    geom_col() + 
+    labs(title = "Total Count of the Number of Heads Out of 20 Tosses",
+         subtitle = "Based on 1,000 simulations with p = 0.4",
+         x = "Number of Heads out of 20 Tosses",
+         y = "Count")
 ```
 
-Clarifying notes:
+Either way, the figures show *what would have happened if that model --- that $p = 0.4$ --- were true.*
 
-* Each row is a population (or "high school") and at each high school, we've surveyed 1000 random groups of 20 and recorded the proportions. The darkness of each cluster represents how many individual samples are in that area. The clusters with few, lighter points are less likely to occur in the sampling distribution. So, for example, if I wanted to know the sampling distribution of one particular high school, I'd look at that row. The animation below illustrates this concept:
+We can do the same thing for all 11 possible models, calculating what would happen if each of them were true. This is somewhat counterfactual since only one of them can be true. Yet this assumption does allow us to create the *joint distribution* of *models which might be true* and of *data which our experiment might generate*. Let's simplify this is p(models, data), although you should keep the precise meaning in mind.
+
+```{r}
+set.seed(10)
+
+x <- tibble(p = rep(seq(0, 1, 0.1), 1000)) %>%
+  mutate(heads = map_int(p, ~ rbinom(n = 1, size = 20, p = .)))
+
+x %>% 
+  ggplot(aes(y = p, x = heads)) +
+    geom_jitter(alpha = 0.1) +
+    labs(title = "Number of Heads and Probability of Heads",
+         x = "Number of Heads out of 20 Tosses",
+         y = "Value of *p*")
+```
+
+<!-- DK: Bunch of things to see in this diagram. -->
+
+<!-- DK: Then, finally, we do the experiment. We get 8 heads. What does that mean?  -->
+
+
+## Posterior Distribution
+
+
+We don't really care about the p($models$, $data$), the joint distribution of the models-which-might-be-true and the data-which-our-experiment-might-generate. Instead, we want to estimate $p$, the unknown parameter which determines the probability that this coin will come up heads when tossed. The joint distribution alone can't tell us that. We *created* the joint distribution before we had even conducted the experiment. It is our creation, a tool which we use to make infernences. Instead, we want the conditional distribution, p($models$ | $data = 8$). We have the results of the experiment. What do those results tell us about the probability distribution of $p$? 
+
+To answer this question, we simply take a vertical *slice* from the joint distribution at the point of the x-axis corresponding to the results of the experiment.
 
 ![](05-probability/animations/color_red_combo.gif)
 
-* Read the graph vertically (find a point along the x-axis and look up) if you're trying to figure out in which population proportion(s) your sample statistic appears.
-
-```{marginfigure}
-
-Jim Albert goes through a very similar example and as he points out: "The histogram of the simulated values of the proportion p reflects the prior distribution that we
-placed on this parameter. The histogram of the simulated values of the data y is also meaningful. This is the distribution of data that is plausible assuming our prior on p and the binomial sampling model."
+This is the only part of the joint distribution that we care about. We aren't interested in what the object looks like where, for example, the number of heads is 11. That portion is irrelevant because we observed 8 heads, not 11. There are a total of 465 times in our simulation in which 8 heads were observed.
 
 
-*Read more: Jim Albert (1997) Teaching Bayes Rule: A Data-Oriented Approach, The
-American Statistician, 51:3, 247-253*
-
+```{r}
+x_with_heads_equal_8 <- x %>% 
+  filter(heads == 8)
 ```
 
-* Read the graph horizontally (find a point on the y-axis and look to the side) if you're trying to figure out the distribution of sample statistics given a population proportion.
+As we would expect, most of the time when 8 coin tosses came up heads, the value of $p$ was 0.4. But, on numerous occasions, it was not. It is quite common for a value of $p$ like 0.3 or 0.5 to generate 8 heads. Consider:
 
-So, from this scatterplot you can observe some interesting things about your own initial sample of 20 at high school $A$. 
+```{r}
+x %>% 
+  filter(heads == 8) %>% 
+  ggplot(aes(p)) +
+    geom_bar() +
+    labs(title = "Values of p Associated with 8 Heads",
+         x = "Assumed value of p in simulation",
+         y = "Count")
+```
 
-* You got a sample proportion of .2. If you find that place on the x-axis, you can see all of the population proportions for which that sample proportion occurs. That would be from .1 to .5! You're pretty confident your high school has a proportion somewhere in there!
+Yet this is a distribution of raw counts. It is an unnormalized density. To turn it into a proper probability density --- i.e., one in which the sum of the probabilities across possible outcomes sums to one --- we just divide everything by the total number of observations.
 
-<!-- CB: The start of this section says you get a sample proportion of .4, and it switches to .2 here which might be confusing for someone. -->
+```{r}
+p_posterior <- x %>% 
+  filter(heads == 8) %>% 
+  group_by(p) %>% 
+  summarize(total = n(), .groups = "drop") %>%
+  mutate(probs = total/sum(total))
 
-* In fact, you even know the how likely a sample proportion tends to appear in a population proportion. While a .6 proportion population sometimes gives a sample with a proportion of .2, it doesn't do so as often as a population with the proportion of .2. If you took 10 more samples of 20 at your high school and got values close to .2, you're increasing your confidence the population of your high school is closer to .2 
+p_posterior %>% 
+  ggplot(aes(x = p, y = probs)) +
+    geom_col() +
+    labs(title = "Posterior Probability Distribution of p",
+         x = "Possible Values of p",
+         y = "Probability")
+```
 
-* The above means you can use this scatterplot to estimate a confidence interval for your sample of 20. If you want a 90% confidence interval, find population proportions which have a sampling distribution in which this sample result is in the middle 90% of the data!
+The most likely value of $p$ is still 0.4, as before. But, it is much more likely that $p$ is either 0.3 or 0.5. And there is about an 8% chance that $p \ge 0.6$.
 
-There are a few key takeaways we want to note in this situation.
 
-First, we are uncertain about the actual proportion of the population that loves statistics. This is likely to always be the case - that we are uncertain about the parameter. We won't really know what the true probability is. We can however, become better informed about what it could be. For that, we use models. That is the principle expressed in this in this example. We created a bunch of models for each potential probability and used the results of those models to understand which model is more or less likely to explain our specific results.
+## Predictions
+
+Models are useless unless we use them for something. Let's make some predictions. What are the chances that, if we toss this coin 10 times, we will get 7 or more heads? Because our posterior distribution is centered around $p = 0.4$, we don't expect to see 7 heads, but it is certainly not impossible.
+  
+
+<!-- DK: Two ways to do this. First (and best?) using x_with_heads_equal_8 and just draw samples from this vector. Second feeding p_posterior directly to rbinom, with one column the p and one column the probs.  -->
 
 
 ## Testing is Evil
 
 <!-- Introduce concepts like the null model, testing, and p-values. Connect to permutation tests from chapter 3.  Side note quotation: "Amatuers test. Professionals summarize." Maybe we should pick an example in which the number of heads is low enough to provide some reasonable evidence against p = 0.5. -->
 
-In some fields, it is common to want to test a specific hypothesis. Consider the hypothesis that the coin is fair, i.e., that $p = 0.5$. Does the data we have support or reject that hypothesis? (Be wary that $p$ is both used for the probability of a head and the $p$-value of a hypothesis test.)
+<!-- In some fields, it is common to want to test a specific hypothesis. Consider the hypothesis that the coin is fair, i.e., that $p = 0.5$. Does the data we have support or reject that hypothesis? (Be wary that $p$ is both used for the probability of a head and the $p$-value of a hypothesis test.) -->
 
-Not really interested in that exact test except in toy scenarios.
+<!-- Not really interested in that exact test except in toy scenarios. -->
 
-Difference between 0.04 and 0.06 is rarely significant. And is hardly ever a good reason to decide X over Y.
-
-
+<!-- Difference between 0.04 and 0.06 is rarely significant. And is hardly ever a good reason to decide X over Y. -->
 
 
-
-## Posterior Predictions (Advanced)
-
-Looking at the marginal distributions from the Bayes scatterplots shows us the posterior distribution of the data, conditioning on the model, and of the model, conditioning on the data. In other words, if the model us true, this is what we believe about the distribution of the data, both the data that we have already seen and about the data we will see in the future, assuming that that the model is true.
-
-But such a forecast is, in the real world, not the best forecast possible because it is assuming that the model is 100% true --- in this case, that $p = 0.4$ --- even though we don't know, for certain, that the model is true. Indeed, the whole point of the Bayesian scatter plot is to show that, if we see 8 heads in 20 tosses, that, although $p = 0.4$ is the most likely model, it could be that $p = 0.3$ or $p = 0.5$. *We are uncertain about what $p$ is.* The best possible forecast will incorporate that uncertainty, will not pretend that we know, for certain, that $p = 0.4$. Forecasts which incorporate our uncertainty about parameter values are called "posterior predictions."
-
-To construct posterior predictions, we do the same sampling proceedure as with the Bayes scatterplots, while averaging over the rest of possible values for $p$, weighted by their relative likelihood. Recall the analysis above:
-
-  
-```{r}
-# Same code to get set up as before. But 10,000 this time for more stability,
-# and to really see some extreme values for p. Don't need to show this code
-# again. Maybe just show the plot.
-
-set.seed(10)
-
-mod <- seq(0, 1, 0.1)
-rep <- 1:10000
-toss <- 1:20
-
-x <- crossing(mod, rep, toss) %>% 
-  mutate(result = ifelse(runif(n = nrow(.)) < mod, 1, 0)) %>% 
-  group_by(mod, rep)  %>% 
-  summarize(total = sum(result)) %>% 
-  filter(total == 8)
-
-# Show that the plot is the same, but highlight that there is a chance, however
-# miniscule, that p is 0.8 or 0.1. 
-
-x %>% 
-  ggplot(aes(x = mod)) +
-    geom_bar(aes(y = (..count..)/sum(..count..))) + 
-    scale_y_continuous(labels=percent) +
-    labs(title = "Posterior Estimate of p Given 8 Heads in 20 Flips",
-         subtitle = "p is more likely to be something other than 0.4",
-         x = "Probability of Heads",
-         y = "Posterior")
-
-```
-  
-Although the most likely value for $p$ is 0.4, it is actually more likely that $p$ is a different value than 0.4, either lower or higher and, potentially, much lower or higher. To get the correct uncertainty in our forecasts for the number of heads in the next 20 tosses, we need to incorporate that uncertainty directly.
-
-```{r}
-# Did not get around to finishing this.
-
-x %>% 
-  select(-rep, -total) 
-
-
-```
 
 ## Key Themes
 
