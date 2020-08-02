@@ -14,7 +14,7 @@
 
 <meta name="author" content="David Kane" />
 
-<meta name="date" content="2020-07-30" />
+<meta name="date" content="2020-08-01" />
 
 <script type="text/x-mathjax-config">
 MathJax.Hub.Config({
@@ -51,7 +51,6 @@ if(f.classList.contains('fa-plus-square')) {
 <script src="libs/htmlwidgets-1.5.1/htmlwidgets.js"></script>
 <link href="libs/str_view-0.1.0/str_view.css" rel="stylesheet" />
 <script src="libs/str_view-binding-1.4.0/str_view.js"></script>
-<script src="libs/kePrint-0.0.1/kePrint.js"></script>
 
 
 <style type="text/css">code{white-space: pre;}</style>
@@ -147,8 +146,8 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <a href="functions.html"><span class="toc-section-number">4</span> Functions</a>
 <a href="probability.html"><span class="toc-section-number">5</span> Probability</a>
 <a href="sampling.html"><span class="toc-section-number">6</span> Sampling</a>
-<a href="one-parameter.html"><span class="toc-section-number">7</span> One Parameter</a>
-<a href="two-parameters.html"><span class="toc-section-number">8</span> Two Parameters</a>
+<a href="rubin-causal-model.html"><span class="toc-section-number">7</span> One Parameter</a>
+<a href="rubin-causal-model.html"><span class="toc-section-number">8</span> Two Parameters</a>
 <a id="active-page" href="n-parameters.html"><span class="toc-section-number">9</span> N Parameters</a><ul class="toc-sections">
 <li class="toc"><a href="#explorator-data-analysis-of-shaming"> Explorator Data Analysis of <code>shaming</code></a></li>
 <li class="toc"><a href="#causal-effects-of-treament"> Causal Effects of <code>treament</code></a></li>
@@ -163,8 +162,6 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li class="toc"><a href="#need-rstanarm"> need rstanarm</a></li>
 <li class="toc"><a href="#rubin-causal-model-3"> Rubin Causal Model</a></li>
 </ul>
-<a href="continuous-response.html"><span class="toc-section-number">10</span> Continuous Response</a>
-<a href="discrete-response.html"><span class="toc-section-number">11</span> Discrete Response</a>
 <a href="appendices.html">Appendices</a>
 <a href="tools.html">Tools</a>
 <a href="shiny.html">Shiny</a>
@@ -232,7 +229,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 ## $ treatment   &lt;fct&gt; Civic Duty, Civic Duty, Hawthorne, Hawthorne, Hawthorne, …
 ## $ primary_06  &lt;int&gt; 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 0, 1, …
 ## $ hh_size     &lt;int&gt; 2, 2, 3, 3, 3, 3, 3, 3, 2, 2, 1, 2, 2, 1, 2, 2, 2, 2, 1, …
-## $ no_of_names &lt;int&gt; 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 2…</code></pre>
+## $ no_of_names &lt;int&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, N…</code></pre>
 <p>Here we see that <code>glimpse()</code> gives us a look at the raw data contained within the <code>shaming</code> data set. At the very top of the output, we can see the number of rows and columns, or observations and variables respectively. We see that there are 344,084 observations, with each row corresponding to a unique respondent. The “Columns: 10” tells us that there are 10 variables within this data set. Below this, we see a cutoff version of the entire data set that has the variables on the left as rows and the observations as a list separated by commas, as compared to the tibble output that presents with the variables as columns and the observations as rows running horizontally.</p>
 <p>While <code>glimpse()</code> gives us a good look at the possible values for the variables, it is difficult to read it in terms of individual observations. Recall that the <em>observational unit</em> is what is being measured. With the <code>shaming</code> data set, the observational unit would be the voter respondent. To get a better sense of some respondents’ information, let’s use <code>sample_n()</code> to gather a random sample of <em>n</em> observations from the data set.</p>
 <div class="sourceCode" id="cb909"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb909-1"><a href="n-parameters.html#cb909-1"></a>shaming <span class="op">%&gt;%</span><span class="st"> </span></span>
@@ -263,6 +260,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 ##                     Mean   :1956                                        
 ##                     3rd Qu.:1965                                        
 ##                     Max.   :1986                                        
+##                                                                         
 ##   primary_04         general_04             treatment        primary_06  
 ##  Length:344084      Length:344084      Civic Duty: 38218   Min.   :0.00  
 ##  Class :character   Class :character   Hawthorne : 38204   1st Qu.:0.00  
@@ -270,20 +268,22 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 ##                                        Self      : 38218   Mean   :0.32  
 ##                                        Neighbors : 38201   3rd Qu.:1.00  
 ##                                                            Max.   :1.00  
-##     hh_size     no_of_names  
-##  Min.   :1.0   Min.   : 1.0  
-##  1st Qu.:2.0   1st Qu.:21.0  
-##  Median :2.0   Median :21.0  
-##  Mean   :2.2   Mean   :20.9  
-##  3rd Qu.:2.0   3rd Qu.:21.0  
-##  Max.   :8.0   Max.   :21.0</code></pre>
+##                                                                          
+##     hh_size     no_of_names    
+##  Min.   :1.0   Min.   :10      
+##  1st Qu.:2.0   1st Qu.:21      
+##  Median :2.0   Median :21      
+##  Mean   :2.2   Mean   :21      
+##  3rd Qu.:2.0   3rd Qu.:21      
+##  Max.   :8.0   Max.   :21      
+##                NA's   :305883</code></pre>
 <p>For numerical variables, the <code>summary()</code> output provides us with the minimum, maximum, mean, and quartiles. For variables such as <code>treatment</code>, we are given a list of the various treatments along with counts of how many observations are within each group. In this case, the character variables do not provide us with any information other than the number of observations for each.</p>
 <p>One other helpful summarizing technique we can use is <code>skim()</code>. To make the information it contains simpler, we will only be looking at three variables: <code>primary_06</code>, <code>treatment</code>, and <code>sex</code>.</p>
 <div class="sourceCode" id="cb913"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb913-1"><a href="n-parameters.html#cb913-1"></a>shaming <span class="op">%&gt;%</span><span class="st"> </span></span>
 <span id="cb913-2"><a href="n-parameters.html#cb913-2"></a><span class="st">  </span><span class="kw">select</span>(primary_<span class="dv">06</span>, treatment, sex) <span class="op">%&gt;%</span><span class="st"> </span></span>
 <span id="cb913-3"><a href="n-parameters.html#cb913-3"></a><span class="st">  </span><span class="kw">skim</span>()</span></code></pre></div>
 <p><!--
-<caption>--><span class="marginnote shownote"><span id="tab:unnamed-chunk-637">TABLE 9.1: </span>Data summary</span><!--</caption>--></p>
+<caption>--><span class="marginnote shownote"><span id="tab:unnamed-chunk-639">TABLE 9.1: </span>Data summary</span><!--</caption>--></p>
 <table><tbody>
 <tr class="odd">
 <td align="left">Name</td>
@@ -615,10 +615,10 @@ confidence interval gives the range of uncertainty
 
 <p style="text-align: center;">
 <a href="two-parameters.html"><button class="btn btn-default">Previous</button></a>
-<a href="continuous-response.html"><button class="btn btn-default">Next</button></a>
+<a href="appendices.html"><button class="btn btn-default">Next</button></a>
 </p>
 <p class="build-date">Page built: 
-2020-07-30
+2020-08-01
 </p>
 </div>
 </div>
