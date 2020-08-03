@@ -14,7 +14,7 @@
 
 <meta name="author" content="David Kane" />
 
-<meta name="date" content="2020-08-01" />
+<meta name="date" content="2020-08-02" />
 
 <script type="text/x-mathjax-config">
 MathJax.Hub.Config({
@@ -201,23 +201,14 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <h2>
 <span class="header-section-number">9.1</span> Explorator Data Analysis of <code>shaming</code>
 </h2>
-<p>Begin by loading packages which we have used in previous chapters.</p>
-<div class="sourceCode" id="cb906"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb906-1"><a href="n-parameters.html#cb906-1"></a><span class="kw">library</span>(PPBDS.data)</span>
-<span id="cb906-2"><a href="n-parameters.html#cb906-2"></a><span class="kw">library</span>(skimr)</span>
-<span id="cb906-3"><a href="n-parameters.html#cb906-3"></a><span class="kw">library</span>(broom)</span>
-<span id="cb906-4"><a href="n-parameters.html#cb906-4"></a><span class="kw">library</span>(tidyverse)</span></code></pre></div>
+<p>Begin by loading the packages which we need.</p>
+<div class="sourceCode" id="cb909"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb909-1"><a href="n-parameters.html#cb909-1"></a><span class="kw">library</span>(PPBDS.data)</span>
+<span id="cb909-2"><a href="n-parameters.html#cb909-2"></a><span class="kw">library</span>(skimr)</span>
+<span id="cb909-3"><a href="n-parameters.html#cb909-3"></a><span class="kw">library</span>(broom.mixed)</span>
+<span id="cb909-4"><a href="n-parameters.html#cb909-4"></a><span class="kw">library</span>(rstanarm)</span>
+<span id="cb909-5"><a href="n-parameters.html#cb909-5"></a><span class="kw">library</span>(tidyverse)</span></code></pre></div>
 <p>We will start off this chapter introducing a new data set from the <strong>PPBDS.data</strong> package: <code>shaming</code>. This data set corresponds to an experiment carried out by Gerber, Green, and Larimer (2008) titled “Social Pressure and Voter Turnout: Evidence from a Large-Scale Field Experiment”. This experiment used several hundred thousand registered voters and a series of mailings to determine the effect of social pressure on voter turnout.</p>
-<!-- DK: Do glimpse and maybe other discussion here -->
-<!-- Then mention treatment and run shaming %>% count(treatment), and then you discuss what these are. -->
-<p>Four types of treatments were used in the experiment, with voters receiving one type of mailing. All of the mailing treatments carried the message, “DO YOUR CIVIC DUTY - VOTE!”.</p>
-<p>The first treatment, Civic Duty, also read, “Remember your rights and responsibilities as a citizen. Remember to vote.” This message acted as a baseline for the other treatments, since it carried a message very similar to the one displayed on all the mailings.</p>
-<p>In the second type of treatment, households received a mailing called the Hawthorne effect that told the voters that they were being studied and their voting behavior would be examined through public records. This adds a small amount of social pressure to the households receiving this mailing.</p>
-<p>The third type of treatment is Self, in which the mailing includes the recent voting record of each member of the household, placing the word “Voted” next to their name if they did in fact vote in the 2004 election or places a blank space next to the name if they did not. In this mailing, the households were also told, “we intend to mail an updated chart” with the voting record of the members after the 2006 election. By emphasizing the public nature of voting records, this type of mailing exerts more social pressure on voting than the Hawthorne treatment.</p>
-<p>The final type of mailing is the Neighbors treatment, which follows the Self mailing by listing the household members’ voting records, as well as the voting records of those who live nearby. This mailing also told recipients, “we intend to mail an updated chart” of who voted in the 2006 election. This “shaming” treatment exerts the most social pressure of all the treatments and broadcasts individuals’ voting habits.</p>
-<p>In addition to the treatments, the data set also consists of variables such as <code>primary_02</code>, <code>general_02</code>, <code>primary_04</code>, and <code>general_04</code> which tell us whether or not respondents voted in these primary and general elections. We are also given information about the respondents’ backgrounds such as <code>sex</code>, <code>birth_year</code>, and household size (<code>hh_size</code>).</p>
-<p>Consider the <code>shaming</code> tibble from <strong>PPBDS.data</strong>. Let’s explore the variables and observations contained within this data set by performing an Exploratory Data Analysis (EDA). EDAs help us summarize the data, identify patterns, spot outliers or anomalies, and more. We can start by running some summarizing commands such as <code>glimpse()</code>, <code>sample_n()</code>, and <code>summary()</code>.</p>
-<!-- Provide a EDA of the shaming tibble, perhaps restricting it to a subset of the provided columns. Follow the lead of chapter 10. Make sure to use `glimpse()`, `sample_n()` and `skim()`. Readers need to know understand what the dependent variable means, along with left-hand side variables like treatment. -->
-<div class="sourceCode" id="cb907"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb907-1"><a href="n-parameters.html#cb907-1"></a><span class="kw">glimpse</span>(shaming)</span></code></pre></div>
+<div class="sourceCode" id="cb910"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb910-1"><a href="n-parameters.html#cb910-1"></a><span class="kw">glimpse</span>(shaming)</span></code></pre></div>
 <pre><code>## Rows: 344,084
 ## Columns: 10
 ## $ sex         &lt;chr&gt; "Male", "Female", "Male", "Female", "Female", "Male", "Fe…
@@ -230,10 +221,159 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 ## $ primary_06  &lt;int&gt; 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 0, 1, …
 ## $ hh_size     &lt;int&gt; 2, 2, 3, 3, 3, 3, 3, 3, 2, 2, 1, 2, 2, 1, 2, 2, 2, 2, 1, …
 ## $ no_of_names &lt;int&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, N…</code></pre>
-<p>Here we see that <code>glimpse()</code> gives us a look at the raw data contained within the <code>shaming</code> data set. At the very top of the output, we can see the number of rows and columns, or observations and variables respectively. We see that there are 344,084 observations, with each row corresponding to a unique respondent. The “Columns: 10” tells us that there are 10 variables within this data set. Below this, we see a cutoff version of the entire data set that has the variables on the left as rows and the observations as a list separated by commas, as compared to the tibble output that presents with the variables as columns and the observations as rows running horizontally.</p>
-<p>While <code>glimpse()</code> gives us a good look at the possible values for the variables, it is difficult to read it in terms of individual observations. Recall that the <em>observational unit</em> is what is being measured. With the <code>shaming</code> data set, the observational unit would be the voter respondent. To get a better sense of some respondents’ information, let’s use <code>sample_n()</code> to gather a random sample of <em>n</em> observations from the data set.</p>
-<div class="sourceCode" id="cb909"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb909-1"><a href="n-parameters.html#cb909-1"></a>shaming <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb909-2"><a href="n-parameters.html#cb909-2"></a><span class="st">  </span><span class="kw">sample_n</span>(<span class="dv">10</span>)</span></code></pre></div>
+<p>There are 344,084 observations, with each row corresponding to a unique respondent.</p>
+<p>Four types of treatments were used in the experiment, with voters receiving one type of mailing. All of the mailing treatments carried the message, “DO YOUR CIVIC DUTY - VOTE!”.</p>
+<p>The first treatment, Civic Duty, also read, “Remember your rights and responsibilities as a citizen. Remember to vote.” This message acted as a baseline for the other treatments, since it carried a message very similar to the one displayed on all the mailings.</p>
+<p>In the second treatment, Hawthorne, households received a mailing which told the voters that they were being studied and their voting behavior would be examined through public records. This adds a small amount of social pressure to the households receiving this mailing.</p>
+<p>In the third treatment, Self, the mailing includes the recent voting record of each member of the household, placing the word “Voted” next to their name if they did in fact vote in the 2004 election or a blank space next to the name if they did not. In this mailing, the households were also told, “we intend to mail an updated chart” with the voting record of the household members after the 2006 primary. By emphasizing the public nature of voting records, this type of mailing exerts more social pressure on voting than the Hawthorne treatment.</p>
+<p>The fourth treatment, Neighbors, provides the household members’ voting records, as well as the voting records of those who live nearby. This mailing also told recipients, “we intend to mail an updated chart” of who voted in the 2006 election.</p>
+<p>In addition to the treatments, the data set also consists of variables such as <code>primary_02</code>, <code>general_02</code>, <code>primary_04</code>, and <code>general_04</code> which tell us whether or not respondents voted in these primary and general elections. We are also given information about the respondents’ backgrounds such as <code>sex</code>, <code>birth_year</code>, and household size (<code>hh_size</code>).</p>
+<p>For now, let’s focus on a subset of the data.</p>
+<div class="sourceCode" id="cb912"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb912-1"><a href="n-parameters.html#cb912-1"></a>ch9 &lt;-<span class="st"> </span>shaming <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb912-2"><a href="n-parameters.html#cb912-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">solo =</span> <span class="kw">ifelse</span>(hh_size <span class="op">==</span><span class="st"> </span><span class="dv">1</span>, <span class="ot">TRUE</span>, <span class="ot">FALSE</span>)) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb912-3"><a href="n-parameters.html#cb912-3"></a><span class="st">  </span><span class="kw">select</span>(primary_<span class="dv">06</span>, treatment, solo, sex)</span></code></pre></div>
+<p>We create the variable <code>solo</code>, which is TRUE for voters who live along and FALSE for those that do not. We are curious to see if the treatment effect, if any, is the same for voters who live alone as it is for those who do not.</p>
+<div class="sourceCode" id="cb913"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb913-1"><a href="n-parameters.html#cb913-1"></a>ch9 <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb913-2"><a href="n-parameters.html#cb913-2"></a><span class="st">  </span><span class="kw">skim</span>()</span></code></pre></div>
+<p><!--
+<caption>--><span class="marginnote shownote"><span id="tab:unnamed-chunk-641">TABLE 9.1: </span>Data summary</span><!--</caption>--></p>
+<table><tbody>
+<tr class="odd">
+<td align="left">Name</td>
+<td align="left">Piped data</td>
+</tr>
+<tr class="even">
+<td align="left">Number of rows</td>
+<td align="left">344084</td>
+</tr>
+<tr class="odd">
+<td align="left">Number of columns</td>
+<td align="left">4</td>
+</tr>
+<tr class="even">
+<td align="left">_______________________</td>
+<td align="left"></td>
+</tr>
+<tr class="odd">
+<td align="left">Column type frequency:</td>
+<td align="left"></td>
+</tr>
+<tr class="even">
+<td align="left">character</td>
+<td align="left">1</td>
+</tr>
+<tr class="odd">
+<td align="left">factor</td>
+<td align="left">1</td>
+</tr>
+<tr class="even">
+<td align="left">logical</td>
+<td align="left">1</td>
+</tr>
+<tr class="odd">
+<td align="left">numeric</td>
+<td align="left">1</td>
+</tr>
+<tr class="even">
+<td align="left">________________________</td>
+<td align="left"></td>
+</tr>
+<tr class="odd">
+<td align="left">Group variables</td>
+<td align="left">None</td>
+</tr>
+</tbody></table>
+<p><strong>Variable type: character</strong></p>
+<table>
+<thead><tr class="header">
+<th align="left">skim_variable</th>
+<th align="right">n_missing</th>
+<th align="right">complete_rate</th>
+<th align="right">min</th>
+<th align="right">max</th>
+<th align="right">empty</th>
+<th align="right">n_unique</th>
+<th align="right">whitespace</th>
+</tr></thead>
+<tbody><tr class="odd">
+<td align="left">sex</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">4</td>
+<td align="right">6</td>
+<td align="right">0</td>
+<td align="right">2</td>
+<td align="right">0</td>
+</tr></tbody>
+</table>
+<p><strong>Variable type: factor</strong></p>
+<table>
+<thead><tr class="header">
+<th align="left">skim_variable</th>
+<th align="right">n_missing</th>
+<th align="right">complete_rate</th>
+<th align="left">ordered</th>
+<th align="right">n_unique</th>
+<th align="left">top_counts</th>
+</tr></thead>
+<tbody><tr class="odd">
+<td align="left">treatment</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="left">FALSE</td>
+<td align="right">5</td>
+<td align="left">Con: 191243, Civ: 38218, Sel: 38218, Haw: 38204</td>
+</tr></tbody>
+</table>
+<p><strong>Variable type: logical</strong></p>
+<table>
+<thead><tr class="header">
+<th align="left">skim_variable</th>
+<th align="right">n_missing</th>
+<th align="right">complete_rate</th>
+<th align="right">mean</th>
+<th align="left">count</th>
+</tr></thead>
+<tbody><tr class="odd">
+<td align="left">solo</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">0.14</td>
+<td align="left">FAL: 296250, TRU: 47834</td>
+</tr></tbody>
+</table>
+<p><strong>Variable type: numeric</strong></p>
+<table>
+<thead><tr class="header">
+<th align="left">skim_variable</th>
+<th align="right">n_missing</th>
+<th align="right">complete_rate</th>
+<th align="right">mean</th>
+<th align="right">sd</th>
+<th align="right">p0</th>
+<th align="right">p25</th>
+<th align="right">p50</th>
+<th align="right">p75</th>
+<th align="right">p100</th>
+<th align="left">hist</th>
+</tr></thead>
+<tbody><tr class="odd">
+<td align="left">primary_06</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">0.32</td>
+<td align="right">0.46</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">1</td>
+<td align="right">1</td>
+<td align="left">▇▁▁▁▃</td>
+</tr></tbody>
+</table>
+<!-- DK: Add discussion of what you see here. No need to drop missing values since there aren't any. I think this next discussion can be dropped. --><p>While <code>glimpse()</code> gives us a good look at the possible values for the variables, it is difficult to read it in terms of individual observations. Recall that the <em>observational unit</em> is what is being measured. With the <code>shaming</code> data set, the observational unit would be the voter respondent. To get a better sense of some respondents’ information, let’s use <code>sample_n()</code> to gather a random sample of <em>n</em> observations from the data set.</p>
+<div class="sourceCode" id="cb914"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb914-1"><a href="n-parameters.html#cb914-1"></a>shaming <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb914-2"><a href="n-parameters.html#cb914-2"></a><span class="st">  </span><span class="kw">sample_n</span>(<span class="dv">10</span>)</span></code></pre></div>
 <pre><code>## # A tibble: 10 x 10
 ##    sex   birth_year primary_02 general_02 primary_04 general_04 treatment
 ##    &lt;chr&gt;      &lt;int&gt; &lt;chr&gt;      &lt;chr&gt;      &lt;chr&gt;      &lt;chr&gt;      &lt;fct&gt;    
@@ -248,11 +388,11 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 ##  9 Fema…       1972 No         Yes        Yes        Yes        Control  
 ## 10 Male        1983 Yes        Yes        Yes        Yes        Control  
 ## # … with 3 more variables: primary_06 &lt;int&gt;, hh_size &lt;int&gt;, no_of_names &lt;int&gt;</code></pre>
-<p>Now we have a table with 5 random observations and the respondents’ information in a regular table output. By taking a few random samples, we may start to see some patterns within the data. Do you notice anything in particular about the variable <code>treatment</code>?
+<p>Now we have a table with 5 random observations and the respondents’ information in a regular table output. By taking a few random samples, we may start to see some patterns within the data. Do you notice anything in particular about the variable <code>treatment</code>?</p>
 <!-- HV: Is it okay to pose these questions here? -->
-<!-- HV: The no_of_names variable is supposed to give an integer with the number of names listed *IF* the respondent was in the "Neighbors" group but for all other treatments it is listed as 21. Should I just mutate this or have it dealt with in the data set as a whole? --></p>
+<!-- HV: The no_of_names variable is supposed to give an integer with the number of names listed *IF* the respondent was in the "Neighbors" group but for all other treatments it is listed as 21. Should I just mutate this or have it dealt with in the data set as a whole? -->
 <p>To get a more in-depth summary of the variables and their components, we can run <code>summary()</code> on the data set.</p>
-<div class="sourceCode" id="cb911"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb911-1"><a href="n-parameters.html#cb911-1"></a><span class="kw">summary</span>(shaming)</span></code></pre></div>
+<div class="sourceCode" id="cb916"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb916-1"><a href="n-parameters.html#cb916-1"></a><span class="kw">summary</span>(shaming)</span></code></pre></div>
 <pre><code>##      sex              birth_year    primary_02         general_02       
 ##  Length:344084      Min.   :1900   Length:344084      Length:344084     
 ##  Class :character   1st Qu.:1947   Class :character   Class :character  
@@ -279,11 +419,11 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 ##                NA's   :305883</code></pre>
 <p>For numerical variables, the <code>summary()</code> output provides us with the minimum, maximum, mean, and quartiles. For variables such as <code>treatment</code>, we are given a list of the various treatments along with counts of how many observations are within each group. In this case, the character variables do not provide us with any information other than the number of observations for each.</p>
 <p>One other helpful summarizing technique we can use is <code>skim()</code>. To make the information it contains simpler, we will only be looking at three variables: <code>primary_06</code>, <code>treatment</code>, and <code>sex</code>.</p>
-<div class="sourceCode" id="cb913"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb913-1"><a href="n-parameters.html#cb913-1"></a>shaming <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb913-2"><a href="n-parameters.html#cb913-2"></a><span class="st">  </span><span class="kw">select</span>(primary_<span class="dv">06</span>, treatment, sex) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb913-3"><a href="n-parameters.html#cb913-3"></a><span class="st">  </span><span class="kw">skim</span>()</span></code></pre></div>
+<div class="sourceCode" id="cb918"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb918-1"><a href="n-parameters.html#cb918-1"></a>shaming <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb918-2"><a href="n-parameters.html#cb918-2"></a><span class="st">  </span><span class="kw">select</span>(primary_<span class="dv">06</span>, treatment, sex) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb918-3"><a href="n-parameters.html#cb918-3"></a><span class="st">  </span><span class="kw">skim</span>()</span></code></pre></div>
 <p><!--
-<caption>--><span class="marginnote shownote"><span id="tab:unnamed-chunk-639">TABLE 9.1: </span>Data summary</span><!--</caption>--></p>
+<caption>--><span class="marginnote shownote"><span id="tab:unnamed-chunk-644">TABLE 9.2: </span>Data summary</span><!--</caption>--></p>
 <table><tbody>
 <tr class="odd">
 <td align="left">Name</td>
@@ -414,66 +554,1221 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <h2>
 <span class="header-section-number">9.2</span> Causal Effects of <code>treament</code>
 </h2>
-<!-- This follows the discussion in chapter 8 very closely. See below for some key R code, which must be explained. (Obviously, you can use other code as well.) -->
-<div class="sourceCode" id="cb914"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb914-1"><a href="n-parameters.html#cb914-1"></a>shaming <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb914-2"><a href="n-parameters.html#cb914-2"></a><span class="st">  </span><span class="kw">lm</span>(<span class="dt">data =</span> ., primary_<span class="dv">06</span> <span class="op">~</span><span class="st"> </span>treatment <span class="op">-</span><span class="st"> </span><span class="dv">1</span>)</span></code></pre></div>
-<pre><code>## 
-## Call:
-## lm(formula = primary_06 ~ treatment - 1, data = .)
-## 
-## Coefficients:
-## treatmentCivic Duty   treatmentHawthorne     treatmentControl  
-##               0.315                0.322                0.297  
-##       treatmentSelf   treatmentNeighbors  
-##               0.345                0.378</code></pre>
+<div class="sourceCode" id="cb919"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb919-1"><a href="n-parameters.html#cb919-1"></a>obj<span class="fl">.1</span> &lt;-<span class="st"> </span><span class="kw">stan_glm</span>(<span class="dt">data =</span> shaming, </span>
+<span id="cb919-2"><a href="n-parameters.html#cb919-2"></a>                <span class="dt">formula =</span> primary_<span class="dv">06</span> <span class="op">~</span><span class="st"> </span>treatment <span class="op">-</span><span class="st"> </span><span class="dv">1</span>, </span>
+<span id="cb919-3"><a href="n-parameters.html#cb919-3"></a>                <span class="dt">family =</span> <span class="kw">gaussian</span>(), </span>
+<span id="cb919-4"><a href="n-parameters.html#cb919-4"></a>                <span class="dt">refresh =</span> <span class="dv">0</span>)</span></code></pre></div>
+<style>html {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
+}
+
+#mfgubmzphp .gt_table {
+  display: table;
+  border-collapse: collapse;
+  margin-left: auto;
+  margin-right: auto;
+  color: #333333;
+  font-size: 16px;
+  background-color: #FFFFFF;
+  width: auto;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #A8A8A8;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #A8A8A8;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+}
+
+#mfgubmzphp .gt_heading {
+  background-color: #FFFFFF;
+  text-align: center;
+  border-bottom-color: #FFFFFF;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+}
+
+#mfgubmzphp .gt_title {
+  color: #333333;
+  font-size: 125%;
+  font-weight: initial;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  border-bottom-color: #FFFFFF;
+  border-bottom-width: 0;
+}
+
+#mfgubmzphp .gt_subtitle {
+  color: #333333;
+  font-size: 85%;
+  font-weight: initial;
+  padding-top: 0;
+  padding-bottom: 4px;
+  border-top-color: #FFFFFF;
+  border-top-width: 0;
+}
+
+#mfgubmzphp .gt_bottom_border {
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+
+#mfgubmzphp .gt_col_headings {
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+}
+
+#mfgubmzphp .gt_col_heading {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: normal;
+  text-transform: inherit;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: bottom;
+  padding-top: 5px;
+  padding-bottom: 6px;
+  padding-left: 5px;
+  padding-right: 5px;
+  overflow-x: hidden;
+}
+
+#mfgubmzphp .gt_column_spanner_outer {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: normal;
+  text-transform: inherit;
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+#mfgubmzphp .gt_column_spanner_outer:first-child {
+  padding-left: 0;
+}
+
+#mfgubmzphp .gt_column_spanner_outer:last-child {
+  padding-right: 0;
+}
+
+#mfgubmzphp .gt_column_spanner {
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  vertical-align: bottom;
+  padding-top: 5px;
+  padding-bottom: 6px;
+  overflow-x: hidden;
+  display: inline-block;
+  width: 100%;
+}
+
+#mfgubmzphp .gt_group_heading {
+  padding: 8px;
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  text-transform: inherit;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: middle;
+}
+
+#mfgubmzphp .gt_empty_group_heading {
+  padding: 0.5px;
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  vertical-align: middle;
+}
+
+#mfgubmzphp .gt_striped {
+  background-color: rgba(128, 128, 128, 0.05);
+}
+
+#mfgubmzphp .gt_from_md > :first-child {
+  margin-top: 0;
+}
+
+#mfgubmzphp .gt_from_md > :last-child {
+  margin-bottom: 0;
+}
+
+#mfgubmzphp .gt_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  margin: 10px;
+  border-top-style: solid;
+  border-top-width: 1px;
+  border-top-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: middle;
+  overflow-x: hidden;
+}
+
+#mfgubmzphp .gt_stub {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  text-transform: inherit;
+  border-right-style: solid;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  padding-left: 12px;
+}
+
+#mfgubmzphp .gt_summary_row {
+  color: #333333;
+  background-color: #FFFFFF;
+  text-transform: inherit;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#mfgubmzphp .gt_first_summary_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+}
+
+#mfgubmzphp .gt_grand_summary_row {
+  color: #333333;
+  background-color: #FFFFFF;
+  text-transform: inherit;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#mfgubmzphp .gt_first_grand_summary_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-top-style: double;
+  border-top-width: 6px;
+  border-top-color: #D3D3D3;
+}
+
+#mfgubmzphp .gt_table_body {
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+
+#mfgubmzphp .gt_footnotes {
+  color: #333333;
+  background-color: #FFFFFF;
+  border-bottom-style: none;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+}
+
+#mfgubmzphp .gt_footnote {
+  margin: 0px;
+  font-size: 90%;
+  padding: 4px;
+}
+
+#mfgubmzphp .gt_sourcenotes {
+  color: #333333;
+  background-color: #FFFFFF;
+  border-bottom-style: none;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+}
+
+#mfgubmzphp .gt_sourcenote {
+  font-size: 90%;
+  padding: 4px;
+}
+
+#mfgubmzphp .gt_left {
+  text-align: left;
+}
+
+#mfgubmzphp .gt_center {
+  text-align: center;
+}
+
+#mfgubmzphp .gt_right {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+#mfgubmzphp .gt_font_normal {
+  font-weight: normal;
+}
+
+#mfgubmzphp .gt_font_bold {
+  font-weight: bold;
+}
+
+#mfgubmzphp .gt_font_italic {
+  font-style: italic;
+}
+
+#mfgubmzphp .gt_super {
+  font-size: 65%;
+}
+
+#mfgubmzphp .gt_footnote_marks {
+  font-style: italic;
+  font-size: 65%;
+}
+</style>
+<div id="mfgubmzphp" style="overflow-x:auto;overflow-y:auto;width:auto;height:auto;"><table class="gt_table">
+<thead class="gt_col_headings"><tr>
+<th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1"><strong>Characteristic</strong></th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1"><strong>Beta</strong></th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1">
+<strong>95% CI</strong><sup class="gt_footnote_marks">1</sup>
+</th>
+    </tr></thead>
+<tbody class="gt_table_body">
+<tr>
+<td class="gt_row gt_left">treatment</td>
+      <td class="gt_row gt_center"></td>
+      <td class="gt_row gt_center"></td>
+    </tr>
+<tr>
+<td class="gt_row gt_left" style="text-align: left; text-indent: 10px;">Civic Duty</td>
+      <td class="gt_row gt_center">0.31</td>
+      <td class="gt_row gt_center">0.31, 0.32</td>
+    </tr>
+<tr>
+<td class="gt_row gt_left" style="text-align: left; text-indent: 10px;">Hawthorne</td>
+      <td class="gt_row gt_center">0.32</td>
+      <td class="gt_row gt_center">0.32, 0.33</td>
+    </tr>
+<tr>
+<td class="gt_row gt_left" style="text-align: left; text-indent: 10px;">Control</td>
+      <td class="gt_row gt_center">0.30</td>
+      <td class="gt_row gt_center">0.29, 0.30</td>
+    </tr>
+<tr>
+<td class="gt_row gt_left" style="text-align: left; text-indent: 10px;">Self</td>
+      <td class="gt_row gt_center">0.35</td>
+      <td class="gt_row gt_center">0.34, 0.35</td>
+    </tr>
+<tr>
+<td class="gt_row gt_left" style="text-align: left; text-indent: 10px;">Neighbors</td>
+      <td class="gt_row gt_center">0.38</td>
+      <td class="gt_row gt_center">0.37, 0.38</td>
+    </tr>
+</tbody>
+<tfoot><tr class="gt_footnotes">
+<td colspan="3">
+        <p class="gt_footnote">
+          <sup class="gt_footnote_marks"><em>1</em>
+          </sup>
+           
+          CI = Confidence Interval
+          <br></p>
+      </td>
+    </tr></tfoot>
+</table></div>
 <!-- Talk about what these results mean.  Then, create the same model but with a different structure. -->
-<div class="sourceCode" id="cb916"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb916-1"><a href="n-parameters.html#cb916-1"></a>shaming <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb916-2"><a href="n-parameters.html#cb916-2"></a><span class="st">  </span><span class="kw">lm</span>(<span class="dt">data =</span> ., primary_<span class="dv">06</span> <span class="op">~</span><span class="st"> </span>treatment)</span></code></pre></div>
-<pre><code>## 
-## Call:
-## lm(formula = primary_06 ~ treatment, data = .)
-## 
-## Coefficients:
-##        (Intercept)  treatmentHawthorne    treatmentControl       treatmentSelf  
-##            0.31454             0.00784            -0.01790             0.03061  
-## treatmentNeighbors  
-##            0.06341</code></pre>
+<div class="sourceCode" id="cb920"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb920-1"><a href="n-parameters.html#cb920-1"></a>obj<span class="fl">.2</span> &lt;-<span class="st"> </span><span class="kw">stan_glm</span>(<span class="dt">data =</span> shaming, </span>
+<span id="cb920-2"><a href="n-parameters.html#cb920-2"></a>                <span class="dt">formula =</span> primary_<span class="dv">06</span> <span class="op">~</span><span class="st"> </span>treatment, </span>
+<span id="cb920-3"><a href="n-parameters.html#cb920-3"></a>                <span class="dt">family =</span> <span class="kw">gaussian</span>(), </span>
+<span id="cb920-4"><a href="n-parameters.html#cb920-4"></a>                <span class="dt">refresh =</span> <span class="dv">0</span>)</span></code></pre></div>
+<style>html {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
+}
+
+#wielckxvee .gt_table {
+  display: table;
+  border-collapse: collapse;
+  margin-left: auto;
+  margin-right: auto;
+  color: #333333;
+  font-size: 16px;
+  background-color: #FFFFFF;
+  width: auto;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #A8A8A8;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #A8A8A8;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+}
+
+#wielckxvee .gt_heading {
+  background-color: #FFFFFF;
+  text-align: center;
+  border-bottom-color: #FFFFFF;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+}
+
+#wielckxvee .gt_title {
+  color: #333333;
+  font-size: 125%;
+  font-weight: initial;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  border-bottom-color: #FFFFFF;
+  border-bottom-width: 0;
+}
+
+#wielckxvee .gt_subtitle {
+  color: #333333;
+  font-size: 85%;
+  font-weight: initial;
+  padding-top: 0;
+  padding-bottom: 4px;
+  border-top-color: #FFFFFF;
+  border-top-width: 0;
+}
+
+#wielckxvee .gt_bottom_border {
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+
+#wielckxvee .gt_col_headings {
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+}
+
+#wielckxvee .gt_col_heading {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: normal;
+  text-transform: inherit;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: bottom;
+  padding-top: 5px;
+  padding-bottom: 6px;
+  padding-left: 5px;
+  padding-right: 5px;
+  overflow-x: hidden;
+}
+
+#wielckxvee .gt_column_spanner_outer {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: normal;
+  text-transform: inherit;
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+#wielckxvee .gt_column_spanner_outer:first-child {
+  padding-left: 0;
+}
+
+#wielckxvee .gt_column_spanner_outer:last-child {
+  padding-right: 0;
+}
+
+#wielckxvee .gt_column_spanner {
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  vertical-align: bottom;
+  padding-top: 5px;
+  padding-bottom: 6px;
+  overflow-x: hidden;
+  display: inline-block;
+  width: 100%;
+}
+
+#wielckxvee .gt_group_heading {
+  padding: 8px;
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  text-transform: inherit;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: middle;
+}
+
+#wielckxvee .gt_empty_group_heading {
+  padding: 0.5px;
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  vertical-align: middle;
+}
+
+#wielckxvee .gt_striped {
+  background-color: rgba(128, 128, 128, 0.05);
+}
+
+#wielckxvee .gt_from_md > :first-child {
+  margin-top: 0;
+}
+
+#wielckxvee .gt_from_md > :last-child {
+  margin-bottom: 0;
+}
+
+#wielckxvee .gt_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  margin: 10px;
+  border-top-style: solid;
+  border-top-width: 1px;
+  border-top-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: middle;
+  overflow-x: hidden;
+}
+
+#wielckxvee .gt_stub {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  text-transform: inherit;
+  border-right-style: solid;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  padding-left: 12px;
+}
+
+#wielckxvee .gt_summary_row {
+  color: #333333;
+  background-color: #FFFFFF;
+  text-transform: inherit;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#wielckxvee .gt_first_summary_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+}
+
+#wielckxvee .gt_grand_summary_row {
+  color: #333333;
+  background-color: #FFFFFF;
+  text-transform: inherit;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#wielckxvee .gt_first_grand_summary_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-top-style: double;
+  border-top-width: 6px;
+  border-top-color: #D3D3D3;
+}
+
+#wielckxvee .gt_table_body {
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+
+#wielckxvee .gt_footnotes {
+  color: #333333;
+  background-color: #FFFFFF;
+  border-bottom-style: none;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+}
+
+#wielckxvee .gt_footnote {
+  margin: 0px;
+  font-size: 90%;
+  padding: 4px;
+}
+
+#wielckxvee .gt_sourcenotes {
+  color: #333333;
+  background-color: #FFFFFF;
+  border-bottom-style: none;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+}
+
+#wielckxvee .gt_sourcenote {
+  font-size: 90%;
+  padding: 4px;
+}
+
+#wielckxvee .gt_left {
+  text-align: left;
+}
+
+#wielckxvee .gt_center {
+  text-align: center;
+}
+
+#wielckxvee .gt_right {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+#wielckxvee .gt_font_normal {
+  font-weight: normal;
+}
+
+#wielckxvee .gt_font_bold {
+  font-weight: bold;
+}
+
+#wielckxvee .gt_font_italic {
+  font-style: italic;
+}
+
+#wielckxvee .gt_super {
+  font-size: 65%;
+}
+
+#wielckxvee .gt_footnote_marks {
+  font-style: italic;
+  font-size: 65%;
+}
+</style>
+<div id="wielckxvee" style="overflow-x:auto;overflow-y:auto;width:auto;height:auto;"><table class="gt_table">
+<thead class="gt_col_headings"><tr>
+<th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1"><strong>Characteristic</strong></th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1"><strong>Beta</strong></th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1">
+<strong>95% CI</strong><sup class="gt_footnote_marks">1</sup>
+</th>
+    </tr></thead>
+<tbody class="gt_table_body">
+<tr>
+<td class="gt_row gt_left">treatment</td>
+      <td class="gt_row gt_center"></td>
+      <td class="gt_row gt_center"></td>
+    </tr>
+<tr>
+<td class="gt_row gt_left" style="text-align: left; text-indent: 10px;">Civic Duty</td>
+      <td class="gt_row gt_center">—</td>
+      <td class="gt_row gt_center">—</td>
+    </tr>
+<tr>
+<td class="gt_row gt_left" style="text-align: left; text-indent: 10px;">Hawthorne</td>
+      <td class="gt_row gt_center">0.01</td>
+      <td class="gt_row gt_center">0.00, 0.01</td>
+    </tr>
+<tr>
+<td class="gt_row gt_left" style="text-align: left; text-indent: 10px;">Control</td>
+      <td class="gt_row gt_center">-0.02</td>
+      <td class="gt_row gt_center">-0.02, -0.01</td>
+    </tr>
+<tr>
+<td class="gt_row gt_left" style="text-align: left; text-indent: 10px;">Self</td>
+      <td class="gt_row gt_center">0.03</td>
+      <td class="gt_row gt_center">0.02, 0.04</td>
+    </tr>
+<tr>
+<td class="gt_row gt_left" style="text-align: left; text-indent: 10px;">Neighbors</td>
+      <td class="gt_row gt_center">0.06</td>
+      <td class="gt_row gt_center">0.06, 0.07</td>
+    </tr>
+</tbody>
+<tfoot><tr class="gt_footnotes">
+<td colspan="3">
+        <p class="gt_footnote">
+          <sup class="gt_footnote_marks"><em>1</em>
+          </sup>
+           
+          CI = Confidence Interval
+          <br></p>
+      </td>
+    </tr></tfoot>
+</table></div>
 <!-- Explain how these two models are the same, except in how they define the parameters. Show us the math like Gelman does. Write down the math. For simple. -->
-<div class="sourceCode" id="cb918"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb918-1"><a href="n-parameters.html#cb918-1"></a>shaming <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb918-2"><a href="n-parameters.html#cb918-2"></a><span class="st">  </span><span class="kw">lm</span>(<span class="dt">data =</span> ., primary_<span class="dv">06</span> <span class="op">~</span><span class="st"> </span>treatment <span class="op">-</span><span class="st"> </span><span class="dv">1</span>) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb918-3"><a href="n-parameters.html#cb918-3"></a><span class="st">  </span><span class="kw">tidy</span>(<span class="dt">conf.int =</span> <span class="ot">TRUE</span>, <span class="dt">conf.level =</span> <span class="fl">0.99</span>) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb918-4"><a href="n-parameters.html#cb918-4"></a><span class="st">  </span><span class="kw">select</span>(term, conf.low, estimate, conf.high)</span></code></pre></div>
-<pre><code>## # A tibble: 5 x 4
-##   term                conf.low estimate conf.high
-##   &lt;chr&gt;                  &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;
-## 1 treatmentCivic Duty    0.308    0.315     0.321
-## 2 treatmentHawthorne     0.316    0.322     0.328
-## 3 treatmentControl       0.294    0.297     0.299
-## 4 treatmentSelf          0.339    0.345     0.351
-## 5 treatmentNeighbors     0.372    0.378     0.384</code></pre>
 <!-- Once we talk about these things --- and, again, this is exactly what we have talked about in chapter 8 --- we can do a bit more. Like discuss how we are using 99%, because there is nothing magical aboyt 95%, other than convention. I also think it would be fun to show a nice graphic of this, highlighting how the estimates for Civic and Hawthorne overlap.  -->
 <div id="interactions" class="section level3">
 <h3>
 <span class="header-section-number">9.2.1</span> Interactions</h3>
 <!-- This is new. With only two parameters, we can't really look at interaction effects. Need to discuss interaction effects in general. Also, note that heterogenous treatment effects are the same thing as interaction effects that involve a treatment effect as one of the variables.  -->
 <!-- Feel free to build up this code, and other examples, more slowly than I am doing it here. -->
-<div class="sourceCode" id="cb920"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb920-1"><a href="n-parameters.html#cb920-1"></a>shaming <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb920-2"><a href="n-parameters.html#cb920-2"></a><span class="st">  </span><span class="kw">lm</span>(<span class="dt">data =</span> ., primary_<span class="dv">06</span> <span class="op">~</span><span class="st"> </span>sex<span class="op">*</span>treatment <span class="op">-</span><span class="st"> </span><span class="dv">1</span>) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb920-3"><a href="n-parameters.html#cb920-3"></a><span class="st">  </span><span class="kw">tidy</span>() <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb920-4"><a href="n-parameters.html#cb920-4"></a><span class="st">  </span><span class="kw">select</span>(term, estimate)</span></code></pre></div>
-<pre><code>## # A tibble: 10 x 2
-##    term                       estimate
-##    &lt;chr&gt;                         &lt;dbl&gt;
-##  1 sexFemale                   0.306  
-##  2 sexMale                     0.323  
-##  3 treatmentHawthorne          0.0109 
-##  4 treatmentControl           -0.0159 
-##  5 treatmentSelf               0.0354 
-##  6 treatmentNeighbors          0.0650 
-##  7 sexMale:treatmentHawthorne -0.00617
-##  8 sexMale:treatmentControl   -0.00406
-##  9 sexMale:treatmentSelf      -0.00960
-## 10 sexMale:treatmentNeighbors -0.00321</code></pre>
+<div class="sourceCode" id="cb921"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb921-1"><a href="n-parameters.html#cb921-1"></a>obj<span class="fl">.3</span> &lt;-<span class="st"> </span><span class="kw">stan_glm</span>(<span class="dt">data =</span> shaming, </span>
+<span id="cb921-2"><a href="n-parameters.html#cb921-2"></a>                <span class="dt">formula =</span> primary_<span class="dv">06</span> <span class="op">~</span><span class="st"> </span>sex <span class="op">+</span><span class="st"> </span>treatment <span class="op">+</span><span class="st"> </span>sex<span class="op">:</span>treatment, </span>
+<span id="cb921-3"><a href="n-parameters.html#cb921-3"></a>                <span class="dt">family =</span> <span class="kw">gaussian</span>(), </span>
+<span id="cb921-4"><a href="n-parameters.html#cb921-4"></a>                <span class="dt">refresh =</span> <span class="dv">0</span>)</span></code></pre></div>
+<style>html {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
+}
+
+#vddqmqcdhe .gt_table {
+  display: table;
+  border-collapse: collapse;
+  margin-left: auto;
+  margin-right: auto;
+  color: #333333;
+  font-size: 16px;
+  background-color: #FFFFFF;
+  width: auto;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #A8A8A8;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #A8A8A8;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+}
+
+#vddqmqcdhe .gt_heading {
+  background-color: #FFFFFF;
+  text-align: center;
+  border-bottom-color: #FFFFFF;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+}
+
+#vddqmqcdhe .gt_title {
+  color: #333333;
+  font-size: 125%;
+  font-weight: initial;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  border-bottom-color: #FFFFFF;
+  border-bottom-width: 0;
+}
+
+#vddqmqcdhe .gt_subtitle {
+  color: #333333;
+  font-size: 85%;
+  font-weight: initial;
+  padding-top: 0;
+  padding-bottom: 4px;
+  border-top-color: #FFFFFF;
+  border-top-width: 0;
+}
+
+#vddqmqcdhe .gt_bottom_border {
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+
+#vddqmqcdhe .gt_col_headings {
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+}
+
+#vddqmqcdhe .gt_col_heading {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: normal;
+  text-transform: inherit;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: bottom;
+  padding-top: 5px;
+  padding-bottom: 6px;
+  padding-left: 5px;
+  padding-right: 5px;
+  overflow-x: hidden;
+}
+
+#vddqmqcdhe .gt_column_spanner_outer {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: normal;
+  text-transform: inherit;
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+#vddqmqcdhe .gt_column_spanner_outer:first-child {
+  padding-left: 0;
+}
+
+#vddqmqcdhe .gt_column_spanner_outer:last-child {
+  padding-right: 0;
+}
+
+#vddqmqcdhe .gt_column_spanner {
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  vertical-align: bottom;
+  padding-top: 5px;
+  padding-bottom: 6px;
+  overflow-x: hidden;
+  display: inline-block;
+  width: 100%;
+}
+
+#vddqmqcdhe .gt_group_heading {
+  padding: 8px;
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  text-transform: inherit;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: middle;
+}
+
+#vddqmqcdhe .gt_empty_group_heading {
+  padding: 0.5px;
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  vertical-align: middle;
+}
+
+#vddqmqcdhe .gt_striped {
+  background-color: rgba(128, 128, 128, 0.05);
+}
+
+#vddqmqcdhe .gt_from_md > :first-child {
+  margin-top: 0;
+}
+
+#vddqmqcdhe .gt_from_md > :last-child {
+  margin-bottom: 0;
+}
+
+#vddqmqcdhe .gt_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  margin: 10px;
+  border-top-style: solid;
+  border-top-width: 1px;
+  border-top-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: middle;
+  overflow-x: hidden;
+}
+
+#vddqmqcdhe .gt_stub {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  text-transform: inherit;
+  border-right-style: solid;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  padding-left: 12px;
+}
+
+#vddqmqcdhe .gt_summary_row {
+  color: #333333;
+  background-color: #FFFFFF;
+  text-transform: inherit;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#vddqmqcdhe .gt_first_summary_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+}
+
+#vddqmqcdhe .gt_grand_summary_row {
+  color: #333333;
+  background-color: #FFFFFF;
+  text-transform: inherit;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#vddqmqcdhe .gt_first_grand_summary_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-top-style: double;
+  border-top-width: 6px;
+  border-top-color: #D3D3D3;
+}
+
+#vddqmqcdhe .gt_table_body {
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+
+#vddqmqcdhe .gt_footnotes {
+  color: #333333;
+  background-color: #FFFFFF;
+  border-bottom-style: none;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+}
+
+#vddqmqcdhe .gt_footnote {
+  margin: 0px;
+  font-size: 90%;
+  padding: 4px;
+}
+
+#vddqmqcdhe .gt_sourcenotes {
+  color: #333333;
+  background-color: #FFFFFF;
+  border-bottom-style: none;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+}
+
+#vddqmqcdhe .gt_sourcenote {
+  font-size: 90%;
+  padding: 4px;
+}
+
+#vddqmqcdhe .gt_left {
+  text-align: left;
+}
+
+#vddqmqcdhe .gt_center {
+  text-align: center;
+}
+
+#vddqmqcdhe .gt_right {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+#vddqmqcdhe .gt_font_normal {
+  font-weight: normal;
+}
+
+#vddqmqcdhe .gt_font_bold {
+  font-weight: bold;
+}
+
+#vddqmqcdhe .gt_font_italic {
+  font-style: italic;
+}
+
+#vddqmqcdhe .gt_super {
+  font-size: 65%;
+}
+
+#vddqmqcdhe .gt_footnote_marks {
+  font-style: italic;
+  font-size: 65%;
+}
+</style>
+<div id="vddqmqcdhe" style="overflow-x:auto;overflow-y:auto;width:auto;height:auto;"><table class="gt_table">
+<thead class="gt_col_headings"><tr>
+<th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1"><strong>Characteristic</strong></th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1"><strong>Beta</strong></th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_center" rowspan="1" colspan="1">
+<strong>95% CI</strong><sup class="gt_footnote_marks">1</sup>
+</th>
+    </tr></thead>
+<tbody class="gt_table_body">
+<tr>
+<td class="gt_row gt_left">sex</td>
+      <td class="gt_row gt_center"></td>
+      <td class="gt_row gt_center"></td>
+    </tr>
+<tr>
+<td class="gt_row gt_left" style="text-align: left; text-indent: 10px;">Female</td>
+      <td class="gt_row gt_center">—</td>
+      <td class="gt_row gt_center">—</td>
+    </tr>
+<tr>
+<td class="gt_row gt_left" style="text-align: left; text-indent: 10px;">Male</td>
+      <td class="gt_row gt_center">0.02</td>
+      <td class="gt_row gt_center">0.01, 0.03</td>
+    </tr>
+<tr>
+<td class="gt_row gt_left">treatment</td>
+      <td class="gt_row gt_center"></td>
+      <td class="gt_row gt_center"></td>
+    </tr>
+<tr>
+<td class="gt_row gt_left" style="text-align: left; text-indent: 10px;">Civic Duty</td>
+      <td class="gt_row gt_center">—</td>
+      <td class="gt_row gt_center">—</td>
+    </tr>
+<tr>
+<td class="gt_row gt_left" style="text-align: left; text-indent: 10px;">Hawthorne</td>
+      <td class="gt_row gt_center">0.01</td>
+      <td class="gt_row gt_center">0.00, 0.02</td>
+    </tr>
+<tr>
+<td class="gt_row gt_left" style="text-align: left; text-indent: 10px;">Control</td>
+      <td class="gt_row gt_center">-0.02</td>
+      <td class="gt_row gt_center">-0.02, -0.01</td>
+    </tr>
+<tr>
+<td class="gt_row gt_left" style="text-align: left; text-indent: 10px;">Self</td>
+      <td class="gt_row gt_center">0.04</td>
+      <td class="gt_row gt_center">0.03, 0.04</td>
+    </tr>
+<tr>
+<td class="gt_row gt_left" style="text-align: left; text-indent: 10px;">Neighbors</td>
+      <td class="gt_row gt_center">0.06</td>
+      <td class="gt_row gt_center">0.06, 0.07</td>
+    </tr>
+<tr>
+<td class="gt_row gt_left">sex * treatment</td>
+      <td class="gt_row gt_center"></td>
+      <td class="gt_row gt_center"></td>
+    </tr>
+<tr>
+<td class="gt_row gt_left" style="text-align: left; text-indent: 10px;">Male * Hawthorne</td>
+      <td class="gt_row gt_center">-0.01</td>
+      <td class="gt_row gt_center">-0.02, 0.01</td>
+    </tr>
+<tr>
+<td class="gt_row gt_left" style="text-align: left; text-indent: 10px;">Male * Control</td>
+      <td class="gt_row gt_center">0.00</td>
+      <td class="gt_row gt_center">-0.01, 0.01</td>
+    </tr>
+<tr>
+<td class="gt_row gt_left" style="text-align: left; text-indent: 10px;">Male * Self</td>
+      <td class="gt_row gt_center">-0.01</td>
+      <td class="gt_row gt_center">-0.02, 0.00</td>
+    </tr>
+<tr>
+<td class="gt_row gt_left" style="text-align: left; text-indent: 10px;">Male * Neighbors</td>
+      <td class="gt_row gt_center">0.00</td>
+      <td class="gt_row gt_center">-0.02, 0.01</td>
+    </tr>
+</tbody>
+<tfoot><tr class="gt_footnotes">
+<td colspan="3">
+        <p class="gt_footnote">
+          <sup class="gt_footnote_marks"><em>1</em>
+          </sup>
+           
+          CI = Confidence Interval
+          <br></p>
+      </td>
+    </tr></tfoot>
+</table></div>
 <!-- Takes a while to explain what all this means. -->
 <!-- Two key issues: 1) Interpreting lots of parameters in a model. interactions, heterogenous treatment effects. shaming using lm(). 
 
@@ -618,7 +1913,7 @@ confidence interval gives the range of uncertainty
 <a href="appendices.html"><button class="btn btn-default">Next</button></a>
 </p>
 <p class="build-date">Page built: 
-2020-08-01
+2020-08-03
 </p>
 </div>
 </div>
