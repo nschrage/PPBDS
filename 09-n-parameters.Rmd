@@ -44,42 +44,53 @@ In this chapter, we will consider models with multiple parameters and the comple
 
 ## Explorator Data Analysis of `shaming`
 
-Begin by loading packages which we have used in previous chapters.
+Begin by loading the packages which we need.
 
-```{r}
+```{r, message=FALSE}
 library(PPBDS.data)
 library(skimr)
-library(broom)
+library(broom.mixed)
+library(rstanarm)
 library(tidyverse)
 ```
 
 We will start off this chapter introducing a new data set from the **PPBDS.data** package: `shaming`. This data set corresponds to an experiment carried out by Gerber, Green, and Larimer (2008) titled "Social Pressure and Voter Turnout: Evidence from a Large-Scale Field Experiment". This experiment used several hundred thousand registered voters and a series of mailings to determine the effect of social pressure on voter turnout. 
 
-<!-- DK: Do glimpse and maybe other discussion here -->
+```{r}
+glimpse(shaming)
+```
 
-<!-- Then mention treatment and run shaming %>% count(treatment), and then you discuss what these are. -->
+There are 344,084 observations, with each row corresponding to a unique respondent. 
 
 Four types of treatments were used in the experiment, with voters receiving one type of mailing. All of the mailing treatments carried the message, "DO YOUR CIVIC DUTY - VOTE!". 
 
 The first treatment, Civic Duty, also read, “Remember your rights and responsibilities as a citizen. Remember to vote." This message acted as a baseline for the other treatments, since it carried a message very similar to the one displayed on all the mailings.
 
-In the second type of treatment, households received a mailing called the Hawthorne effect that told the voters that they were being studied and their voting behavior would be examined through public records. This adds a small amount of social pressure to the households receiving this mailing.
+In the second treatment, Hawthorne, households received a mailing which told the voters that they were being studied and their voting behavior would be examined through public records. This adds a small amount of social pressure to the households receiving this mailing.
 
-The third type of treatment is Self, in which the mailing includes the recent voting record of each member of the household, placing the word "Voted" next to their name if they did in fact vote in the 2004 election or places a blank space next to the name if they did not. In this mailing, the households were also told, “we intend to mail an updated chart" with the voting record of the members after the 2006 election. By emphasizing the public nature of voting records, this type of mailing exerts more social pressure on voting than the Hawthorne treatment.
+In the third treatment, Self, the mailing includes the recent voting record of each member of the household, placing the word "Voted" next to their name if they did in fact vote in the 2004 election or a blank space next to the name if they did not. In this mailing, the households were also told, “we intend to mail an updated chart" with the voting record of the household members after the 2006 primary. By emphasizing the public nature of voting records, this type of mailing exerts more social pressure on voting than the Hawthorne treatment.
 
-The final type of mailing is the Neighbors treatment, which follows the Self mailing by listing the household members' voting records, as well as the voting records of those who live nearby. This mailing also told recipients, "we intend to mail an updated chart" of who voted in the 2006 election. This "shaming" treatment exerts the most social pressure of all the treatments and broadcasts individuals' voting habits. 
+The fourth treatment, Neighbors, provides the household members' voting records, as well as the voting records of those who live nearby. This mailing also told recipients, "we intend to mail an updated chart" of who voted in the 2006 election.  
 
 In addition to the treatments, the data set also consists of variables such as `primary_02`, `general_02`, `primary_04`, and `general_04` which tell us whether or not respondents voted in these primary and general elections. We are also given information about the respondents' backgrounds such as `sex`, `birth_year`, and household size (`hh_size`).
 
-Consider the `shaming` tibble from **PPBDS.data**. Let's explore the variables and observations contained within this data set by performing an Exploratory Data Analysis (EDA). EDAs help us summarize the data, identify patterns, spot outliers or anomalies, and more. We can start by running some summarizing commands such as `glimpse()`, `sample_n()`, and `summary()`.
-
-<!-- Provide a EDA of the shaming tibble, perhaps restricting it to a subset of the provided columns. Follow the lead of chapter 10. Make sure to use `glimpse()`, `sample_n()` and `skim()`. Readers need to know understand what the dependent variable means, along with left-hand side variables like treatment. -->
+For now, let's focus on a subset of the data.
 
 ```{r}
-glimpse(shaming)
+ch9 <- shaming %>% 
+  mutate(solo = ifelse(hh_size == 1, TRUE, FALSE)) %>% 
+  select(primary_06, treatment, solo, sex)
 ```
 
-Here we see that `glimpse()` gives us a look at the raw data contained within the `shaming` data set. At the very top of the output, we can see the number of rows and columns, or observations and variables respectively. We see that there are 344,084 observations, with each row corresponding to a unique respondent. The "Columns: 10" tells us that there are 10 variables within this data set. Below this, we see a cutoff version of the entire data set that has the variables on the left as rows and the observations as a list separated by commas, as compared to the tibble output that presents with the variables as columns and the observations as rows running horizontally.
+We create the variable `solo`, which is TRUE for voters who live along and FALSE for those that do not. We are curious to see if the treatment effect, if any, is the same for voters who live alone as it is for those who do not.
+
+```{r}
+ch9 %>% 
+  skim()
+```
+
+<!-- DK: Add discussion of what you see here. No need to drop missing values since there aren't any. I think this next discussion can be dropped. -->
+
 
 While `glimpse()` gives us a good look at the possible values for the variables, it is difficult to read it in terms of individual observations. Recall that the *observational unit* is what is being measured. With the `shaming` data set, the observational unit would be the voter respondent. To get a better sense of some respondents' information, let's use `sample_n()` to gather a random sample of *n* observations from the data set. 
 
@@ -89,6 +100,7 @@ shaming %>%
 ```
 
 Now we have a table with 5 random observations and the respondents' information in a regular table output. By taking a few random samples, we may start to see some patterns within the data. Do you notice anything in particular about the variable `treatment`?
+
 <!-- HV: Is it okay to pose these questions here? -->
 <!-- HV: The no_of_names variable is supposed to give an integer with the number of names listed *IF* the respondent was in the "Neighbors" group but for all other treatments it is listed as 21. Should I just mutate this or have it dealt with in the data set as a whole? -->
 
@@ -135,30 +147,38 @@ Having created models with one parameter in Chapter \@ref(#one-parameter) and tw
 
 ## Causal Effects of `treament`
 
-<!-- This follows the discussion in chapter 8 very closely. See below for some key R code, which must be explained. (Obviously, you can use other code as well.) -->
 
 ```{r}
-shaming %>% 
-  lm(data = ., primary_06 ~ treatment - 1)
+obj.1 <- stan_glm(data = shaming, 
+                formula = primary_06 ~ treatment - 1, 
+                family = gaussian(), 
+                refresh = 0)
 ```
+
+```{r, echo=FALSE}
+tbl_regression(obj.1)
+```
+
+
+
 
 <!-- Talk about what these results mean.  Then, create the same model but with a different structure. -->
 
 
 ```{r}
-shaming %>% 
-  lm(data = ., primary_06 ~ treatment)
+obj.2 <- stan_glm(data = shaming, 
+                formula = primary_06 ~ treatment, 
+                family = gaussian(), 
+                refresh = 0)
+```
+
+
+```{r, echo=FALSE}
+tbl_regression(obj.2)
 ```
 
 <!-- Explain how these two models are the same, except in how they define the parameters. Show us the math like Gelman does. Write down the math. For simple. -->
 
-
-```{r}
-shaming %>% 
-  lm(data = ., primary_06 ~ treatment - 1) %>% 
-  tidy(conf.int = TRUE, conf.level = 0.99) %>% 
-  select(term, conf.low, estimate, conf.high)
-```
 
 
 <!-- Once we talk about these things --- and, again, this is exactly what we have talked about in chapter 8 --- we can do a bit more. Like discuss how we are using 99%, because there is nothing magical aboyt 95%, other than convention. I also think it would be fun to show a nice graphic of this, highlighting how the estimates for Civic and Hawthorne overlap.  -->
@@ -171,10 +191,14 @@ shaming %>%
 <!-- Feel free to build up this code, and other examples, more slowly than I am doing it here. -->
 
 ```{r}
-shaming %>% 
-  lm(data = ., primary_06 ~ sex*treatment - 1) %>% 
-  tidy() %>% 
-  select(term, estimate)
+obj.3 <- stan_glm(data = shaming, 
+                formula = primary_06 ~ sex + treatment + sex:treatment, 
+                family = gaussian(), 
+                refresh = 0)
+```
+
+```{r, echo=FALSE}
+tbl_regression(obj.3)
 ```
 
 <!-- Takes a while to explain what all this means. -->
@@ -217,6 +241,7 @@ What problems do we face? All the things that make modeling difficult. Why is th
 
 
 ## Formatting Linear Models in R
+
 In the previous chapter, linear models were created using the general format of `dependent variable ~ -1 + independent variable`. After running the regression on a model of this type, the resulting table would show coefficients for both parameters of the independent variable, for example Democrat and Republican. This method works fine when there are only one or two parameters in consideration, however now we will be moving onto *n* parameters and we will have to change the formula we use; specifically, we will be removing the -1 from the lm formula.
 
 In order to remove the -1, we first have to understand the function of it in the linear regression formulas that you have seen previously. Using the Enos (2014) `trains` data, when we use -1 in our formula and regress party on income, the table output lists both parameters and estimates their mean income values.
