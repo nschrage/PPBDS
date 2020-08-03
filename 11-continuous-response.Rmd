@@ -43,6 +43,8 @@ Concepts in this chapter are multivariate regression, interaction models, parall
 
 <!-- In loess section, grab a copy of this xkcd and use it: https://xkcd.com/2048/ -->
 
+<!-- EC: Where is machine learning being introduced, if at all? -->
+
 In the last two chapters, we covered regressions and common pitfalls. This chapter will be all about applying these concepts using the `tidymodels` framework.
 
 The dataset we will be using is `nes` from the `PPBDS.data` package. `nes` contains data from the American National Election Survey, conducted every presidential election cycle. Along with demographic details, such as race, gender, and age, the survey also contains respondents' ideological identification. Because `ideology` is measured on a scale from 1 to 7, we can treat it as our continuous outcome variable.
@@ -61,27 +63,24 @@ skim(nes)
 
 Great! Before we dive in, let's identify the variables of interest:
 
-* `year`
-* `state` 
-* `gender`
-* `race`
-* `income`
-* `age`
-* `education`
-* `ideology` as the continuous outcome variable
+* `year`: the year the study was conducted
+* `state`: the two-letter abbreviation corresponding to the state of the respondent
+* `gender`: identifies respondents with values "Male" and "Female"
+* `race`: race/ethnicity respondent identification
+* `income`: integer variable representing 5 income groups: 1 as 0-16th percentile, 2 as 17-33rd, 3 as 34 to 67, 4 as 68 to 95, 5 as 96 to 100 
+* `age`: ordered factor of respondents' age ranges
+* `education`: ordered factor variable with a 7 tier delineation of educational achievement
+* `pres_appr`: respondents' self-reported approval of the sitting president
+* `ideology` as the continuous outcome variable, with 1 corresponding to strongly Democrat and 7 corresponding to strongly Republican and 0 if NA.
 
-As you may have gleaned, these variables comprise a person's background. If we were given a new person who was not surveyed, and the above variables, our goal is to predict their ideology correctly. Let's subset the data for only these variables.
-
-```{r eval=FALSE}
-nes %>%
-  select(year, state, gender, race, income, age, education, ideology)
-```
+As you may have gleaned, these variables comprise a person's background. If we were given a new person who was not surveyed, and the above variables, our goal is to predict their ideology correctly. 
 
 As you also saw, there are a lot of data points in this dataset. `nes` covers 1954 through 2016, but for our sake, we will narrow our scope to just 2016. Because of the changing nature of what makes someone ideologically liberal or ideologically conservative over time, it is best to construct a model in which we eliminate as much of this variance as possible. Keep in mind that, when feeding in new data to our model, it is most accurately applied to voters in or around 2016. Indeed, a 1954 voter might act very differently than a 2016 voter.
 
 Filter the data to only show `year == 2016`.
 
-```{r eval=FALSE}
+```{r}
+library(tidyverse)
 nes %>%
   select(year, state, gender, race, income, age, education, ideology) %>%
   filter(year == 2016)
@@ -91,7 +90,6 @@ Note from our previous skimming of the data that all of the variables are incomp
 
 ```{r}
 nes_2016 <- nes %>%
-  select(year, state, gender, race, income, age, education, ideology) %>%
   filter(year == 2016) %>%
   select(-year) %>%
   drop_na()
@@ -101,9 +99,9 @@ nes_2016
 
 With this cleaned data, let's dive into the first model we will create, which will create a linear regression.
 
-# `lm()`
+## `lm()`
 
-First, load the ***tidymodels*** library and use `initial_split()` to split the data into testing and training sets. Don't worry about the testing set  - for now,  we will build our model off of the training set.
+First, load the ***tidymodels*** library and use `initial_split()` to split the data into testing and training sets. Don't worry about the testing set-- for now,  we will build our model off of the training set.
 
 ```{r}
 library(tidymodels)
@@ -126,13 +124,13 @@ lm_model <-
 
 Here, we are using the ***parsnip*** package to create an engine that can run this linear regression model easily and repeatedly. `linear_reg()` tells the engine that this is a linear regression. `set_engine("lm")` tells the engine to use the `lm()` function. `set_mode()` has to options, "regression" and "classification". Since our left-hand variable is a continuous one, we will set it to "regression". If it were categorical, we would set the mode to "classification".
 
-Fit the model to the data. We will first create a regression formula and save it as an R object for future recall.
+Fit the model to the data. We will first create a regression formula and save it as an R object for future recall. There are a lot of different combinations we could use for the formula, but which will yield the *best* model? For now, we will build a full model containing all of the predictor variables
 
 ```{r}
-lm_formula <- formula(ideology ~ state + gender + race + income + age + education)
+lm_formula <- formula(ideology ~ state + gender + race + income + age + education + pres_appr)
 ```
 
-```{r echo=FALSE}
+```{r eval=FALSE}
 fit(lm_model, lm_formula, nes_training)
 ```
 
@@ -154,34 +152,42 @@ Cross validation is a technique that permits us to alleviate both these problems
 
 However, we only have available one set of outcomes: the ones we actually observed. Cross validation is based on the idea of generating a series of different random samples on which to apply our algorithm. There are several approaches we can use, but the general idea for all of them is to randomly generate smaller datasets that are not used for training, and instead used to estimate the true error.
 
-### cross-validation using ***rsample***
+### K-Fold Cross-validation
 
 Generally speaking, a machine learning challenge starts with a dataset. We need to build an algorithm using this dataset that will eventually be used in completely independent datasets.
 
-So to imitate this situation, we carve out a piece of our dataset and pretend it is an independent dataset: we divide the dataset into a _training set_ and a _test set_. We will train our algorithm exclusively on the training set and use the test set only for evaluation purposes.
+So to imitate this situation, we carve out a piece of our dataset and pretend it is an independent dataset: previously, we divided the dataset into a _training set_ and a _test set_. We will train our algorithm exclusively on the training set and use the test set *only for evaluation purposes*.
 
 We usually try to select a small piece of the dataset so that we have as much data as possible to train. However, we also want the test set to be large so that we obtain a stable estimate of the loss without fitting an impractical number of models. The `initial_split()` function reserves 25% of the data for testing by default. 
 
 Remember, we cannot touch the testing set! One way we can check whether the model we created works is to use cross-validation, which avoids the problem of overtraining by splitting the data into smaller sections. We'll show you how to do using the ***rsample*** package.
 
-<!-- EC: How do you select what value of `v` to use? Discussion here. -->
+The function `vfold_cv()` splits your training set into `v`, a specified number of smaller sections. The most common values for `v` are 5 and 10. To keep things simple, we will be using `v = 5` to keep the individual sections large enough to accurately train the models. The first four folds will be used to train the model, and the last fold is always used to assess the accuracy of the model.
+
+Below, we will create a new object called `nes_folds` that contains equally sized sections of `nes_training`.
 
 ```{r}
 nes_folds <- nes_training %>%
   vfold_cv(v = 5)
 ```
 
-How can we work with the `nes_folds` object?  **tidymodels** makes it easy by using the `fit_resamples()` function in the **tune** package. The `fit_resamples()` function takes as its first argument a model specification (such as `lm_model`), then a formula as its second argument, called `preprocessor`.^[Or a recipe, if you delve more deeply into **tidymodels**.]  Finally, the `resamples` argument is where you input the cross-validation dataset.
+How can we work with the `nes_folds` object?  **tidymodels** makes it easy by using the `fit_resamples()` function in the **tune** package. The `fit_resamples()` function takes as its first argument a model specification (such as `lm_model`). It takes a formula as its second argument, either in traditional form or as a `recipe()`. 
 
-```{r}
-fit_resamples(lm_model,
-              recipe(lm_formula, data = nes_training),
-              nes_folds)
+```{marginfigure, echo=TRUE}
+Recipes are what ***tidymodels*** use in lieu of defining a formula traditionally. `recipe()` is useful because you can define both the formula and any transformations you want to make with the data. Recipes are easily called and re-used, making it easy to use the same recipe with different models.
+
+There are a number of useful functions that can be piped into recipes. One particularly useful family of functions is the family of step functions. These functions conduct a variety of transformations, from removing variables with high correlations to other variables (`step_corr()`) to adding in an interaction term (`step_interact()`). To learn more about recipes, you can visit the [Tidymodels website.](https://recipes.tidymodels.org/reference/index.html)
 ```
 
-<!-- EC: Getting an error? https://github.com/cimentadaj/tidyflow/issues/12. Insert new paragraph that explains what recipe does. -->
+Finally, the `resamples` argument is where you input the cross-validation dataset.
 
-To inspect the average metrics across all the folds, we can use the `collect_metrics()` function:
+```{r}
+fit_resamples(object = lm_model,
+              preprocessor = recipe(lm_formula, data = nes_training),
+              resamples = nes_folds)
+```   
+
+Because the metrics are in list-columns, we can extract the average metrics across all the folds using the `collect_metrics()` function:
 
 ```{r}
 fit_resamples(lm_model,
@@ -190,7 +196,7 @@ fit_resamples(lm_model,
   collect_metrics()
 ```
 
-Now that we've viewed the cross-validation metrics, it's time to use new data: namely, the testing set. 
+Now that we've viewed the cross-validation metrics, it's time to use new data: namely, the testing set. Remember, we only touch the testing set for evaluation purposes. To apply our model to `nes_testing`, use the `predict()` function.
 
 ```{r}
 lm_model %>%
@@ -208,7 +214,7 @@ lm_model %>%
   rmse(truth = ideology, estimate = .pred)
 ```
 
-<!-- EC: Insert additional interpretation. -->
+The mean squared error is about 1.64.
 
 ## Using `stan_glm()`
 
@@ -216,7 +222,7 @@ The ***rstanarm*** package contains a lot of powerful functions that conduct Bay
 
 We will be following the exact same steps as before. First, we will construct a ***parsnip*** model that uses the "stan" engine.
 
-```{r}
+```{r message=FALSE}
 library(rstanarm)
 
 stan_model <-
@@ -225,99 +231,233 @@ stan_model <-
     set_mode("regression")
 ```
 
-```{r}
+Next, let's fit this model using the formula we specified before. We can select for the relevant terms after using `tidy()` to make our tibble viewable.
+
+```{r message=FALSE, warning=FALSE}
 fit(stan_model, lm_formula, nes_training) %>%
   tidy(conf.int = TRUE) %>%
   select(term, estimate, std.error)
 ```
 
-### Cross Validation
+### Leave-One-Out Cross Validation
 
-```{r echo=FALSE, cache=TRUE}
-fit_resamples(stan_model,
-              recipe(lm_formula, data = nes_training),
-              nes_folds)
-```
+Another type of cross-validation is called Leave-One-Out (LOO) cross validation. Instead of creating a specified number of folds, such as the case in V-Fold cross validation, the number of resamples corresponds to the number of rows in the dataset. This is because each resample leaves out exactly one data point, estimates the model based off of the remaining points, and assesses the accuracy of the model based off of the out-of-sample data point. 
 
-<!-- EC: Bulk Effective Samples Size (ESS) is too low error -->
+LOO cross validation is especially useful for Bayesian models. However, one drawback is that they take a long time to run. Compared to `v` resamples in K-fold cross validation with `vfold_cv()`, LOO will need to run as many resamples as there are rows in the data.
 
-To inspect the average metrics across all the folds, we can use the `collect_metrics()` function:
-
-```{r cache=TRUE}
-fit_resamples(stan_model,
-              recipe(lm_formula, data = nes_training),
-              nes_folds) %>%
-  collect_metrics()
-```
-
-Discussion of CV results: the rmse values for both models `stan_model` and `lm_model` are both high, with a lower R-squared. This means that our model is not doing well at mapping the predictor variables to the outcome variable. Recall that there are seven different predictor variables; one of them being `state`, which has fifty different levels. 
-
-What if we created a bunch of different models that used different permutations of predictor variables? For example, ones that would potentially exclude `state`.
-
-First, let's create a basic formula that only takes in `age`.
+First, let's create `nes_loo`, which will run LOO cross validation on the data set.
 
 ```{r}
-basic_form <- formula(ideology ~ age)
+nes_loo <- loo_cv(nes_training)
+```
+
+Next, we will use `fit_resamples()` just like before, replacing `nes_folds` with our newly defined object. Remember, the model we are testing is `stan_model`.
+
+```{r eval=FALSE}
+fit_resamples(stan_model,
+              recipe(lm_formula, data = nes_training),
+              nes_loo)
+```
+
+<!-- EC: LOO is not supported with tune. Do we want to introduce something else, like the ***caret*** package? https://topepo.github.io/caret/model-training-and-tuning.html. The authors of tidymodels say LOO is deprecated: https://stackoverflow.com/questions/62844003/implementing-loo-cv-from-rsample-in-tidymodels-->
+
+What if we created a bunch of different formulas that used different permutations of predictor variables? For example, one would exclude `state`, which has 50 different levels.
+
+First, let's create a basic formula that only takes in `pres_appr`.
+
+```{r}
+basic_form <- formula(ideology ~ pres_appr)
 ```
 
 Next, we can use `update()` to create the more complicated formulas.  `update()` takes as its first argument a formula and as its second argument the additions you want to make.  To keep all the predictors from the first formula and add more, you will start with `~ . + ` and then add more predictors, like so:
 
 ```{r}
-age_gender_form <- update(basic_form,
-                    ~ . + gender)
+race_gender_form <- update(basic_form,
+                    ~ . + race + gender)
 
-demo_form <- update(age_gender_form,
-                    ~ . + race + income)
+demo_form <- formula(ideology ~ age + gender + race + income)
 
-edu_form <- update(age_gender_form,
+edu_form <- update(race_gender_form,
                    ~ . + education)
 
-interact_form <- update(basic_form,
-                        ~ . + gender * race + income)
+non_state_form <- update(edu_form,
+                         ~ . + age + income)
 ```
 
 Next, we will save these different formulas, along with the original `lm_formula`, in a tibble to easily remember and recall the formulas.
 
 ```{r}
-nes_formulas <- tibble(formula = c(lm_formula,
-                                   age_gender_form,
+nes_formulas <- tibble(formula = c(basic_form,
+                                   race_gender_form,
                                    demo_form,
                                    edu_form,
-                                   interact_form),
-                       group = c("Full model",
-                                 "Age and gender model",
+                                   non_state_form,
+                                   lm_formula),
+                       group = c("Presidential approval model",
+                                 "Race and gender model",
                                  "Demographic model",
-                                 "Demographic and education model",
-                                 "Demographic model with interaction"))
+                                 "Education model",
+                                 "Full model without state",
+                                 "Full model"))
 ```
 
 Now, we can use `map_*` to apply all of these models and view their metrics to see which ones have the lowest rmse values.
 
 ```{r cache=TRUE}
-folds_metrics <- nes_formulas %>%
-  mutate(metrics = map(formula, ~ fit_resamples(stan_model,
-                                                recipe(lm_formula, data = nes_training),
-                                                nes_folds) %>%
+folds_metrics<- nes_formulas %>%
+  mutate(metrics = map(formula, ~ fit_resamples(object = lm_model,
+                                                preprocessor = recipe(., data = nes_training),
+                                                resamples = nes_folds) %>%
                          collect_metrics()))
 ```
 
 Let's present the results stored in our `folds_metrics` object:
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 folds_metrics %>%
   mutate(mean_rmse = map_dbl(metrics, ~ filter(., .metric == "rmse") %>% pull(mean)),
          se_rmse = map_dbl(metrics, ~ filter(., .metric == "rmse") %>% pull(std_err))) %>%
   select(group, mean_rmse, se_rmse)
 ```
 
-<!-- EC: Is there a better way to test different permutations of the formula besides manually?  -->
+Looking at the results, it seems like `pres_appr` is a good predictor variable to incorporate, as the rmse for `basic_form` is much lower than that of the Demographic model, which does not include `pres_appr`. This makes sense, as how you lean ideologically is very likely correlated with how you feel about the President.
+
+The models with the lowest rmse values seem to be the Full model excluding state, which includes:
+
+* `pres_appr`
+* `education`
+* `race`
+* `gender`
+* `age`
+* `income`
+
+It is very similar in rmse value with the Education model, which excludes `age` and `income`.
+
+Let's test the Full model excluding state on the testing set.
+
+```{r}
+lm_model %>%
+  fit(non_state_form, data = nes_training) %>%
+  predict(new_data = nes_testing)
+```
+
+To extract the rmse, we set the "truth" to `ideology` so this function can compare our predicted values to the true values.
+
+```{r}
+lm_model %>%
+  fit(non_state_form, data = nes_training) %>%
+  predict(new_data = nes_testing) %>%
+  bind_cols(nes_testing) %>%
+  rmse(truth = ideology, estimate = .pred)
+```
+
+Discuss rmse value
 
 ## Using a neural network
 
-### ***parsnip*** 
+<!-- EC: Is this particular approach better suited for classification questions? (chapter 12) https://www.tidymodels.org/learn/models/parsnip-nnet/ -->
+
+Let's dive into the world of machine learning. Neural networks are useful for mimicking how humans make decisions. Thanks to the ***parsnip*** package, there are functions available that can fit regression models using neural networks.
+
+Let's create the neural network engine.
+
+```{r }
+nnet_model <- mlp(hidden_units = 5) %>%
+  set_mode("regression") %>%
+  set_engine("nnet") %>%
+  translate()
+nnet_model
+```
+
+### Bootstrap
+
+Besides cross-validation, another way we can improve the variance of our final estimate is to take more samples. To do this, we would no longer require the training set to be partitioned into non-overlapping sets. Instead, we would just pick $K$ sets of some size at random.
+
+One popular version of this technique, at each fold, picks observations at random with replacement (which means the same observation can appear twice) -- our old friend the *bootstrap*.
+
+In **rsample**, we can do that using the `boostraps()` function.  The `times` argument states how many bootstrap samples you want to take:
+
+```{r}
+set.seed(1234)
+
+nes_boots <- nes_training %>%
+  bootstraps(times = 25)
+```
+
+Now we can use `fit_resample()` just like we did with `nes_folds`.  Here's how we do it with one formula:
+
+```{r cache=TRUE}
+fit_resamples(object = nnet_model,
+              preprocessor = recipe(non_state_form, data = nes_training),
+              resamples = nes_boots) %>%
+  collect_metrics()
+```
+
+And we can also adapt our code to run this for every formula in `nes_formulas`:
+
+```{r}
+boots_metrics<- nes_formulas %>%
+  mutate(metrics = map(formula, ~ fit_resamples(object = nnet_model,
+                                                preprocessor = recipe(., data = nes_training),
+                                                resamples = nes_boots) %>%
+                         collect_metrics()))
+
+boots_metrics %>%
+  mutate(mean_rmse = map_dbl(metrics, ~ filter(., .metric == "rmse") %>% pull(mean)),
+         se_rmse = map_dbl(metrics, ~ filter(., .metric == "rmse") %>% pull(std_err))) %>%
+  select(group, mean_rmse, se_rmse)
+```
+Notably, the Race and gender model that includes `pres_appr` has the lowest mean squared error, whereas the full model has a higher mean squared error than in the `lm_model`. Notice that the standard errors are also significantly smaller.
+
+```{r, echo = FALSE, message = FALSE}
+# boots_metrics <- cces_formulas %>%
+#   mutate(metrics = map(formula, ~ fit_resamples(lm_spec,
+#                                                 preprocessor = .,
+#                                                 resamples = cces_boots) %>%
+#                          collect_metrics()))
+# 
+# boots_metrics %>%
+#   write_rds(path = "data/boots_metrics.rds")
+# 
+# boots_metrics <- read_rds(path = "data/boots_metrics.rds")
+# 
+# boots_metrics %>%
+#   mutate(mean_rmse = map_dbl(metrics, ~ filter(., .metric == "rmse") %>% pull(mean)),
+#          se_rmse = map_dbl(metrics, ~ filter(., .metric == "rmse") %>% pull(std_err))) %>%
+#   select(group, mean_rmse, se_rmse)
+```
+
+Cross-validation and the bootstrap lead to similar estimates of the RMSE, but note that the standard error of the RMSE goes down using the bootstrap method, since more samples were taken.  However, the trade-off is that the more samples you take, the more computing time you'll use.
+
+### Predicting new data
+
+Lastly, let's apply our neural network model to the testing set.
+
+```{r}
+nnet_model %>%
+  fit(non_state_form, data = nes_training) %>%
+  predict(new_data = nes_testing) %>%
+  bind_cols(nes_testing) %>%
+  rmse(truth = ideology, estimate = .pred)
+```
 
 
 ## Model selection
 
+By now, we have created three different linear regression models: one using the `lm` engine, one using the Bayesian `stan` engine, and one using the machine learning `nnet` engine. We have also explored three different methods to analyze the accuracy of our models' out-of-sample predictions: K-fold cross-validation, Leave-One-Out cross-validation, and bootstrapping. We've also tested six different formulas.
+
+So many options! How do we choose which model and formula is the best?
+
+First, we should only favor more complex models (or formulas) if the additional complexity is *warranted*. This is a philosophical principle known as "Occam's Razor." It states that, "all other things being equal, simpler solutions are more likely to be correct than complex ones." When viewed in a modeling framework, Occam's Razor can be restated as, "all other things being equal, simpler models are to be preferred over complex ones." In other words, we should only favor the more complex model/formula if the additional complexity is *warranted*.
+
+Secondly, we have two quantitative metrics to help guide our decision: the `rmse` and `rsq` values. Lower `rmse` values are more desired because they indicate a higher accuracy in predicting the outcome variable. Higher `rsq` values are better because that means that more of the variation in the dataset can be explained by the predictor variables in the formula.
+
+
 ## Wrap-Up
 
+So, how can we predict someone's ideology based off of other information?
+
+* `pres_appr`
+* trends in `age`, `income`, `gender`, `race`, `education`
+* caveat interaction variables
+* caveat applying to other data before 2016
