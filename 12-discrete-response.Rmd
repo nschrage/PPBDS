@@ -195,29 +195,38 @@ The mathematical function $log\left(\frac{p}{1 - p}\right)$ is called the *logit
 
 ### One categorical explanatory variable
 
-Let's start our modeling by predicting `approval` with a single categorical explanatory variable. We'll start by modeling our new binary `approval` with the categorical variable `race`.  As we'll see, the syntax for running a logistic regression in R is very similar to that for running a linear regression.  In fact, we'll follow the same basic steps:
+Let's start our modeling by predicting `approval` with a single categorical explanatory variable. We'll start by modeling our binary `approval` with the categorical variable `race`. Like last chapter, we'll  be using tools from the **tidymodels** package. Rather than having to use a different function each time we construct a model (choosing between lm(), glm(), and other modelling function), **tidymodels** streamlines the synthax for any model we want to construct.
 
-1. We first "fit" the logistic regression model using the `glm(y ~ x, family, data)` function and save it in `race_model`.
-2. We get the regression table by applying the `tidy()` function from the **broom** package to `race_model`.  We'll print the `term`, `estimate`, `conf.low`, and `conf.high` columns.
+```{r, message = FALSE}
+library(tidymodels)
+```
 
-Note that the key difference is that instead of using `lm()`, we are now using `glm()`.  `glm()` operates very similarly to `lm()`, but it has an additional argument: `family`.  To run a logistic regression, we use `family = binomial`. This means that it will be modelled along the red line in Figure \@ref(fig:OLSlogistic) rather than the blue line.
+First, in the **tidymodels** workflow, we have to save the *model specification*.  We do that using two functions: `logistic_reg()` and `set_engine()`.
 
-Next, let's fit a model and `tidy()` it:
+```{r}
+race_mod <- logistic_reg() %>%
+  set_engine("glm")
+```
 
-```{r, eval=FALSE}
-race_model <- glm(approval ~ race, family = binomial, data = ch12)
-race_model %>%
+`logistic_reg()` says that we want to fit a logistic regression, and `set_engine("glm")` specifies that we want to do it using `glm()`. By unifying the syntax, it means that you don't have to memorize how a lot of different functions work to use different model types, from glm to random forests that we'll use later in the chapter. `glm()` operates very similarly to `lm()`, but will instead model along the red line in Figure \@ref(fig:OLSlogistic) rather than the blue line when using a logistic outcome variable.
+
+Note that our new object, `race_mod`, doesn't contain our data or a formula.  In order actually to fit our model, we need to feed `race_mod` to a function called `fit()`.  `fit()` takes as its first argument the model specification, but otherwise it operates similarly to `lm()` and `glm()`. We have to wrap `approval` in `factor()`, because `fit()` is more careful than `glm()` in requiring that classification models actually have categorical outcomes.
+
+```{r}
+race_fit <- fit(race_mod,
+                    factor(approval) ~ race,
+                    data = ch12)
+```
+
+One we have fit the model, how can we use it?  The `glm` object is still stored in `race_fit$fit`, so we can access that and use `tidy()`, just like we did before:
+
+```{r}
+race_fit$fit %>%
   tidy(conf.int = TRUE) %>%
-  select(term, estimate, conf.low, conf.high)
-```
-
-```{r, echo=FALSE}
-race_model <- glm(approval ~ race, family = binomial, data = ch12)
-tidy(race_model) %>%
-  select(term, estimate) %>%
+  select(term, estimate, conf.low, conf.high) %>%
   gt()
-
 ```
+
 The intercept here is the omitted category, Asian.
 
 How can we interpret the coefficients?  Unlike linear regressions, these coefficients aren't directly interpretable.  Recall our logistic regression model equation:
@@ -263,7 +272,7 @@ We obtained these values and other values using the `augment()` function from th
 
 <!-- MB: .se.fit into cooksd???-->
 ```{r, eval=FALSE}
-regression_points <- race_model %>%
+regression_points <- race_fit %>%
   augment() %>%
   mutate(conf.low = .fitted - 2 * .cooksd,
          conf.high = .fitted + 2 * .cooksd) %>%
@@ -272,7 +281,7 @@ regression_points
 ```
 
 ```{r, echo=FALSE}
-regression_points <- augment(race_model) %>%
+regression_points <- augment(race_fit) %>%
   mutate(conf.low = .fitted - 2 * .cooksd,
          conf.high = .fitted + 2 * .cooksd) %>%
   select(approval, race,  .fitted, conf.low, conf.high, .resid)
@@ -285,7 +294,7 @@ regression_points %>%
 The syntax is the same, but the interpretation has to change, since the `.fitted`, `conf.low`, and `conf.high` columns are all on the logit scale.  While we could try to interpret these values, `augment()` has the argument `type.predict = "response"` that allow us to present the results in terms of *predicted probabilities*:
 
 ```{r, eval=FALSE}
-regression_points <- race_model %>%
+regression_points <- race_fit %>%
   augment(type.predict = "response") %>%
   mutate(conf.low = .fitted - 2 * .cooksd,
          conf.high = .fitted + 2 * .cooksd) %>%
@@ -294,7 +303,7 @@ regression_points
 ```
 
 ```{r, echo=FALSE}
-regression_points <- augment(race_model,
+regression_points <- augment(race_fit,
                              type.predict = "response") %>%
   mutate(conf.low = .fitted - 2 * .cooksd,
          conf.high = .fitted + 2 * .cooksd) %>%
@@ -323,7 +332,7 @@ However, you can also have `augment()` report residuals as differences between t
 <!-- type.residuals from response to deviance -->
 
 ```{r, eval=FALSE}
-regression_points <- race_model %>%
+regression_points <- race_fit %>%
   augment(type.predict = "response",
           type.residuals = "deviance") %>%
   mutate(conf.low = .fitted - 2 * .cooksd,
@@ -333,7 +342,7 @@ regression_points
 ```
 
 ```{r, echo=FALSE}
-regression_points <- augment(race_model,
+regression_points <- augment(race_fit,
                              type.predict = "response",
                              type.residuals = "deviance") %>%
   mutate(conf.low = .fitted - 2 * .cooksd,
@@ -349,26 +358,28 @@ Now, the `.resid` value is the difference between the actual outcome (`approval`
 
 ### One numerical explanatory variable
 
-We'll now predict `approval` with a single numerical explanatory variable, `age`. 
+We'll now predict `approval` with a single numerical explanatory variable, `age` using **tidymodels**. We'll begin, once again, by setting our engine to `glm`.
 
-1. We first "fit" the logistic regression model using the `glm(y ~ x, family, data)` function and save it in `age_model`.
-2. We get the regression table by applying the `tidy()` function from the **broom** package to `age_model`.  We'll print the `term`, `estimate`, `conf.low`, and `conf.high` columns.
-
-```{r, eval=FALSE}
-age_model <- glm(approval ~ age, family = binomial, data = ch12)
-age_model %>%
-  tidy(conf.int = TRUE) %>%
-  select(term, estimate, conf.low, conf.high)
+```{r}
+age_mod <- logistic_reg() %>%
+  set_engine("glm")
 ```
 
-```{r, echo=FALSE}
-age_model <- glm(approval ~ age, family = binomial, data = ch12)
-tidy(age_model,
-     conf.int = TRUE) %>%
-  select(term, estimate, conf.low, conf.high) %>%
-  gt() %>%
-  tab_source_note(md("Logistical Regression Table"))
+Now, we'll use `fit` to add our formula to the model. 
 
+```{r}
+age_fit <- fit(age_mod,
+               factor(approval) ~ age,
+               data = ch12)
+```
+
+We'll use `tidy()` to view the `glm` object is still stored in `race_fit$fit`.
+
+```{r}
+age_fit$fit %>%
+  tidy(conf.int = TRUE) %>%
+  select(term, estimate, conf.low, conf.high) %>%
+  gt()
 ```
 
 How do we interpret the coefficients in this model?  Since the `age` coefficient is positive, that means that each additional year of age is associated with a higher approval of the President in 2018. 
@@ -404,110 +415,115 @@ Here is where we can use the *divide by 4 rule* that we discussed before.  A log
 
 Therefore, you can divide a logistic regression coefficient by 4 to get an upper bound on the effect a one-unit change in that predictor will have on the predicted probability of your outcome.  In this case, the approximation tells us that each additional year of age is associated with about a $0.023 / 4 = 0.005$ increase in the predicted probability of a voter approving of the President.
 
-While `race_model` and `age_model` both tell us something interesting, we could learn more with an *interaction model* that includes both of our predictors.
+While `race_model` and `age_model` both tell us something interesting, we could learn more with an *interaction model* that includes multiple predictors.
 
-### One numerical and one categorical explanatory variable
+### Multiple explanatory variables
 
-We'll now predict `approval` with two variables, `race` and `age`, as well as the interaction between the two.
+We'll now predict `approval` with three variables, `race`, `age` and `gender`, as well as the interaction between the `race` and `age`.
 
-This time, we'll do it slightly differently. Rather than using `glm()` like we did in the last two examples, we'll instead be using tools from a package called **tidymodels**. Rather than having to use a different function each time we construct a model (choosing between lm(), glm(), and other modelling function), **tidymodels** streamlines the synthax for any model we want to construct.
-
-```{r, message = FALSE}
-library(tidymodels)
-```
-
-**tidymodels** includes many packages, but we'll start by showing how to use **parsnip** to fit a logistic regression. 
-
-First, in the **tidymodels** workflow, we have to save the *model specification*.  We do that using two functions: `logistic_reg()` and `set_engine()`.
-
-```{r}
-logistic_mod <- logistic_reg() %>%
-  set_engine("glm")
-```
-
-`logistic_reg()` says that we want to fit a logistic regression, and `set_engine("glm")` specifies that we want to do it using `glm()`.  Behind the scenes, **parsnip** uses many other packages to fit its models, but by unifying the syntax, it means that you don't have to memorize how a lot of different functions work.
-
-Note that our new object, `logistic_mod`, doesn't contain our data or a formula.  In order actually to fit our model, we need to feed `logistic_mod` to a function called `fit()`.  `fit()` is the general purpose function in **parsnip** for fitting any model specification.  It takes as its first argument the model specification, but otherwise it operates similarly to `lm()` and `glm()`. We have to wrap `approval` in `factor()`, because `fit()` is more careful than `glm()` in requiring that classification models actually have categorical outcomes.
-
-```{r}
-logistic_fit <- fit(logistic_mod,
-                    factor(approval) ~ race * age,
-                    data = ch12)
-```
-
-One we have fit the model, how can we use it?  The `glm` object is still stored in `logistic_fit$fit`, so we can access that and use `tidy()`, just like we did before:
-
-```{r}
-logistic_fit$fit %>%
-  tidy(conf.int = TRUE) %>%
-  select(term, estimate, conf.low, conf.high) %>%
-  gt()
-```
-
-### Cross-Validation
+This time, we'll do it slightly differently. We'll still be using **tidymodels**, but this time we will split the data into a testing set and training set. The training dataset will be used to create our model and the testing dataset will be used to test our final model’s performance. This is a typical part of the tidymodels workflow; it was omitted in our previous two examples because we were not testing the performance of either models. The `initial_split()` function reserves 25% of the data for testing by default. 
 
 ```{r}
 log_split <- initial_split(ch12)
 
 log_training <- log_split %>% training()
 log_testing <- log_split %>% testing()
+```
 
+Then, let's set the *model specification* to be a logistic regression using `glm`.
+
+```{r}
+logistic_mod <- logistic_reg() %>%
+  set_engine("glm")
+```
+
+For our multi-variable logistic regression, we'll be using 3 different explanatory variables, as well as the interaction between 2 of those variables, `race` and `age`. We will begin by defining the formula of our model. In our last two examples, we constructed our formulas directly in `fit()`. This time, we will do it seperately, as the formula will be used seperately later when cross-validating our results.
+
+```{r}
+log_formula <- formula(approval ~ age + gender + race + race:age)
+```
+
+Finally, let's fit our model. `fit()` will take in our model specification `logistic_mod`, our formula, and our training set of data. We are reserving our testing set for later.
+
+```{r}
+logistic_fit <- fit(logistic_mod, log_formula, log_training)
+
+logistic_fit$fit %>%
+  tidy(conf.int = TRUE) %>%
+  select(term, estimate, conf.low, conf.high) %>%
+  gt()
+
+```
+
+This table may at first seem a bit intimidating, but once we understand how to use the coefficients, the model becomes more simple to interpret.
+
+You may notice that the coefficient associated with each race has changed significantly from `race_model`. Here is the output of `race_model` alone.
+
+```{r}
+tidy(race_model) %>%
+  select(term, estimate) %>%
+  gt()
+```
+
+The reason these numbers are significantly different is because our model now incorporates gender, age, and how age changes by gender. An observation's fitted value is now the sum of their race's coefficient, whether or not they are a male, and the age coefficient corresponding to their race. For example, the fitted value of a 21-year-old white man is addition of raceWhite + the genderMale  + 21 * raceWhite:age. The fitted value of an 45-year-old Asian woman is the addition of (Intercept) + 45 * age; this model uses Asian as the default race, which is why we use the (Intercept) and age coefficients.
+
+### K-Fold Cross-Validation
+
+We can check whether the model we created is accurate by using cross-validation. Recall that when we first started constructing this model, we used `initial_split()` to reserves 25% of the data for testing and 75% of the data for creating the model. By doing so, the model avoids the issue of overtraining.
+
+The function `vfold_cv()` splits your training set into `v` smaller sections. We will be using `v = 5` so that the small, individual sections are still large enough to train the model. The first four folds will be used to train the model, and the last fold is always used to assess the accuracy of the model.
+
+```{r}
 log_folds <- log_training %>%
   vfold_cv(v = 5)
+```
 
-log_recipe <- recipe(approval ~ age + gender + race, data = ch12) %>%
-  step_normalize(all_numeric()) %>%
-  step_knnimpute(all_predictors())
+Now, we create the recipe for our cross-validation. A recipe is the same thing as a formula, except it includes the dataset that the formula is enacted upon (`log_training` in our case).
 
+```{r}
+log_recipe <- recipe(approval ~ age + gender + race, data = log_training) 
+```
+
+You'll notice that our interaction term is missing from this recipe. In order to add interaction terms to a recipe, you must take the additional step of using `step_interact`.
+
+```{r}
+log_recipe <- log_recipe %>%
+  step_interact(terms = ~ age:race)
+```
+
+Finally, we'll use `fit_resamples()` to run our logistic model on the different folds we created in the training set. `fit_resamples()` takes in our model specification, our recipe, and the folds we created. This will give us our `accuracy` and `roc_auc` values. 
+
+```{r, message = FALSE, warning = FALSE}
 fit_resamples(logistic_mod,
               log_recipe,
               log_folds) %>%
   collect_metrics()
 ```
+<!-- MB: interpret these values -->
 
+Now that we saw how the training set performed, it's time to use our testing set. We do so by applying `log_testing` to `predict()`.
 
-### Prediction
-
-As you can see, this generates the same results as when we used `glm()` directly. Now we can see how the effect of `age` varies by `race`. Looking at predicted probabilities of these numbers can put this model in perspective.  Let's use `augment()` to generate the predictions.  Remember that `type.predict = "response"` and `type.residuals = "deviance"` put the fitted values and the residuals on the probability scale.
-
-
-<!-- MB: This doesn't work, yoou need to find a way to do it in tidymodels. It is a dataframe not a model -->
-
-```{r, eval=FALSE}
-
-interact_model <- logistic_fit$fit %>%
-  tidy(conf.int = TRUE) %>%
-  select(term, estimate, conf.low, conf.high)
-
-# regression_points <- interact_model %>%
-#   augment(type.predict = "response",
-#           type.residuals = "deviance") %>%
-#   mutate(conf.low = .fitted - 2 * .cooksd,
-#          conf.high = .fitted + 2 * .cooksd) %>%
-#   select(approval, race, age, .fitted, conf.low, conf.high, .resid)
-# regression_points
-
+```{r}
+logistic_mod %>%
+  fit(log_formula, data = log_training) %>%
+  predict(new_data = log_testing)
 ```
 
-```{r, echo=FALSE}
-# 
-# regression_points <- augment(interact_model,
-#                              type.predict = "response",
-#                              type.residuals = "deviance") %>%
-#   mutate(conf.low = .fitted - 2 * .cooksd,
-#          conf.high = .fitted + 2 * .cooksd) %>%
-#   select(approval, race, age, .fitted, conf.low, conf.high, .resid)
-# regression_points %>%
-#   slice(1:10) %>%
-#   knitr::kable(
-#     digits = 3,
-#     caption = "Regression points (First 10 out of 60,000 voters)",
-#     booktabs = TRUE,
-#     linesep = ""
-#   ) %>%
-#   gt()
+Here, the model created by the training set predicts whether the observations in testing set would approve or disapprove of the President. While this is an interesting set of predictions, it doesn't tell us much about how well our model performed. So, we need to solve for the rmse, or the mean squared error.
 
+To extract the rmse, we set the "truth" to `approval` so this function can compare our predicted values to the true values.
+
+```{r}
+logistic_mod %>%
+  fit(log_formula, data = log_training) %>%
+  predict(new_data = log_testing) %>%
+  bind_cols(log_testing) %>%
+  rmse(truth = as.numeric(approval), estimate = as.numeric(.pred_class))
 ```
+
+The mean squared error is about 0.62.
+
+<!-- MB: interpret thi value -->
 
 ## Classification and regression trees (CART)
 
