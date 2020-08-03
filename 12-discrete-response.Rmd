@@ -3,6 +3,11 @@ output_yaml:
   - _output.yml
 ---
 
+<!-- Questions
+- Streamining tidymodels workflow across chapters
+- tree can't handle interaction terms
+-->
+
 
 <!-- Outline: -->
 
@@ -270,39 +275,24 @@ We have previously defined the following three concepts for a linear regression:
 
 We obtained these values and other values using the `augment()` function from the **broom** package. Recall too that we used the `.se.fit` column to construct confidence intervals.  We'll see here how we can apply these same concepts to logistic regression.
 
-<!-- MB: .se.fit into cooksd???-->
-```{r, eval=FALSE}
+<!-- MB: This entire part has to be redone in tidymodels because augment doesn't work anymore
+
 regression_points <- race_fit %>%
   augment() %>%
   mutate(conf.low = .fitted - 2 * .cooksd,
          conf.high = .fitted + 2 * .cooksd) %>%
   select(approval, race, .fitted, conf.low, conf.high, .resid)
 regression_points
-```
 
-```{r, echo=FALSE}
-regression_points <- augment(race_fit) %>%
-  mutate(conf.low = .fitted - 2 * .cooksd,
-         conf.high = .fitted + 2 * .cooksd) %>%
-  select(approval, race,  .fitted, conf.low, conf.high, .resid)
-regression_points %>%
-  slice(1:10) %>%
-  gt() %>%
-  tab_source_note(md("Regression points (First 10 out of 60,000 voters)"))
-```
 
-The syntax is the same, but the interpretation has to change, since the `.fitted`, `conf.low`, and `conf.high` columns are all on the logit scale.  While we could try to interpret these values, `augment()` has the argument `type.predict = "response"` that allow us to present the results in terms of *predicted probabilities*:
-
-```{r, eval=FALSE}
 regression_points <- race_fit %>%
   augment(type.predict = "response") %>%
   mutate(conf.low = .fitted - 2 * .cooksd,
          conf.high = .fitted + 2 * .cooksd) %>%
   select(approval, race, .fitted, conf.low, conf.high, .resid)
 regression_points
-```
 
-```{r, echo=FALSE}
+
 regression_points <- augment(race_fit,
                              type.predict = "response") %>%
   mutate(conf.low = .fitted - 2 * .cooksd,
@@ -312,7 +302,7 @@ regression_points %>%
   slice(1:10) %>%
   gt() %>%
   tab_source_note(md("Regression points (First 10 out of 60,000 voters)"))
-```
+
 
 Now each of the `.fitted` values is a *predicted probability* of a Democratic victory from our model for a particular district and the confidence intervals are confidence intervals around that predicted probability. You'll notice how the fitted value in this table is the same as the probabilities we calculated by hand using the standard logistical function.
 
@@ -329,9 +319,7 @@ The sum of the individual deviance residuals is referred to as the **deviance** 
 
 However, you can also have `augment()` report residuals as differences between the observed outcome and the predicted probabilities by using `type.residuals = "deviance"`:
 
-<!-- type.residuals from response to deviance -->
 
-```{r, eval=FALSE}
 regression_points <- race_fit %>%
   augment(type.predict = "response",
           type.residuals = "deviance") %>%
@@ -339,9 +327,7 @@ regression_points <- race_fit %>%
          conf.high = .fitted + 2 * .cooksd) %>%
   select(approval, race, .fitted, conf.low, conf.high, .resid)
 regression_points
-```
 
-```{r, echo=FALSE}
 regression_points <- augment(race_fit,
                              type.predict = "response",
                              type.residuals = "deviance") %>%
@@ -352,13 +338,16 @@ regression_points %>%
   slice(1:10) %>%
   gt() %>%
   tab_source_note(md("Regression points (First 10 out of 60,000 voters)"))
-```
+
 
 Now, the `.resid` value is the difference between the actual outcome (`approval`) and the predicted probability.
+
+-->
 
 ### One numerical explanatory variable
 
 We'll now predict `approval` with a single numerical explanatory variable, `age` using **tidymodels**. We'll begin, once again, by setting our engine to `glm`.
+
 
 ```{r}
 age_mod <- logistic_reg() %>%
@@ -426,6 +415,7 @@ This time, we'll do it slightly differently. We'll still be using **tidymodels**
 ```{r}
 log_split <- initial_split(ch12)
 
+
 log_training <- log_split %>% training()
 log_testing <- log_split %>% testing()
 ```
@@ -457,15 +447,7 @@ logistic_fit$fit %>%
 
 This table may at first seem a bit intimidating, but once we understand how to use the coefficients, the model becomes more simple to interpret.
 
-You may notice that the coefficient associated with each race has changed significantly from `race_model`. Here is the output of `race_model` alone.
-
-```{r}
-tidy(race_model) %>%
-  select(term, estimate) %>%
-  gt()
-```
-
-The reason these numbers are significantly different is because our model now incorporates gender, age, and how age changes by gender. An observation's fitted value is now the sum of their race's coefficient, whether or not they are a male, and the age coefficient corresponding to their race. For example, the fitted value of a 21-year-old white man is addition of raceWhite + the genderMale  + 21 * raceWhite:age. The fitted value of an 45-year-old Asian woman is the addition of (Intercept) + 45 * age; this model uses Asian as the default race, which is why we use the (Intercept) and age coefficients.
+You may notice that the coefficient associated with each race and age has changed significantly from `race_model` and `age_model`. The reason these numbers are significantly different is because our model now incorporates gender, age, and how age changes by gender. An observation's fitted value is now the sum of their race's coefficient, whether or not they are a male, and the age coefficient corresponding to their race. For example, the fitted value of a 21-year-old white man is addition of raceWhite + the genderMale  + 21 * raceWhite:age. The fitted value of an 45-year-old Asian woman is the addition of (Intercept) + 45 * age; this model uses Asian as the default race, which is why we use the (Intercept) and age coefficients.
 
 ### K-Fold Cross-Validation
 
@@ -523,7 +505,7 @@ logistic_mod %>%
 
 The mean squared error is about 0.62.
 
-<!-- MB: interpret thi value -->
+<!-- MB: interpret this value -->
 
 ## Classification and regression trees (CART)
 
@@ -560,6 +542,16 @@ Classification trees have certain advantages that make them very useful. They ar
 
 ### Multivariate CART
 
+Before creating any model, let's split our data into a training and testing set, just like we did with our multivariate logistical regression.
+
+```{r}
+cart_split <- initial_split(ch12)
+
+cart_training <- cart_split %>% training()
+cart_testing <- cart_split %>% testing()
+```
+
+
 To create a CART using multiple variables, we'll use the `decision_tree()` model specification and the `"rpart"` engine.  The syntax is very similar to when we used `logistic_reg()`.  Note that our binary response variable has to be a factor, just like with `logistic_reg()`. 
 
 ```{r}
@@ -573,30 +565,37 @@ Note that we added the argument `model = TRUE` to `set_engine()`.  This saves th
 
 The function `set_mode()` wasn't necessary when we did logistic regression.  Here it clarifies that we want a *classification* tree rather than a *regression* tree.
 
-Now that we have the object `tree_mod`, we can use `fit()` in the **parsnip** package.  We'll start by predicting `approval` with `ideology` as our categorical right side variable. Note that our binary response variable has to be a factor, just like with `logistic_reg()`. 
-
-<!-- MB: Add more vars later; can't handle more vars rn? -->
+Next, let's create our formula for this tree. We will use the same formula that we used in the logistical regression.
 
 ```{r}
-approval_tree <- fit(tree_mod,
-                 factor(approval) ~ race + age,
-                 data = ch12)
+cart_formula <- formula(approval ~ age + gender + race)
 ```
 
-See how when using **tidymodels**, this is exactly the same as how we would fit a logistic regression, but with our model specification saved in `tree_mod` rather than the model specification we saved in `logistic_fit`.
+
+Now that we have the object `tree_mod` and our formula, we can use `fit()` to construct our tree. 
+
+<!-- MB: Trees cannot handle interaction terms, so how should I compare the models? -->
+
+```{r}
+cart_fit <- fit(tree_mod,
+                 cart_formula,
+                 cart_training)
+```
+
+As you can see, **tidymodels** has the same workflow for creating a CART as it does for fitting a logistic regression, but with our model specification saved in `tree_mod` rather than the model specification we saved in `logistic_mod`.
 
 What was the result of our tree?
 
 ```{r}
-approval_tree
+cart_fit
 ```
 
-It's not helpful to look at the results of a tree as text.  In order to visualize the tree, we'll use the `prp()` function in the **rpart.plot** package.  Remember that the model object is stored in `approval_tree$fit`.
+It's not helpful to look at the results of a tree as text.  In order to visualize the tree, we'll use the `prp()` function in the **rpart.plot** package.  Remember that the model object is stored in `cart_fit$fit`.
 
 ```{r, message = FALSE}
 library(rpart.plot)
 
-approval_tree$fit %>%
+cart_fit$fit %>%
   prp(extra = 6, varlen = 0, faclen = 0)
 ```
 
@@ -605,45 +604,76 @@ The arguments `varlen = 0` and `faclen = 0` ensure that the full variable names 
 ```{r}
 prp_ch12 <- function(x, ...) prp(x, extra = 6, varlen = 0, faclen = 0, ...)
 
-approval_tree$fit %>%
+cart_fit$fit %>%
   prp_ch12()
 ```
 
-So, how do we interpret this tree? We are given two partitions; the first is for race. The observations that identify as any of the named races are classified as disapproving of the President, denoted by the 0 on that node. All other racial identities proceed to the next partition. If these people are younger than 42, they are also classified as disapproving of the president. Voters 42 and older are classsified as approving of the President. 
+So, how do we interpret this tree? We are given two partitions; the first is for race. The observations that identify as any of the named races are classified as disapproving of the President, denoted by the 0 on that node. All other racial identities proceed to the next partition. If these people are younger than 44, they are also classified as disapproving of the president. Voters 44 and older are classsified as approving of the President. 
 
-The decimal numbers within each box identify how many observations in that node approved of the President. This means that only 20% of observations in the first node approved of the President, 37% in the second node, and 54% in the third node.
+The decimal numbers within each box identify how many observations in that node approved of the President. This means that only 20% of observations in the first node approved of the President, 38% in the second node, and 54% in the third node.
 
-### Cross-Validation
+### K-Fold Cross-Validation
+
+Once again, we can check whether the model we created is accurate by using cross-validation. 
+
+We'll use `vfold_cv()` to create `v = 5` splits in the training set, using the final fold to asses the model's accuracy.
 
 ```{r}
-cart_split <- initial_split(ch12)
-
-cart_training <- cart_split %>% training()
-cart_testing <- cart_split %>% testing()
-
 cart_folds <- cart_training %>%
   vfold_cv(v = 5)
+```
 
-cart_recipe <- recipe(approval ~ age + race, data = ch12) %>%
-  step_normalize(all_numeric()) %>%
-  step_knnimpute(all_predictors())
+Then, we'll create our recipe and plug it into `fit_resamples()` along with `tree_mod` and `cart_folds`. We'll use `collect_metrics()` to get our accuracy values.
+
+<!-- MB: Added interaction term here, but not in the tree above -->
+
+```{r}
+cart_recipe <- recipe(approval ~ age + race + gender, data = cart_training) 
+
+cart_recipe <- cart_recipe %>%
+  step_interact(terms = ~ age:race)
 
 fit_resamples(tree_mod,
               cart_recipe,
               cart_folds) %>%
   collect_metrics()
 ```
+<!-- Interpret accuracy values -->
 
-### Prediction
+Now that we saw how the training set performed, we'll use our testing set. We do so by applying `cart_testing` to `predict()`.
+
+```{r}
+tree_mod %>%
+  fit(cart_formula, data = cart_training) %>%
+  predict(new_data = cart_testing)
+```
+
+Once again, the model predicts whether the observations in testing set would approve or disapprove of the President based on the model created with the training set. 
+
+To extract the rmse, we set the "truth" to `approval` so this function can compare our predicted values to the true values.
+
+```{r}
+tree_mod %>%
+  fit(cart_formula, data = cart_training) %>%
+  predict(new_data = cart_testing) %>%
+  bind_cols(cart_testing) %>%
+  rmse(truth = as.numeric(approval), estimate = as.numeric(.pred_class))
+```
+
+The mean squared error is about 0.616.
+
+
+### Predicting New Data
 
 Let's now use our tree to make some predictions. When used on trees, the `predict()` function takes in the tree object and new observations containing the explanatory variables. In this case, we'll be passing in a 54-year-old Asian voter, a 41-year-old Black voter, a 56-year-old White voter, and a 70-year-old Native American voter.
 
 ```{r}
 
 newdata <- tibble(race = c("Asian", "Black", "White", "Native American"),
-                  age = c(54, 41, 56, 70))
+                  age = c(54, 41, 56, 70),
+                  gender = c("Male", "Female", "Male", "Female"))
 
-predict(approval_tree, new_data = newdata) 
+predict(cart_fit, new_data = newdata) 
 
 ```
 
@@ -656,8 +686,6 @@ As you can see, the tree predicted that our first two new voters would disapprov
 Random forests are a very popular machine learning approach that addresses the shortcomings of decision trees using a clever idea. The goal is to improve prediction performance and reduce instability by _averaging_ multiple decision trees (a forest of trees constructed with randomness). It has two features that help accomplish this.
 
 The first step is _bootstrap aggregation_ or _bagging_. The general idea is to generate many predictors, each using classification trees, and then forming a final prediction based on the average prediction of all these trees. To assure that the individual trees are not the same, we use the bootstrap to induce randomness. These two features combined explain the name: the bootstrap makes the individual trees **randomly** different, and the combination of trees is the **forest**. The specific steps are as follows.
-
-<!-- AR: do we explain training set/test set before this? -->
 
 1. Build decision trees using a portion of the data called the training set. We refer to the fitted models as $T_1, T_2, \dots, T_B$. We later explain how we ensure they are different.
 
@@ -680,26 +708,35 @@ https://s3.amazonaws.com/assets.datacamp.com/production/course_7215/slides/chapt
 We will demonstrate by fitting a random forest to the House elections data. Before we even write our model formula, we need to split the data to create a *training set* and a *testing set*. The training dataset will be used to create our model and the testing dataset will be used to test our final model’s performance.
 
 ```{r}
-library(randomForest)
-
-approval_split <- initial_split(ch12, 
+forest_split <- initial_split(ch12, 
                                 prop = 3/4)
 
-approval_train <- training(approval_split)
-approval_test <- testing(approval_split)
+forest_train <- training(forest_split)
+forest_test <- testing(forest_split)
 ```
 
 Next, we will use the `rand_forest()` function to create our model specification, setting the engine to `"randomForest"` and the mode to `"classification"`. 
 
 ```{r}
+library(randomForest)
 
-approval_forest <- 
+forest_mod <- 
   rand_forest() %>%
   set_engine("randomForest") %>%
   set_mode("classification") 
 
-approval_forest
+```
 
+We will now create the formula for our forest.
+
+```{r}
+forest_formula <- formula(approval ~ age + gender + race + race:age)
+```
+
+Finally, let's fit our model. `fit()` will take in our model specification `logistic_mod`, our formula, and our training set of data. We are reserving our testing set for later.
+
+```{r}
+forest_fit <- fit(forest_mod, forest_formula, forest_train)
 ```
 
 <!-- We see under "OOB estimate of error rate" that this model has an error rate of 18.67% (or, looking at it the other way, an accuracy of 81.33%). We can see how the error rate of our algorithm changes as we add trees by looking at `house_forest$fit$err.rate[, "OOB"]`.  By default, `randomForest()` (the engine we specified) grows 500 trees. -->
@@ -714,80 +751,92 @@ approval_forest
 
 <!-- We can see that in this case, the accuracy improves as we add more trees until about 50 trees where accuracy stabilizes. Random forests often perform better than other methods. However, a disadvantage of random forests is that we lose interpretability---we don't get anything like the coefficients from a logistic regression or the single tree from CART. -->
 
-Now that we've created our forest, we can finally pass our data into it. This is done by creating a `recipe`, which is another word for formula. The formula in our case is `approval` explained by `gender`,`age`, and `race`. The `step_normalize` and `step_knnimpute` commands standardizes our data so that it is easier to analyze. 
 
-Then, we must create a workflow. This workflow puts together our recipe and our forest that we constructed earlier.
+### K-Fold Cross-Validation
+
+Just like with CART and logistic regression, we will use cross-validation to check the accuracy of our random forest. Once again, we'll create the recipe and add our interaction term seperately.
 
 ```{r}
 
-approval_recipe <- 
-  recipe(approval ~ age + gender + race, 
-         data = ch12) %>%
-  step_normalize(all_numeric()) %>%
-  step_knnimpute(all_predictors())
+forest_recipe <- recipe(approval ~ age + gender + race, 
+                        data = forest_train)
 
-approval_workflow <- workflow() %>%
+forest_recipe <- forest_recipe %>%
+  step_interact(terms = ~ age:race)
+
+#approval_workflow <- workflow() %>%
   # add the recipe
-  add_recipe(approval_recipe) %>%
+#  add_recipe(approval_recipe) %>%
   # add the model
-  add_model(approval_forest)
+#  add_model(forest_mod)
 
 ```
 
-Now it's time to use our training and testing sets. We use `last_fit` to enact our workflow on our training set and evalulate it using our testing set. To see how it performed, we use `collect_metrics` to create a test performance object. 
+We will also create our folds using `vfold_cv()`.
+
+```{r}
+forest_folds <- forest_train %>%
+  vfold_cv(v = 5)
+```
+
+Now we use `fit_resamples()` to see how it accurately  the model performed on the fifth and final fold of the training set. We will save the output of `fit_resamples()` in forest_metrics to use later.
 
 ```{r}
 
-approval_fit <- approval_workflow %>%
-  # fit on the training set and evaluate on test set
-  last_fit(approval_split)
+forest_metrics <- fit_resamples(forest_mod,
+                                forest_recipe,
+                                forest_folds) 
 
-test_performance <- approval_fit %>% collect_metrics()
-
-test_performance
+forest_metrics %>% collect_metrics()
 
 ```
-Overall, the performance of the model in predicting the test set was moderately good, with an accuracy of 62.6%. 
 
-We can use `collect_predictions()` to see exactly how many of the predictions on the test set were correct. It appears that `r 7001+2050` were correct (the addition of the (0,0) and (1,1) cells), while `r 4082+1321` were incorrect.
+<!-- MB: Interpret -->
+
+Now that we saw how the training set performed, we'll use our testing set. We do so by applying `forest_test` to `predict()`.
 
 ```{r}
-
-test_predictions <- approval_fit %>% collect_predictions()
-test_predictions %>% 
-  conf_mat(truth = approval, estimate = .pred_class)
-
+logistic_mod %>%
+  fit(forest_formula, data = forest_train) %>%
+  predict(new_data = forest_test)
 ```
 
-We could also plot distributions of the predicted probability distributions for voter.
+To extract the rmse, we again set the "truth" to `approval` so this function can compare our predicted values to the true values.
 
 ```{r}
-test_predictions %>%
-  ggplot() +
-  geom_density(aes(x = .pred_1, fill = approval), 
-               alpha = 0.5)
+forest_mod %>%
+  fit(forest_formula, data = forest_train) %>%
+  predict(new_data = forest_test) %>%
+  bind_cols(forest_test) %>%
+  rmse(truth = as.numeric(approval), estimate = as.numeric(.pred_class))
 ```
 
-```{r}
-final_model <- fit(approval_workflow, ch12)
-```
+The mean squared error is about 0.619.
 
-### Cross-validation
+<!-- We can use `collect_predictions()` to see exactly how many of the predictions on the test set were correct. It appears that `r 7001+2050` were correct (the addition of the (0,0) and (1,1) cells), while `r 4082+1321` were incorrect. -->
 
-Now that we have our model, let's use the `vfold_cv` to cross-validate it. To see the average metrics for all the folds, we can use the `collect_metrics()` function:
+<!-- ```{r} -->
 
-```{r}
+<!-- test_predictions <- forest_metrics %>% collect_predictions() -->
+<!-- test_predictions %>%  -->
+<!--   conf_mat(truth = approval, estimate = .pred_class) -->
 
-approval_cv <- vfold_cv(approval_train, v = 3) 
+<!-- ``` -->
 
-fit_resamples(approval_forest,
-              approval_recipe,
-              approval_cv) %>%
-  collect_metrics()
+<!-- We could also plot distributions of the predicted probability distributions for voter. -->
 
-```
+<!-- ```{r} -->
+<!-- test_predictions %>% -->
+<!--   ggplot() + -->
+<!--   geom_density(aes(x = .pred_1, fill = approval),  -->
+<!--                alpha = 0.5) -->
+<!-- ``` -->
 
-### Prediction
+<!-- ```{r} -->
+<!-- final_model <- fit(approval_workflow, ch12) -->
+<!-- ``` -->
+
+### Predicting New Data
 
 Let's use our final forest model to make some predictions. We'll be passing in the same observations as with the CART example: a 54-year-old Asian voter, a 41-year-old Black voter, a 56-year-old White voter, and a 70-year-old Native American voter. However, our forest also includes a gender variable. We'll make the first and third observations female.
 
@@ -797,44 +846,9 @@ newdata <- tibble(race = c("Asian", "Black", "White", "Native American"),
                   age = c(54, 41, 56, 70),
                   gender = c("Female", "Male", "Female", "Male"))
 
-predict(final_model, new_data = newdata) 
+predict(forest_fit, new_data = newdata) 
 
 ```
 
 Our forest predicted that the first three voters would disaprove of the President and that our final voter would approve. These predictions differ from our CART predictions most likely because of the added variable: gender. Because females disapproved of the President at higher rates, the third voter was predicted to disapprove instead.
 
-
-## Machine Learning
-
-<!-- MB: insert whole section INTRO -->
-For this chapter, we'll consider x possible models.  We have some intuitions about what should be in a useful model for presidential approval.  First, since the effect of all the predictors likely vary based on whether the president is a Democrat or Republican, all predictors should be interacted with `pres_gop`.  Also, party identification is likely a large predictor of presidential approval, and thus should be included.  But what about the other variables?  Let's consider the following combinations:
-
-1. `race` alone
-2. `race` and `age`
-3. `state` plus demographic variables (`race`, `female`, `educ`, and `age`)
-4. Same as above, but with all two-way interactions between the demographic variables
-
-Of course, these are a small subset of the possible models we could consider, either with the variables we have selected or with the larger set of all the variables in the `cces`.  But we'll use these as examples for the machine learning techniques in this chapter; if you'd like, you can use the methods we learn here to test additional models.
-
-Let's save these as `formula` objects in R, so we can easily access them later.  We'll start with the simplest model we'll consider, as `basic_form`:
-
-```{r}
-basic_form <- formula(approval ~ age * ideology)
-```
-
-Next, we can use `update()` to create the more complicated formulas.  `update()` takes as its first argument a formula and as its second argument the additions you want to make.  To keep all the predictors from the first formula and add more, you will start with `~ . + ` and then add more predictors, like so:
-
-```{r}
-ideo_form <- update(basic_form,
-                    ~ age * ideology)
-
-demo_form <- update(basic_form,
-                    ~ . + race * gender + 
-                      age * gender  + 
-                      education * gender + 
-                      state * gender)
-
-demo_interact_form <- update(basic_form,
-                             ~ . + race * education * gender + 
-                               gender * age * race)
-```
