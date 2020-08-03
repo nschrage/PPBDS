@@ -3,12 +3,6 @@ output_yaml:
   - _output.yml
 ---
 
-<!-- Questions
-- Streamining tidymodels workflow across chapters
-- tree can't handle interaction terms
--->
-
-
 <!-- Outline: -->
 
 <!-- 1) Preamble: Intro paragraph to classification in general, both 0/1 and multiple categories. Discuss different approaches, all for solving the same problem. -->
@@ -42,9 +36,9 @@ output_yaml:
 
 **Binary responses** take on only two values: success ($Y=1$) or failure ($Y=0$), yes ($Y=1$) or no ($Y=0$), et cetera. Binary responses are one of the most common types of data that statisticians encounter.  We are often interested in modeling the probability of success, $p$, based on a set of covariates. As with regression, there are two broad categories of problems: *modeling for prediction* and *modeling for causation*. Although terminology varies across fields, "regression" is generally used for situations in which our *dependent variable* is continuous, as in Chapter \@ref(continuous-response). "Classification" applies to cases in which the dependent variable takes on discrete values, the simplest of which is the binary case.
 
-In this chapter, we will look at three common techniques of **classification** of binary data.  First, we will consider logistic regression, which is similar conceptually to the linear regression models we considered in Chapters \@ref(pitfalls) and \@ref(continuous-response).  Second, we will consider classification and regression trees (CART).  Third, we will discuss random forests. We use the **tidymodels** tools for all examples.
+In this chapter, we will look at three common techniques of **classification** of binary data.  First, we will consider logistic regression, which is similar conceptually to the linear regression models we considered in Chapters \@ref(pitfalls) and \@ref(continuous-response).  Second, we will consider classification and regression trees (CART).  Third, we will discuss random forests. We use the **tidymodels** tools for all examples. At the end, we will compare the performances of all three models.
 
-<!-- DK: Need to end with precise question. -->
+Which of these models will be the most accurate? Keep this question in mind as you read through this chapter. 
 
 ## Exploratory Data Analysis (EDA)
 
@@ -57,7 +51,6 @@ library(skimr)
 library(PPBDS.data)
 library(tidymodels)
 ```
-
 
 Before we start modeling, let's perform some exploratory analysis on the dataset we'll be working with, cces. Cces stands for the Cooperative Congressional Election Study, a study regarding the approval rating of individual voters to their sitting president. Each row captures one voter, some of their demographic information, and how highly they approve (or disaprprove) of the president. Let's first look at the raw data values by either looking at `cces` using RStudio's spreadsheet viewer or by using the `glimpse()` function from the **dplyr** package:
 
@@ -149,18 +142,24 @@ ch12 %>%
 
 This segmented bar graph shows us the percentage of each race that approved of the president.We can see that the disapproving majority in the overall data is present across most races.
 
-Now, let's use our ideology variable. `ideology` has values "Very Liberal", "Liberal", "Moderate", "Conservative", "Very Conservative", and "Not Sure". Let's create a jitterplot with `approval` to see hoow approval varied across political affiliations.
+Now, let's use our state variable. Let's create a scatterplot with `approval` to see how the rate of approval varied across states.
 
-```{r}
+```{r, message = FALSE}
 ch12 %>%
-  ggplot(aes(x = ideology, y = approval)) + 
-  geom_jitter() + 
-  labs(y = "Presidential Approval",
-       x = "Ideology",
-       title = "Presidential Approval by Ideology")
+  mutate(approval = as.integer(approval)) %>%
+  mutate(approval = case_when(
+    approval == 1 ~ 0,
+    approval == 2 ~ 1)) %>%
+  group_by(state) %>%
+  summarise(avg_approval = sum(approval)/n()) %>%
+  ggplot(aes(x = avg_approval, y = reorder(state, avg_approval))) + 
+  geom_point() + 
+  labs(y = "State",
+       x = "Approval Rate of President",
+       title = "Presidential Approval by State")
 ```
 
-As one would expect, approval is denser for conservative and very conservative voters while disapproval is denser for liberal and very liberal voters. 
+<!-- MB: Summary says -->
 
 ## Logistic regression
 
@@ -571,10 +570,7 @@ Next, let's create our formula for this tree. We will use the same formula that 
 cart_formula <- formula(approval ~ age + gender + race)
 ```
 
-
-Now that we have the object `tree_mod` and our formula, we can use `fit()` to construct our tree. 
-
-<!-- MB: Trees cannot handle interaction terms, so how should I compare the models? -->
+Now that we have the object `tree_mod` and our formula, we can use `fit()` to construct our tree.
 
 ```{r}
 cart_fit <- fit(tree_mod,
@@ -612,6 +608,9 @@ So, how do we interpret this tree? We are given two partitions; the first is for
 
 The decimal numbers within each box identify how many observations in that node approved of the President. This means that only 20% of observations in the first node approved of the President, 38% in the second node, and 54% in the third node.
 
+You may notice that this tree did not factor in gender. 
+<!-- MB: Trees cannot handle interaction terms, -->
+
 ### K-Fold Cross-Validation
 
 Once again, we can check whether the model we created is accurate by using cross-validation. 
@@ -627,7 +626,7 @@ Then, we'll create our recipe and plug it into `fit_resamples()` along with `tre
 
 <!-- MB: Added interaction term here, but not in the tree above -->
 
-```{r}
+```{r, message = FALSE, warning = FALSE}
 cart_recipe <- recipe(approval ~ age + race + gender, data = cart_training) 
 
 cart_recipe <- cart_recipe %>%
@@ -781,7 +780,7 @@ forest_folds <- forest_train %>%
 
 Now we use `fit_resamples()` to see how it accurately  the model performed on the fifth and final fold of the training set. We will save the output of `fit_resamples()` in forest_metrics to use later.
 
-```{r}
+```{r, message = FALSE, warning = FALSE}
 
 forest_metrics <- fit_resamples(forest_mod,
                                 forest_recipe,
@@ -851,4 +850,40 @@ predict(forest_fit, new_data = newdata)
 ```
 
 Our forest predicted that the first three voters would disaprove of the President and that our final voter would approve. These predictions differ from our CART predictions most likely because of the added variable: gender. Because females disapproved of the President at higher rates, the third voter was predicted to disapprove instead.
+
+## Comparing Models
+
+Now that we've modelled the same formula using three different types of models (logistic regression, CART, and random forest), let's compare these models to see which was the most accurate.
+
+Here is the outpit
+
+```{r, message = FALSE}
+fit_resamples(logistic_mod, 
+              log_recipe, 
+              log_folds) %>% collect_metrics()
+```
+
+```{r, message = FALSE}
+fit_resamples(tree_mod, 
+              cart_recipe, 
+              cart_folds) %>% collect_metrics()
+```
+
+```{r, message = FALSE}
+fit_resamples(forest_mod, 
+              forest_recipe, 
+              forest_folds) %>% collect_metrics()
+```
+Based on `accuracy`, the random forest performed best by a small margin, followed by logistic regression and then CART. `accuracy` is the percentage of observations in the testing set that the model (which was constructed using the training set) was able to successfully predict. All of the models performed within a margin of 0.01 of eachother. However, it makes sense that random forest was the most successful. By generating many prediction trees and averaging them rather than relying on one, random forest is a more precise form of modelling than CART. 
+
+<!-- MB: Is it a worthwhile discussion to include graphs for roc_auc or -->
+
+`roc_auc` is similar to `accuracy` in that it is a measure of how good a model is at predicting 0s to be 0 and 1s to be 1 in the dataset. However, it is calculated by taking the area under the ROC curve. `roc_auc` itself is a shortened form of "area under the ROC curve." The ROC curve is created by graphing the rate of true positives as the y-axis (those who approved of the President who were labelled as such) against the rate of false positives (those who approved of the President but were labelled as disapproving). The area under this curve comes out to a very similar measure of accuracy. A `roc_auc` of 1 means that the testing set was perfectly predicted while a 0 means that every observation of the testing set was  falsely predicted.
+
+In the case of the `roc_auc`, our logistic regression performed best, followed by the random forest, and then CART. They were all within 0.05 of eachother, a wider range than `accuracy`. Being a cruder version of random forest, it again makes sense that it placed last. 
+
+<!-- MB: Say something about log being better than RF -->
+
+
+
 
