@@ -7,122 +7,72 @@ output_yaml:
 
 <!-- Outline: -->
 
-<!-- The goal of this chapter is to replicate all of the things we have learned in chapter 8, except with models that allow for more than two parameters, which mostly involves have more than one right-hand side variable. We go through all of themes.Rmd two more times, once with a causal data set and once with a predictive one. So far, nothing new or different. But we are also going to highlight three major problems. We aren't going to solve those problems, but we are going to hint at them. The problems are: a) How do you decide which model is "better?" (Not an easy question! But the ability to predict new data is certainly a big part of the answer. b) How do you avoid overfitting, not least because it makes your predictions horrible? c) How do you establish causality if you don't have a randomized experiment? -->
+<!-- The goal of this chapter is to replicate all of the things we have learned in chapter 8, except with models that allow for more than two parameters, which mostly involves have more than one right-hand side variable. We are also going to explicitly avoid discussing some common pitfalls in these problems, saving those pitfalls for chapter 10. So, nothing about overfitting. Nothing about rstanarm. Just two more examples which go through themes.Rmd with more complex models. But nothing fundamentally new or different. -->
 
 <!-- 0) Start with a problem-->
 
-
-<!-- 1) EDA of `shaming`. I think that hh_size is a good variable to check for interactions with, especially with Control. One approach: Create a new variable called `solo` which is TRUE if the `hh_size` is equal to 1 and FALSE otherwise. In other words, does the state of living alone tell us anything? We will interact this term with treatment in our model. It is cool that the p value for the interaction with Self is 0.06. A perfect example for the evils of testing!  -->
-
-<!-- It may be worth mentioning that general_04 is always "yes", unlike all the other voting history variables which have values of "yes" and "no". Why is that? I *think* that this is caused by their sampling plan. They found all the people who voted in the 2004 general election. Then, the authors found their history. As we would expect, those people had sometimes voted in the past and sometime not. Then, the authors sent the mailing. The key dependent variable, primary_06, is coding 0/1, since that makes doing the statistics easier. -->
-
-<!-- 2) `primary_06` as a function of `treatment` and `solo` and of their interaction. We will build up this model step-by-step, very similar to how we explored the effect of treatment in chapter 8. But we go deeper because  we are learning about interactions. Key thing is to go through all the themes.Rmd issues, at least until prediction. Note that this situation is different from Chapter 8 in that fitted values and predicted values are not the same thing! The fitted value, for a combination of values for treatment and solo, is something 0.30, meaning that 30% of the people in this bucket votes. But the predicted value must be 0 or 1. Either you voted or you didn't. This example is clearly causal and so you need a Rubin Table with 4 potential outcome columns. The key difference in this chapter is that we are using lots of right hand side variables, both continuous and discrete. Unlike last chapter, we go through the entire process in this section, all the way through dgm and predictive uncertainty. -->
-
-<!-- 3) EDA of `nes`. Or maybe something else? Let's discuss. This can be fairly quick. Again, we won't use all the variables. Only discuss the ones we do use. One of the variables should be year. We want to show off Gelman's trick by plotting things by year. -->
-
-<!-- 4) We are making a predictive model of what as a function of what other stuff? Want to use a continuous variable and some discrete variables as well. Interactions too.  -->
-
-<!-- 5) Discussion of the difference between predictive and causal, and how we can interpret a model as causal even if it uses observational data. Apply to the nes example model. -->
-
-<!-- 6) Pitfalls. Discuss model selection and overfitting. Again, we are not solving these problems here. They are hard problems. Instead, we are motivating chapter 10, which should perhaps be re-titled.  -->
-
-
-<!-- Thoughts -->
-
-<!-- * Should we do any Bayesian stuff here. Maybe not? We build the dgm() function by hand, maybe simplifying things a bit by not taking parameter uncertainty seriously. We mentioned that there must be an easier way, and then we do that in chapter 10.  -->
-
-<!-- * Should we discuss overfitting here? I think that the answer is Yes, that we at least have to mention it and why it is a problem. Indeed, we have at least two pages making sure the concepts are clear. Again, we hint at what solutions might look like and promise a resolution in chapter 10. Maybe we mention pooling. Maybe we mention cross-validation. But we don't yet solve the problem.  -->
-
-<!-- * The key part of this chapter is showing the themes.Rmd all the way through two problems, one causal and one not. In that way, it is very similar to chapter 8. Indeed, perhaps we should make these two chapters as alike as possible. -->
-
 Having created models with one parameter in Chapter \@ref(#one-parameter) and two parameters in Chapter \@ref(#two-parameters), you are now ready to make the jump to $N$ parameters. 
+<!-- HV: This does not knit nicely. -->
 
 Imagine you are running for Governor and want to do a better job of getting your voters to vote. You recently read about a large-scale experiment showing the effect of sending out a voting reminder that "shames" citizens who do not vote. You are considering sending out a "shaming" voting reminder yourself. What will happen if you do? Will more voters show up to the polls? Additionally, on the day of the election a female citizen is randomly selected. What is the probability she will vote?
 
 In this chapter, we will consider models with multiple parameters and the complexities that arise from these additions. We will also learn how to make more accurate predictions using Bayesian methods that will provide us with answers to the questions posed above.
 
 
+<!-- 1) EDA of `shaming`. I think that hh_size is a good variable to check for interactions with, especially with Control. One approach: Create a new variable called `solo` which is TRUE if the `hh_size` is equal to 1 and FALSE otherwise. In other words, does the state of living alone tell us anything? We will interact this term with treatment in our model. It is cool that the p value for the interaction with Self is 0.06. A perfect example for the evils of testing!  -->
+
 ## Explorator Data Analysis of `shaming`
 
-Begin by loading the packages which we need.
+Begin by loading packages which we have used in previous chapters.
 
-```{r, message=FALSE}
+```{r include=FALSE}
+knitr::opts_chunk$set(echo=FALSE, tidy=FALSE)
 library(PPBDS.data)
 library(skimr)
-library(broom.mixed)
-library(rstanarm)
-library(gtsummary)
+library(broom)
 library(tidyverse)
 ```
 
-We will start off this chapter introducing a new data set from the **PPBDS.data** package: `shaming`. This data set corresponds to an experiment carried out by Gerber, Green, and Larimer (2008) titled "Social Pressure and Voter Turnout: Evidence from a Large-Scale Field Experiment". This experiment used several hundred thousand registered voters and a series of mailings to determine the effect of social pressure on voter turnout. 
+We will start off this chapter introducing a new data set from the **PPBDS.data** package: shaming. This data set corresponds to an experiment carried out by Gerber, Green, and Larimer (2008) titled "Social Pressure and Voter Turnout: Evidence from a Large-Scale Field Experiment". This experiment used several hundred thousand registered voters and a series of mailings to determine the effect of social pressure on voter turnout. Four types of treatments were used in the experiment, with voters receiving one type of mailing. All of the mailing treatments carried the message, "DO YOUR CIVIC DUTY - VOTE!". 
 
-Let's explore the variables and observations contained within this data set by performing an Exploratory Data Analysis (EDA). EDAs help us summarize the data, identify patterns, spot outliers or anomalies, and more. We can start by running some summarizing commands such as `glimpse()`, `sample_n()`, and `summary()`.
+The first treatment, Civic Duty, also read, “Remember your rights and responsibilities as a citizen. Remember to vote." This message acted as a baseline for the other treatments, since it carried a message very similar to the one displayed on all the mailings.
+
+In the second type of treatment, households received a mailing called the Hawthorne effect that told the voters that they were being studied and their voting behavior would be examined through public records. This adds a small amount of social pressure to the households receiving this mailing.
+
+The third type of treatment is Self, in which the mailing includes the recent voting record of each member of the household, placing the word "Voted" next to their name if they did in fact vote in the 2004 election or places a blank space next to the name if they did not. In this mailing, the households were also told, “we intend to mail an updated chart" with the voting record of the members after the 2006 election. By emphasizing the public nature of voting records, this type of mailing exerts more social pressure on voting than the Hawthorne treatment.
+
+The final type of mailing is the Neighbors treatment, which follows the Self mailing by listing the household members' voting records, as well as the voting records of those who live nearby. This mailing also told recipients, "we intend to mail an updated chart" of who voted in the 2006 election. This "shaming" treatment exerts the most social pressure of all the treatments and broadcasts individuals' voting habits. 
+
+In addition to the treatments, the data set also consists of variables such as `primary_02`, `general_02`, `primary_04`, and `general_04` which tell us whether or not respondents voted in these primary and general elections. We are also given information about the respondents' backgrounds such as `sex`, `birth_year`, and household size (`hh_size`).
+
+Consider the `shaming` tibble from **PPBDS.data**. Let's explore the variables and observations contained within this data set by performing an Exploratory Data Analysis (EDA). EDAs help us summarize the data, identify patterns, spot outliers or anomalies, and more. We can start by running some summarizing commands such as `glimpse()`, `sample_n()`, and `summary()`.
+
+<!-- Provide a EDA of the shaming tibble, perhaps restricting it to a subset of the provided columns. Follow the lead of chapter 10. Make sure to use `glimpse()`, `sample_n()` and `skim()`. Readers need to know understand what the dependent variable means, along with left-hand side variables like treatment. -->
 
 ```{r}
 glimpse(shaming)
 ```
+
 Here we see that `glimpse()` gives us a look at the raw data contained within the `shaming` data set. At the very top of the output, we can see the number of rows and columns, or observations and variables respectively. We see that there are 344,084 observations, with each row corresponding to a unique respondent. The "Columns: 10" tells us that there are 10 variables within this data set. Below this, we see a cutoff version of the entire data set that has the variables on the left as rows and the observations as a list separated by commas, as compared to the tibble output that presents with the variables as columns and the observations as rows running horizontally.
 
-From this summary, we get an idea about some of the variables we will be dealing with. Some variables that will be of interest to us are `sex`, `hh_size`, and `primary_06`. The variable `hh_size` tells us the size of the respondent's household, and `primary_06` tells us whether or not the respondent voted in the 2006 Primary election. 
-
-There are a few things to note while exploring this data set. You may -- or may not -- have noticed that the only response to the `general_04` variable is "Yes". In their published article, the authors note that "Only registered voters who voted in November 2004 were selected for our sample" (Gerber, Green, Larimer, 2008). After this, the authors found their history then sent out the mailings.
-
-It is also important to identify the dependent variable and its meaning. In this shaming experiment, the dependent variable is `primary_06`, which is a variable coded either 0 or 1 for whether or not the respondent voted in the 2006 primary election. This is the dependent variable because the authors are trying to measure the effect that the treatments have on the proportion of people who vote in the 2006 general election.
-
-<!-- HV: Should I include discussion of the left-hand variable (treatment?) here? Or wait until we move into the regressions? -->
-
-The voting results from other years, such as 2002 and 2004, are of less interest to us and can be removed from the abbreviated data set. In addition to removing `general_04`, `primary_02`, `general_02`, or `primary_04`, we also will not be taking particular interest in `birth_year`, or `no_of_names` within this chapter.
-<!-- HV: should I explain why we are not using any of these variables? why they are not of great use to us? -->
-
-By narrowing down the set of variables we are looking at and investigating, we will find more meaningful relationships among them. However, we have not yet discussed the most important variable of them all: `treatment`. The `treatment` variable is a factor variable with 5 levels, including the control. Since we are curious as to how sending mailings affects voter turnout, the treatment variable will tell us about the impact each type of mailing can make. Let's start off by taking a broad look at the different treatments.
-<!-- HV: Is it okay to say the first sentence of this paragraph? -->
+While `glimpse()` gives us a good look at the possible values for the variables, it is difficult to read it in terms of individual observations. Recall that the *observational unit* is what is being measured. With the `shaming` data set, the observational unit would be the voter respondent. To get a better sense of some respondents' information, let's use `sample_n()` to gather a random sample of *n* observations from the data set. 
 
 ```{r}
-shaming %>%
-  count(treatment)
-```
-
-Four types of treatments were used in the experiment, with voters receiving one type of mailing. All of the mailing treatments carried the message, "DO YOUR CIVIC DUTY - VOTE!". 
-
-The first treatment, Civic Duty, also read, “Remember your rights and responsibilities as a citizen. Remember to vote." This message acted as a baseline for the other treatments, since it carried a message very similar to the one displayed on all the mailings.
-
-In the second treatment, Hawthorne, households received a mailing which told the voters that they were being studied and their voting behavior would be examined through public records. This adds a small amount of social pressure to the households receiving this mailing.
-
-In the third treatment, Self, the mailing includes the recent voting record of each member of the household, placing the word "Voted" next to their name if they did in fact vote in the 2004 election or a blank space next to the name if they did not. In this mailing, the households were also told, “we intend to mail an updated chart" with the voting record of the household members after the 2006 primary. By emphasizing the public nature of voting records, this type of mailing exerts more social pressure on voting than the Hawthorne treatment.
-
-The fourth treatment, Neighbors, provides the household members' voting records, as well as the voting records of those who live nearby. This mailing also told recipients, "we intend to mail an updated chart" of who voted in the 2006 election.
-
-For now, let's focus on a subset of the data.
-
-```{r}
-ch9 <- shaming %>% 
-  mutate(solo = ifelse(hh_size == 1, TRUE, FALSE)) %>% 
-  select(primary_06, treatment, solo, sex)
-```
-
-We create the variable `solo`, which is TRUE for voters who live alone and FALSE for those that do not. We are curious to see if the treatment effect, if any, is the same for voters who live alone as it is for those who do not.
-
-```{r}
-ch9 %>% 
-  skim()
-```
-
-
-<!-- DK: Add discussion of what you see here. No need to drop missing values since there aren't any. I think this next discussion can be dropped. -->
-
-
-While some summarizing commands such as `glimpse()` gives us a good look at the possible values for the variables, it is difficult to read it in terms of individual observations. Recall that the *observational unit* is what is being measured. With the `shaming` data set, the observational unit would be the voter respondent. To get a better sense of some respondents' information, let's use `sample_n()` to gather a random sample of *n* observations from the data set.
-<!-- HV: Does this belong here? -->
-
-```{r}
-ch9 %>% 
+shaming %>% 
   sample_n(10)
 ```
 
-Now we have a table with 5 random observations and the respondents' information in a regular table output. By taking a few random samples, we may start to see some patterns within the data. 
-
 Now we have a table with 5 random observations and the respondents' information in a regular table output. By taking a few random samples, we may start to see some patterns within the data. Do you notice anything in particular about the variable `treatment`?
+<!-- HV: Is it okay to pose these questions here? -->
+<!-- HV: The no_of_names variable is supposed to give an integer with the number of names listed *IF* the respondent was in the "Neighbors" group but for all other treatments it is listed as 21. Should I just mutate this or have it dealth with in the data set as a whole? -->
+
+To get a more in-depth summary of the variables and their components, we can run `summary()` on the data set.
+
+```{r}
+summary(shaming)
+```
+
+For numerical variables, the `summary()` output provides us with the minimum, maximum, mean, and quartiles. For variables such as `treatment`, we are given a list of the various treatments along with counts of how many observations are within each group. In this case, the character variables do not provide us with any information other than the number of observations for each.
 
 One other helpful summarizing technique we can use is `skim()`. To make the information it contains simpler, we will only be looking at three variables: `primary_06`, `treatment`, and `sex`. 
 
@@ -133,6 +83,14 @@ shaming %>%
 ```
 
 By running the `skim()` command, we get a summary of the data set as a whole, as well as the types of variables and individual variable summaries. At the top we see the number of columns and rows within the selected data set. Below this we are given a list with the different types of variables, or columns, and how often they appear within the data we are skimming. Following this, the variables are then separated by their column type, and we are given individual summaries based on the type. 
+
+There are a few things to note while exploring this data set. You may -- or may not -- have noticed that the only response to the `general_04` variable is "Yes". In their published article, the authors note that "Only registered voters who voted in November 2004 were selected for our sample" (Gerber, Green, Larimer, 2008). After this, the authors found their history then sent out the mailings.
+
+It is also important to identify the dependent variable and its meaning. In this shaming experiment, the dependent variable is `primary_06`, which is a variable coded either 0 or 1 for whether or not the respondent voted in the 2006 primary election. This is the dependent variable because the authors are trying to measure the effect that the treatments have on the proportion of people who vote.
+
+<!-- HV: Should I include discussion of the left-hand variable (treatment?) here? Or wait until we move into the regressions? -->
+
+<!-- It may be worth mentioning that general_04 is always "yes", unlike all the other voting history variables which have values of "yes" and "no". Why is that? I *think* that this is caused by their sampling plan. They found all the people who voted in the 2004 general election. Then, the authors found their history. As we would expect, those people had sometimes voted in the past and sometime not. Then, the authors sent the mailing. The key dependent variable, primary_06, is coding 0/1, since that makes doing the statistics easier. -->
 
 <!-- 2) `primary_06` as a function of `treatment` and `solo` and of their interaction. We will build up this model step-by-step, very similar to how we explored the effect of treatment in chapter 8. But we go deeper because  we are learning about interactions. Key thing is to go through all the themes.Rmd issues, at least until prediction. Note that this situation is different from Chapter 8 in that fitted values and predicted values are not the same thing! The fitted value, for a combination of values for treatment and solo, is something 0.30, meaning that 30% of the people in this bucket votes. But the predicted value must be 0 or 1. Either you voted or you didn't. This example is clearly causal and so you need a Rubin Table with 4 potential outcome columns. The key difference in this chapter is that we are using lots of right hand side variables, both continuous and discrete. -->
 
@@ -147,46 +105,31 @@ By running the `skim()` command, we get a summary of the data set as a whole, as
 
 
 Having created models with one parameter in Chapter \@ref(#one-parameter) and two parameters in Chapter \@ref(#two-parameters), you are now ready to make the jump to $N$ parameters.  The more parameters we include in our models, the more flexible they can become. But we must be careful of *overfitting*, of making models which are inaccurate because they don't use enough data to accurately estimate those parameters. The tension between overfitting and underfitting is central to the practice of data science.
-<!-- HV: Where does this belong? -->
+
+
+
 
 ## Causal Effects of `treament`
 
-We will now be looking into the causal effect of the treatment variable on the 2006 primary election. To start, let's build a model using `stan_glm()` followed by a regression table. 
+<!-- This follows the discussion in chapter 8 very closely. See below for some key R code, which must be explained. (Obviously, you can use other code as well.) -->
 
 ```{r}
-obj.1 <- stan_glm(data = shaming, 
-                formula = primary_06 ~ treatment - 1, 
-                family = gaussian(), 
-                refresh = 0)
+shaming %>% 
+  lm(data = ., primary_06 ~ treatment - 1)
 ```
-
-```{r, echo=FALSE}
-tbl_regression(obj.1)
-```
-
-This table shows us each of the five treatments and their beta coefficients, along with a 95% Confidence Interval for these coefficients. The Control provides us with a baseline.
-
-<!-- HV: Not exactly sure how to interpret this using causal effect... Should I be making preceptor tables here? -->
-
-
-
-<!-- Talk about what these results mean.  Then, create the same model but with a different structure. -->
-
 
 ```{r}
-obj.2 <- stan_glm(data = shaming, 
-                formula = primary_06 ~ treatment, 
-                family = gaussian(), 
-                refresh = 0)
+shaming %>% 
+  lm(data = ., primary_06 ~ treatment - 1) %>% 
+  tidy(conf.int = TRUE)
 ```
 
-
-```{r, echo=FALSE}
-tbl_regression(obj.2)
+```{r}
+shaming %>% 
+  lm(data = ., primary_06 ~ treatment - 1) %>% 
+  tidy(conf.int = TRUE, conf.level = 0.99) %>% 
+  select(term, conf.low, estimate, conf.high)
 ```
-
-<!-- Explain how these two models are the same, except in how they define the parameters. Show us the math like Gelman does. Write down the math. For simple. -->
-
 
 
 <!-- Once we talk about these things --- and, again, this is exactly what we have talked about in chapter 8 --- we can do a bit more. Like discuss how we are using 99%, because there is nothing magical aboyt 95%, other than convention. I also think it would be fun to show a nice graphic of this, highlighting how the estimates for Civic and Hawthorne overlap.  -->
@@ -199,14 +142,10 @@ tbl_regression(obj.2)
 <!-- Feel free to build up this code, and other examples, more slowly than I am doing it here. -->
 
 ```{r}
-obj.3 <- stan_glm(data = shaming, 
-                formula = primary_06 ~ sex + treatment + sex:treatment, 
-                family = gaussian(), 
-                refresh = 0)
-```
-
-```{r, echo=FALSE}
-tbl_regression(obj.3)
+shaming %>% 
+  lm(data = ., primary_06 ~ sex*treatment - 1) %>% 
+  tidy() %>% 
+  select(term, estimate)
 ```
 
 <!-- Takes a while to explain what all this means. -->
@@ -249,7 +188,6 @@ What problems do we face? All the things that make modeling difficult. Why is th
 
 
 ## Formatting Linear Models in R
-
 In the previous chapter, linear models were created using the general format of `dependent variable ~ -1 + independent variable`. After running the regression on a model of this type, the resulting table would show coefficients for both parameters of the independent variable, for example Democrat and Republican. This method works fine when there are only one or two parameters in consideration, however now we will be moving onto *n* parameters and we will have to change the formula we use; specifically, we will be removing the -1 from the lm formula.
 
 In order to remove the -1, we first have to understand the function of it in the linear regression formulas that you have seen previously. Using the Enos (2014) `trains` data, when we use -1 in our formula and regress party on income, the table output lists both parameters and estimates their mean income values.
