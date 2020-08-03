@@ -5,9 +5,12 @@ output_yaml:
 
 # N Parameters {#n-parameters}
 
+
+<!-- Organization: For both examples, start with prudence discussion of validity. Then, show Preceptor Table. Then, we do a series of models for each example. For each model, first give the math. Then estimate the model. Then interpret the model, which will generally involve inserting estimated values into the math, and working through the algebra slowly, like Modern Dive. Then, at end, of that example, when you have a final model which you might use, talk about temperance, and how you need to be careful.  -->
+
 <!-- Outline: -->
 
-<!-- The goal of this chapter is to replicate all of the things we have learned in chapter 8, except with models that allow for more than two parameters, which mostly involves have more than one right-hand side variable. We go through all of themes.Rmd two more times, once with a causal data set and once with a predictive one. So far, nothing new or different. But we are also going to highlight three major problems. We aren't going to solve those problems, but we are going to hint at them. The problems are: a) How do you decide which model is "better?" (Not an easy question! But the ability to predict new data is certainly a big part of the answer. b) How do you avoid overfitting, not least because it makes your predictions horrible? c) How do you establish causality if you don't have a randomized experiment? -->
+<!-- The goal of this chapter is to replicate all of the things we have learned in chapter 8, except with models that allow for more than two parameters, which mostly involves have more than one right-hand side variable. We go through all of themes.Rmd two more times, once with a causal data set and once with a predictive one. Nothing really new or different, just more complex settings. Key is to go through all the themes each time, and in detail. -->
 
 <!-- 0) Start with a problem-->
 
@@ -18,13 +21,13 @@ output_yaml:
 
 <!-- 2) `primary_06` as a function of `treatment` and `solo` and of their interaction. We will build up this model step-by-step, very similar to how we explored the effect of treatment in chapter 8. But we go deeper because  we are learning about interactions. Key thing is to go through all the themes.Rmd issues, at least until prediction. Note that this situation is different from Chapter 8 in that fitted values and predicted values are not the same thing! The fitted value, for a combination of values for treatment and solo, is something 0.30, meaning that 30% of the people in this bucket votes. But the predicted value must be 0 or 1. Either you voted or you didn't. This example is clearly causal and so you need a Rubin Table with 4 potential outcome columns. The key difference in this chapter is that we are using lots of right hand side variables, both continuous and discrete. Unlike last chapter, we go through the entire process in this section, all the way through dgm and predictive uncertainty. -->
 
-<!-- 3) EDA of `nes`. Or maybe something else? Let's discuss. This can be fairly quick. Again, we won't use all the variables. Only discuss the ones we do use. One of the variables should be year. We want to show off Gelman's trick by plotting things by year. -->
+<!-- 3) EDA of `nes`. This can be fairly quick. Again, we won't use all the variables. Only discuss the ones we do use. One of the variables should be year. We want to show off Gelman's trick by plotting things by year. -->
 
 <!-- 4) We are making a predictive model of what as a function of what other stuff? Want to use a continuous variable and some discrete variables as well. Interactions too.  -->
 
 <!-- 5) Discussion of the difference between predictive and causal, and how we can interpret a model as causal even if it uses observational data. Apply to the nes example model. -->
 
-<!-- 6) Pitfalls. Discuss model selection and overfitting. Again, we are not solving these problems here. They are hard problems. Instead, we are motivating chapter 10, which should perhaps be re-titled.  -->
+<!-- 6) Pitfalls. Does this belong? Discuss model selection and overfitting. Again, we are not solving these problems here. They are hard problems. Instead, we are motivating chapter 10, which should perhaps be re-titled.  -->
 
 
 <!-- Thoughts -->
@@ -153,7 +156,7 @@ Having created models with one parameter in Chapter \@ref(#one-parameter) and tw
 
 We will now be looking into the causal effect of the treatment variable on the 2006 primary election. To start, let's build a model using `stan_glm()` followed by a regression table. 
 
-```{r}
+```{r, cache=TRUE}
 obj.1 <- stan_glm(data = shaming, 
                 formula = primary_06 ~ treatment - 1, 
                 family = gaussian(), 
@@ -173,7 +176,7 @@ This table shows us each of the five treatments and their beta coefficients, alo
 <!-- Talk about what these results mean.  Then, create the same model but with a different structure. -->
 
 
-```{r}
+```{r, cache=TRUE}
 obj.2 <- stan_glm(data = shaming, 
                 formula = primary_06 ~ treatment, 
                 family = gaussian(), 
@@ -198,7 +201,7 @@ tbl_regression(obj.2)
 
 <!-- Feel free to build up this code, and other examples, more slowly than I am doing it here. -->
 
-```{r}
+```{r, cache=TRUE}
 obj.3 <- stan_glm(data = shaming, 
                 formula = primary_06 ~ sex + treatment + sex:treatment, 
                 family = gaussian(), 
@@ -211,16 +214,9 @@ tbl_regression(obj.3)
 
 <!-- Takes a while to explain what all this means. -->
 
+<!-- Two key issues: 1) Interpreting lots of parameters in a model. interactions, heterogenous treatment effects. shaming using lm().  -->
 
-
-
-<!-- Two key issues: 1) Interpreting lots of parameters in a model. interactions, heterogenous treatment effects. shaming using lm(). 
-
-
-
-
-2) Estimate support for the president among small demographic. How do female, Hispanics in Alabama feel about Obama? You don't want to just use the overall mean, which would underfitting. You don't want to use the mean for just that small group, which would be overfitting.  Using nes data, for 2012, approval for Obama and stan_glm().  -->
-
+<!-- Treatment effect is not the same thing as a coefficient. -->
 
 <!-- 
 intercept
@@ -247,129 +243,6 @@ What problems do we face? All the things that make modeling difficult. Why is th
 
 <!-- So, just what will we use? rstanarm(). If so (and if we have not introduced it earlier), we can begin with seeing how it is similar to lm() and then expand. This means that, in one paramter chapter, we should be doing lm( ~ 1). In two parameter, lm( ~ treatment) --- if treatment is zero one --- or, perhaps better, lm( ~ -1 + treatment) if treatment is a factor/character with two levels. We might also have introduced  -->
 
-
-## Formatting Linear Models in R
-
-In the previous chapter, linear models were created using the general format of `dependent variable ~ -1 + independent variable`. After running the regression on a model of this type, the resulting table would show coefficients for both parameters of the independent variable, for example Democrat and Republican. This method works fine when there are only one or two parameters in consideration, however now we will be moving onto *n* parameters and we will have to change the formula we use; specifically, we will be removing the -1 from the lm formula.
-
-In order to remove the -1, we first have to understand the function of it in the linear regression formulas that you have seen previously. Using the Enos (2014) `trains` data, when we use -1 in our formula and regress party on income, the table output lists both parameters and estimates their mean income values.
-
-```{r}
-
-lm(data = trains, income ~ -1 + party) %>% tidy(conf.int = TRUE)
-
-```
-<!-- HV: Is there a way to make this output neater in the knit document? More of a typical regression table? -->
-<!-- HV: Should I start off introducing rstanarm and use stan_glm for all models in this chapter? -->
-
-This table tells us that Democrats have an average income of $136,755.20, while Republicans have an average income of $167,368.40. 
-
-Once we remove the -1 from the formula, the the regression table replaces one of the parameter terms with "(Intercept)". For example, if we use the same regression as above but remove the -1, the output table changes to this:
-```{r}
-
-lm(data = trains, income ~ party) %>% tidy(conf.int = TRUE)
-
-```
-
-Although the coefficients in this regression table are different than the ones above, the interpretation stays the same. The intercept still represents the average income of democrats, the default parameter, however the partyRepulican coefficient is now the difference between the mean income of republicans and democrats. The value of the mean republican income remains the same, however, but it is now calculated by adding the partyRepublican coefficient to the intercept estimate.
-
-```{r}
-136755.21 + 30613.21
-```
-
-
-## Adding parameters
-We will now begin adding parameters to our regression models. The simplest way to do so is by adding another independent variable to the regression formula. For example, we can add gender to the same formula we used previously.
-
-```{r}
-
-lm(data = trains, income ~ party + gender) %>% tidy(conf.int = TRUE)
-
-```
-
-### Understanding the Model
-Models with multiple predictors can become complicated to interpret, since the interpretation of a coefficient somewhat relies on the other variables of the model. The model we have just created summarizes the difference in average income of subjects based on both their political party affiliation and their gender. Using just these two predictors and their coefficients, we have three parameters to describe four types of people: democratic females, democratic males, republican females, and republican males.
-
-We can start off by converting the resulting output into mathematical notation using the simple linear regression equation of	$Y =\beta_{1}x_{1} + \beta_{2}x_{2} + \cdots + \epsilon $. Using this notation, this model could be written as Income = 121086.46 + 31621.14*Republican + 27855.54*Male. Both of these predictors, party and gender, are binary and given the output coefficient terms, if a person is Republican it is coded as 1, whereas if they are a Democrat it is coded as 0. The same intuition applies to gender, with male coded as 1 and female coded as 0. Now, we must interpret this model.
-
-*Intercept*: If we think about the intercept in terms of the linear equation we formulated above, it is the value of Y when x is zero, or the income when Republican and Male are both coded zero. Therefore in this model, the intercept represents female democrats and tells us that the mean income for female democrats is $121,086.46. 
-
-*Party coefficient*: Alone, this variable compares the incomes of people with different political affiliations. It tells us that Republicans have a mean income that is $31,621.14 more than Democrats. If we look at the model altogether and want the mean income for a female republican, we would add the partyRepublican coefficient to the intercept estimate by coding a 1 to the Republican variable. This gives us a mean income of $152,707.60 for female republicans, compared to the mean income of $121,086.46 for female democrats.
-
-*Gender coefficient*: The genderMale coefficient tells us the difference between the income of a female and a male. If we take out the partyRepublican term, the genderMale coefficient looks specifically at the difference in income of a female democrat versus a male democrat. By adding this coefficient to the intercept value, we find that male democrats have a mean income of $148,942, or $27,855.54 more than female democrats. 
-
-*Using both coefficients*: In order to find the mean income of a male republican, we would have to code a 1 to both variables which would lead us to add both the partyRepublican coefficient *and* the genderMale coefficient to the intercept, since both parameters apply. From this we find the mean income of a republican male is $180,563.10. 
-<!-- Fix choppy writing in this whole section. Maybe change formatting. -->
-
-It is important to note, however, that adding predictors brings about a range of complexities, including which predictors to omit and which to include, interpretations of multiple coefficients, and the uncertainty associated with our models.
-
-## Interaction terms
-Another way to add parameters to a linear regression formula is by incorporating interaction terms. 
-
-
-
-## heterogeneous treatment effect
-fancy way of saying interactions but with a variable that you believe is causal 
-
-
-
-## 5 sources of uncertainty
-style.Rmd
-
-#### 3. Parameter Uncertainty
-estimate of income coefficient
-confidence interval gives the range of uncertainty
-  - when dealing with a new observation, it is not the confidence interval
-      - this is where you use posterior predict
-      - difference between uncertainty about parameyer mean estimate but confidence interval for the mean is not equal to the estimate for the new observation
-
-#### 4. Unmodeled Variation
-
-
-
-
-## Rubin Causal Model
-new female democrat shows up
-
-
-## cces data
-
-In this chapter we will be using the cces data, or Cooperative Congress Election Survey. The CCES is a 50,000+ person national stratified sample survey that consists of a pre- and post- election wave. In the pre-election wave, respondents complete two-thirds of the survey that asks about general political attitudes, various demographic factors, assessment of roll call voting choices, political information, and vote intentions. In the post-election wave, respondents complete the final third of the survey that consists mostly of items related to the election that just occurred.
-
-Some of the key variables that are included in the data set are approval ratings of the elected officials, from the governor to the president, on a scale from "Strongly Disapprove" to "Strongly Approve". To quantify this data, the new variables `approval_pres_num`, `approval_rep_num`, `approval_sen1_num`, `approval_sen2_num`, and `approval_gov_num` have all been created and quantify the approval scale by ordering the responses from a 1 to a 5. Those who answered with "Strongly Disapprove" are a 1 on the approval scale, while those who answered with "Strongly Approve" are a 5 on the numerical approval scale. Those who are neutral answered with "Neither Approve Nor Disapprove" and are quantified as a 3 on the scale. Respondents who answered with "Never Heard / Not Sure" have been removed in order to improve the accuracy of the approval ratings.
-
-```{r, include=FALSE}
-ch9 <- PPBDS.data::cces
-
-
-
-```
-
-
-Other variables in the cces data include state, race, age, education level, gender, and ideology. The data taken spans from 2006 to 2018, although it should be noted that there are more observations in years with general elections.
-
-## presidential approval; overall; by year; by state; by state x year x educ
-
-## need rstanarm
-
-## Rubin Causal Model
-
-<!-- create numeric `rating` 1 to 4. Leave out Never heard. Might use percentage strongly approve. -->
-
-<!-- discuss overall rating for entire date set. One parameter. Discuss. For each year. For each state. -->
-
-<!-- basic lm -->
-
-<!-- lm(data = cces, age ~ 1) %>% tidy(conf.int = TRUE) -->
-<!-- lm(data = cces, age ~ -1 + state) %>% tidy(conf.int = TRUE) -->
-<!-- lm(data = cces, age ~ -1 + as.factor(year)) %>% tidy(conf.int = TRUE) -->
-
-<!-- obj <- lm(data = cces, age ~ -1 + state*as.factor(year)) %>% tidy(conf.int = TRUE) -->
-
-
-<!-- Connecting parameters to real world concepts. What are we measuring? validity. -->
-
-<!-- estimands -->
 
 
 
