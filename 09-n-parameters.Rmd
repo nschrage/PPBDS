@@ -6,20 +6,26 @@ output_yaml:
 # N Parameters {#n-parameters}
 
 
-<!-- Organization: For both examples, start with prudence discussion of validity. Then, show Preceptor Table. Then, we do a series of models for each example. For each model, first give the math. Then estimate the model. Then interpret the model, which will generally involve inserting estimated values into the math, and working through the algebra slowly, like Modern Dive. Then, at end, of that example, when you have a final model which you might use, talk about temperance, and how you need to be careful.  -->
+<!-- Outline: The goal of this chapter is to replicate all of the things we have learned in chapter 8, except with models that allow for more than two parameters, which mostly involves having more than one right-hand side variable.  -->
 
-<!-- Outline: -->
+<!-- For both data examples, do the following: -->
 
-<!-- The goal of this chapter is to replicate all of the things we have learned in chapter 8, except with models that allow for more than two parameters, which mostly involves have more than one right-hand side variable. We go through all of themes.Rmd two more times, once with a causal data set and once with a predictive one. Nothing really new or different, just more complex settings. Key is to go through all the themes each time, and in detail. -->
+<!-- Prudence: Start with Prudence discussion, both of validity and, in the case of shaming, the specific estimand which is of interest. Part of this is: What question are you trying to answer? What problem are we solving?  -->
 
-<!-- 0) Start with a problem-->
+<!-- Then, we will be going through a series of models, always with greater complexity. For each model, we have: -->
+
+<!-- Justice: each model discussion begins with Justice, which includes a Preceptor Table --- note how this changes for each model, because the Preceptor Table only needs columns for the convariates in the model, and only needs outcome columns for the outcomes you care about --- and then provides the math of the situation, which is also different each time.  A Preceptor Table has the rows and columns such that, if there are no missing values, answering your quetsion is trivial. I guess you might not have to give the Preceptor Table and the math every single time. But you do need to describe how they would differ from the last example. -->
+
+<!-- Courage: Then, we have Courage, which means run the code and interpret it. This will include posterior_linpred(). Indeed, that is where this section finishes. In other words, each model includes a discussion of Justice and Courage, labeled as such. -->
+
+<!-- Temperance: After you come to your final model, it is time for a discussion of Temperance: All the reasons why you shold be careful about what you do with the model in the future. This section includes the use of posterior_predict(). -->
 
 
-<!-- 1) EDA of `shaming`. I think that hh_size is a good variable to check for interactions with, especially with Control. One approach: Create a new variable called `solo` which is TRUE if the `hh_size` is equal to 1 and FALSE otherwise. In other words, does the state of living alone tell us anything? We will interact this term with treatment in our model. It is cool that the p value for the interaction with Self is 0.06. A perfect example for the evils of testing!  -->
+<!-- 1) EDA of `shaming`. I think that hh_size is a good variable to check for interactions with, especially with Control. Create a new variable called `solo` which is TRUE if the `hh_size` is equal to 1 and FALSE otherwise. In other words, does the state of living alone tell us anything? We will interact this term with treatment in our model. It is cool that the p value for the interaction of solo with Self is 0.06. A perfect example for the evils of testing!  -->
 
-<!-- It may be worth mentioning that general_04 is always "yes", unlike all the other voting history variables which have values of "yes" and "no". Why is that? I *think* that this is caused by their sampling plan. They found all the people who voted in the 2004 general election. Then, the authors found their history. As we would expect, those people had sometimes voted in the past and sometime not. Then, the authors sent the mailing. The key dependent variable, primary_06, is coding 0/1, since that makes doing the statistics easier. -->
 
-<!-- 2) `primary_06` as a function of `treatment` and `solo` and of their interaction. We will build up this model step-by-step, very similar to how we explored the effect of treatment in chapter 8. But we go deeper because  we are learning about interactions. Key thing is to go through all the themes.Rmd issues, at least until prediction. Note that this situation is different from Chapter 8 in that fitted values and predicted values are not the same thing! The fitted value, for a combination of values for treatment and solo, is something 0.30, meaning that 30% of the people in this bucket votes. But the predicted value must be 0 or 1. Either you voted or you didn't. This example is clearly causal and so you need a Rubin Table with 4 potential outcome columns. The key difference in this chapter is that we are using lots of right hand side variables, both continuous and discrete. Unlike last chapter, we go through the entire process in this section, all the way through dgm and predictive uncertainty. -->
+
+<!-- 2) `primary_06` as a function of `treatment`, `gender`, `solo`, `age` and (some of) their interactions. We will build up this model step-by-step, very similar to how we explored the effect of treatment in chapter 8. But we go deeper because  we are learning about interactions. Note that this situation is different from Chapter 8 in that fitted values and predicted values are not the same thing! The fitted value, for a combination of values for treatment and solo, is something 0.30, meaning that 30% of the people in this bucket votes. But the predicted value must be 0 or 1. Either you voted or you didn't. This example is clearly causal and so you need a Rubin Table with 5 potential outcome columns. The key difference in this chapter is that we are using lots of right hand side variables, both continuous and discrete. -->
 
 <!-- 3) EDA of `nes`. This can be fairly quick. Again, we won't use all the variables. Only discuss the ones we do use. One of the variables should be year. We want to show off Gelman's trick by plotting things by year. -->
 
@@ -54,7 +60,6 @@ library(PPBDS.data)
 library(skimr)
 library(broom.mixed)
 library(rstanarm)
-library(gtsummary)
 library(tidyverse)
 ```
 
@@ -66,6 +71,8 @@ Let's explore the variables and observations contained within this data set by p
 glimpse(shaming)
 ```
 Here we see that `glimpse()` gives us a look at the raw data contained within the `shaming` data set. At the very top of the output, we can see the number of rows and columns, or observations and variables respectively. We see that there are 344,084 observations, with each row corresponding to a unique respondent. The "Columns: 10" tells us that there are 10 variables within this data set. Below this, we see a cutoff version of the entire data set that has the variables on the left as rows and the observations as a list separated by commas, as compared to the tibble output that presents with the variables as columns and the observations as rows running horizontally.
+
+<!-- It may be worth mentioning that general_04 is always "yes", unlike all the other voting history variables which have values of "yes" and "no". Why is that? I *think* that this is caused by their sampling plan. They found all the people who voted in the 2004 general election. Then, the authors found their history. As we would expect, those people had sometimes voted in the past and sometime not. Then, the authors sent the mailing. The key dependent variable, primary_06, is coding 0/1, since that makes doing the statistics easier. -->
 
 From this summary, we get an idea about some of the variables we will be dealing with. Some variables that will be of interest to us are `sex`, `hh_size`, and `primary_06`. The variable `hh_size` tells us the size of the respondent's household, and `primary_06` tells us whether or not the respondent voted in the 2006 Primary election. 
 
@@ -101,7 +108,8 @@ For now, let's focus on a subset of the data.
 ```{r}
 ch9 <- shaming %>% 
   mutate(solo = ifelse(hh_size == 1, TRUE, FALSE)) %>% 
-  select(primary_06, treatment, solo, sex)
+  mutate(age = 2006 - birth_year)
+  select(primary_06, treatment, solo, sex, age)
 ```
 
 We create the variable `solo`, which is TRUE for voters who live alone and FALSE for those that do not. We are curious to see if the treatment effect, if any, is the same for voters who live alone as it is for those who do not.
