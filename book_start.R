@@ -34,7 +34,7 @@ options(digits = 2)
 # knitting.
 
 # knitr::opts_chunk$set(cache=TRUE)
-# knitr::opts_chunk$set(cache.path = "cache-directory/")
+knitr::opts_chunk$set(cache.path = "cache-directory/")
 
 # Question: Should I delete the cache each time I build the book for release?
 
