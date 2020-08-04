@@ -54,14 +54,6 @@ In this chapter, we will consider models with multiple parameters and the comple
 
 ## Explorator Data Analysis of `governors`
 
-
-
-
-## Model of `alive_post`
-
-
-## Explorator Data Analysis of `shaming`
-
 Begin by loading the packages which we need.
 
 ```{r, message=FALSE}
@@ -72,7 +64,99 @@ library(rstanarm)
 library(tidyverse)
 ```
 
-We will start off this chapter introducing a new data set from the **PPBDS.data** package: `shaming`. This data set corresponds to an experiment carried out by Gerber, Green, and Larimer (2008) titled "Social Pressure and Voter Turnout: Evidence from a Large-Scale Field Experiment". This experiment used several hundred thousand registered voters and a series of mailings to determine the effect of social pressure on voter turnout. 
+<!-- Talk about the data, as we usual do. Lots of interesting things. Explain how we only have data for people who are already dead. That is an interesting restriction, and effects the Preceptor Table in interesting ways. Make sure to mention all the variables we end up keeping below. Finish with some graphics which show how various things are related to our lefthand side variable: alive_post. -->
+
+
+```{r}
+ch9_gov <- governors %>% 
+  mutate(won = ifelse(win_margin > 0, TRUE, FALSE)) %>% 
+  select(last_name, year, state, sex, status, won, alive_post, alive_pre)
+```
+
+## Model of `alive_post`
+
+<!-- DK: Maybe instead of tables, we should just be showing graphics, using ggdist/tidybayes. -->
+
+Let's explore descriptive, not causal, models of covariates associated with how long candidates for governor live after elections.
+
+```{r}
+obj.gov.1 <- stan_glm(data = ch9_gov,
+                      formula = alive_post ~ alive_pre,
+                      family = gaussian(),
+                      refresh = 0)
+```
+
+<!-- This is a simple example. Only three parameters are estimated: intercept, beta and sigma. But step through them all slowly, discussing what they mean. Not sure on the best way to display this. Maybe we just ignore sigma? -->
+
+```{r}
+tbl_regression(obj.gov.1, intercept = TRUE)
+```
+
+```{r}
+obj.gov.2 <- stan_glm(data = ch9_gov,
+                      formula = alive_post ~ sex - 1,
+                      family = gaussian(),
+                      refresh = 0)
+```
+
+```{r}
+tbl_regression(obj.gov.2, intercept = TRUE)
+```
+
+<!-- DK: Weird result, huh? Men live twice as long as women! Useful to discuss why that might be the case. -->
+
+```{r}
+obj.gov.3 <- stan_glm(data = ch9_gov,
+                      formula = alive_post ~ sex + alive_pre,
+                      family = gaussian(),
+                      refresh = 0)
+```
+
+```{r}
+tbl_regression(obj.gov.3, intercept = TRUE)
+```
+
+<!-- DK: Cool, eh? It is (mostly?) an age effect! Controlling for age at the election, women live about as long as men, but they are much more likely be candidates as an older age. Again, what we are doing is slowly building more complex models, understanding what they mean. -->
+
+<!-- Also, note that this is a "parallel slopes" model. Explain slowly what that means.  Create a plot. -->
+
+<!-- Side note: I would have thought that overlapping CIs for male/female would equate to insignificance of sex dummy when the regression includes a intercept. But that does not seem to be the case. Am I missing something? -->
+
+<!-- With this as warm-up, we are now in a position to explore interactions. -->
+
+```{r}
+obj.gov.4 <- stan_glm(data = ch9_gov,
+                      formula = alive_post ~ sex*alive_pre,
+                      family = gaussian(),
+                      refresh = 0)
+```
+
+```{r}
+tbl_regression(obj.gov.4, intercept = TRUE)
+```
+
+<!-- DK: Take your time explaining what this means! It is not trivial. Note that this is a non-parallel slopes model. -->
+
+
+```{r, cache=TRUE}
+obj.gov.5 <- stan_glm(data = ch9_gov,
+                      formula = alive_post ~ state + sex*alive_pre,
+                      family = gaussian(),
+                      refresh = 0,
+                      iter = 10000)
+```
+
+
+
+```{r}
+tbl_regression(obj.gov.5, intercept = TRUE)
+```
+
+<!-- DK: Need to modify this to only show of the more interesting state coefficients. (Although we might show all the state pdfs in the graphic.) This a good place to discuss shrinkage, which is what is happening here. And that is probaly enough models. -->
+
+## Explorator Data Analysis of `shaming`
+
+Consider a new data set, `shaming`, corresponding to an experiment carried out by Gerber, Green, and Larimer (2008) titled "Social Pressure and Voter Turnout: Evidence from a Large-Scale Field Experiment". This experiment used several hundred thousand registered voters and a series of mailings to determine the effect of social pressure on voter turnout. 
 
 Let's explore the variables and observations contained within this data set by performing an Exploratory Data Analysis (EDA). EDAs help us summarize the data, identify patterns, spot outliers or anomalies, and more. We can start by running some summarizing commands such as `glimpse()`, `sample_n()`, and `summary()`.
 
