@@ -158,7 +158,9 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li class="toc"><a href="#prediction-1"> Prediction</a></li>
 </ul>
 <a href="n-parameters.html"><span class="toc-section-number">9</span> N Parameters</a>
-<a href="discrete-response.html"><span class="toc-section-number">10</span> Discrete Response</a>
+<a href="pitfalls.html"><span class="toc-section-number">10</span> Pitfalls</a>
+<a href="continuous-response.html"><span class="toc-section-number">11</span> Continuous Response</a>
+<a href="discrete-response.html"><span class="toc-section-number">12</span> Discrete Response</a>
 <a href="appendices.html">Appendices</a>
 <a href="tools.html">Tools</a>
 <a href="shiny.html">Shiny</a>
@@ -191,17 +193,12 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <span class="header-section-number">8.1</span> EDA for <code>trains</code>
 </h2>
 <!-- DK: Still need to standardize the method we use for providing references. -->
-<p>Let’s do some exploratory data analysis (EDA) of the <code>trains</code> data set from the <strong>PPBDS.data</strong> package. Recall the discussion from Chapter <a href="rubin-causal-model.html#rubin-causal-model">3</a>. Enos (2014) randomly placed Spanish-speaking confederates on nine train platforms around Boston, Massachusetts. Exposure to Spanish-speakers – the <code>treatment</code> – influenced attitudes toward immigration. These reactions were measured through changes in answers to three survey questions. Let’s load the libraries we will need in this chapter and look at the data.</p>
-<div class="sourceCode" id="cb854"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb854-1"><a href="two-parameters.html#cb854-1"></a>knitr<span class="op">::</span>opts_chunk<span class="op">$</span><span class="kw">set</span>(<span class="dt">echo =</span> <span class="ot">TRUE</span>, <span class="dt">tidy =</span> <span class="ot">FALSE</span>, <span class="dt">cache.extra =</span> <span class="kw">packageVersion</span>(<span class="st">'tufte'</span>))</span>
-<span id="cb854-2"><a href="two-parameters.html#cb854-2"></a></span>
-<span id="cb854-3"><a href="two-parameters.html#cb854-3"></a><span class="kw">library</span>(PPBDS.data)</span>
-<span id="cb854-4"><a href="two-parameters.html#cb854-4"></a><span class="kw">library</span>(tidyverse)</span>
-<span id="cb854-5"><a href="two-parameters.html#cb854-5"></a><span class="kw">library</span>(broom)</span>
-<span id="cb854-6"><a href="two-parameters.html#cb854-6"></a><span class="kw">library</span>(rsample)</span>
-<span id="cb854-7"><a href="two-parameters.html#cb854-7"></a><span class="kw">library</span>(skimr)</span>
-<span id="cb854-8"><a href="two-parameters.html#cb854-8"></a><span class="kw">library</span>(gt)</span>
-<span id="cb854-9"><a href="two-parameters.html#cb854-9"></a><span class="kw">library</span>(tidyverse)</span>
-<span id="cb854-10"><a href="two-parameters.html#cb854-10"></a><span class="kw">library</span>(tufte)</span></code></pre></div>
+<p>Let’s do some exploratory data analysis (EDA) of the <code>trains</code> data set from the <strong>PPBDS.data</strong> package. Recall the discussion from Chapter <a href="rubin-causal-model.html#rubin-causal-model">3</a>. Enos (2014) randomly placed Spanish-speaking confederates on nine train platforms around Boston, Massachusetts. Exposure to Spanish-speakers – the <code>treatment</code> – influenced attitudes toward immigration. These reactions were measured through changes in answers to three survey questions. Let’s load the libraries we will need in this chapter, all of which we have used before, and look at the data.</p>
+<div class="sourceCode" id="cb854"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb854-1"><a href="two-parameters.html#cb854-1"></a><span class="kw">library</span>(PPBDS.data)</span>
+<span id="cb854-2"><a href="two-parameters.html#cb854-2"></a><span class="kw">library</span>(broom)</span>
+<span id="cb854-3"><a href="two-parameters.html#cb854-3"></a><span class="kw">library</span>(rsample)</span>
+<span id="cb854-4"><a href="two-parameters.html#cb854-4"></a><span class="kw">library</span>(skimr)</span>
+<span id="cb854-5"><a href="two-parameters.html#cb854-5"></a><span class="kw">library</span>(tidyverse)</span></code></pre></div>
 <div class="sourceCode" id="cb855"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb855-1"><a href="two-parameters.html#cb855-1"></a><span class="kw">glimpse</span>(trains)</span></code></pre></div>
 <pre><code>## Rows: 115
 ## Columns: 8
@@ -213,7 +210,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 ## $ att_start &lt;dbl&gt; 11, 9, 3, 11, 8, 13, 13, 10, 12, 9, 10, 11, 13, 6, 8, 13, 7…
 ## $ treatment &lt;fct&gt; Treated, Treated, Treated, Treated, Control, Treated, Contr…
 ## $ att_end   &lt;dbl&gt; 11, 10, 5, 11, 5, 13, 13, 11, 12, 10, 9, 9, 13, 7, 8, 13, 8…</code></pre>
-<p>Here, we can see variables that indicate each respondent’s gender, political affiliations, age, and income. Additionally, we have variables that indicate whether a subject was in the control or treatment group, and the their attitudes toward immigration both before or after the treatment. You can type <code>?trains</code> to read the help page for more information about each variable. Let’s restrict attention to a subset of the variables.</p>
+<p>Here, we can see variables that indicate each respondent’s gender, political affiliations, age, and income. Additionally, we have variables that indicate whether a subject was in the control or treatment group, and their attitudes toward immigration both before (<code>att_start</code>) and after (<code>att_end</code>) the experiment. You can type <code>?trains</code> to read the help page for more information about each variable. Let’s restrict attention to a subset of the variables.</p>
 <div class="sourceCode" id="cb857"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb857-1"><a href="two-parameters.html#cb857-1"></a>ch8 &lt;-<span class="st"> </span>trains <span class="op">%&gt;%</span><span class="st"> </span></span>
 <span id="cb857-2"><a href="two-parameters.html#cb857-2"></a><span class="st">  </span><span class="kw">select</span>(age, att_end, party, treatment)</span></code></pre></div>
 <p>It is always smart to look at a some random samples of the data:</p>
@@ -227,7 +224,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 ## 3    63       5 Democrat Treated  
 ## 4    61       9 Democrat Control  
 ## 5    39       8 Democrat Treated</code></pre>
-<p><code>att_end</code> is a measure of person’s attitude toward immigration, a higher number means to a more conservative, i.e., a more exclusionary stance on immigration into the United States. Running <code>glimpse()</code> is another way of exploring a data set.</p>
+<p><code>att_end</code> is a measure of person’s attitude toward immigration, a higher number means more conservative, i.e., a more exclusionary stance on immigration into the United States. Running <code>glimpse()</code> is another way of exploring a data set.</p>
 <div class="sourceCode" id="cb860"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb860-1"><a href="two-parameters.html#cb860-1"></a>ch8 <span class="op">%&gt;%</span><span class="st"> </span></span>
 <span id="cb860-2"><a href="two-parameters.html#cb860-2"></a><span class="st">  </span><span class="kw">glimpse</span>()</span></code></pre></div>
 <pre><code>## Rows: 115
@@ -236,7 +233,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 ## $ att_end   &lt;dbl&gt; 11, 10, 5, 11, 5, 13, 13, 11, 12, 10, 9, 9, 13, 7, 8, 13, 8…
 ## $ party     &lt;chr&gt; "Democrat", "Republican", "Democrat", "Democrat", "Democrat…
 ## $ treatment &lt;fct&gt; Treated, Treated, Treated, Treated, Control, Treated, Contr…</code></pre>
-<p>Pay attention to the variable “type.” Do they make sense? Perhaps. But there are certainly grounds for suspicion. Why are <code>age</code> and <code>att_end</code> doubles rather than integers? Why is <code>party</code> a character variable and <code>treament</code> a factor variable? It could be that these are intentional choices made by the creator of the tibble, i.e., us. These could be mistakes. Or, most likely, these choices are a mixture of sensible and arbitrary. Regardless, it is your responsibility to notice them. You can’t make a good model without looking closely at the data which you are using.</p>
+<p>Pay attention to the variable “type.” Do they make sense? Perhaps. But there are certainly grounds for suspicion. Why are <code>age</code> and <code>att_end</code> doubles rather than integers? All the values in the data appear to be integers, so there is no benefit is having these variables be doubles. Why is <code>party</code> a character variable and <code>treament</code> a factor variable? It could be that these are intentional choices made by the creator of the tibble, i.e., us. These could be mistakes. Or, most likely, these choices are a mixture of sensible and arbitrary. Regardless, it is your responsibility to notice them. You can’t make a good model without looking closely at the data which you are using.</p>
 <p><code>skim</code> from the <strong>skimr</strong> package is the best way to get an overview of a tibble.</p>
 <div class="sourceCode" id="cb862"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb862-1"><a href="two-parameters.html#cb862-1"></a>ch8 <span class="op">%&gt;%</span><span class="st"> </span></span>
 <span id="cb862-2"><a href="two-parameters.html#cb862-2"></a><span class="st">  </span><span class="kw">skim</span>()</span></code></pre></div>
@@ -370,24 +367,26 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </tr>
 </tbody>
 </table>
-<p><code>skim()</code> shows us what the different values of <code>treatment</code> are because it is a factor. Unfortunately, it does not do the same for character variables like <code>party</code>. The ranges for <code>age</code> and <code>att_end</code> seem reasonable. Recall that participants were asked three questions about immigration issues, each of which allowed for an answer which was a strength of agreement between 1 and 5, with higher values indicating more agreement with conservative viewpoints. So, the most liberal possible value is 3 and the most conservative is 15.</p>
-<p>Plotting some variables from the dataset is another important practice in exploratory data analysis:</p>
+<p><code>skim()</code> shows us what the different values of <code>treatment</code> are because it is a factor. Unfortunately, it does not do the same for character variables like <code>party</code>. The ranges for <code>age</code> and <code>att_end</code> seem reasonable. Recall that participants were asked three questions about immigration issues, each of which allowed for an answer indicated strength of agreement on a scale form 1 to 5, with higher values indicating more agreement with conservative viewpoints. <code>att_end</code> is the sum of the responses to the three questions, so the most liberal possible value is 3 and the most conservative is 15.</p>
+<p>Always plot your data.</p>
 <div class="sourceCode" id="cb863"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb863-1"><a href="two-parameters.html#cb863-1"></a>ch8 <span class="op">%&gt;%</span></span>
 <span id="cb863-2"><a href="two-parameters.html#cb863-2"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> party, <span class="dt">y =</span> age)) <span class="op">+</span><span class="st"> </span></span>
 <span id="cb863-3"><a href="two-parameters.html#cb863-3"></a><span class="st">  </span><span class="kw">geom_jitter</span>(<span class="dt">width =</span> <span class="fl">0.1</span>, <span class="dt">height =</span> <span class="dv">0</span>) <span class="op">+</span><span class="st"> </span></span>
-<span id="cb863-4"><a href="two-parameters.html#cb863-4"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">"Party"</span>,</span>
-<span id="cb863-5"><a href="two-parameters.html#cb863-5"></a>       <span class="dt">y =</span> <span class="st">"Age"</span>,</span>
-<span id="cb863-6"><a href="two-parameters.html#cb863-6"></a>       <span class="dt">title =</span> <span class="st">"Age by Party Affiliation in Trains Dataset"</span>)</span></code></pre></div>
+<span id="cb863-4"><a href="two-parameters.html#cb863-4"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">"Age by Party Affiliation in Trains Dataset"</span>,</span>
+<span id="cb863-5"><a href="two-parameters.html#cb863-5"></a>       <span class="dt">subtitle =</span> <span class="st">"Where are the old Republicans?"</span>,</span>
+<span id="cb863-6"><a href="two-parameters.html#cb863-6"></a>       <span class="dt">x =</span> <span class="st">"Party"</span>,</span>
+<span id="cb863-7"><a href="two-parameters.html#cb863-7"></a>       <span class="dt">y =</span> <span class="st">"Age"</span>)</span></code></pre></div>
 <p><img src="book_temp_files/figure-html/unnamed-chunk-615-1.png" width="672"></p>
 <p>From this plot, we can gather that there are many more Democrats in this dataset than Republicans. Democrats also span a wider range of ages than Republicans. The mode age for Democrats appears to be 50.</p>
 <div class="sourceCode" id="cb864"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb864-1"><a href="two-parameters.html#cb864-1"></a>ch8 <span class="op">%&gt;%</span></span>
 <span id="cb864-2"><a href="two-parameters.html#cb864-2"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> treatment, <span class="dt">y =</span> att_end)) <span class="op">+</span><span class="st"> </span></span>
 <span id="cb864-3"><a href="two-parameters.html#cb864-3"></a><span class="st">  </span><span class="kw">geom_boxplot</span>() <span class="op">+</span><span class="st"> </span></span>
-<span id="cb864-4"><a href="two-parameters.html#cb864-4"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">"Treatment"</span>,</span>
-<span id="cb864-5"><a href="two-parameters.html#cb864-5"></a>       <span class="dt">y =</span> <span class="st">"Attitude End"</span>,</span>
-<span id="cb864-6"><a href="two-parameters.html#cb864-6"></a>       <span class="dt">title =</span> <span class="st">"Attitude End by Treatment in Trains Dataset"</span>)</span></code></pre></div>
+<span id="cb864-4"><a href="two-parameters.html#cb864-4"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">"Attitude End by Treatment in Trains Dataset"</span>,</span>
+<span id="cb864-5"><a href="two-parameters.html#cb864-5"></a>       <span class="dt">subtitle =</span> <span class="st">"Did the treatment make people more conservative?"</span>,</span>
+<span id="cb864-6"><a href="two-parameters.html#cb864-6"></a>       <span class="dt">x =</span> <span class="st">"Treatment"</span>,</span>
+<span id="cb864-7"><a href="two-parameters.html#cb864-7"></a>       <span class="dt">y =</span> <span class="st">"Attitude After Experiment"</span>)</span></code></pre></div>
 <p><img src="book_temp_files/figure-html/unnamed-chunk-616-1.png" width="672"></p>
-<p>On a boxplot, the top and bottom borders of the box denotes the 75th and 25th percentiles, respectively. The line inside the box denotes the mean of the data. Treated individuals have a higher mean att_end than the control group, and a higher distribution in general, with its 25th percentile lining up with the mean of the control group. The control group has an outlier, while the treatment group does not.</p>
+<p>On a boxplot, the top and bottom borders of the box denotes the 75th and 25th percentiles, respectively. The line inside the box denotes the mean of the data. Treated individuals have a higher mean <code>att_end</code> than the control group, and a higher distribution in general, with its 25th percentile lining up with the mean of the control group. The control group has one outlier, while the treatment group has none.</p>
 </div>
 <div id="review-of-one-parameter-estimation" class="section level2">
 <h2>
@@ -4286,7 +4285,7 @@ Note that the math for both the predictive model we worked on earlier and this m
 <a href="n-parameters.html"><button class="btn btn-default">Next</button></a>
 </p>
 <p class="build-date">Page built: 
-2020-08-05
+2020-08-06
 </p>
 </div>
 </div>
