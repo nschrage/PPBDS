@@ -28,28 +28,21 @@ We have now introduced almost all of the key themes in the book. The last five c
 
 <!-- DK: Still need to standardize the method we use for providing references. -->
 
-Let's do some exploratory data analysis (EDA) of the `trains` data set from the **PPBDS.data** package. Recall the discussion from Chapter \@ref(rubin-causal-model). Enos (2014) randomly placed Spanish-speaking confederates on nine train platforms around Boston, Massachusetts. Exposure to Spanish-speakers -- the `treatment` -- influenced attitudes toward immigration. These reactions were measured through changes in answers to three survey questions. Let's load the libraries we will need in this chapter and look at the data.
+Let's do some exploratory data analysis (EDA) of the `trains` data set from the **PPBDS.data** package. Recall the discussion from Chapter \@ref(rubin-causal-model). Enos (2014) randomly placed Spanish-speaking confederates on nine train platforms around Boston, Massachusetts. Exposure to Spanish-speakers -- the `treatment` -- influenced attitudes toward immigration. These reactions were measured through changes in answers to three survey questions. Let's load the libraries we will need in this chapter, all of which we have used before, and look at the data.
 
 ```{r, message=FALSE}
-
-knitr::opts_chunk$set(echo = TRUE, tidy = FALSE, cache.extra = packageVersion('tufte'))
-
 library(PPBDS.data)
-library(tidyverse)
 library(broom)
 library(rsample)
 library(skimr)
-library(gt)
 library(tidyverse)
-library(tufte)
-
 ```
 
 ```{r}
 glimpse(trains)
 ```
 
-Here, we can see variables that indicate each respondent's gender, political affiliations, age, and income. Additionally, we have variables that indicate whether a subject was in the control or treatment group, and the their attitudes toward immigration both before or after the treatment. You can type `?trains` to read the help page for more information about each variable. Let's restrict attention to a subset of the variables.
+Here, we can see variables that indicate each respondent's gender, political affiliations, age, and income. Additionally, we have variables that indicate whether a subject was in the control or treatment group, and their attitudes toward immigration both before (`att_start`) and after (`att_end`) the experiment. You can type `?trains` to read the help page for more information about each variable. Let's restrict attention to a subset of the variables.
 
 ```{r}
 ch8 <- trains %>% 
@@ -63,14 +56,14 @@ ch8 %>%
   sample_n(5)
 ```
 
-`att_end` is a measure of person's attitude toward immigration, a higher number means to a more conservative, i.e., a more exclusionary stance on immigration into the United States. Running `glimpse()` is another way of exploring a data set.
+`att_end` is a measure of person's attitude toward immigration, a higher number means more conservative, i.e., a more exclusionary stance on immigration into the United States. Running `glimpse()` is another way of exploring a data set.
 
 ```{r}
 ch8 %>% 
   glimpse()
 ```
 
-Pay attention to the variable "type." Do they make sense? Perhaps. But there are certainly grounds for suspicion. Why are `age` and `att_end` doubles rather than integers? Why is `party` a character variable and `treament` a factor variable? It could be that these are intentional choices made by the creator of the tibble, i.e., us. These could be mistakes. Or, most likely, these choices are a mixture of sensible and arbitrary. Regardless, it is your responsibility to notice them. You can't make a good model without looking closely at the data which you are using.
+Pay attention to the variable "type." Do they make sense? Perhaps. But there are certainly grounds for suspicion. Why are `age` and `att_end` doubles rather than integers? All the values in the data appear to be integers, so there is no benefit is having these variables be doubles. Why is `party` a character variable and `treament` a factor variable? It could be that these are intentional choices made by the creator of the tibble, i.e., us. These could be mistakes. Or, most likely, these choices are a mixture of sensible and arbitrary. Regardless, it is your responsibility to notice them. You can't make a good model without looking closely at the data which you are using.
 
 `skim` from the **skimr** package is the best way to get an overview of a tibble.
 
@@ -79,35 +72,33 @@ ch8 %>%
   skim()
 ```
 
-`skim()` shows us what the different values of `treatment` are because it is a factor. Unfortunately, it does not do the same for character variables like `party`. The ranges for `age` and `att_end` seem reasonable. Recall that participants were asked three questions about immigration issues, each of which allowed for an answer which was a strength of agreement between 1 and 5, with higher values indicating more agreement with conservative viewpoints. So, the most liberal possible value is 3 and the most conservative is 15.
+`skim()` shows us what the different values of `treatment` are because it is a factor. Unfortunately, it does not do the same for character variables like `party`. The ranges for `age` and `att_end` seem reasonable. Recall that participants were asked three questions about immigration issues, each of which allowed for an answer indicated strength of agreement on a scale form 1 to 5, with higher values indicating more agreement with conservative viewpoints. `att_end` is the sum of the responses to the three questions, so the most liberal possible value is 3 and the most conservative is 15.
 
-Plotting some variables from the dataset is another important practice in exploratory data analysis:
+Always plot your data.
 
 ```{r}
-
 ch8 %>%
   ggplot(aes(x = party, y = age)) + 
   geom_jitter(width = 0.1, height = 0) + 
-  labs(x = "Party",
-       y = "Age",
-       title = "Age by Party Affiliation in Trains Dataset")
-
+  labs(title = "Age by Party Affiliation in Trains Dataset",
+       subtitle = "Where are the old Republicans?",
+       x = "Party",
+       y = "Age")
 ```
 
 From this plot, we can gather that there are many more Democrats in this dataset than Republicans. Democrats also span a wider range of ages than Republicans. The mode age for Democrats appears to be 50.
 
 ```{r}
-
 ch8 %>%
   ggplot(aes(x = treatment, y = att_end)) + 
   geom_boxplot() + 
-  labs(x = "Treatment",
-       y = "Attitude End",
-       title = "Attitude End by Treatment in Trains Dataset")
-
+  labs(title = "Attitude End by Treatment in Trains Dataset",
+       subtitle = "Did the treatment make people more conservative?",
+       x = "Treatment",
+       y = "Attitude After Experiment")
 ```
 
-On a boxplot, the top and bottom borders of the box denotes the 75th and 25th percentiles, respectively. The line inside the box denotes the mean of the data. Treated individuals have a higher mean att_end than the control group, and a higher distribution in general, with its 25th percentile lining up with the mean of the control group. The control group has an outlier, while the treatment group does not. 
+On a boxplot, the top and bottom borders of the box denotes the 75th and 25th percentiles, respectively. The line inside the box denotes the mean of the data. Treated individuals have a higher mean `att_end` than the control group, and a higher distribution in general, with its 25th percentile lining up with the mean of the control group. The control group has one outlier, while the treatment group has none. 
 
 
 ## Review of One Parameter Estimation
