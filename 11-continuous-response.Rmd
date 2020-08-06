@@ -55,6 +55,17 @@ Wouldn't it be interesting to predict `ideology` based off of other variables? T
 
 Load `PPBDS.data` and `skimr`. `skim()` the dataset.
 
+```{r echo=FALSE, message=FALSE}
+library(PPBDS.data)
+library(tidyverse)
+nes <- nes %>%
+  mutate(state = as.factor(state),
+         gender = as.factor(gender),
+         race = as.factor(race),
+         pres_appr = as.factor(pres_appr),
+         education = as.character(education))
+```
+
 ```{r}
 library(PPBDS.data)
 library(skimr)
@@ -103,14 +114,30 @@ With this cleaned data, let's dive into the first model we will create, which wi
 
 First, load the ***tidymodels*** library and use `initial_split()` to split the data into testing and training sets. Don't worry about the testing set-- for now,  we will build our model off of the training set.
 
-```{r}
+```{r eval=FALSE}
 library(tidymodels)
 library(rsample)
 
+set.seed(10)
 nes_split <- initial_split(nes_2016)
 
 nes_training <- nes_split %>% training()
 nes_testing <- nes_split %>% testing()
+```
+
+```{r}
+library(tidymodels)
+library(rsample)
+
+set.seed(10)
+nes_split <- initial_split(nes_2016)
+
+nes_training <- nes_split %>%
+  training() %>%
+  mutate(education = as.character(education))
+nes_testing <- nes_split %>%
+  testing() %>%
+  mutate(education = as.character(education))
 ```
 
 Next, construct the linear regression model.
@@ -127,17 +154,17 @@ Here, we are using the ***parsnip*** package to create an engine that can run th
 Fit the model to the data. We will first create a regression formula and save it as an R object for future recall. There are a lot of different combinations we could use for the formula, but which will yield the *best* model? For now, we will build a full model containing all of the predictor variables
 
 ```{r}
-lm_formula <- formula(ideology ~ state + gender + race + income + age + education + pres_appr)
+interact_form <- formula(ideology ~ gender * race + state * income + age + education + pres_appr)
 ```
 
 ```{r eval=FALSE}
-fit(lm_model, lm_formula, nes_training)
+fit(lm_model, interact_form, nes_training)
 ```
 
 Note that we can use `tidy()`, just like we did in previous chapters, to take a look at the results:
 
 ```{r}
-fit(lm_model, lm_formula, nes_training) %>%
+fit(lm_model, interact_form, nes_training) %>%
   tidy(conf.int = TRUE) %>%
   select(term, estimate, conf.low, conf.high)
 ```
@@ -167,6 +194,7 @@ The function `vfold_cv()` splits your training set into `v`, a specified number 
 Below, we will create a new object called `nes_folds` that contains equally sized sections of `nes_training`.
 
 ```{r}
+set.seed(10)
 nes_folds <- nes_training %>%
   vfold_cv(v = 5)
 ```
@@ -179,19 +207,32 @@ Recipes are what ***tidymodels*** use in lieu of defining a formula traditionall
 There are a number of useful functions that can be piped into recipes. One particularly useful family of functions is the family of step functions. These functions conduct a variety of transformations, from removing variables with high correlations to other variables (`step_corr()`) to adding in an interaction term (`step_interact()`). To learn more about recipes, you can visit the [Tidymodels website.](https://recipes.tidymodels.org/reference/index.html)
 ```
 
-Finally, the `resamples` argument is where you input the cross-validation dataset.
+Usually, a simple formula without interaction terms can be plugged right in to `fit_resamples()`. However, ***tidymodels*** does not allow in-line functions in recipes, meaning we need to use a `step_*` function to add the interaction terms. Let's create our recipe.
 
 ```{r}
+lm_rec <- recipe(ideology ~ gender + race + state + income + age + education + pres_appr, data = nes_training) %>%
+  step_interact(terms = ~ gender:race + state:income)
+```
+
+<!-- EC: Adding interaction terms seems to complicate fit_resamples. -->
+
+Finally, the `resamples` argument is where you input the cross-validation dataset.
+
+<!-- EC: Not sure why fold 2 is getting an error but the other folds are not. -->
+
+```{r}
+set.seed(10)
 fit_resamples(object = lm_model,
-              preprocessor = recipe(lm_formula, data = nes_training),
+              preprocessor = lm_rec,
               resamples = nes_folds)
 ```   
 
 Because the metrics are in list-columns, we can extract the average metrics across all the folds using the `collect_metrics()` function:
 
 ```{r}
+set.seed(10)
 fit_resamples(lm_model,
-              recipe(lm_formula, data = nes_training),
+              lm_rec,
               nes_folds) %>%
   collect_metrics()
 ```
@@ -200,7 +241,7 @@ Now that we've viewed the cross-validation metrics, it's time to use new data: n
 
 ```{r}
 lm_model %>%
-  fit(lm_formula, data = nes_training) %>%
+  fit(interact_form, data = nes_training) %>%
   predict(new_data = nes_testing)
 ```
 
@@ -208,13 +249,42 @@ To extract the rmse, we set the "truth" to `ideology` so this function can compa
 
 ```{r}
 lm_model %>%
-  fit(lm_formula, data = nes_training) %>%
+  fit(interact_form, data = nes_training) %>%
   predict(new_data = nes_testing) %>%
   bind_cols(nes_testing) %>%
   rmse(truth = ideology, estimate = .pred)
 ```
 
 The mean squared error is about 1.64.
+
+What if we create completely new data outside of the testing set? Time to make up some imaginary people. Let's say we have four individuals whose ideology in 2016 we wanted to predict. We can create a tibble with the values of their demographic information, like so:
+
+<!-- EC: Do we want to include pres_appr? Is that a meaningful variable or is that too close to the outcome variable? -->
+
+```{r}
+new_people <- tibble("Name" = c("Alice", "Bob", "Chelsea", "Darren"),
+                     "state" = as.factor(c("VA", "AL", "VA", "AL")),
+                     "gender" = as.factor(c("Female", "Male", "Female", "Male")),
+                     "income" = c(3, 1, 3, 5),
+                     "age" = c("35 - 44", "55 - 64", "35 - 44", "55 - 64"),
+                     "education" = c("elementary", "hs diploma", "hs diploma +", "hs diploma"),
+                     "race" = c("White", "White", "White", "White"),
+                     "pres_appr" = as.factor(c("approve", "approve", "approve", "approve")))
+```
+
+Now, let's predict each new person's ideology using the linear regression model we just created.
+
+```{r this-is-not-knitting, eval=FALSE}
+lm_model %>%
+  fit(interact_form, data = nes_training) %>%
+  predict(new_data = new_people) %>%
+  bind_cols(new_people) %>%
+  rename("ideology" = ".pred")
+```
+
+As you can see, the two women, Alice and Chelsea, have similar values for their variables save for one: education. Alice is educated at the elementary level, whereas Chelsea holds an advanced degree. Their predicted ideologies are 2.22 and 2.42 respectively, showing that a 35-44 year old white woman from Virginia who approved of the sitting President in 2016 with an advanced degree was on average 0.20 more conservative than her counterpart with an elementary degree.
+
+Meanwhile, white 55-64 year old men with high school diplomas from Alabama differ in their income; Bob is two standard deviations above average, whereas Darren is two standard deviations below average in earnings. All else held equal, Bob's ideology was estimated to be more conservative than Darren's by 0.13. Let's see if these observations hold up with our other models.
 
 ## Using `stan_glm()`
 
@@ -233,33 +303,44 @@ stan_model <-
 
 Next, let's fit this model using the formula we specified before. We can select for the relevant terms after using `tidy()` to make our tibble viewable.
 
-```{r message=FALSE, warning=FALSE}
-fit(stan_model, lm_formula, nes_training) %>%
+```{r message=FALSE, warning=FALSE, eval=FALSE}
+set.seed(10)
+fit(stan_model, interact_form, nes_training) %>%
   tidy(conf.int = TRUE) %>%
   select(term, estimate, std.error)
 ```
 
-### Leave-One-Out Cross Validation
+<!-- EC: Removed LOO. Add back in K-fold -->
 
-Another type of cross-validation is called Leave-One-Out (LOO) cross validation. Instead of creating a specified number of folds, such as the case in V-Fold cross validation, the number of resamples corresponds to the number of rows in the dataset. This is because each resample leaves out exactly one data point, estimates the model based off of the remaining points, and assesses the accuracy of the model based off of the out-of-sample data point. 
+### Verifying fit using cross-validation
 
-LOO cross validation is especially useful for Bayesian models. However, one drawback is that they take a long time to run. Compared to `v` resamples in K-fold cross validation with `vfold_cv()`, LOO will need to run as many resamples as there are rows in the data.
+Let's practice K-Fold validation with the `stan` model.
 
-First, let's create `nes_loo`, which will run LOO cross validation on the data set.
+```{r cache=TRUE}
+set.seed(10)
+fit_resamples(object = stan_model,
+              preprocessor = lm_rec,
+              resamples = nes_folds)
+```   
 
-```{r}
-nes_loo <- loo_cv(nes_training)
-```
 
-Next, we will use `fit_resamples()` just like before, replacing `nes_folds` with our newly defined object. Remember, the model we are testing is `stan_model`.
-
-```{r eval=FALSE}
+```{r cache=TRUE, eval=FALSE}
+set.seed(10)
 fit_resamples(stan_model,
-              recipe(lm_formula, data = nes_training),
-              nes_loo)
+              lm_rec,
+              nes_folds) %>%
+  collect_metrics()
 ```
 
-<!-- EC: LOO is not supported with tune. Do we want to introduce something else, like the ***caret*** package? https://topepo.github.io/caret/model-training-and-tuning.html. The authors of tidymodels say LOO is deprecated: https://stackoverflow.com/questions/62844003/implementing-loo-cv-from-rsample-in-tidymodels-->
+Let's test the stan model using our four `new_people`.
+
+```{r message=FALSE, eval=FALSE}
+stan_model %>%
+  fit(interact_form, data = nes_training) %>%
+  predict(new_people) %>%
+  bind_cols(new_people) %>%
+  rename("ideology" = ".pred")
+```
 
 What if we created a bunch of different formulas that used different permutations of predictor variables? For example, one would exclude `state`, which has 50 different levels.
 
@@ -277,36 +358,37 @@ race_gender_form <- update(basic_form,
 
 demo_form <- formula(ideology ~ age + gender + race + income)
 
-edu_form <- update(race_gender_form,
-                   ~ . + education)
+non_state_form <- update(demo_form,
+                         ~ . + education + pres_appr)
 
-non_state_form <- update(edu_form,
-                         ~ . + age + income)
+full_form <- update(non_state_form,
+                   ~ . + state)
 ```
 
-Next, we will save these different formulas, along with the original `lm_formula`, in a tibble to easily remember and recall the formulas.
+Next, we will save these different formulas, along with the original `interact_form`, in a tibble to easily remember and recall the formulas.
 
 ```{r}
 nes_formulas <- tibble(formula = c(basic_form,
                                    race_gender_form,
                                    demo_form,
-                                   edu_form,
                                    non_state_form,
-                                   lm_formula),
+                                   full_form,
+                                   interact_form),
                        group = c("Presidential approval model",
                                  "Race and gender model",
                                  "Demographic model",
-                                 "Education model",
                                  "Full model without state",
-                                 "Full model"))
+                                 "Full model",
+                                 "Interaction model"))
 ```
 
 Now, we can use `map_*` to apply all of these models and view their metrics to see which ones have the lowest rmse values.
 
 ```{r cache=TRUE}
+set.seed(10)
 folds_metrics<- nes_formulas %>%
   mutate(metrics = map(formula, ~ fit_resamples(object = lm_model,
-                                                preprocessor = recipe(., data = nes_training),
+                                                preprocessor = .,
                                                 resamples = nes_folds) %>%
                          collect_metrics()))
 ```
@@ -369,65 +451,24 @@ nnet_model <- mlp(hidden_units = 5) %>%
 nnet_model
 ```
 
-### Bootstrap
+### Verifying fit with cross-validation
 
-Besides cross-validation, another way we can improve the variance of our final estimate is to take more samples. To do this, we would no longer require the training set to be partitioned into non-overlapping sets. Instead, we would just pick $K$ sets of some size at random.
+Let's cross-validate our predictions using `vfold_cv()`.
 
-One popular version of this technique, at each fold, picks observations at random with replacement (which means the same observation can appear twice) -- our old friend the *bootstrap*.
-
-In **rsample**, we can do that using the `boostraps()` function.  The `times` argument states how many bootstrap samples you want to take:
-
-```{r}
-set.seed(1234)
-
-nes_boots <- nes_training %>%
-  bootstraps(times = 25)
-```
-
-Now we can use `fit_resample()` just like we did with `nes_folds`.  Here's how we do it with one formula:
-
-```{r cache=TRUE}
+```{r message=FALSE, eval=FALSE}
+set.seed(10)
 fit_resamples(object = nnet_model,
-              preprocessor = recipe(non_state_form, data = nes_training),
-              resamples = nes_boots) %>%
+              preprocessor = lm_rec,
+              resamples = nes_folds)
+```   
+
+```{r eval=FALSE}
+set.seed(10)
+fit_resamples(nnet_model,
+              lm_rec,
+              nes_folds) %>%
   collect_metrics()
 ```
-
-And we can also adapt our code to run this for every formula in `nes_formulas`:
-
-```{r}
-boots_metrics<- nes_formulas %>%
-  mutate(metrics = map(formula, ~ fit_resamples(object = nnet_model,
-                                                preprocessor = recipe(., data = nes_training),
-                                                resamples = nes_boots) %>%
-                         collect_metrics()))
-
-boots_metrics %>%
-  mutate(mean_rmse = map_dbl(metrics, ~ filter(., .metric == "rmse") %>% pull(mean)),
-         se_rmse = map_dbl(metrics, ~ filter(., .metric == "rmse") %>% pull(std_err))) %>%
-  select(group, mean_rmse, se_rmse)
-```
-Notably, the Race and gender model that includes `pres_appr` has the lowest mean squared error, whereas the full model has a higher mean squared error than in the `lm_model`. Notice that the standard errors are also significantly smaller.
-
-```{r, echo = FALSE, message = FALSE}
-# boots_metrics <- cces_formulas %>%
-#   mutate(metrics = map(formula, ~ fit_resamples(lm_spec,
-#                                                 preprocessor = .,
-#                                                 resamples = cces_boots) %>%
-#                          collect_metrics()))
-# 
-# boots_metrics %>%
-#   write_rds(path = "data/boots_metrics.rds")
-# 
-# boots_metrics <- read_rds(path = "data/boots_metrics.rds")
-# 
-# boots_metrics %>%
-#   mutate(mean_rmse = map_dbl(metrics, ~ filter(., .metric == "rmse") %>% pull(mean)),
-#          se_rmse = map_dbl(metrics, ~ filter(., .metric == "rmse") %>% pull(std_err))) %>%
-#   select(group, mean_rmse, se_rmse)
-```
-
-Cross-validation and the bootstrap lead to similar estimates of the RMSE, but note that the standard error of the RMSE goes down using the bootstrap method, since more samples were taken.  However, the trade-off is that the more samples you take, the more computing time you'll use.
 
 ### Predicting new data
 
@@ -441,6 +482,15 @@ nnet_model %>%
   rmse(truth = ideology, estimate = .pred)
 ```
 
+Now, let's predict each new person's ideology using the `nnet` model we created, like before.
+
+```{r message=FALSE, eval=FALSE}
+nnet_model %>%
+  fit(interact_form, data = nes_training) %>%
+  predict(new_people) %>%
+  bind_cols(new_people) %>%
+  rename("ideology" = ".pred")
+```
 
 ## Model selection
 
