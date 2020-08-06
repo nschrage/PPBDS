@@ -1,0 +1,126 @@
+---
+title: "DGM Example"
+author: "David Kane"
+date: "7/17/2020"
+output: html_document
+---
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(rsample)
+library(broom)
+library(PPBDS.data)
+```
+
+The purpose of this document is to provide an example how to construct a *data generating mechanism* for a simple problem. Suggestions welcome.
+
+We will work with the `nhanes` data from the **PPBDS.data** package. Some set-up
+
+```{r}
+ch7 <- nhanes %>% 
+  filter(year == 2009, gender == "male", age >= 18) %>% 
+  select(height) %>% 
+  drop_na()
+
+lm.obj <- lm(data = ch7, height ~ 1)
+
+x <- augment(lm.obj) %>% 
+  select(height, .fitted, .resid)
+
+```
+
+```{r}
+mean(ch7$height)
+sd(ch7$height)
+```
+
+
+First, create a dgm for height for adult men in 2009
+
+
+```{r}
+dgm_height_1 <- function(){
+  
+  fitted <- sample(x$.fitted, size = 1)
+  variation <- sample(x$.resid, size = 1)
+  
+ fitted + variation 
+}
+```
+
+This is, obviously, incredibly inefficient, but perhaps it is not a bad way to start. Every DGM combines the fitted model with some source of variation. Mean and standard deviation are similar. Is there some standard way to compare two distributions? Maybe QQ-plots?
+
+```{r}
+n <- 1000
+
+tibble(orig = sort(sample(ch7$height, size = n, replace = TRUE)),
+       sim = sort(replicate(n, dgm_height_1()))) %>% 
+  ggplot(aes(orig, sim)) +
+    geom_point()
+```
+
+
+Large n makes everything look really good in the middle, but there are still weirdnesses in the tails. Let's clean up a little:
+
+```{r}
+dgm_height_2 <- function(){
+  
+  ## All the fitted values are the same. Instead of bootstraping the residuals,
+  ## we can just model them as coming from a normal distribution.
+  
+  fitted <- x$.fitted[1]
+  
+  variation <- rnorm(n = 1, mean = 0, sd = sd(x$.resid))
+  
+ fitted + variation 
+}
+```
+
+
+```{r}
+n <- 100000
+
+tibble(orig = sort(sample(ch7$height, size = n, replace = TRUE)),
+       sim = sort(replicate(n, dgm_height_2()))) %>% 
+  ggplot(aes(orig, sim)) +
+    geom_point()
+```
+
+It looks like putting together a fitted value and something which captures the unmodelled variation does a good job of creating a DGM which can create fake data which looks like our real data. But what is the best way to handle this in general? And in what order should we teach these things?
+
+Perhaps the predict function is more powerful than I thought? One tricky thing is how to give in new data for the model with just a mean, like in chapter 7. For that, you can make an empty tibble like:
+
+```{r}
+predict(lm.obj, newdata = tibble(.rows = 5))
+```
+
+Note this useful tricks, which allow us to talk about fitted models immediately.
+
+```{r}
+predict(lm.obj, newdata = tibble(.rows = 5), interval = "confidence")
+predict(lm.obj, newdata = tibble(.rows = 5), interval = "prediction")
+```
+
+There is a built-in function called `simulate()`! Who knew? But why does it always produce the same number of rows as the original data? Can't I just simulate one observation?
+
+```{r}
+simulate(lm.obj, nsim = 1)
+```
+
+Looks good graphically.
+
+```{r}
+tibble(orig = sort(ch7$height),
+       sim = sort(simulate(lm.obj, nsim = 1)[,1])) %>% 
+  ggplot(aes(orig, sim)) +
+    geom_point()
+```
+
+```{r}
+simulate(lm.obj, nsim = 1, newdata = tibble(.rows = 2))
+```
+
+
+
+
