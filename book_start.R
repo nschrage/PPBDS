@@ -15,6 +15,7 @@ library(scales)
 library(gt)
 library(gtsummary)
 library(patchwork)
+library(msmbstyle)
 
 options(digits = 2)
 
