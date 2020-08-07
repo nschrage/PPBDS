@@ -5,27 +5,15 @@ output_yaml:
 
 # Probability
 
-<!-- 1) No orphan parantheses. Meaning no ) by itself and no ( with nothing after. -->
+<!-- 1) No orphan parantheses. Meaning no ) by itself and no ( with nothing after. - Done VZ-->
 
-<!-- 2) "Do you have disease?" on Y- axis instead. The data here is: What does your test show? The two models are: You have the disease and you don't have the disease. -->
+<!-- 2) "Do you have disease?" on Y- axis instead. The data here is: What does your test show? The two models are: You have the disease and you don't have the disease. Done VZ-->
 
-<!-- 3) Maybe switch the graph making package to [daggity](https://CRAN.R-project.org/package=dagitty)? I think that dagitty() would do the same as your package. I hate having to install a bioconductor package.  -->
+<!-- 3) Maybe switch the graph making package to [daggity](https://CRAN.R-project.org/package=dagitty)? I think that dagitty() would do the same as your package. I hate having to install a bioconductor package.  
 
-<!-- 4) Define the mathematical distribution of electoral college votes as the distribution which results from running the following calculation 10,000 times. Take the vector ev of electoral college votes, which is an integer vector of length 51. (Use the current value, don't worry about the past.) Multiple this vector, element-by-element, with `rbinom(length(ev), size = 1, p = 0.5)`. Sum the resulting vector. Code:  `ev %*% rbinom(length(ev), size = 1, p = 0.5)` Doing this once gives you the total electoral votes for the Democrat in that one simulation. -->
+Explored this. I think it is possible but would mean losing the text above and below the lines. Still figuring out how to get the arrows to go in the right direction VZ-->
 
-```{r}
-# ev <- c(12, 23, 2, 4, 25, 3, 34, 12, 26, 34)
-# sims <- 10000
-# 
-# result <- tibble(total = (matrix(rbinom(sims*length(ev), 
-#                         size = 1, p = 0.5), 
-#                  ncol = length(ev)) %*% ev)[,1])
-# 
-# ggplot(data = result, aes(total)) +
-#   geom_histogram(binwidth = 1)
-  
-```
-
+<!-- 4) Define the mathematical distribution of electoral college votes as the distribution which results from running the following calculation 10,000 times. Take the vector ev of electoral college votes, which is an integer vector of length 51. (Use the current value, don't worry about the past.) Multiple this vector, element-by-element, with `rbinom(length(ev), size = 1, p = 0.5)`. Sum the resulting vector. Code:  `ev %*% rbinom(length(ev), size = 1, p = 0.5)` Doing this once gives you the total electoral votes for the Democrat in that one simulation. - done VZ-->
 
 <!-- Add 4th subsubpart to first part explaining Joint Distributions. Do this at the end of probability distribution part.  Example is one die with 50% likelihood of coming up 6 (and other faces at 10%) and second die 50% likelihood. Don't only care about the total. In this situation, you need a 3d plot. p(A, B) is p(Result of Die 1, Result of Die 2). Just one empirical plot of 100 roles. -->
 
@@ -109,9 +97,9 @@ DK: If we want to do rethinking: https://bookdown.org/content/3890/small-worlds-
 
 library(scales)
 library(ggthemes)
-library(Rgraphviz)
-library(infer)
+# library(Rgraphviz)
 library(tufte)
+library(dagitty)
 library(tidyverse)
 
 # invalidate cache when the tufte version changes
@@ -221,8 +209,7 @@ In the case of the coin toss, the posterior distribution changes depending on yo
 mydata <- tibble(
   results = c(
     rep(0, 95),
-    rep(1, 5)
-))
+    rep(1, 5)))
 
 ggplot(mydata, aes(x = results)) +
   geom_histogram(aes(y=..count../sum(..count..)), binwidth = 0.5, 
@@ -301,27 +288,15 @@ The *posterior distribution* for rolling one dice a hundred times will vary base
 
 # Flipping a dice 100 times
 
-mydata <- tibble(
-  results = c(
-    rep(2, 30),
-    rep(3, 15),
-    rep(4, 15),
-    rep(5, 3),
-    rep(6, 2),
-    rep(7, 1),
-    rep(8, 5),
-    rep(9, 5),
-    rep(10, 5),
-    rep(11,1),
-    rep(12,3)
-))
+mydata <- tibble(results = c(rep(2, 30),rep(3, 15),rep(4, 15),rep(5, 3),
+                             rep(6, 2),rep(7, 1),rep(8, 5),rep(9, 5),
+                             rep(10, 5),rep(11,1),rep(12,3)))
 
 ggplot(mydata, aes(x = results)) +
   geom_histogram(aes(y=..count../sum(..count..)), binwidth = 0.5, 
                  fill = "dark gray", color = "white") +
   labs(title = "Posterior Probability Distribution",
-       subtitle = "Rolling Two Die at a Crooked Casino",
-       x = "Outcomes",
+       subtitle = "Rolling Two Die at a Crooked Casino", x = "Outcomes",
        y = "Probability") +
   scale_x_continuous(breaks = seq(0,12,1), labels = 0:12) +
   theme_classic()
@@ -329,16 +304,36 @@ ggplot(mydata, aes(x = results)) +
 ```
 ### Presidential Elections
 
-Now we let's say we are building probability distributions for political events, like a presidential election. We want to know p(Candidate A wins the election).
+Now we let's say we are building probability distributions for political events, like a presidential election. We want to know p(Democrats win x electoral votes), where x represents the range of possible outcomes from 0 to 538.
 
-It would be incredibly naive to create the following *mathematical distribution*.
+It would be incredibly naive to create the following *mathematical distribution*. We create a distribution by running a simulation 10,000 times, where the chances of the Democrats winning any given electoral vote is 0.5.
+
+
+```{r}
+
+ev <- c(rep(3, 8), rep(4, 5), rep(5, 3), rep(6, 6), rep(7, 3), rep(8,2),
+        rep(9, 3), rep(10, 4), rep(11, 4), 12, 13, 14, 15, rep(16, 2), 18, 20 , 20, 19, 29, 38, 55)
+
+sims <- 10000
+
+result <- tibble(total = (matrix(rbinom(sims*length(ev),
+                        size = 1, p = 0.5),
+                 ncol = length(ev)) %*% ev)[,1])
+
+ggplot(data = result, aes(total)) +
+  geom_histogram(binwidth = 1) +
+  labs(title = "Mathematical Probability Distribution",
+       y = "Number of Simulations (Count)",
+       x = "Total of Electoral Votes for Democrats") +
+  theme_classic()
+
+```
 
 ```{r, echo = FALSE}
 
 # Flipping one coin 100 times
 
-mydata <- tibble(results = c(rep(0, 50),
-                             rep(1, 50)))
+mydata <- tibble(results = c(rep(0, 50),rep(1, 50)))
 
 ggplot(mydata, aes(x = results)) +
   geom_histogram(aes(y=..count../sum(..count..)), binwidth = 0.5, 
@@ -356,12 +351,12 @@ The *empirical distribution* in this case could involve looking into past electi
 
 ```{r, echo = FALSE}
 
-mydata <- tibble(
-  electoral_votes = c(486,191,17,297,49,13,111,370,379,
+mydata <- tibble(electoral_votes = c(486,191,17,297,49,13,111,370,379,
                       271,286,365,332,304))
 
 ggplot(mydata, aes(x = electoral_votes)) +
-  geom_histogram(aes(y=..count../sum(..count..)), bins = 100, fill = "light blue", color = "white") +
+  geom_histogram(aes(y=..count../sum(..count..)), bins = 100, 
+                 fill = "light blue", color = "white") +
   labs(title = "Mathematical Probability Distribution",
        subtitle = "Probability of Parties Winning",
        x = "Outcomes",
@@ -384,6 +379,88 @@ There are many political science questions you could explore with posterior dist
 * Future: How many electoral votes will a presidential candidate win?
 
 <!-- We need a continuous distribution. -->
+
+<!-- Add 4th subsubpart to first part explaining Joint Distributions. Do this at the end of probability distribution part.  Example is one die with 50% likelihood of coming up 6 (and other faces at 10%) and second die 50% likelihood. Don't only care about the total. In this situation, you need a 3d plot. p(A, B) is p(Result of Die 1, Result of Die 2). Just one empirical plot of 100 roles. -->
+
+### Joint Distributions
+
+Now we understand that p(A) can represent the probability distribution of outcomes for event A. Let's talk about joint distributions, which can be represented by p(A, B). Joint distributions are also mathematical objects that cover a set of outcomes, where each distinct outcome has a chance of occurring between 0 and 1 and the sum of all chances equals to 1. The key to a joint distribution is it measures the chance that both events A and B will occur simultaneously.
+
+Let's say that you are rolling two six-sided die simultaneously. One is weighted so that there is a 50% chance of rolling a 6 and a 10% chance of each of the other values. The other is weighted so there is a 50% chance of rolling a 5 and a 10% chance of rolling each of the other values. Let's roll both die 1000 times. In previous examples involving two die, we cared about the sum of results and not the outcomes of the first versus the second rolls of each simulation. With a joint distributions, the order matters so instead of 11 possible outcomes on the x-axis of our distribution graph (ranging from 2 to 12), we have 36. Furthermore, a 2D probability distribution is not sufficient to represent all of the variables involved, so the joint distribution for this example should be displayed using a 3D plot.
+
+<!-- Add 4th subsubpart to first part explaining Joint Distributions. Do this at the end of probability distribution part.  Example is one die with 50% likelihood of coming up 6 (and other faces at 10%) and second die 50% likelihood. Don't only care about the total. In this situation, you need a 3d plot. p(A, B) is p(Result of Die 1, Result of Die 2). Just one empirical plot of 100 roles. -->
+
+```{r, echo=FALSE}
+
+mydata <- tibble(die.1 = sample(1:6, size = 1000, prob =
+                                  c(0.1,0.1,0.1,0.1,0.1,0.5), replace = TRUE),
+                 die.2 = sample(1:6, size = 1000, prob =
+                                  c(0.1,0.1,0.1,0.1,0.5,0.1), replace = TRUE))
+
+joint_distribution <- ggplot(mydata, aes(x = die.1, y = die.2, alpha = 0.01)) +
+  geom_jitter(color = "black")
+
+saveGIF(
+  expr = {
+    
+    # ggplot of bayes plot
+    
+    plot(joint_distribution)
+    
+    # blue hist3d from above
+    
+    hist3D(z = z_factor, border = "black",
+       curtain = F, 
+       col = "blue",
+       theta = 0, phi = 90,
+       space = .25)
+    
+    # hist3d from above colored by model
+    
+    hist3D(z = z_factor, border = "black",
+       curtain = F, 
+       colvar = colvar,col = jet.col(21),
+       theta = 0, phi = 90,
+       space = .25,
+       colkey = FALSE)
+
+    
+  },
+  
+    # change the interval between the images. Default is 1 I believe
+  
+  interval = 1,
+  
+  # name the gif. You can change where it goes by putting the file path before
+  # it. E.g. "./folder/3d_hist_1.gf" where the "." is a stand in for the current
+  # directory. This would create a gif called "3d_hist_1.gf" and put it inside a
+  # folder called "folder" in the current directory. The folder must already
+  # exist.
+  
+  movie.name = "joint_distribution.gif"
+)
+
+
+bayes_scatter_2 <- ggplot(x, aes(result, mod, alpha = 0.01)) +
+  geom_jitter(color = "black") +
+  labs(x = "Data",
+       y = "Model") +
+  theme_bw() +
+  theme(legend.position = "none",
+        plot.margin = unit(c(2.1, 2.1, 2.1, 2.1), "cm")) #top, right, bottom, left
+
+
+```
+
+The fact that we're talking about joint distributions where we roll two die doesn't change the meaning of a probability distribution. As you can see through the tibble, the sum of the probabilities of all the outcomes is 1.
+
+```{r}
+
+sum(mydata$probability)
+
+```
+
+<!-- 2 b) Another coding session, but this time with list-columns and map_functions. These do not have to be long. We just want to re-iterate the points we made in words. Maybe we don't need list-columns. Maybe just show map functions here. Again, the point of this section is ONLY to understand the key probabity concepts: joint, total, conditional and marginal. -->
 
 ## Tree Diagrams
 
@@ -501,6 +578,14 @@ How would you express this in statistical notation? p(A|B) is the same thing as 
 **False Negative:** The patient has the disease but the test results incorrectly suggest that they do not.
 
 ```
+
+# library(dagitty)
+# 
+# dag <- dagitty("dag{z <- x -> y}")
+# ggdag(dag)
+# 
+# ggdag(dag, layout = "circle")
+
 
 ```{r, echo=FALSE}
 
@@ -731,39 +816,9 @@ plot(rEG, edgeAttrs=eAttrs, attrs=attributes)
 
 ```
 
-### Joint Probability
-
-Now that we understand both p(A) and p(A|B), let's talk about what it means to calculate p(A, B). With p(A|B), we are considering the probability of A assuming event B has already occurred. p(A, B) is the chance that both events will occur at the same point in time.
-
-Let's say that you are rolling two six-sided die simultaneously. One is weighted so that there is a 50% chance of rolling a 6 and a 10% chance of each of the other values. The other is weighted so there is a 50% chance of rolling a 5 and a 10% chance of rolling each of the other values. Let's roll both die 1000 times. If we were to visualize this, it would look different because the domain is a plane instead of a line.
-
-```{r, echo=FALSE}
-
-mydata <- tibble(die.1 = sample(1:6, size = 1000, prob =
-                                  c(0.1,0.1,0.1,0.1,0.1,0.5), replace = TRUE),
-                 die.2 = sample(1:6, size = 1000, prob =
-                                  c(0.1,0.1,0.1,0.1,0.5,0.1), replace = TRUE)) %>%
-  group_by(die.1, die.2) %>%
-  summarize(total = n()) %>%
-  ungroup() %>%
-  mutate(probability = total/sum(total))
-
-mydata
-
-```
-
-The fact that we're talking about joint distributions where we roll two die doesn't change the meaning of a probability distribution. As you can see through the tibble, the sum of the probabilities of all the outcomes is 1.
-
-```{r}
-
-sum(mydata$probability)
-
-```
-
-<!-- 2 b) Another coding session, but this time with list-columns and map_functions. These do not have to be long. We just want to re-iterate the points we made in words. Maybe we don't need list-columns. Maybe just show map functions here. Again, the point of this section is ONLY to understand the key probabity concepts: joint, total, conditional and marginal. -->
-
-
 ## Two Models
+
+"Do you have disease?" on Y- axis instead. The data here is: What does your test show? The two models are: You have the disease and you don't have the disease. -->
 
 <!-- # Section 3: Two Models, Scatterplots and Bayes Theorem -->
 
@@ -803,10 +858,8 @@ It becomes easier to understand when you increase this population size 10,000 an
 # Define a population of 10000 where 10 people have the disease but
 # 100 people have tested positive.
 
-pop <- tibble(
-  patient_id = 1:10000,
-  tested_positive = c(rep(1, 110), rep(0, 9890))
-) %>%
+pop <- tibble(patient_id = 1:10000, tested_positive = c(rep(1, 110), 
+                                                        rep(0, 9890))) %>%
   mutate(have_disease = case_when(patient_id == 1:10 ~ 1)) %>%
   mutate(have_disease = case_when(patient_id == 1:10 ~ 1,
                                   is.na(have_disease) ~ 0))
@@ -817,11 +870,9 @@ ggplot(pop, aes(x = as.factor(have_disease), y = as.factor(tested_positive))) +
   geom_point() + 
   geom_jitter(alpha = .4) +
   theme_classic() +
-  labs(
-    title = "Distribution of Disease Results in a Population of 10000",
-    x = "Do you have the disease?",
-    y = "Did you test positive?"
-  )
+  labs(title = "Distribution of Disease Results in a Population of 10000",
+    x = "Did you test positive?",
+    y = "Do you have the disease?")
 
 ```
 
@@ -848,19 +899,13 @@ Now, imagine that your friend gives you a bag with two marbles. There could eith
 
 ```{r, echo=FALSE}
 
-all_white <- tibble(
-  results = c(rep(2, 1000)),
-  model = c(rep(1, 1000)))
+all_white <- tibble(results = c(rep(2, 1000)), model = c(rep(1, 1000)))
 
-all_black <- tibble(
-  results = c(rep(0, 1000)),
-  model = c(rep(0, 1000))
-)
+all_black <- tibble(results = c(rep(0, 1000)), model = c(rep(0, 1000)))
 
-mixed_bw <- tibble(
-  results = sample(0:1, size = 1000, prob = c(0.5, 0.5), replace = TRUE),
-  model = c(rep(0.5, 1000))
-)
+mixed_bw <- tibble(results = sample(0:1, size = 1000, prob = c(0.5, 0.5), 
+                                    replace = TRUE),
+                   model = c(rep(0.5, 1000)))
 
 # all_marbles <- merge(all_white, all_black, all.x = TRUE, all.y = TRUE) %>%
 #   merge(mixed_bw, all.x = TRUE, all.y = TRUE)
