@@ -13,6 +13,7 @@ output_yaml:
 
 <!-- 1) EDA of nes. drop na. Talk about Prudence at the end. It's own ### and with image in the side margin. OK if its only a paragraph or two.  -->
 
+
 <!-- 2) Preview the three models. Justice. Review the Preceptor. Discuss Predictive. Might it be Causal. Show some math.  Courage, which is just code. -->
 
 <!-- $$y_i = f(x_{i1}, x_{i2}, ..., \beta)$$ -->
@@ -44,21 +45,9 @@ Wouldn't it be interesting to predict `ideology` based off of other variables? T
 
 Load `PPBDS.data` and `skimr`. `skim()` the dataset.
 
-```{r eval=FALSE}
+```{r message=FALSE}
 library(PPBDS.data)
 library(skimr)
-skim(nes)
-```
-
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-library(PPBDS.data)
-library(tidyverse)
-library(skimr)
-nes <- nes %>%
-  mutate(state = as.factor(state),
-         gender = as.factor(gender),
-         race = as.factor(race),
-         pres_appr = as.factor(pres_appr))
 skim(nes)
 ```
 
@@ -68,9 +57,9 @@ Great! Before we dive in, let's identify the variables of interest:
 * `state`: the two-letter abbreviation corresponding to the state of the respondent
 * `gender`: identifies respondents with values "Male" and "Female"
 * `race`: race/ethnicity respondent identification
-* `income`: integer variable representing 5 income groups: 1 as 0-16th percentile, 2 as 17-33rd, 3 as 34 to 67, 4 as 68 to 95, 5 as 96 to 100 
-* `age`: ordered factor of respondents' age ranges
-* `education`: ordered factor variable with a 7 tier delineation of educational achievement
+* `income`: 5 income groups: 1 as 0-16th percentile, 2 as 17-33rd, 3 as 34 to 67, 4 as 68 to 95, 5 as 96 to 100 
+* `age`: respondents' age ranges
+* `education`: 7 tier delineation of educational achievement
 * `pres_appr`: respondents' self-reported approval of the sitting president
 * `ideology` as the continuous outcome variable, with 1 corresponding to strongly Democrat and 7 corresponding to strongly Republican and 0 if NA.
 
@@ -98,24 +87,41 @@ nes_2016 <- nes %>%
 nes_2016
 ```
 
-With this cleaned data, let's dive into the first model we will create, which will create a linear regression.
-
-## `lm()`
-
-First, load the ***tidymodels*** library and use `initial_split()` to split the data into testing and training sets. Don't worry about the testing set-- for now,  we will build our model off of the training set.
-
-```{r eval=FALSE}
-library(tidymodels)
-library(rsample)
-
-set.seed(10)
-nes_split <- initial_split(nes_2016)
-
-nes_training <- nes_split %>% training()
-nes_testing <- nes_split %>% testing()
-```
+Note that certain variables we would like to include are characters. We should convert them into factor types to indicate that they are categorical predictor variables.
 
 ```{r}
+nes_2016 <- nes_2016 %>%
+  mutate(state = as.factor(state),
+         gender = as.factor(gender),
+         race = as.factor(race),
+         pres_appr = as.factor(pres_appr))
+
+skim(nes_2016)
+```
+
+Great! Now we can proceed with creating models to estimate respondents' ideology.
+
+### Prudence
+
+```{r echo=FALSE, fig.margin=TRUE}
+knitr::include_graphics("other/images/prudence.jpg")
+```
+
+Recall the first of the four Cardinal Virtues of data science. We need to carefully consider how we would like to approach our problem. In fact, what is our problem to solve?
+
+Our problem is that we may not know someone's ideology right off of the bat. This is true in real life, in which it is an awkward question to pose a stranger. This is also true in surveys that may not have asked respondents to politically self-identify, but would find that information useful. What we are given, however, are a number of demographic variables that can be used to predict someone's ideology. We need to keep the defining problem (How can we predict someone's ideology based off of certain demographic variables) in mind as we navigate the models ahead.
+
+### Justice
+
+```{r echo=FALSE, fig.margin=TRUE}
+knitr::include_graphics("other/images/justice.jpg")
+```
+
+Keep in mind that, by dropping the `NA`s to create our cleaner dataset, we are creating an ideal Preceptor Table in which there are no unknown values. We are then using this ideal Preceptor Table to make predictions for new data. 
+
+However, recall the virtue of Justice: **We want to make sure our models are as just and representative of the real world as possible.** As such, we will split our `nes_2016` data into two sets: a training set and a testing set. We can do so using the ***rsample*** function, `initial_split()`.
+
+```{r message=FALSE}
 library(tidymodels)
 library(rsample)
 
@@ -128,7 +134,32 @@ nes_testing <- nes_split %>%
   testing()
 ```
 
-Next, construct the linear regression model.
+*We will not be touching the testing set.* The testing set can be thought of as the final test to analyze the fit of the model. Never will we use the testing set to train the model. After all, that is what the training set is for! And what exactly does training the model mean? Training is simply the process in which we take the components of the ideal Preceptor Table and create as accurate a predictive machine as possible.
+
+We have mentioned that the following models will be *predictive*, not *causal*. Recall that all we care about in a predictive model is forecasting some value $y_i$ given that we know $x_{i_1}, x_{i_2}, ... x_{i_n}$. The $y_i$ in our case is `ideology`. The $x_{i_1}, x_{i_2}, ... x_{i_n}$ in this case are certain known variables, such as `state`, `age`, and `income`, among others.
+
+However, we cannot infer what would happen to someone's `ideology` if their `income` level was within the 16th percentile, versus within the 96th percentile. The aforementioned inference would be a causal inference, which ignores the possibility that there are confounding variables. In our case, there are many possible confounding variables that are not represented, such as family socioeconomic background and immigration status.
+
+### Courage
+
+```{r echo=FALSE, fig.margin=TRUE}
+knitr::include_graphics("other/images/courage.jpg")
+```
+
+We will be using three different engines as models: `lm`, `stan`, and `nnet`. We will be using `lm` to fit a standard linear regression and `stan` to fit a Bayesian linear regression. You have encountered these two engines in previous chapters in the form of the functions `lm()` and `stan_glm()`. The last engine is based on multilayer perceptron neural networks, a supervised machine learning process in which data can be evaluated non-linearly.
+
+<!-- EC: Is there a better/more simple way to introduce MLP? -->
+
+We have two linear regression models and one potentially non-linear model. How can we illustrate how each model will map the predictor variables to `ideology`?
+
+We can do so by writing an equation in which the `ideology` of the *i*th respondent, $y_i$, is a function of certain linear and/or non-linear parameters. 
+
+$$y_i = f(x_{i_1}, x_{i_2}, ..., \beta)$$
+Now, all that's left is to code. Let's dive right in to the first model.
+
+## `lm()`
+
+First, we have to construct the linear regression model.
 
 ```{r}
 lm_model <-
