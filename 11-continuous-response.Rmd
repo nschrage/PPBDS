@@ -51,7 +51,7 @@ library(skimr)
 skim(nes)
 ```
 
-Great! Before we dive in, let's identify the variables of interest:
+Great! Before we dive in, let's identify the variables available to us in `nes`:
 
 * `year`: the year the study was conducted
 * `state`: the two-letter abbreviation corresponding to the state of the respondent
@@ -61,15 +61,16 @@ Great! Before we dive in, let's identify the variables of interest:
 * `age`: respondents' age ranges
 * `education`: 7 tier delineation of educational achievement
 * `pres_appr`: respondents' self-reported approval of the sitting president
-* `ideology` as the continuous outcome variable, with 1 corresponding to strongly Democrat and 7 corresponding to strongly Republican and 0 if NA.
+* `voted`: whether the respondent had voted in the presidential election
+* `ideology` a continuous variable with 1 corresponding to strongly Democrat and 7 corresponding to strongly Republican and 0 if NA.
 
-As you may have gleaned, these variables comprise a person's background. If we were given a new person who was not surveyed, and the above variables, our goal is to predict their ideology correctly. 
+If we were given a new person who was not surveyed, and the above variables, our goal is to predict their ideology correctly. 
 
 As you also saw, there are a lot of data points in this dataset. `nes` covers 1954 through 2016, but for our sake, we will narrow our scope to just 2016. Because of the changing nature of what makes someone ideologically liberal or ideologically conservative over time, it is best to construct a model in which we eliminate as much of this variance as possible. Keep in mind that, when feeding in new data to our model, it is most accurately applied to voters in or around 2016. Indeed, a 1954 voter might act very differently than a 2016 voter.
 
 Filter the data to only show `year == 2016`.
 
-```{r warning=FALSE}
+```{r message=FALSE}
 library(tidyverse)
 nes %>%
   select(year, state, gender, race, income, age, education, ideology) %>%
@@ -87,20 +88,6 @@ nes_2016 <- nes %>%
 nes_2016
 ```
 
-Note that certain variables we would like to include are characters. We should convert them into factor types to indicate that they are categorical predictor variables.
-
-```{r}
-nes_2016 <- nes_2016 %>%
-  mutate(state = as.factor(state),
-         gender = as.factor(gender),
-         race = as.factor(race),
-         pres_appr = as.factor(pres_appr))
-
-skim(nes_2016)
-```
-
-Great! Now we can proceed with creating models to estimate respondents' ideology.
-
 ### Prudence
 
 ```{r echo=FALSE, fig.margin=TRUE}
@@ -111,34 +98,56 @@ Recall the first of the four Cardinal Virtues of data science. We need to carefu
 
 Our problem is that we may not know someone's ideology right off of the bat. This is true in real life, in which it is an awkward question to pose a stranger. This is also true in surveys that may not have asked respondents to politically self-identify, but would find that information useful. What we are given, however, are a number of demographic variables that can be used to predict someone's ideology. We need to keep the defining problem (How can we predict someone's ideology based off of certain demographic variables) in mind as we navigate the models ahead.
 
+Taking a look again at the variables in `nes_2016`, we might decide against including `pres_appr` and `voted` in our models. Why exclude variables, especially variables that may make your model even better? 
+
+From glimpsing `ch11`, we see that there are three data types: factors, characters, and integers. However, `income`, `age`, and `education` are ordered factors. This means that each factor level is considered additively. Ordered factors are dangerous because we do not know how they will interact with our regression models. Therefore, we will use `factor()` and `ordered = FALSE` to remove their level orders.
+
+```{r}
+ch11 <- nes_2016 %>%
+  mutate(income = factor(income, ordered = FALSE),
+         age = factor(age, ordered = FALSE),
+         education = factor(education, ordered= FALSE))
+```
+
+While we're paying attention to data types, it is best practice to change character variables to factors.
+
+```{r}
+ch11 <- ch11 %>%
+  mutate(state = as.factor(state),
+         gender = as.factor(gender),
+         race = as.factor(race))
+```
+
 ### Justice
 
 ```{r echo=FALSE, fig.margin=TRUE}
 knitr::include_graphics("other/images/justice.jpg")
 ```
 
-Keep in mind that, by dropping the `NA`s to create our cleaner dataset, we are creating an ideal Preceptor Table in which there are no unknown values. We are then using this ideal Preceptor Table to make predictions for new data. 
-
-However, recall the virtue of Justice: **We want to make sure our models are as just and representative of the real world as possible.** As such, we will split our `nes_2016` data into two sets: a training set and a testing set. We can do so using the ***rsample*** function, `initial_split()`.
+Recall the virtue of Justice: **We want to make sure our models are as just and representative of the real world as possible.** As such, we will split our `nes_2016` data into two sets: a training set and a testing set. We can do so using the ***rsample*** function, `initial_split()`.
 
 ```{r message=FALSE}
 library(tidymodels)
 library(rsample)
 
 set.seed(10)
-nes_split <- initial_split(nes_2016)
+ch11_split <- initial_split(ch11)
 
-nes_training <- nes_split %>%
+ch11_training <- ch11_split %>%
   training()
-nes_testing <- nes_split %>%
+ch11_testing <- ch11_split %>%
   testing()
 ```
 
-*We will not be touching the testing set.* The testing set can be thought of as the final test to analyze the fit of the model. Never will we use the testing set to train the model. After all, that is what the training set is for! And what exactly does training the model mean? Training is simply the process in which we take the components of the ideal Preceptor Table and create as accurate a predictive machine as possible.
+*We will not be touching the testing set.* The testing set can be thought of as the final test to analyze the fit of the model. Never will we use the testing set to train the model. After all, that is what the training set is for! And what exactly does training the model mean? Training is simply the process in which we take the components of the given data and create as accurate a predictive machine as possible.
 
 We have mentioned that the following models will be *predictive*, not *causal*. Recall that all we care about in a predictive model is forecasting some value $y_i$ given that we know $x_{i_1}, x_{i_2}, ... x_{i_n}$. The $y_i$ in our case is `ideology`. The $x_{i_1}, x_{i_2}, ... x_{i_n}$ in this case are certain known variables, such as `state`, `age`, and `income`, among others.
 
 However, we cannot infer what would happen to someone's `ideology` if their `income` level was within the 16th percentile, versus within the 96th percentile. The aforementioned inference would be a causal inference, which ignores the possibility that there are confounding variables. In our case, there are many possible confounding variables that are not represented, such as family socioeconomic background and immigration status.
+
+Keep in mind that our goal is to create the best possible model to predict one's ideology given a number of demographic variables. That is to say, we plan on re-using our model on out-of-sample data. Hence, we have set the testing set aside to serve as one instance in which to re-use our model to make predictions.
+
+Besides the testing set, new out-of-sample data could come from other surveys that collect demographic information, or from website traffic data. These data most likely will not contain information on whether the respondent approves of the president or whether they voted in the presidential election. In order for our model to be relevant to our question, we will assume that new data will *not* provide `pres_appr` and `voted`.  When defining our formula later on, we will keep this in mind.
 
 ### Courage
 
@@ -147,8 +156,6 @@ knitr::include_graphics("other/images/courage.jpg")
 ```
 
 We will be using three different engines as models: `lm`, `stan`, and `nnet`. We will be using `lm` to fit a standard linear regression and `stan` to fit a Bayesian linear regression. You have encountered these two engines in previous chapters in the form of the functions `lm()` and `stan_glm()`. The last engine is based on multilayer perceptron neural networks, a supervised machine learning process in which data can be evaluated non-linearly.
-
-<!-- EC: Is there a better/more simple way to introduce MLP? -->
 
 We have two linear regression models and one potentially non-linear model. How can we illustrate how each model will map the predictor variables to `ideology`?
 
@@ -170,20 +177,20 @@ lm_model <-
 
 Here, we are using the ***parsnip*** package to create an engine that can run this linear regression model easily and repeatedly. `linear_reg()` tells the engine that this is a linear regression. `set_engine("lm")` tells the engine to use the `lm()` function. `set_mode()` has to options, "regression" and "classification". Since our left-hand variable is a continuous one, we will set it to "regression". If it were categorical, we would set the mode to "classification".
 
-Fit the model to the data. We will first create a regression formula and save it as an R object for future recall. There are a lot of different combinations we could use for the formula, but which will yield the *best* model? For now, we will build a full model containing all of the predictor variables
+Fit the model to the data. We will first create a regression formula and save it as an R object for future recall. There are a lot of different combinations we could use for the formula, but which will yield the *best* model? In previous chapters, we discussed this dilemma. For now, we will build a full model containing all of the predictor variables and some interactions.
 
 ```{r}
-interact_form <- formula(ideology ~ gender * race + state * income + age + education + pres_appr)
+interact_form <- formula(ideology ~ gender * race + state * income + age + education)
 ```
 
 ```{r eval=FALSE}
-fit(lm_model, interact_form, nes_training)
+fit(lm_model, interact_form, ch11_training)
 ```
 
 Note that we can use `tidy()`, just like we did in previous chapters, to take a look at the results:
 
 ```{r}
-fit(lm_model, interact_form, nes_training) %>%
+fit(lm_model, interact_form, ch11_training) %>%
   tidy(conf.int = TRUE) %>%
   select(term, estimate, conf.low, conf.high)
 ```
@@ -210,15 +217,15 @@ Remember, we cannot touch the testing set! One way we can check whether the mode
 
 The function `vfold_cv()` splits your training set into `v`, a specified number of smaller sections. The most common values for `v` are 5 and 10. To keep things simple, we will be using `v = 5` to keep the individual sections large enough to accurately train the models. The first four folds will be used to train the model, and the last fold is always used to assess the accuracy of the model.
 
-Below, we will create a new object called `nes_folds` that contains equally sized sections of `nes_training`.
+Below, we will create a new object called `ch11_folds` that contains equally sized sections of `ch11_training`.
 
 ```{r}
 set.seed(10)
-nes_folds <- nes_training %>%
+ch11_folds <- ch11_training %>%
   vfold_cv(v = 5)
 ```
 
-How can we work with the `nes_folds` object?  **tidymodels** makes it easy by using the `fit_resamples()` function in the **tune** package. The `fit_resamples()` function takes as its first argument a model specification (such as `lm_model`). It takes a formula as its second argument, either in traditional form or as a `recipe()`. 
+How can we work with the `ch11_folds` object?  **tidymodels** makes it easy by using the `fit_resamples()` function in the **tune** package. The `fit_resamples()` function takes as its first argument a model specification (such as `lm_model`). It takes a formula as its second argument, either in traditional form or as a `recipe()`. 
 
 ```{marginfigure, echo=TRUE}
 Recipes are what ***tidymodels*** use in lieu of defining a formula traditionally. `recipe()` is useful because you can define both the formula and any transformations you want to make with the data. Recipes are easily called and re-used, making it easy to use the same recipe with different models.
@@ -229,7 +236,7 @@ There are a number of useful functions that can be piped into recipes. One parti
 Usually, a simple formula without interaction terms can be plugged right in to `fit_resamples()`. However, ***tidymodels*** does not allow in-line functions in recipes, meaning we need to use a `step_*` function to add the interaction terms. Let's create our recipe.
 
 ```{r}
-lm_rec <- recipe(ideology ~ gender + race + state + income + age + education + pres_appr, data = nes_training) %>%
+lm_rec <- recipe(ideology ~ gender + race + state + income + age + education, data = ch11_training) %>%
   step_interact(terms = ~ gender:race + state:income)
 ```
 
@@ -243,7 +250,7 @@ Finally, the `resamples` argument is where you input the cross-validation datase
 set.seed(10)
 fit_resamples(object = lm_model,
               preprocessor = lm_rec,
-              resamples = nes_folds)
+              resamples = ch11_folds)
 ```   
 
 Because the metrics are in list-columns, we can extract the average metrics across all the folds using the `collect_metrics()` function:
@@ -252,25 +259,25 @@ Because the metrics are in list-columns, we can extract the average metrics acro
 set.seed(10)
 fit_resamples(lm_model,
               lm_rec,
-              nes_folds) %>%
+              ch11_folds) %>%
   collect_metrics()
 ```
 
-Now that we've viewed the cross-validation metrics, it's time to use new data: namely, the testing set. Remember, we only touch the testing set for evaluation purposes. To apply our model to `nes_testing`, use the `predict()` function.
+Now that we've viewed the cross-validation metrics, it's time to use new data: namely, the testing set. Remember, we only touch the testing set for evaluation purposes. To apply our model to `ch11_testing`, use the `predict()` function.
 
 ```{r}
 lm_model %>%
-  fit(interact_form, data = nes_training) %>%
-  predict(new_data = nes_testing)
+  fit(interact_form, data = ch11_training) %>%
+  predict(new_data = ch11_testing)
 ```
 
 To extract the rmse, we set the "truth" to `ideology` so this function can compare our predicted values to the true values.
 
 ```{r}
 lm_model %>%
-  fit(interact_form, data = nes_training) %>%
-  predict(new_data = nes_testing) %>%
-  bind_cols(nes_testing) %>%
+  fit(interact_form, data = ch11_training) %>%
+  predict(new_data = ch11_testing) %>%
+  bind_cols(ch11_testing) %>%
   rmse(truth = ideology, estimate = .pred)
 ```
 
@@ -287,15 +294,14 @@ new_people <- tibble("Name" = c("Alice", "Bob", "Chelsea", "Darren"),
                      "income" = as.factor(c("34 - 67", "0 - 16", "34 - 67", "96 - 100")),
                      "age" = c("35 - 44", "55 - 64", "35 - 44", "55 - 64"),
                      "education" = c("Elementary", "Highschool", "Adv. Degree", "Highschool"),
-                     "race" = c("White", "White", "White", "White"),
-                     "pres_appr" = as.factor(c("Approve", "Approve", "Approve", "Approve")))
+                     "race" = c("White", "White", "White", "White"))
 ```
 
 Now, let's predict each new person's ideology using the linear regression model we just created.
 
 ```{r this-is-not-knitting, message=FALSE}
 lm_model %>%
-  fit(interact_form, data = nes_training) %>%
+  fit(interact_form, data = ch11_training) %>%
   predict(new_data = new_people) %>%
   bind_cols(new_people) %>%
   rename("ideology" = ".pred")
@@ -331,7 +337,7 @@ Next, let's fit this model using the formula we specified before. We can select 
 
 ```{r message=FALSE, warning=FALSE, eval=FALSE}
 set.seed(10)
-fit(stan_model, interact_form, nes_training) %>%
+fit(stan_model, interact_form, ch11_training) %>%
   tidy(conf.int = TRUE) %>%
   select(term, estimate, std.error)
 ```
@@ -340,11 +346,11 @@ fit(stan_model, interact_form, nes_training) %>%
 
 Let's practice K-Fold validation with the `stan` model.
 
-```{r cache=TRUE}
+```{r cache=TRUE, eval=FALSE}
 set.seed(10)
 fit_resamples(object = stan_model,
               preprocessor = lm_rec,
-              resamples = nes_folds)
+              resamples = ch11_folds)
 ```   
 
 
@@ -352,7 +358,7 @@ fit_resamples(object = stan_model,
 set.seed(10)
 fit_resamples(stan_model,
               lm_rec,
-              nes_folds) %>%
+              ch11_folds) %>%
   collect_metrics()
 ```
 
@@ -360,7 +366,7 @@ Let's test the stan model using our four `new_people`.
 
 ```{r message=FALSE, eval=FALSE}
 stan_model %>%
-  fit(interact_form, data = nes_training) %>%
+  fit(interact_form, data = ch11_training) %>%
   predict(new_people) %>%
   bind_cols(new_people) %>%
   rename("ideology" = ".pred")
@@ -413,7 +419,7 @@ set.seed(10)
 folds_metrics<- nes_formulas %>%
   mutate(metrics = map(formula, ~ fit_resamples(object = lm_model,
                                                 preprocessor = .,
-                                                resamples = nes_folds) %>%
+                                                resamples = ch11_folds) %>%
                          collect_metrics()))
 ```
 
@@ -443,17 +449,17 @@ Let's test the Full model excluding state on the testing set.
 
 ```{r}
 lm_model %>%
-  fit(non_state_form, data = nes_training) %>%
-  predict(new_data = nes_testing)
+  fit(non_state_form, data = ch11_training) %>%
+  predict(new_data = ch11_testing)
 ```
 
 To extract the rmse, we set the "truth" to `ideology` so this function can compare our predicted values to the true values.
 
 ```{r}
 lm_model %>%
-  fit(non_state_form, data = nes_training) %>%
-  predict(new_data = nes_testing) %>%
-  bind_cols(nes_testing) %>%
+  fit(non_state_form, data = ch11_training) %>%
+  predict(new_data = ch11_testing) %>%
+  bind_cols(ch11_testing) %>%
   rmse(truth = ideology, estimate = .pred)
 ```
 
@@ -481,14 +487,14 @@ Let's cross-validate our predictions using `vfold_cv()`.
 set.seed(10)
 fit_resamples(object = nnet_model,
               preprocessor = lm_rec,
-              resamples = nes_folds)
+              resamples = ch11_folds)
 ```   
 
 ```{r eval=FALSE}
 set.seed(10)
 fit_resamples(nnet_model,
               lm_rec,
-              nes_folds) %>%
+              ch11_folds) %>%
   collect_metrics()
 ```
 
@@ -498,9 +504,9 @@ Lastly, let's apply our neural network model to the testing set.
 
 ```{r}
 nnet_model %>%
-  fit(non_state_form, data = nes_training) %>%
-  predict(new_data = nes_testing) %>%
-  bind_cols(nes_testing) %>%
+  fit(non_state_form, data = ch11_training) %>%
+  predict(new_data = ch11_testing) %>%
+  bind_cols(ch11_testing) %>%
   rmse(truth = ideology, estimate = .pred)
 ```
 
@@ -508,7 +514,7 @@ Now, let's predict each new person's ideology using the `nnet` model we created,
 
 ```{r message=FALSE, eval=FALSE}
 nnet_model %>%
-  fit(interact_form, data = nes_training) %>%
+  fit(interact_form, data = ch11_training) %>%
   predict(new_people) %>%
   bind_cols(new_people) %>%
   rename("ideology" = ".pred")
