@@ -91,9 +91,6 @@ DK: If we want to do rethinking: https://bookdown.org/content/3890/small-worlds-
 # should be included once, at the start of making the book. Use ggthemes so we
 # can use theme_tufte for our plots!
 
-# DK: Why Rgraphviz and not one of the other tree packages? It is a giant bother
-# to deal with a Bioconductor package.
-
 library(scales)
 library(ggthemes)
 library(Rgraphviz)
@@ -289,7 +286,7 @@ mydata <- tibble(results = c(rep(2, 30),rep(3, 15),rep(4, 15),rep(5, 3),
                              rep(10, 5),rep(11,1),rep(12,3)))
 
 ggplot(mydata, aes(x = results)) +
-  geom_histogram(aes(y=..count../sum(..count..)), binwidth = 0.5, 
+  geom_histogram(aes(y=..count../sum(..count..)), binwidth = 1, 
                  fill = "dark gray", color = "white") +
   labs(title = "Posterior Probability Distribution",
        subtitle = "Rolling Two Die at a Crooked Casino",
@@ -307,6 +304,7 @@ Now we let's say we are building probability distributions for political events,
 It would be incredibly naive to create the following *mathematical distribution*. We create a distribution by running a simulation 10,000 times, where the chances of the Democrats winning any given electoral vote is 0.5.
 
 ```{r, echo=FALSE}
+
 ev <- c(rep(3, 8), rep(4, 5), rep(5, 3), rep(6, 6), rep(7, 3), rep(8,2),
         rep(9, 3), rep(10, 4), rep(11, 4), 12, 13, 14, 15, rep(16, 2), 18, 20 , 20, 19, 29, 38, 55)
 
@@ -315,17 +313,21 @@ sims <- 10000
 result <- tibble(total = (matrix(rbinom(sims*length(ev),
                         size = 1, p = 0.5),
                  ncol = length(ev)) %*% ev)[,1])
+
 ggplot(data = result, aes(total)) +
-  geom_histogram(binwidth = 1) +
+  geom_histogram(aes(y=..count../sum(..count..)), binwidth = 1) +
   labs(title = "Mathematical Probability Distribution",
-       y = "Count", # Change to likelihood of the outcome
+       y = "Probability of Result",
        x = "Total of Electoral Votes for Democrats") +
   theme_classic()
+
 ```
 
-We know that campaign platforms, donations, charisma, and many other factors will contribute to a candidate's likeability. Elections are more complicated than coin tosses. Some polticial scientists may try to create algorithms to calculate mathematical probability distributions.
+We know that campaign platforms, donations, charisma, and many other factors will contribute to a candidate's likeability. Elections are more complicated than coin tosses. Some political scientists may try to create algorithms to calculate mathematical probability distributions.
 
-The *empirical distribution* in this case could involve looking into past elections in the United States and counting the number of elections that each party has won. Perhaps we're interested specifically in the electoral votes that the Democrats receive. For the empirical distribution, we would create a tibble from past elections. Looking at elections since 1964, we can observe that the number of electoral votes that the Democrats received in each one is different. Given that we only have 14 entries, it is difficult to draw conclusions or make predictions based off of this empirical distribution.
+The *empirical distribution* in this case could involve looking into past elections in the United States and counting the number of electoral votes that the Democrats won in each. For the empirical distribution, we create a tibble with electoral vote results from past elections. Looking at elections since 1964, we can observe that the number of electoral votes that the Democrats received in each one is different. Given that we only have 14 entries, it is difficult to draw conclusions or make predictions based off of this empirical distribution.
+
+However, this model is enough to suggest that the assumptions of the mathematical probability distribution above do not work for electoral votes. The model assumes that the Democrats have a 50% chance of receiving each of the 538 votes. Just looking at the mathematical probability distribution, we can observe that receiving 13 or 17 or 486 votes out of 538 would be extreme and almost impossible under this mathematical model. However, our empirical distribution tells us that those were real election results.
 
 ```{r, echo = FALSE}
 
@@ -333,19 +335,20 @@ mydata <- tibble(electoral_votes = c(486,191,17,297,49,13,111,370,379,
                       271,286,365,332,304))
 
 ggplot(mydata, aes(x = electoral_votes)) +
-  geom_histogram(aes(y=..count../sum(..count..)), bins = 100, fill = "light blue", color = "white") +
+  geom_histogram(aes(y=..count../sum(..count..)), bins = 100, fill = "gray", color = "white") +
   labs(title = "Empirical Probability Distribution",
-       subtitle = "Probability of Parties Winning",
-       x = "Outcomes",
-       y = "Probability")
+       subtitle = "Electoral Votes from Previous Elections",
+       x = "Total of Electoral Votes for Democrats",
+       y = "Probability of Result") +
+  theme_classic()
 
 ```
 
-The *posterior distribution* in the election case is something many data scientists actually devote a lot of time to. Consider this projection from The Economist, which uses various assumptions to generate a forecast. The analysts have developed an algorithm that considers their expectations for each outcome. In this case, the analysts at the Economist have chosen to merge two axes (i.e. the number of Republican votes and the number of Democrat votes) together.
+The *posterior distribution* in the election case is something many data scientists actually devote a lot of time to. Consider this projection from The Economist, which uses various assumptions to generate a forecast. The analysts have developed an algorithm that considers their expectations for each outcome. Here is a posterior from the Economist website. This looks confusing at first because the data analysts have chosen to merge the axes for Republican and Democratic electoral votes. For each electoral result, the height of the bar represents the probability that a given event will occur. However, there is no numbered y-axis telling us what the specific probability of each outcome is.
 
-```{r, echo=FALSE, fig.fullwidth = TRUE}
+```{r, echo=FALSE, fig.fullwidth = TRUE, caption = "Economist Posterior from August 8, 2020"}
 
-knitr::include_graphics("05-probability/images/election_distribution.png")
+knitr::include_graphics("05-probability/images/economist_posterior_election.png")
 
 ```
 
