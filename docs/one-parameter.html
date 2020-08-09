@@ -175,7 +175,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <html><body><div id="one-parameter" class="section level1">
 <h1>
 <span class="header-section-number">Chapter 7</span> One Parameter</h1>
-<p>What is the average height of an American male? What is the 75th percentile of the distribution of height for American men? How certain are you are your estimates? If we past 5 men walking down the street, what are the odds that the tallest will be at least 5 centimeters taller than the shortest?</p>
+<p>What is the average height of an American male? What is the 90th percentile of the distribution of height for American men? How certain are you are your estimates? If we past 5 men walking down the street, what are the odds that the tallest will be at least 5 centimeters taller than the shortest?</p>
 <div id="resampling-tactile" class="section level2">
 <h2>
 <span class="header-section-number">7.1</span> Pennies example</h2>
@@ -2011,7 +2011,7 @@ FIGURE 7.5: Analogy of difference between point estimates and confidence interva
 <div id="confidence-intervals-using-lm-and-quantile" class="section level3">
 <h3>
 <span class="header-section-number">7.1.4</span> Confidence Intervals using lm and quantile</h3>
-<p>Let’s now compute the confidence interval for our mean year of pennies in 2019. One way to extract the confidence interval is through using the <code>lm</code> method. <code>lm</code> means linear model and is generally used in regression modeling; however,<code>lm</code> can also used to find the confidence interval for a mean. The catch, though, is that we can only use <code>lm</code> to calculate the confidence interval for a mean only! This means that we cannot use <code>lm</code> to calculate the condfience interval for a statistic like the median or 75th percentile.</p>
+<p>Let’s now compute the confidence interval for our mean year of pennies in 2019. One way to extract the confidence interval is through using the <code>lm</code> method. <code>lm</code> means linear model and is generally used in regression modeling; however,<code>lm</code> can also used to find the confidence interval for a mean. The catch, though, is that we can only use <code>lm</code> to calculate the confidence interval for a mean only! This means that we cannot use <code>lm</code> to calculate the condfience interval for a statistic like the median or 90th percentile.</p>
 <p>First, let’s type <code>lm(year ~ 1, data = pennies_sample)</code> in our code chunk. This alone will get the mean of our dataset for pennies_sample</p>
 <div class="sourceCode" id="cb853"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb853-1"><a href="one-parameter.html#cb853-1"></a>  <span class="kw">lm</span>(year <span class="op">~</span><span class="st"> </span><span class="dv">1</span>, <span class="dt">data =</span> pennies_sample)</span></code></pre></div>
 <pre><code>## 
@@ -2226,66 +2226,97 @@ The plot shows some interesting stuff. Since the distributions of height for bot
 <h2>
 <span class="header-section-number">7.3</span> Using Bootstraps with <code>nhanes</code>
 </h2>
-<p>We have shown you how to use bootstrap sampling to create confidence intervals for an unknown parameter for which you have created. In other words, we use bootstrap sampling to create our posterior distribution for the average year of pennies in the US duing 2009. But we have not yet demonstrated that the bootstrap “works.” the purpose of this section is to provide that demonstration.</p>
-<p>As we can see that gender and height appears to be related, let’s filter our data set to just males and the year 2009 in order to see how we can estimate certain statistics of our further subsetted data set using bootstrap samples. In this example, let’s try to estimate the mean 90th percentile of male height in the year 2009. Obviously, we already know what these statistics are since we can easily calculate them by hand. However, the purpose of this example is to show that we can estimate the mean and 90th percentile pretty accurately from our bootstrap samples we will soon create. This section of chapter 7 will essentially show the validity of bootstrap samples. For now, let’s focus on subsetting our data even more.</p>
+<!-- 4. Prove that the bootstrap works, that our 95% confidence intervals provide correct coverage. We make a game and I give you a sample of like 40. Here's the 40, and you give me a 95% CI using the bootstrap tools we learned. Then I give you another 40. And another. If we do this 1,00 times, and we use the same procedure for calculating a confidence interval each time, then 950 should include the truth. That's how we know bootstraps is correct and I could only demonstrate this to you if we know what the truth is.   -->
+<!-- Plan: create function called create_ci(), which takes a tibble with a single variable called height and returns the 95% confidence interval --- i.e., a numeric vector of length 2 --- for the 75th percentile.  Note that you get to hard code everything. -->
+<!-- Then, create a tibble, first column is ID. Second column is height_sample, which is created by running sample(ch7$height, size = 40, replace = FALSE). Third column is ci, which is result mutate(ci = map(height_sample, ~ create_ci(.)). Fourth column is within_ci, which is TRUE if ci includes the TRUE value and FALSE otherwise. (If you want to have two columns, one for each limit, that is fine.) -->
+<p>We have shown you how to use bootstrap sampling to create confidence intervals for an unknown parameter for which you have created. In other words, we use bootstrap sampling to create our posterior distribution for the average year of pennies in the US during 2009. But we have not yet demonstrated that the bootstrap “works,” that our 95% confidence intervals provide correct coverage. The purpose of this section is to provide that demonstration.</p>
+<p>In this demonstration, let’s play a game! Let’s first filter our data set to just males and the year 2009. We want to estimate the mean and 75th percentile of male height in the year 2009. Obviously, we already know what these statistics are since we can easily calculate them by hand. However, we want to show that the bootstrap works!</p>
 <div class="sourceCode" id="cb872"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb872-1"><a href="one-parameter.html#cb872-1"></a>ch7_male &lt;-<span class="st"> </span>nhanes <span class="op">%&gt;%</span></span>
-<span id="cb872-2"><a href="one-parameter.html#cb872-2"></a><span class="st">  </span><span class="kw">select</span>(height, gender, survey) <span class="op">%&gt;%</span></span>
-<span id="cb872-3"><a href="one-parameter.html#cb872-3"></a><span class="st">  </span><span class="kw">filter</span>(gender <span class="op">==</span><span class="st"> "Male"</span>, survey <span class="op">==</span><span class="st"> </span><span class="dv">2009</span>) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb872-4"><a href="one-parameter.html#cb872-4"></a><span class="st">  </span><span class="kw">select</span>(height) <span class="op">%&gt;%</span></span>
-<span id="cb872-5"><a href="one-parameter.html#cb872-5"></a><span class="st">  </span><span class="kw">drop_na</span>()</span></code></pre></div>
-<p>By further subsetting our data, we can see that we will only be using one variable. Since we are only estimating a model with one parameter, we can’t make use of richer data.</p>
-<p>The mean is 167.51 and the 90th percentile is 184.3. We are looking at 90th percentile, which is approximately the 237th tallest person.</p>
+<span id="cb872-2"><a href="one-parameter.html#cb872-2"></a><span class="st">  </span><span class="kw">filter</span>(survey <span class="op">==</span><span class="st"> </span><span class="dv">2009</span>, gender <span class="op">==</span><span class="st"> "Male"</span>) <span class="op">%&gt;%</span></span>
+<span id="cb872-3"><a href="one-parameter.html#cb872-3"></a><span class="st">  </span><span class="kw">select</span>(height) <span class="op">%&gt;%</span></span>
+<span id="cb872-4"><a href="one-parameter.html#cb872-4"></a><span class="st">  </span><span class="kw">arrange</span>(height) <span class="op">%&gt;%</span></span>
+<span id="cb872-5"><a href="one-parameter.html#cb872-5"></a><span class="st">  </span><span class="kw">na.omit</span>()</span></code></pre></div>
 <p>We are now going to estimate both of these statistics using bootstrap. Remember how in the <code>pennies_sample</code> example, we first used a sample of 50 pennies to create our bootstrap samples. Let’s do something very similar. In this case, let’s take a sample without replacement of 40 of the 2,370 males in our data and look at their heights in 2009. To do so, we run the following command:</p>
-<div class="sourceCode" id="cb873"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb873-1"><a href="one-parameter.html#cb873-1"></a><span class="kw">set.seed</span>(<span class="dv">9</span>)</span>
-<span id="cb873-2"><a href="one-parameter.html#cb873-2"></a>heights_sample &lt;-<span class="st"> </span><span class="kw">sample_n</span>(ch7_male, <span class="dv">40</span>, <span class="dt">replace =</span> <span class="ot">FALSE</span>)</span></code></pre></div>
-<p>Great! So now we have our sample of 40 male heights in 2009. Now you might wonder how this section of this chapter is different from the section with <code>pennies_samples</code>. Well, there are two key differences. First, we know the truth in this case, so we can examine whether or not the bootstrap works. (That is, we pull a sample of 40 and see if the bootstrap confidence interval from that 40 includes the true 75th percentile of the 2,370) Second, note that only the bootstrap will allow us to estimate statistics other than the mean. We can’t use the lm() trick we learned about for pennies as we will find the confidence interval for the 75th percentile, which is a statistic that isn’t the mean.</p>
-<p>Let’s thus create our bootstrap samples. We already know how to create bootsrap samples from the <code>pennies_sample</code> section. Let’s use the same code but obviously create the variables we are interested in, which are <code>height_90th</code>.</p>
+<div class="sourceCode" id="cb873"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb873-1"><a href="one-parameter.html#cb873-1"></a>heights_sample &lt;-<span class="st"> </span><span class="kw">sample_n</span>(ch7_male, <span class="dv">40</span>, <span class="dt">replace =</span> <span class="ot">FALSE</span>)</span></code></pre></div>
+<p>Great! So now we have our sample of 40 male heights in 2009. Now you might wonder how this section of this chapter is different from the section with <code>pennies_samples</code>. Well, there are two key differences. First, we know the truth in this case, so we can examine whether or not the bootstrap works. (That is, we pull a sample of 40 and see if the bootstrap confidence interval from that 40 includes the true 90th percentile of the 2,370) Second, note that only the bootstrap will allow us to estimate statistics other than the mean. We can’t use the lm() trick we learned about for pennies as we will find the confidence interval for the 90th percentile, which is a statistic that isn’t the mean.</p>
 <div class="sourceCode" id="cb874"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb874-1"><a href="one-parameter.html#cb874-1"></a><span class="kw">set.seed</span>(<span class="dv">9</span>)</span>
 <span id="cb874-2"><a href="one-parameter.html#cb874-2"></a>virtual_heights &lt;-<span class="st"> </span>heights_sample <span class="op">%&gt;%</span></span>
 <span id="cb874-3"><a href="one-parameter.html#cb874-3"></a><span class="st">  </span><span class="kw">select</span>(height) <span class="op">%&gt;%</span></span>
 <span id="cb874-4"><a href="one-parameter.html#cb874-4"></a><span class="st">  </span><span class="kw">bootstraps</span>(<span class="dt">times =</span> <span class="dv">1000</span>) <span class="op">%&gt;%</span></span>
 <span id="cb874-5"><a href="one-parameter.html#cb874-5"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">boot =</span> <span class="kw">map</span>(splits, <span class="op">~</span><span class="st"> </span><span class="kw">analysis</span>(.))) <span class="op">%&gt;%</span></span>
 <span id="cb874-6"><a href="one-parameter.html#cb874-6"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">heights =</span> <span class="kw">map</span>(boot, <span class="op">~</span><span class="st"> </span><span class="kw">pull</span>(., height))) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb874-7"><a href="one-parameter.html#cb874-7"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">height_90th =</span> <span class="kw">map_dbl</span>(heights, <span class="op">~</span><span class="st"> </span><span class="kw">quantile</span>(., <span class="dt">probs =</span> <span class="fl">0.90</span>))) </span>
+<span id="cb874-7"><a href="one-parameter.html#cb874-7"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">height_90th =</span> <span class="kw">map_dbl</span>(heights, <span class="op">~</span><span class="st"> </span><span class="kw">quantile</span>(., <span class="dt">probs =</span> <span class="fl">.90</span>))) </span>
 <span id="cb874-8"><a href="one-parameter.html#cb874-8"></a>virtual_heights</span></code></pre></div>
 <pre><code>## # Bootstrap sampling 
 ## # A tibble: 1,000 x 5
 ##    splits          id            boot              heights    height_90th
 ##    &lt;list&gt;          &lt;chr&gt;         &lt;list&gt;            &lt;list&gt;           &lt;dbl&gt;
-##  1 &lt;split [40/14]&gt; Bootstrap0001 &lt;tibble [40 × 1]&gt; &lt;dbl [40]&gt;        183.
-##  2 &lt;split [40/16]&gt; Bootstrap0002 &lt;tibble [40 × 1]&gt; &lt;dbl [40]&gt;        183.
+##  1 &lt;split [40/14]&gt; Bootstrap0001 &lt;tibble [40 × 1]&gt; &lt;dbl [40]&gt;        182.
+##  2 &lt;split [40/16]&gt; Bootstrap0002 &lt;tibble [40 × 1]&gt; &lt;dbl [40]&gt;        182.
 ##  3 &lt;split [40/13]&gt; Bootstrap0003 &lt;tibble [40 × 1]&gt; &lt;dbl [40]&gt;        183.
 ##  4 &lt;split [40/14]&gt; Bootstrap0004 &lt;tibble [40 × 1]&gt; &lt;dbl [40]&gt;        182.
 ##  5 &lt;split [40/15]&gt; Bootstrap0005 &lt;tibble [40 × 1]&gt; &lt;dbl [40]&gt;        182.
-##  6 &lt;split [40/16]&gt; Bootstrap0006 &lt;tibble [40 × 1]&gt; &lt;dbl [40]&gt;        183.
-##  7 &lt;split [40/15]&gt; Bootstrap0007 &lt;tibble [40 × 1]&gt; &lt;dbl [40]&gt;        183.
+##  6 &lt;split [40/16]&gt; Bootstrap0006 &lt;tibble [40 × 1]&gt; &lt;dbl [40]&gt;        182.
+##  7 &lt;split [40/15]&gt; Bootstrap0007 &lt;tibble [40 × 1]&gt; &lt;dbl [40]&gt;        180.
 ##  8 &lt;split [40/12]&gt; Bootstrap0008 &lt;tibble [40 × 1]&gt; &lt;dbl [40]&gt;        183.
-##  9 &lt;split [40/14]&gt; Bootstrap0009 &lt;tibble [40 × 1]&gt; &lt;dbl [40]&gt;        185.
-## 10 &lt;split [40/16]&gt; Bootstrap0010 &lt;tibble [40 × 1]&gt; &lt;dbl [40]&gt;        183.
+##  9 &lt;split [40/14]&gt; Bootstrap0009 &lt;tibble [40 × 1]&gt; &lt;dbl [40]&gt;        182.
+## 10 &lt;split [40/16]&gt; Bootstrap0010 &lt;tibble [40 × 1]&gt; &lt;dbl [40]&gt;        182.
 ## # … with 990 more rows</code></pre>
-<!-- Bootstrap creates posterior distirbution for your estimate of the unknown parametr: the 75th percentile of heights in the 2370 observations from nhanes -->
+<div class="sourceCode" id="cb876"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb876-1"><a href="one-parameter.html#cb876-1"></a>virtual_heights <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb876-2"><a href="one-parameter.html#cb876-2"></a><span class="st">  </span><span class="kw">ggplot</span>() <span class="op">+</span></span>
+<span id="cb876-3"><a href="one-parameter.html#cb876-3"></a><span class="st">    </span><span class="kw">geom_histogram</span>(<span class="kw">aes</span>(<span class="dt">x =</span> height_90th, <span class="dt">y=</span>..count..<span class="op">/</span><span class="kw">sum</span>(..count..)), <span class="dt">binwidth =</span> <span class="fl">.9</span>, <span class="dt">fill =</span> <span class="st">"red"</span>) <span class="op">+</span></span>
+<span id="cb876-4"><a href="one-parameter.html#cb876-4"></a><span class="st">    </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">"Estimate in 90th Percentile of Male Height"</span>, <span class="dt">y =</span> <span class="st">"Probability"</span>,</span>
+<span id="cb876-5"><a href="one-parameter.html#cb876-5"></a>         <span class="dt">title =</span> <span class="st">"Posterior Distribution for the 90th Percentile of Male Heights in 2009"</span>) </span></code></pre></div>
+<p><img src="book_temp_files/figure-html/unnamed-chunk-616-1.png" width="672"></p>
+<!-- Bootstrap creates posterior distirbution for your estimate of the unknown parametr: the 90th percentile of heights in the 2370 observations from nhanes -->
 <p>DK: Discuss our posterior distribution of the 90th percentile. Why it is weird. Does it include the truth in the 95% interval? Yes!</p>
-<p>Cool! We created our bootstrap samples and can see the mean height and 75th percentile of heights for each bootstrap sample. Now that we have our resamples, let’s now estimate the mean male height of 2009 and 75th percentile of male height in 2009 using our resamples. We can do the same thing we did in the pennies section by using the <code>summarize</code> and <code>pull</code> functions.</p>
+<p>Cool! We created our bootstrap samples and can see the mean height and 90th percentile of heights for each bootstrap sample. Now that we have our resamples, let’s now estimate the mean male height of 2009 and 90th percentile of male height in 2009 using our resamples. We can do the same thing we did in the pennies section by using the <code>summarize</code> and <code>pull</code> functions.</p>
 </div>
 <div id="show-bootstrap-works" class="section level2">
 <h2>
 <span class="header-section-number">7.4</span> Show Bootstrap Works</h2>
 <p>Make a function</p>
-<div class="sourceCode" id="cb876"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb876-1"><a href="one-parameter.html#cb876-1"></a>do_the_bootstrap &lt;-<span class="st"> </span><span class="cf">function</span>(x){</span>
-<span id="cb876-2"><a href="one-parameter.html#cb876-2"></a>x <span class="op">%&gt;%</span><span class="st">   </span></span>
-<span id="cb876-3"><a href="one-parameter.html#cb876-3"></a><span class="st">  </span><span class="kw">select</span>(height) <span class="op">%&gt;%</span></span>
-<span id="cb876-4"><a href="one-parameter.html#cb876-4"></a><span class="st">  </span><span class="kw">bootstraps</span>(<span class="dt">times =</span> <span class="dv">1000</span>) <span class="op">%&gt;%</span></span>
-<span id="cb876-5"><a href="one-parameter.html#cb876-5"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">boot =</span> <span class="kw">map</span>(splits, <span class="op">~</span><span class="st"> </span><span class="kw">analysis</span>(.))) <span class="op">%&gt;%</span></span>
-<span id="cb876-6"><a href="one-parameter.html#cb876-6"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">heights =</span> <span class="kw">map</span>(boot, <span class="op">~</span><span class="st"> </span><span class="kw">pull</span>(., height))) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb876-7"><a href="one-parameter.html#cb876-7"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">height_90th =</span> <span class="kw">map_dbl</span>(heights, <span class="op">~</span><span class="st"> </span><span class="kw">quantile</span>(., <span class="dt">probs =</span> <span class="fl">0.90</span>))) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb876-8"><a href="one-parameter.html#cb876-8"></a><span class="st">  </span><span class="kw">pull</span>(height_90th)  <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb876-9"><a href="one-parameter.html#cb876-9"></a><span class="st">  </span><span class="kw">quantile</span>(., <span class="kw">c</span>(<span class="fl">0.025</span>, <span class="fl">0.975</span>))</span>
-<span id="cb876-10"><a href="one-parameter.html#cb876-10"></a>}</span></code></pre></div>
-<div class="sourceCode" id="cb877"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb877-1"><a href="one-parameter.html#cb877-1"></a><span class="co"># sims &lt;- 3</span></span>
-<span id="cb877-2"><a href="one-parameter.html#cb877-2"></a><span class="co"># </span></span>
-<span id="cb877-3"><a href="one-parameter.html#cb877-3"></a><span class="co"># tibble(ID = 1:sims) %&gt;% </span></span>
-<span id="cb877-4"><a href="one-parameter.html#cb877-4"></a><span class="co">#   mutate(heights_samples = map(ID, ~ sample_n(ch7_male, 40, replace = FALSE))) %&gt;% </span></span>
-<span id="cb877-5"><a href="one-parameter.html#cb877-5"></a><span class="co">#   mutate(ci = map(heights_samples, ~ do_the_bootstrap(.))) </span></span></code></pre></div>
+<div class="sourceCode" id="cb877"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb877-1"><a href="one-parameter.html#cb877-1"></a>do_the_bootstrap &lt;-<span class="st"> </span><span class="cf">function</span>(x){</span>
+<span id="cb877-2"><a href="one-parameter.html#cb877-2"></a>x <span class="op">%&gt;%</span><span class="st">   </span></span>
+<span id="cb877-3"><a href="one-parameter.html#cb877-3"></a><span class="st">  </span><span class="kw">select</span>(height) <span class="op">%&gt;%</span></span>
+<span id="cb877-4"><a href="one-parameter.html#cb877-4"></a><span class="st">  </span><span class="kw">bootstraps</span>(<span class="dt">times =</span> <span class="dv">1000</span>) <span class="op">%&gt;%</span></span>
+<span id="cb877-5"><a href="one-parameter.html#cb877-5"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">boot =</span> <span class="kw">map</span>(splits, <span class="op">~</span><span class="st"> </span><span class="kw">analysis</span>(.))) <span class="op">%&gt;%</span></span>
+<span id="cb877-6"><a href="one-parameter.html#cb877-6"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">heights =</span> <span class="kw">map</span>(boot, <span class="op">~</span><span class="st"> </span><span class="kw">pull</span>(., height))) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb877-7"><a href="one-parameter.html#cb877-7"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">height_90th =</span> <span class="kw">map_dbl</span>(heights, <span class="op">~</span><span class="st"> </span><span class="kw">quantile</span>(., <span class="dt">probs =</span> <span class="fl">0.90</span>))) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb877-8"><a href="one-parameter.html#cb877-8"></a><span class="st">  </span><span class="kw">pull</span>(height_90th)  <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb877-9"><a href="one-parameter.html#cb877-9"></a><span class="st">  </span><span class="kw">quantile</span>(., <span class="kw">c</span>(<span class="fl">0.025</span>, <span class="fl">0.975</span>))</span>
+<span id="cb877-10"><a href="one-parameter.html#cb877-10"></a>}</span></code></pre></div>
+<div class="sourceCode" id="cb878"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb878-1"><a href="one-parameter.html#cb878-1"></a><span class="kw">do_the_bootstrap</span>(heights_sample)</span></code></pre></div>
+<pre><code>## 2.5%  98% 
+##  180  186</code></pre>
+<div class="sourceCode" id="cb880"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb880-1"><a href="one-parameter.html#cb880-1"></a><span class="kw">set.seed</span>(<span class="dv">9</span>)</span>
+<span id="cb880-2"><a href="one-parameter.html#cb880-2"></a></span>
+<span id="cb880-3"><a href="one-parameter.html#cb880-3"></a>sims &lt;-<span class="st"> </span><span class="dv">1000</span></span>
+<span id="cb880-4"><a href="one-parameter.html#cb880-4"></a></span>
+<span id="cb880-5"><a href="one-parameter.html#cb880-5"></a>bootstrapchecks &lt;-<span class="st"> </span><span class="kw">tibble</span>(<span class="dt">ID =</span> <span class="dv">1</span><span class="op">:</span>sims) <span class="op">%&gt;%</span></span>
+<span id="cb880-6"><a href="one-parameter.html#cb880-6"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">heights_samples =</span> <span class="kw">map</span>(ID, <span class="op">~</span><span class="st"> </span><span class="kw">sample_n</span>(ch7_male, <span class="dv">40</span>, <span class="dt">replace =</span> <span class="ot">FALSE</span>))) <span class="op">%&gt;%</span></span>
+<span id="cb880-7"><a href="one-parameter.html#cb880-7"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">ci =</span> <span class="kw">map</span>(heights_samples, <span class="op">~</span><span class="st"> </span><span class="kw">do_the_bootstrap</span>(.))) <span class="op">%&gt;%</span></span>
+<span id="cb880-8"><a href="one-parameter.html#cb880-8"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">within_ci =</span> <span class="kw">map_lgl</span>(ci, </span>
+<span id="cb880-9"><a href="one-parameter.html#cb880-9"></a>                             <span class="op">~</span><span class="st"> </span><span class="kw">ifelse</span>(<span class="kw">between</span>(<span class="fl">184.3</span>, </span>
+<span id="cb880-10"><a href="one-parameter.html#cb880-10"></a>                                              ci[[<span class="dv">1</span>]][<span class="dv">1</span>], ci[[<span class="dv">1</span>]][<span class="dv">2</span>]), </span>
+<span id="cb880-11"><a href="one-parameter.html#cb880-11"></a>                                      <span class="ot">TRUE</span>, <span class="ot">FALSE</span>)))</span>
+<span id="cb880-12"><a href="one-parameter.html#cb880-12"></a></span>
+<span id="cb880-13"><a href="one-parameter.html#cb880-13"></a>bootstrapchecks</span></code></pre></div>
+<pre><code>## # A tibble: 1,000 x 4
+##       ID heights_samples   ci        within_ci
+##    &lt;int&gt; &lt;list&gt;            &lt;list&gt;    &lt;lgl&gt;    
+##  1     1 &lt;tibble [40 × 1]&gt; &lt;dbl [2]&gt; TRUE     
+##  2     2 &lt;tibble [40 × 1]&gt; &lt;dbl [2]&gt; TRUE     
+##  3     3 &lt;tibble [40 × 1]&gt; &lt;dbl [2]&gt; TRUE     
+##  4     4 &lt;tibble [40 × 1]&gt; &lt;dbl [2]&gt; TRUE     
+##  5     5 &lt;tibble [40 × 1]&gt; &lt;dbl [2]&gt; TRUE     
+##  6     6 &lt;tibble [40 × 1]&gt; &lt;dbl [2]&gt; TRUE     
+##  7     7 &lt;tibble [40 × 1]&gt; &lt;dbl [2]&gt; TRUE     
+##  8     8 &lt;tibble [40 × 1]&gt; &lt;dbl [2]&gt; TRUE     
+##  9     9 &lt;tibble [40 × 1]&gt; &lt;dbl [2]&gt; TRUE     
+## 10    10 &lt;tibble [40 × 1]&gt; &lt;dbl [2]&gt; TRUE     
+## # … with 990 more rows</code></pre>
+<p>Of the 1000 bootstrap analyses we completed, each starting with a different sample of 40 rows from the <code>nhanes</code> data, 1000 calculated a 95% confidence interval included the true 90th percentile of 184.3.</p>
 </div>
 <div id="parameter-uncertainty-and-unmodeled-variation" class="section level2">
 <h2>
