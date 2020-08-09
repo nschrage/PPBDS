@@ -74,7 +74,7 @@ Then, create a tibble, first column is ID. Second column is height_sample, which
 
 
 
-What is the average height of an American male? What is the 75th percentile of the distribution of height for American men? How certain are you are your estimates? If we past 5 men walking down the street, what are the odds that the tallest will be at least 5 centimeters taller than the shortest?
+What is the average height of an American male? What is the 90th percentile of the distribution of height for American men? How certain are you are your estimates? If we past 5 men walking down the street, what are the odds that the tallest will be at least 5 centimeters taller than the shortest?
 
 
 ## Pennies example {#resampling-tactile}
@@ -375,7 +375,7 @@ pennies_sample %>%
 
 ### Confidence Intervals using lm and quantile
 
-Let's now compute the confidence interval for our mean year of pennies in 2019. One way to extract the confidence interval is through using the `lm` method. `lm` means linear model and is generally used in regression modeling; however,`lm` can also used to find the confidence interval for a mean. The catch, though, is that we can only use `lm` to calculate the confidence interval for a mean only! This means that we cannot use `lm` to calculate the condfience interval for a statistic like the median or 75th percentile. 
+Let's now compute the confidence interval for our mean year of pennies in 2019. One way to extract the confidence interval is through using the `lm` method. `lm` means linear model and is generally used in regression modeling; however,`lm` can also used to find the confidence interval for a mean. The catch, though, is that we can only use `lm` to calculate the confidence interval for a mean only! This means that we cannot use `lm` to calculate the condfience interval for a statistic like the median or 90th percentile. 
 
 First, let's type `lm(year ~ 1, data = pennies_sample)` in our code chunk. This alone will get the mean of our dataset for pennies_sample
 
@@ -481,31 +481,37 @@ The plot shows some interesting stuff. Since the distributions of height for bot
 
 ## Using Bootstraps with `nhanes`
 
-We have shown you how to use bootstrap sampling to create confidence intervals for an unknown parameter for which you have created. In other words, we use bootstrap sampling to create our posterior distribution for the average year of pennies in the US duing 2009. But we have not yet demonstrated that the bootstrap "works." the purpose of this section is to provide that demonstration. 
+<!-- 4. Prove that the bootstrap works, that our 95% confidence intervals provide correct coverage. We make a game and I give you a sample of like 40. Here's the 40, and you give me a 95% CI using the bootstrap tools we learned. Then I give you another 40. And another. If we do this 1,00 times, and we use the same procedure for calculating a confidence interval each time, then 950 should include the truth. That's how we know bootstraps is correct and I could only demonstrate this to you if we know what the truth is.   -->
 
-As we can see that gender and height appears to be related, let's filter our data set to just males and the year 2009 in order to see how we can estimate certain statistics of our further subsetted data set using bootstrap samples. In this example, let's try to estimate the mean 90th percentile of male height in the year 2009. Obviously, we already know what these statistics are since we can easily calculate them by hand. However, the purpose of this example is to show that we can estimate the mean and 90th percentile pretty accurately from our bootstrap samples we will soon create. This section of chapter 7 will essentially show the validity of bootstrap samples. For now, let's focus on subsetting our data even more. 
+<!-- Plan: create function called create_ci(), which takes a tibble with a single variable called height and returns the 95% confidence interval --- i.e., a numeric vector of length 2 --- for the 75th percentile.  Note that you get to hard code everything. -->
+
+<!-- Then, create a tibble, first column is ID. Second column is height_sample, which is created by running sample(ch7$height, size = 40, replace = FALSE). Third column is ci, which is result mutate(ci = map(height_sample, ~ create_ci(.)). Fourth column is within_ci, which is TRUE if ci includes the TRUE value and FALSE otherwise. (If you want to have two columns, one for each limit, that is fine.) -->
+
+
+We have shown you how to use bootstrap sampling to create confidence intervals for an unknown parameter for which you have created. In other words, we use bootstrap sampling to create our posterior distribution for the average year of pennies in the US during 2009. But we have not yet demonstrated that the bootstrap "works," that our 95% confidence intervals provide correct coverage. The purpose of this section is to provide that demonstration. 
+
+In this demonstration, let's play a game! Let's first filter our data set to just males and the year 2009. We want to estimate the mean and 75th percentile of male height in the year 2009. Obviously, we already know what these statistics are since we can easily calculate them by hand. However, we want to show that the bootstrap works!
+
 
 ```{r}
 ch7_male <- nhanes %>%
-  select(height, gender, survey) %>%
-  filter(gender == "Male", survey == 2009) %>% 
+  filter(survey == 2009, gender == "Male") %>%
   select(height) %>%
-  drop_na()
+  arrange(height) %>%
+  na.omit()
+
 ```
 
-By further subsetting our data, we can see that we will only be using one variable. Since we are only estimating a model with one parameter, we can't make use of richer data.
 
-The mean is `r ch7_male %>% pull(height) %>% mean()` and the 90th percentile is `r ch7_male %>% pull(height) %>% quantile(c(.90))`. We are looking at 90th percentile, which is approximately the 237th tallest person. 
 
 We are now going to estimate both of these statistics using bootstrap. Remember how in the `pennies_sample` example, we first used a sample of 50 pennies to create our bootstrap samples. Let's do something very similar. In this case, let's take a sample without replacement of 40 of the 2,370 males in our data and look at their heights in 2009. To do so, we run the following command: 
 
 ```{r}
-set.seed(9)
 heights_sample <- sample_n(ch7_male, 40, replace = FALSE)
 ```
-Great! So now we have our sample of 40 male heights in 2009. Now you might wonder how this section of this chapter is different from the section with `pennies_samples`. Well, there are two key differences. First, we know the truth in this case, so we can examine whether or not the bootstrap works. (That is, we pull a sample of 40 and see if the bootstrap confidence interval from that 40 includes the true 75th percentile of the 2,370) Second, note that only the bootstrap will allow us to estimate statistics other than the mean. We can't use the lm() trick we learned about for pennies as we will find the confidence interval for the 75th percentile, which is a statistic that isn't the mean.
 
-Let's thus create our bootstrap samples. We already know how to create bootsrap samples from the `pennies_sample` section. Let's use the same code but obviously create the variables we are interested in, which are `height_90th`. 
+Great! So now we have our sample of 40 male heights in 2009. Now you might wonder how this section of this chapter is different from the section with `pennies_samples`. Well, there are two key differences. First, we know the truth in this case, so we can examine whether or not the bootstrap works. (That is, we pull a sample of 40 and see if the bootstrap confidence interval from that 40 includes the true 90th percentile of the 2,370) Second, note that only the bootstrap will allow us to estimate statistics other than the mean. We can't use the lm() trick we learned about for pennies as we will find the confidence interval for the 90th percentile, which is a statistic that isn't the mean.
+
 
 ```{r}
 set.seed(9)
@@ -514,15 +520,23 @@ virtual_heights <- heights_sample %>%
   bootstraps(times = 1000) %>%
   mutate(boot = map(splits, ~ analysis(.))) %>%
   mutate(heights = map(boot, ~ pull(., height))) %>% 
-  mutate(height_90th = map_dbl(heights, ~ quantile(., probs = 0.90))) 
+  mutate(height_90th = map_dbl(heights, ~ quantile(., probs = .90))) 
 virtual_heights
 ```
 
-<!-- Bootstrap creates posterior distirbution for your estimate of the unknown parametr: the 75th percentile of heights in the 2370 observations from nhanes -->
+```{r}
+virtual_heights %>% 
+  ggplot() +
+    geom_histogram(aes(x = height_90th, y=..count../sum(..count..)), binwidth = .9, fill = "red") +
+    labs(x = "Estimate in 90th Percentile of Male Height", y = "Probability",
+         title = "Posterior Distribution for the 90th Percentile of Male Heights in 2009") 
+```
+
+<!-- Bootstrap creates posterior distirbution for your estimate of the unknown parametr: the 90th percentile of heights in the 2370 observations from nhanes -->
 
 DK: Discuss our posterior distribution of the 90th percentile. Why it is weird. Does it include the truth in the 95% interval? Yes!
 
-Cool! We created our bootstrap samples and can see the mean height and 75th percentile of heights for each bootstrap sample. Now that we have our resamples, let's now estimate the mean male height of 2009 and 75th percentile of male height in 2009 using our resamples. We can do the same thing we did in the pennies section by using the `summarize` and `pull` functions. 
+Cool! We created our bootstrap samples and can see the mean height and 90th percentile of heights for each bootstrap sample. Now that we have our resamples, let's now estimate the mean male height of 2009 and 90th percentile of male height in 2009 using our resamples. We can do the same thing we did in the pennies section by using the `summarize` and `pull` functions. 
 
 
 ## Show Bootstrap Works
@@ -543,12 +557,19 @@ x %>%
 ```
 
 ```{r}
-# sims <- 3
-# 
-# tibble(ID = 1:sims) %>% 
-#   mutate(heights_samples = map(ID, ~ sample_n(ch7_male, 40, replace = FALSE))) %>% 
-#   mutate(ci = map(heights_samples, ~ do_the_bootstrap(.))) 
-  
+do_the_bootstrap(heights_sample)
+```
+
+
+
+```{r, cache=TRUE}
+sims <- 100
+
+bootstrapchecks <- tibble(ID = 1:sims) %>%
+  mutate(heights_samples = map(ID, ~ sample_n(ch7_male, 40, replace = FALSE))) %>%
+  mutate(ci = map(heights_samples, ~ do_the_bootstrap(.))) %>%
+  mutate(within_ci = map_lgl(ci, ~ ifelse(between(184.3, ci[[1]][1], ci[[1]][2]), TRUE, FALSE)))
+bootstrapchecks
 ```
 
 
