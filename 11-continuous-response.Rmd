@@ -180,18 +180,18 @@ Here, we are using the ***parsnip*** package to create an engine that can run th
 Fit the model to the data. We will first create a regression formula and save it as an R object for future recall. There are a lot of different combinations we could use for the formula, but which will yield the *best* model? In previous chapters, we discussed this dilemma. For now, we will build a full model containing all of the predictor variables and some interactions.
 
 ```{r}
-interact_form <- formula(ideology ~ gender * race + state * income + age + education)
+full_form <- formula(ideology ~ gender + race + state + income + age + education)
 ```
 
 ```{r eval=FALSE}
-fit(lm_model, interact_form, ch11_training)
+fit(lm_model, full_form, ch11_training)
 ```
 
 Note that we can use `tidy()`, just like we did in previous chapters, to take a look at the results:
 
 ```{r message=FALSE}
 library(broom)
-fit(lm_model, interact_form, ch11_training) %>%
+fit(lm_model, full_form, ch11_training) %>%
   tidy(conf.int = TRUE) %>%
   select(term, estimate, conf.low, conf.high)
 ```
@@ -234,13 +234,16 @@ Recipes are what ***tidymodels*** use in lieu of defining a formula traditionall
 There are a number of useful functions that can be piped into recipes. One particularly useful family of functions is the family of step functions. These functions conduct a variety of transformations, from removing variables with high correlations to other variables (`step_corr()`) to adding in an interaction term (`step_interact()`). To learn more about recipes, you can visit the [Tidymodels website.](https://recipes.tidymodels.org/reference/index.html)
 ```
 
-Usually, a simple formula without interaction terms can be plugged right in to `fit_resamples()`. However, ***tidymodels*** does not allow in-line functions in recipes, meaning we need to use a `step_*` function to add the interaction terms. 
+<!-- EC: Commented out because not relevant: Usually, a simple formula without interaction terms can be plugged right in to `fit_resamples()`. However, ***tidymodels*** does not allow in-line functions in recipes, meaning we need to use a `step_*` function to add the interaction terms. Let's create our recipe. First, we define a formula without interaction terms. Then, using `step_interact()`, we add in the relevant interaction terms.   -->
 
-Let's create our recipe. First, we define a formula without interaction terms. Then, using `step_interact()`, we add in the relevant interaction terms. We need to convert all of the nominal variables, which are unordered character values, to dummy variables. Dummy variables are binary variables that are 1 when the categorical event occurs and 0 when it does not occur. For example, each level within `education` would be converted into its own variable, with the value 1 if the respondent had that level of education, and 0 otherwise.
+We need to convert all of the nominal variables, which are unordered character values, to dummy variables. Dummy variables are binary variables that are 1 when the categorical event occurs and 0 when it does not occur. For example, each level within `education` would be converted into its own variable, with the value 1 if the respondent had that level of education, and 0 otherwise.
 
 ```{r message=FALSE, warning=FALSE}
-lm_rec <- recipe(ideology ~ gender + race + state + income + age + education, data = ch11_training) %>%
-  step_interact(terms = ~ gender*race + state*income) %>%
+# formula_rec <- recipe(ideology ~ gender + race + state + income + age + education, data = ch11_training) %>%
+#   step_interact(terms = ~ gender*race + state*income) %>%
+#   step_dummy(all_nominal())
+
+formula_rec <- recipe(ideology ~ gender + race + state + income + age + education, data = ch11_training) %>%
   step_dummy(all_nominal())
 ```
 
@@ -250,7 +253,7 @@ Finally, the `resamples` argument is where you input the cross-validation datase
 ```{r}
 set.seed(10)
 fit_resamples(object = lm_model,
-              preprocessor = lm_rec,
+              preprocessor = formula_rec,
               resamples = ch11_folds)
 ```   
 
@@ -259,7 +262,7 @@ Because the metrics are in list-columns, we can extract the average metrics acro
 ```{r}
 set.seed(10)
 fit_resamples(lm_model,
-              lm_rec,
+              formula_rec,
               ch11_folds) %>%
   collect_metrics()
 ```
@@ -268,7 +271,7 @@ Now that we've viewed the cross-validation metrics, it's time to use new data: n
 
 ```{r}
 lm_model %>%
-  fit(interact_form, data = ch11_training) %>%
+  fit(full_form, data = ch11_training) %>%
   predict(new_data = ch11_testing)
 ```
 
@@ -276,13 +279,13 @@ To extract the rmse, we set the "truth" to `ideology` so this function can compa
 
 ```{r}
 lm_model %>%
-  fit(interact_form, data = ch11_training) %>%
+  fit(full_form, data = ch11_training) %>%
   predict(new_data = ch11_testing) %>%
   bind_cols(ch11_testing) %>%
   rmse(truth = ideology, estimate = .pred)
 ```
 
-The mean squared error is about 2.14.
+The mean squared error is about 2.06.
 
 What if we create completely new data outside of the testing set? Time to make up some imaginary people. Let's say we have four individuals whose ideology in 2016 we wanted to predict. We can create a tibble with the values of their demographic information, like so:
 
@@ -302,7 +305,7 @@ Now, let's predict each new person's ideology using the linear regression model 
 
 ```{r message=FALSE}
 lm_model %>%
-  fit(interact_form, data = ch11_training) %>%
+  fit(full_form, data = ch11_training) %>%
   predict(new_data = new_people) %>%
   bind_cols(new_people) %>%
   rename("ideology" = ".pred")
@@ -329,16 +332,15 @@ stan_model <-
 
 Next, let's fit this model using the formula we specified before. We can select for the relevant terms after using `tidy()` to make our tibble viewable.
 
-<!-- EC: It seems like stan_glm just blows up. We can use algorithm = "optimizing" to make it go faster, but that doesn't play nice with tidymodels. -->
-
-```{r message=FALSE, warning=FALSE, eval=FALSE}
+```{r message=FALSE, warning=FALSE}
 set.seed(10)
-fit(stan_model, demo_form, ch11_training) %>%
-  tidy() %>%
-  select(term, estimate, std.error)
+fit(stan_model, full_form, ch11_training)
+
+  # tidy() %>%
+  # select(term, estimate, std.error)
 ```
 
-<!-- EC: How to fix  $ operator is invalid for atomic vectors error? -->
+<!-- EC: How to fix  $ operator is invalid for atomic vectors error that occurs with tidy? -->
 
 ### Verifying fit using cross-validation
 
@@ -347,7 +349,7 @@ Let's practice K-Fold validation with the `stan` model.
 ```{r cache=TRUE, eval=FALSE}
 set.seed(10)
 fit_resamples(object = stan_model,
-              preprocessor = demo_form,
+              preprocessor = formula_rec,
               resamples = ch11_folds)
 ```   
 
@@ -355,7 +357,7 @@ fit_resamples(object = stan_model,
 ```{r cache=TRUE, eval=FALSE}
 set.seed(10)
 fit_resamples(stan_model,
-              lm_rec,
+              formula_rec,
               ch11_folds) %>%
   collect_metrics()
 ```
@@ -364,7 +366,7 @@ Let's test the stan model using our four `new_people`.
 
 ```{r message=FALSE, eval=FALSE}
 stan_model %>%
-  fit(interact_form, data = ch11_training) %>%
+  fit(full_form, data = ch11_training) %>%
   predict(new_people) %>%
   bind_cols(new_people) %>%
   rename("ideology" = ".pred")
@@ -385,9 +387,6 @@ race_gender_form <- update(race_form,
                     ~ . + gender + race:gender)
 
 demo_form <- formula(ideology ~ race + gender + income + age + education)
-
-full_form <- update(demo_form,
-                   ~ . + state)
 
 interact_form <- update(race_gender_form,
                         ~ . + income*age + education)
@@ -478,7 +477,8 @@ Next, let's fit the model.
 <!-- EC: Tidy method for nnet doesn't exist? -->
 
 ```{r eval=FALSE}
-fit(nnet_model, interact_form, ch11_training) %>%
+nnet_model %>%
+  fit(full_form, ch11_training) %>%
   tidy(conf.int = TRUE) %>%
   select(term, estimate, conf.low, conf.high)
 ```
@@ -490,16 +490,14 @@ Let's cross-validate our predictions using `vfold_cv()`.
 ```{r message=FALSE, eval=FALSE}
 set.seed(10)
 fit_resamples(object = nnet_model,
-              preprocessor = lm_rec,
+              preprocessor = formula_rec,
               resamples = ch11_folds)
 ```   
-
-<!-- EC: Error: too many (1401) weights -->
 
 ```{r eval=FALSE}
 set.seed(10)
 fit_resamples(nnet_model,
-              lm_rec,
+              formula_rec,
               ch11_folds) %>%
   collect_metrics()
 ```
@@ -510,7 +508,7 @@ Lastly, let's apply our neural network model to the testing set.
 
 ```{r}
 nnet_model %>%
-  fit(demo_form, data = ch11_training) %>%
+  fit(full_form, data = ch11_training) %>%
   predict(new_data = ch11_testing) %>%
   bind_cols(ch11_testing) %>%
   rmse(truth = ideology, estimate = .pred)
@@ -520,7 +518,7 @@ Now, let's predict each new person's ideology using the `nnet` model we created,
 
 ```{r message=FALSE, eval=FALSE}
 nnet_model %>%
-  fit(demo_form, data = ch11_training) %>%
+  fit(full_form, data = ch11_training) %>%
   predict(new_people) %>%
   bind_cols(new_people) %>%
   rename("ideology" = ".pred")
