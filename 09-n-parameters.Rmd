@@ -48,11 +48,6 @@ output_yaml:
 
 Having created models with one parameter in Chapter \@ref(one-parameter) and two parameters in Chapter \@ref(two-parameters), you are now ready to make the jump to $N$ parameters. 
 
-Imagine you are running for Governor and want to do a better job of getting your voters to vote. You recently read about a large-scale experiment showing the effect of sending out a voting reminder that "shames" citizens who do not vote. You are considering sending out a "shaming" voting reminder yourself. What will happen if you do? Will more voters show up to the polls? Additionally, on the day of the election a female citizen is randomly selected. What is the probability she will vote?
-
-In this chapter, we will consider models with multiple parameters and the complexities that arise from these additions. We will also learn how to make more accurate predictions using Bayesian methods that will provide us with answers to the questions posed above.
-
-<!-- HV: Should this overarching question change since we are now starting wit the governors data rather than shaming? -->
 
 ## Explorator Data Analysis of `governors`
 
@@ -69,9 +64,8 @@ library(tidyverse)
 
 <!-- Talk about the data, as we usual do. Lots of interesting things. Explain how we only have data for people who are already dead. That is an interesting restriction, and effects the Preceptor Table in interesting ways. Make sure to mention all the variables we end up keeping below. Finish with some graphics which show how various things are related to our lefthand side variable: alive_post. -->
 
-<!-- HV: Should I move my EDA introduction from the shaming EDA to here since this is now first? Same with the general descriptions of functions such as skim, glimpse, etc. -->
 
-We will start off by using a subset of the `governors` data set from the `PPBDS.data` package. This data set looks at the lifespans of U.S. politicians from 1945 to 2012. It corresponds to the paper "Longevity Returns to Political Office" by Barfort, Klemmensen & Larsen (2019), and aims to find out whether winning an election influences the lifespan of politicians.
+We will start off by using a subset of the `governors` data set from the **PPBDS.data** package. This data set looks at the lifespans candidates for governor from 1945 to 2012. It corresponds to the paper "Longevity Returns to Political Office" by Barfort, Klemmensen & Larsen (2019), and aims to find out whether winning an election affects the lifespan of politicians.
 
 Let's explore the variables and observations contained within this data set by performing an Exploratory Data Analysis (EDA). EDAs help us summarize the data, identify patterns, spot outliers or anomalies, and more. We can start by running some summarizing commands such as `glimpse()`, `sample_n()`, and `skim()`.
 
@@ -93,17 +87,18 @@ Another caveat is that for a given election, only the top two candidates are inc
 
 Finally, it is noted that for some observations, only the birth or death year of a candidate could be determined, in which case the date was taken as July 1st of that year.
 
-Now, let's continue with the EDA by running `sample_n()` on the data. This will give us a random sample of observations to look at and may help us notice trends in the data, especially if we run it multiple times.
+Now, let's continue with the EDA by running `sample_n()`. 
 
 ```{r}
-sample_n(ch9_gov, 10)
+ch9_gov %>% 
+  sample_n(10)
 ```
-From this sample, we can see some trends start to appear. For example, we see that `sex` is most often "Male", and status is most often "Challenger" rather than "Incumbent".
 
-Another useful command in summarizing data sets during and EDA is `skim()`.
+Another useful command in summarizing data sets during and EDA is `skim()` from the **skimr** package.
 
 ```{r}
-skim(ch9_gov)
+ch9_gov %>% 
+  skim()
 ```
 
 This output groups the variables together by type (character, logical, numeric, etc.). From this, we can see things like the number of unique last names, how many of the observations in our subset won versus how many lost their elections, and the mean number of days before and after a gubernatorial election that a candidate lived. We are also given histograms of the numerical data. In looking at the histogram for `year`, we see that it is skewed right, with half of the observations from election years between 1945 and 1962. This makes sense logically, because we are only looking at deceased candidates, and candidates from more recent elections are more likely to still be alive.
@@ -152,11 +147,16 @@ obj.gov.1 <- stan_glm(data = ch9_gov,
                       refresh = 0)
 ```
 
-<!-- This is a simple example. Only three parameters are estimated: intercept, beta and sigma. But step through them all slowly, discussing what they mean. Not sure on the best way to display this. Maybe we just ignore sigma? -->
+<!-- This is a simple example. Only three parameters are estimated: intercept, beta and sigma. But step through them all slowly, discussing what they mean. Not sure on the best way to display this. Maybe we just ignore sigma? Note that the intercerpt is meaningless here. How many days do you expect to live after the election if you have been alive zero days? That is nonsense. -->
 
 ```{r}
 tbl_regression(obj.gov.1, intercept = TRUE)
 ```
+
+<!-- You could center alive_pre and then redo the regression, and then  -->
+
+<!-- ch9_gov <- ch9_gov %>% mutate(alive_pre_centered = alive_pre - mean(alive_pre)) -->
+
 
 ```{r}
 obj.gov.2 <- stan_glm(data = ch9_gov,
@@ -202,6 +202,8 @@ tbl_regression(obj.gov.4, intercept = TRUE)
 ```
 
 <!-- DK: Take your time explaining what this means! It is not trivial. Note that this is a non-parallel slopes model. -->
+
+<!-- Consider using: ch9_gov %>% filter(sex == "Female") %>% ggplot(aes(alive_pre, alive_post)) + geom_point() + geom_smooth(method = "lm") -->
 
 
 ```{r, cache=TRUE}
