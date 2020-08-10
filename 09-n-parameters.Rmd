@@ -16,11 +16,11 @@ output_yaml:
 
 <!-- Then, we will be going through a series of models, always with greater complexity. For each model, we have: -->
 
-<!-- Justice: each model discussion begins with Justice, which includes a Preceptor Table --- note how this changes for each model, because the Preceptor Table only needs columns for the convariates in the model, and only needs outcome columns for the outcomes you care about --- and then provides the math of the situation, which is also different each time.  A Preceptor Table has the rows and columns such that, if there are no missing values, answering your quetsion is trivial. I guess you might not have to give the Preceptor Table and the math every single time. But you do need to describe how they would differ from the last example. -->
+<!-- Justice: each model discussion begins with Justice, which includes a Preceptor Table --- note how this changes for each model, because the Preceptor Table only needs columns for the covariates in the model, and only needs outcome columns for the outcomes you care about --- and then provides the math of the situation, which is also different each time.  A Preceptor Table has the rows and columns such that, if there are no missing values, answering your quetsion is trivial. I guess you might not have to give the Preceptor Table and the math every single time. But you do need to describe how they would differ from the last example. -->
 
 <!-- Courage: Then, we have Courage, which means run the code and interpret it. This will include posterior_linpred(). Indeed, that is where this section finishes. In other words, each model includes a discussion of Justice and Courage, labeled as such. -->
 
-<!-- Temperance: After you come to your final model, it is time for a discussion of Temperance: All the reasons why you shold be careful about what you do with the model in the future. This section includes the use of posterior_predict(). -->
+<!-- Temperance: After you come to your final model, it is time for a discussion of Temperance: All the reasons why you should be careful about what you do with the model in the future. This section includes the use of posterior_predict(). -->
 
 
 <!-- 1) EDA of `shaming`. I think that hh_size is a good variable to check for interactions with, especially with Control. Create a new variable called `solo` which is TRUE if the `hh_size` is equal to 1 and FALSE otherwise. In other words, does the state of living alone tell us anything? We will interact this term with treatment in our model. It is cool that the p value for the interaction of solo with Self is 0.06. A perfect example for the evils of testing!  -->
@@ -52,6 +52,8 @@ Imagine you are running for Governor and want to do a better job of getting your
 
 In this chapter, we will consider models with multiple parameters and the complexities that arise from these additions. We will also learn how to make more accurate predictions using Bayesian methods that will provide us with answers to the questions posed above.
 
+<!-- HV: Should this overarching question change since we are now starting wit the governors data rather than shaming? -->
+
 ## Explorator Data Analysis of `governors`
 
 Begin by loading the packages which we need.
@@ -61,17 +63,81 @@ library(PPBDS.data)
 library(skimr)
 library(broom.mixed)
 library(rstanarm)
+library(gtsummary)
 library(tidyverse)
 ```
 
 <!-- Talk about the data, as we usual do. Lots of interesting things. Explain how we only have data for people who are already dead. That is an interesting restriction, and effects the Preceptor Table in interesting ways. Make sure to mention all the variables we end up keeping below. Finish with some graphics which show how various things are related to our lefthand side variable: alive_post. -->
 
+<!-- HV: Should I move my EDA introduction from the shaming EDA to here since this is now first? Same with the general descriptions of functions such as skim, glimpse, etc. -->
+
+We will start off by using a subset of the `governors` data set from the `PPBDS.data` package. This data set looks at the lifespans of U.S. politicians from 1945 to 2012. It corresponds to the paper "Longevity Returns to Political Office" by Barfort, Klemmensen & Larsen (2019), and aims to find out whether winning an election influences the lifespan of politicians.
+
+Let's explore the variables and observations contained within this data set by performing an Exploratory Data Analysis (EDA). EDAs help us summarize the data, identify patterns, spot outliers or anomalies, and more. We can start by running some summarizing commands such as `glimpse()`, `sample_n()`, and `skim()`.
+
+```{r}
+glimpse(governors)
+```
+
+As we can see, there are 11 variables and 1,092 observations. In this chapter, we will only be looking at the variables `state`, `year`, `last_name`, `sex`, `status`, `alive_post`, and `alive_pre`. We will also create a new variable called `won` that is `TRUE` when the win margin is greater than 0, and `FALSE` if not.
 
 ```{r}
 ch9_gov <- governors %>% 
   mutate(won = ifelse(win_margin > 0, TRUE, FALSE)) %>% 
   select(last_name, year, state, sex, status, won, alive_post, alive_pre)
 ```
+
+There are a few things to note when looking at this data. First, the data set includes the variables `alive_pre` and `alive_post`, which tell us how many days a candidate lived before the election took place and how many days a candidate lived after the election took place, respectively. Therefore, only politicians who are already deceased are included in this data set. Furthermore, candidates with unknown dates of death were not included in the dataset. 
+
+Another caveat is that for a given election, only the top two candidates are included in the data set. If a politician did not receive the highest or second-highest number of votes, they are excluded. 
+
+Finally, it is noted that for some observations, only the birth or death year of a candidate could be determined, in which case the date was taken as July 1st of that year.
+
+Now, let's continue with the EDA by running `sample_n()` on the data. This will give us a random sample of observations to look at and may help us notice trends in the data, especially if we run it multiple times.
+
+```{r}
+sample_n(ch9_gov, 10)
+```
+From this sample, we can see some trends start to appear. For example, we see that `sex` is most often "Male", and status is most often "Challenger" rather than "Incumbent".
+
+Another useful command in summarizing data sets during and EDA is `skim()`.
+
+```{r}
+skim(ch9_gov)
+```
+
+This output groups the variables together by type (character, logical, numeric, etc.). From this, we can see things like the number of unique last names, how many of the observations in our subset won versus how many lost their elections, and the mean number of days before and after a gubernatorial election that a candidate lived. We are also given histograms of the numerical data. In looking at the histogram for `year`, we see that it is skewed right, with half of the observations from election years between 1945 and 1962. This makes sense logically, because we are only looking at deceased candidates, and candidates from more recent elections are more likely to still be alive.
+
+In using this data set, our left-side variable will be `alive_post`. We want to know how the election affected the lifespan of these gubernatorial candidates. Let's look at some graphs and plots showing the relationships between `alive_post` and some of the other variables in our subset.
+
+```{r}
+ch9_gov %>%
+  ggplot(aes(x = year, y = alive_post)) +
+  geom_point()
+```
+Starting with the relationship between `alive_post` and `year`, we can see that the data is skewed right. Why might this be?
+
+<!-- Add more discussion of this graph -->
+
+```{r}
+ch9_gov %>%
+  ggplot(aes(x = won, y = alive_post)) +
+  geom_boxplot()
+```
+This box plot is interesting in that it takes a direct look at the relationship we are trying to learn more about: whether winning an election influences the lifespan of politicians. In looking at these box plots, we can see that there are minor differences in the width of the boxes and length of the lines. Of the candidates who won, the 25% who lived the longest after the election lived longer than the top 25% of candidates who lost the election.
+
+<!-- Clean up and add more discussion here -->
+
+<!-- HV: What specific types of plots/graphs do you suggest adding? -->
+
+
+
+<!-- HV: Where should the section/subsection of Prudence go? -->
+### Prudence
+
+Now that we have a general understanding of the data we are working with, let's talk about Prudence.
+
+
 
 ## Model of `alive_post`
 
@@ -158,11 +224,12 @@ tbl_regression(obj.gov.5, intercept = TRUE)
 
 Consider a new data set, `shaming`, corresponding to an experiment carried out by Gerber, Green, and Larimer (2008) titled "Social Pressure and Voter Turnout: Evidence from a Large-Scale Field Experiment". This experiment used several hundred thousand registered voters and a series of mailings to determine the effect of social pressure on voter turnout. 
 
-Let's explore the variables and observations contained within this data set by performing an Exploratory Data Analysis (EDA). EDAs help us summarize the data, identify patterns, spot outliers or anomalies, and more. We can start by running some summarizing commands such as `glimpse()`, `sample_n()`, and `summary()`.
+Let's now do another EDA, starting off by running `glimpse()`.
 
 ```{r}
 glimpse(shaming)
 ```
+
 Here we see that `glimpse()` gives us a look at the raw data contained within the `shaming` data set. At the very top of the output, we can see the number of rows and columns, or observations and variables respectively. We see that there are 344,084 observations, with each row corresponding to a unique respondent. The "Columns: 10" tells us that there are 10 variables within this data set. Below this, we see a cutoff version of the entire data set that has the variables on the left as rows and the observations as a list separated by commas, as compared to the tibble output that presents with the variables as columns and the observations as rows running horizontally.
 
 <!-- It may be worth mentioning that general_04 is always "yes", unlike all the other voting history variables which have values of "yes" and "no". Why is that? I *think* that this is caused by their sampling plan. They found all the people who voted in the 2004 general election. Then, the authors found their history. As we would expect, those people had sometimes voted in the past and sometime not. Then, the authors sent the mailing. The key dependent variable, primary_06, is coding 0/1, since that makes doing the statistics easier. -->
