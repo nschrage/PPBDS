@@ -148,7 +148,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li class="toc"><a href="#resampling-tactile"> Pennies example</a></li>
 <li class="toc"><a href="#eda-for-nhanes"> EDA for <code>nhanes</code></a></li>
 <li class="toc"><a href="#using-bootstraps-with-nhanes"> Using Bootstraps with <code>nhanes</code></a></li>
-<li class="toc"><a href="#show-bootstrap-works"> Show Bootstrap Works</a></li>
+<li class="toc"><a href="#show-that-bootstrap-works"> Show that Bootstrap Works</a></li>
 <li class="toc"><a href="#parameter-uncertainty-and-unmodeled-variation"> Parameter Uncertainty and Unmodeled Variation</a></li>
 <li class="toc"><a href="#ci-conclusion"> Conclusion</a></li>
 </ul>
@@ -181,7 +181,6 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <span class="header-section-number">7.1</span> Pennies example</h2>
 <p>In Chapter <a href="sampling.html#sampling">6</a>, we studied sampling. We started with a “tactile” exercise where we wanted to know the proportion of balls in the urn that are red. While we could have performed an exhaustive count, this would have been a tedious process. So instead, we used a shovel to extract a sample of 50 balls and used the resulting proportion that were red as an <em>estimate</em>. Furthermore, we made sure to mix the urn’s contents before every use of the shovel. Because of the randomness created by the mixing, different uses of the shovel yielded different proportions red and hence different estimates of the proportion of the urn’s balls that are red.</p>
 <p>Remember: There is a <em>truth</em> here. There is an urn. It has red and white balls in it. An exact, but unknown, number of the balls are red. An exact, but unknown, number of the balls are white. An exact, but unknown, percentage of the balls are red – defined as the number red divided by the sum of the number red and the number white. Our goal was to estimate that unknown percentage. We wanted to make statements about the world, even if we can never be certain that those statements are <em>true</em>. We will never have the time or inclination to actually count all the balls. We use the term <em>parameter</em> for things that exist but which are unknown. We use statistics to estimate the true values of parameters.</p>
-<!-- Reinforce the last two sentences as the topic sentences for the Remember paragraph. -->
 <p>We then mimicked this <em>physical</em> sampling exercise with an equivalent <em>virtual</em> sampling exercise using the computer. In Subsection <a href="sampling.html#different-shovels">6.2.4</a>, we repeated this sampling procedure 1,000 times, using three different virtual shovels with 25, 50, and 100 slots. We visualized these three sets of 1,000 estimates in Figure <a href="#fig:comparing-sampling-distributions-3"><strong>??</strong></a> and saw that as the sample size increased, the variation in the estimates decreased. We then expanded this for all sample sizes from 1 to 100.</p>
 <p>In doing so, we constructed <em>sampling distributions</em>. The motivation for taking a 1,000 repeated samples and visualizing the resulting estimates was to study how these estimates varied from one sample to another; in other words, we wanted to study the effect of <em>sampling variation</em>. We quantified the variation of these estimates using their standard deviation, which has a special name: the <em>standard error</em>. In particular, we saw that as the sample size increased from 1 to 100, the standard error decreased and thus the sampling distributions narrowed. Larger sample sizes led to more <em>precise</em> estimates that varied less around the center.</p>
 <!-- Distinguish further the difference between standard deviation and standard error in the above paragraph. Readers can confuse the two. -->
@@ -190,13 +189,10 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <p>An example of a realistic sampling situation would be a poll, like the <a href="https://www.npr.org/sections/itsallpolitics/2013/12/04/248793753/poll-support-for-obama-among-young-americans-eroding">Obama poll</a> you saw in Section <a href="sampling.html#sampling-case-study">6.5</a>. Pollsters did not know the true proportion of <em>all</em> young Americans who supported President Obama in 2013, and thus they took a single sample of size <span class="math inline">\(n\)</span> = 2,089 young Americans to estimate this value.</p>
 <p>So how does one quantify the effects of sampling variation when you only have a <em>single sample</em> to work with? You cannot directly study the effects of sampling variation when you only have one sample. One common method to study this is <em>bootstrapping resampling</em>.</p>
 <p>What if we would like, not only a single estimate of the unknown population parameter, but also a <em>range of highly plausible</em> values? Going back to the Obama poll article, it stated that the pollsters’ estimate of the proportion of all young Americans who supported President Obama was 41%. But in addition it stated that the poll’s “margin of error was plus or minus 2.1 percentage points.” This “plausible range” was [41% - 2.1%, 41% + 2.1%] = [38.9%, 43.1%]. This range of plausible values is what’s known as a <em>confidence interval</em>, which will be the focus of the later sections of this chapter.</p>
-<!-- Create graphic illustrating two-step process of 1) construct bootstrap distribution
-and then 2) based on bootstrap dist'n create CI? -->
 <div id="to-the-bank" class="section level3">
 <h3>
 <span class="header-section-number">7.1.1</span> To the Bank</h3>
 <p>As we did in Chapter <a href="sampling.html#sampling">6</a>, we’ll begin with a hands-on tactile activity. We almost always need the <strong>tidyverse</strong> package.</p>
-<!-- DK: Why can't we stick a margin note in here about how to install PPBDS.data? I can't even leave a commented out version of the note without crashing any knitting attempt. -->
 <div class="sourceCode" id="cb838"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb838-1"><a href="one-parameter.html#cb838-1"></a><span class="kw">library</span>(PPBDS.data)</span>
 <span id="cb838-2"><a href="one-parameter.html#cb838-2"></a><span class="kw">library</span>(rsample)</span>
 <span id="cb838-3"><a href="one-parameter.html#cb838-3"></a><span class="kw">library</span>(tidyverse)</span>
@@ -2011,7 +2007,6 @@ FIGURE 7.5: Analogy of difference between point estimates and confidence interva
 <div id="confidence-intervals-using-lm-and-quantile" class="section level3">
 <h3>
 <span class="header-section-number">7.1.4</span> Confidence Intervals using lm and quantile</h3>
-<p>Let’s now compute the confidence interval for our mean year of pennies in 2019. One way to extract the confidence interval is through using the <code>lm</code> method. <code>lm</code> means linear model and is generally used in regression modeling; however,<code>lm</code> can also used to find the confidence interval for a mean. The catch, though, is that we can only use <code>lm</code> to calculate the confidence interval for a mean only! This means that we cannot use <code>lm</code> to calculate the condfience interval for a statistic like the median or 90th percentile.</p>
 <p>First, let’s type <code>lm(year ~ 1, data = pennies_sample)</code> in our code chunk. This alone will get the mean of our dataset for pennies_sample</p>
 <div class="sourceCode" id="cb853"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb853-1"><a href="one-parameter.html#cb853-1"></a>  <span class="kw">lm</span>(year <span class="op">~</span><span class="st"> </span><span class="dv">1</span>, <span class="dt">data =</span> pennies_sample)</span></code></pre></div>
 <pre><code>## 
@@ -2049,8 +2044,8 @@ FIGURE 7.5: Analogy of difference between point estimates and confidence interva
 <span class="header-section-number">7.2</span> EDA for <code>nhanes</code>
 </h2>
 <p><label for="tufte-mn-63" class="margin-toggle">⊕</label><input type="checkbox" id="tufte-mn-63" class="margin-toggle"><span class="marginnote">Run ?nhanes to get more information about the data from nhanes</span>
-Let’s perform an exploratory data analysis (EDA) of the nhanes data set from the <strong>PPBDS.data</strong> package. The nhanes data is the data from National Health and Nutrition Examination Survey conduced by the Centers for Disease Control and Prevention and is about children and adults in America.</p>
-<p>Let’s first load the libraries we will need in this chapter and look at the nhanes data.</p>
+Shifting away from dealing with pennies, let’s look at bootstrap modeling witht the nhanes dataset. Let’s perform an exploratory data analysis (EDA) of the nhanes data set from the <strong>PPBDS.data</strong> package. The nhanes data is the data from National Health and Nutrition Examination Survey conduced by the Centers for Disease Control and Prevention and is about children and adults in America.</p>
+<p>Load the libraries we will need in this chapter and analyze the nhanes data.</p>
 <div class="sourceCode" id="cb861"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb861-1"><a href="one-parameter.html#cb861-1"></a><span class="kw">library</span>(PPBDS.data)</span>
 <span id="cb861-2"><a href="one-parameter.html#cb861-2"></a><span class="kw">library</span>(tidyverse)</span>
 <span id="cb861-3"><a href="one-parameter.html#cb861-3"></a><span class="kw">library</span>(broom)</span>
@@ -2075,8 +2070,8 @@ Let’s perform an exploratory data analysis (EDA) of the nhanes data set from t
 ## $ depressed      &lt;ord&gt; Several, Several, Several, NA, Several, NA, NA, None, …
 ## $ pregnancies    &lt;int&gt; NA, NA, NA, NA, 2, NA, NA, 1, 1, 1, NA, NA, NA, NA, NA…
 ## $ sleep          &lt;int&gt; 4, 4, 4, NA, 8, NA, NA, 8, 8, 8, 7, 5, 4, NA, 5, 7, NA…</code></pre>
-<p><code>glimpse()</code> is a really cool function to use to get a peek at your data. It basically allows your data to be viewed running across rows. <code>glimpse</code> gives you a sense of what your data is supposed to look like. Based on the glimpse of nhanes, we see that nhanes has data on a diverse array of things like physical attributes, education, and sleep.</p>
-<p>In our examination of nhanes, however, let’s restrict the nhanes data to a subset as demonstrated below.</p>
+<p><code>glimpse()</code> is a really cool function to use to get a quick peek at your data. It basically allows your data to be viewed running across rows. <code>glimpse</code> gives you a sense of what your data is supposed to look like. Based on the glimpse of nhanes, we see that nhanes has data on a diverse array of things like physical attributes, education, and sleep.</p>
+<p>In our examination of nhanes, however, let’s restrict the nhanes data to a subset, focusing on year, gender, and height.</p>
 <div class="sourceCode" id="cb864"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb864-1"><a href="one-parameter.html#cb864-1"></a>ch7 &lt;-<span class="st"> </span>nhanes <span class="op">%&gt;%</span><span class="st"> </span></span>
 <span id="cb864-2"><a href="one-parameter.html#cb864-2"></a><span class="st">  </span><span class="kw">select</span>(gender, height, survey)</span></code></pre></div>
 <p>Furthermore, it is always smart to look at random samples of our data set.</p>
@@ -2090,7 +2085,8 @@ Let’s perform an exploratory data analysis (EDA) of the nhanes data set from t
 ## 3 Male     145    2009
 ## 4 Male     153.   2011
 ## 5 Male     171.   2011</code></pre>
-<p>Notice how there is a decimal in our ch7 data. this is because <code>height</code> is in <code>&lt;dbl&gt;</code> and not <code>&lt;int&gt;</code>. Explain more!</p>
+<p>Notice how there is a decimal in the height column of ch7 data. This is because <code>height</code> is in <code>&lt;dbl&gt;</code> and not <code>&lt;int&gt;</code>, so <code>height</code> will not be rounded up to the nearest integer.</p>
+<p>Let’s also run <code>glimpse</code> to analyze our new data.</p>
 <div class="sourceCode" id="cb867"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb867-1"><a href="one-parameter.html#cb867-1"></a>ch7 <span class="op">%&gt;%</span></span>
 <span id="cb867-2"><a href="one-parameter.html#cb867-2"></a><span class="st">  </span><span class="kw">glimpse</span>()</span></code></pre></div>
 <pre><code>## Rows: 10,000
@@ -2099,6 +2095,7 @@ Let’s perform an exploratory data analysis (EDA) of the nhanes data set from t
 ## $ height &lt;dbl&gt; 165, 165, 165, 105, 168, 133, 131, 167, 167, 167, 170, 182, 16…
 ## $ survey &lt;int&gt; 2009, 2009, 2009, 2009, 2009, 2009, 2009, 2009, 2009, 2009, 20…</code></pre>
 <p>Be on the lookout if anything looks suspicious to you. Are there any NA’s in your data set? What types of data are the columns, i.e. why is <code>survey</code> characterized as integer instead of double? Was most of the data collected in 2009? Are there more females than males? There will clearly be more questions to answer, but it is important that you ask these types of questions and notice anything suspicious. A good data scientist will always look thoroughly at the data.</p>
+<p>In addition to <code>glimpse</code>, we can run<code>skim</code> on our data to get standard statistics like mean of our data.</p>
 <div class="sourceCode" id="cb869"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb869-1"><a href="one-parameter.html#cb869-1"></a>ch7 <span class="op">%&gt;%</span><span class="st"> </span></span>
 <span id="cb869-2"><a href="one-parameter.html#cb869-2"></a><span class="st">  </span><span class="kw">skim</span>()</span></code></pre></div>
 <p><!--
@@ -2220,7 +2217,7 @@ Let’s perform an exploratory data analysis (EDA) of the nhanes data set from t
 <span id="cb871-4"><a href="one-parameter.html#cb871-4"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">"Height"</span>,</span>
 <span id="cb871-5"><a href="one-parameter.html#cb871-5"></a>       <span class="dt">title =</span> <span class="st">"Height by Gender in Nhanes Dataset"</span>)</span></code></pre></div>
 <p><img src="book_temp_files/figure-html/unnamed-chunk-612-1.png" width="672">
-The plot shows some interesting stuff. Since the distributions of height for both genders are skewed left, we can infer that this data set included children and thus age played a role in our data. Additionally, we can see the the most probable heights for both genders and see that men are generally taller than women.</p>
+The plot shows some interesting stuff. Since the distributions of height for both genders are skewed left, we can infer that this data set included children and thus age played a role in our data. Additionally, we can see the the most probable heights for both genders and that men are generally taller than women.</p>
 </div>
 <div id="using-bootstraps-with-nhanes" class="section level2">
 <h2>
@@ -2236,7 +2233,8 @@ The plot shows some interesting stuff. Since the distributions of height for bot
 <span id="cb872-3"><a href="one-parameter.html#cb872-3"></a><span class="st">  </span><span class="kw">select</span>(height) <span class="op">%&gt;%</span></span>
 <span id="cb872-4"><a href="one-parameter.html#cb872-4"></a><span class="st">  </span><span class="kw">arrange</span>(height) <span class="op">%&gt;%</span></span>
 <span id="cb872-5"><a href="one-parameter.html#cb872-5"></a><span class="st">  </span><span class="kw">na.omit</span>()</span></code></pre></div>
-<p>We are now going to estimate both of these statistics using bootstrap. Remember how in the <code>pennies_sample</code> example, we first used a sample of 50 pennies to create our bootstrap samples. Let’s do something very similar. In this case, let’s take a sample without replacement of 40 of the 2,370 males in our data and look at their heights in 2009. To do so, we run the following command:</p>
+<p>Noticed how we did <code>arrange(height)</code>, because since we know the 90th percentile is the 2,133 tallest male in the data set, it would be good to look at our data in increasing order. Furthermore, remember how nhanes had lots of NA’s. It would be good to get rid of them here. The true mean in this case is ________ and the true 90th percentile is ________.</p>
+<p>We are now going to estimate both the true mean and 90th percentile using our bootstrap. Remember how in the <code>pennies_sample</code> example, we first used a sample of 50 pennies to create our bootstrap samples. Let’s do something very similar. In this case, let’s take a sample without replacement of 40 of the 2,370 males in our data and look at their heights in 2009. To do so, we run the following command:</p>
 <div class="sourceCode" id="cb873"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb873-1"><a href="one-parameter.html#cb873-1"></a>heights_sample &lt;-<span class="st"> </span><span class="kw">sample_n</span>(ch7_male, <span class="dv">40</span>, <span class="dt">replace =</span> <span class="ot">FALSE</span>)</span></code></pre></div>
 <p>Great! So now we have our sample of 40 male heights in 2009. Now you might wonder how this section of this chapter is different from the section with <code>pennies_samples</code>. Well, there are two key differences. First, we know the truth in this case, so we can examine whether or not the bootstrap works. (That is, we pull a sample of 40 and see if the bootstrap confidence interval from that 40 includes the true 90th percentile of the 2,370) Second, note that only the bootstrap will allow us to estimate statistics other than the mean. We can’t use the lm() trick we learned about for pennies as we will find the confidence interval for the 90th percentile, which is a statistic that isn’t the mean.</p>
 <div class="sourceCode" id="cb874"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb874-1"><a href="one-parameter.html#cb874-1"></a><span class="kw">set.seed</span>(<span class="dv">9</span>)</span>
@@ -2262,21 +2260,25 @@ The plot shows some interesting stuff. Since the distributions of height for bot
 ##  9 &lt;split [40/14]&gt; Bootstrap0009 &lt;tibble [40 × 1]&gt; &lt;dbl [40]&gt;        182.
 ## 10 &lt;split [40/16]&gt; Bootstrap0010 &lt;tibble [40 × 1]&gt; &lt;dbl [40]&gt;        182.
 ## # … with 990 more rows</code></pre>
+<p>Let’s also see the posterior distribution for the 90th percentile of male heights in 2009 by creating a ggplot.</p>
 <div class="sourceCode" id="cb876"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb876-1"><a href="one-parameter.html#cb876-1"></a>virtual_heights <span class="op">%&gt;%</span><span class="st"> </span></span>
 <span id="cb876-2"><a href="one-parameter.html#cb876-2"></a><span class="st">  </span><span class="kw">ggplot</span>() <span class="op">+</span></span>
-<span id="cb876-3"><a href="one-parameter.html#cb876-3"></a><span class="st">    </span><span class="kw">geom_histogram</span>(<span class="kw">aes</span>(<span class="dt">x =</span> height_90th, <span class="dt">y=</span>..count..<span class="op">/</span><span class="kw">sum</span>(..count..)), <span class="dt">binwidth =</span> <span class="fl">.9</span>, <span class="dt">fill =</span> <span class="st">"red"</span>) <span class="op">+</span></span>
+<span id="cb876-3"><a href="one-parameter.html#cb876-3"></a><span class="st">    </span><span class="kw">geom_histogram</span>(<span class="kw">aes</span>(<span class="dt">x =</span> height_90th, <span class="dt">y=</span>..count..<span class="op">/</span><span class="kw">sum</span>(..count..)), <span class="dt">binwidth =</span> <span class="fl">.5</span>, <span class="dt">fill =</span> <span class="st">"red"</span>) <span class="op">+</span></span>
 <span id="cb876-4"><a href="one-parameter.html#cb876-4"></a><span class="st">    </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">"Estimate in 90th Percentile of Male Height"</span>, <span class="dt">y =</span> <span class="st">"Probability"</span>,</span>
 <span id="cb876-5"><a href="one-parameter.html#cb876-5"></a>         <span class="dt">title =</span> <span class="st">"Posterior Distribution for the 90th Percentile of Male Heights in 2009"</span>) </span></code></pre></div>
 <p><img src="book_temp_files/figure-html/unnamed-chunk-616-1.png" width="672"></p>
-<!-- Bootstrap creates posterior distirbution for your estimate of the unknown parametr: the 90th percentile of heights in the 2370 observations from nhanes -->
+<p>We have just created the posterior distribution of the 90th percentile from our bootstraps. The histogram appears to be skewed to the right. Frankly, the posterior distribution looks weird, but that is okay because the posterior distribution includes the truth.</p>
+<!-- Bootstrap creates posterior distribution for your estimate of the unknown parametr: the 90th percentile of heights in the 2370 observations from nhanes -->
 <p>DK: Discuss our posterior distribution of the 90th percentile. Why it is weird. Does it include the truth in the 95% interval? Yes!</p>
-<p>Cool! We created our bootstrap samples and can see the mean height and 90th percentile of heights for each bootstrap sample. Now that we have our resamples, let’s now estimate the mean male height of 2009 and 90th percentile of male height in 2009 using our resamples. We can do the same thing we did in the pennies section by using the <code>summarize</code> and <code>pull</code> functions.</p>
 </div>
-<div id="show-bootstrap-works" class="section level2">
+<div id="show-that-bootstrap-works" class="section level2">
 <h2>
-<span class="header-section-number">7.4</span> Show Bootstrap Works</h2>
-<p>Make a function</p>
-<div class="sourceCode" id="cb877"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb877-1"><a href="one-parameter.html#cb877-1"></a>do_the_bootstrap &lt;-<span class="st"> </span><span class="cf">function</span>(x){</span>
+<span class="header-section-number">7.4</span> Show that Bootstrap Works</h2>
+<p>Suppose we want to set a 95% confidence interval on the 90th percentile, the true parameter
+value for the real population. We have taken 1000 bootstrap samples. The bootstrap method suggests that approximately 95% of the time, the true parameter value for 90th percentile falls between the 2.5th percentile of the
+bootstrap samples and the 97.5th percentile. In general, a 95% confidence interval indicates that if 1000 bootstrap samples are taken and a 95% confidence interval is calculated for each resample, then approximately 950 of the 1000 confidence intervals will contain the truth. Sometimes, however, we may take just one bootstrap sample and calculate its confidence interval, but this confidence interval may or may not contain the truth. In other words, the confidence interval generated from that bootstrap sample can over- or underestimate the true value. That is why statisticians usually run many samples like a thousand to see if 95% of the confidence intervals generated contain the truth.</p>
+<p>In this case, we have created 1000 bootstrap samples, and we want to show that the bootstrap works, we will be creating a confidence interval for the 90th percentile for each bootstrap sample. One way to create a confidence interval for each bootstrap function is through a function. Notice how the function we created is basically the same as the bootstrap code, but we have just added a line to create the confidence interval for each bootstrap sample.</p>
+<div class="sourceCode" id="cb877"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb877-1"><a href="one-parameter.html#cb877-1"></a>do_the_bootstrapci &lt;-<span class="st"> </span><span class="cf">function</span>(x){</span>
 <span id="cb877-2"><a href="one-parameter.html#cb877-2"></a>x <span class="op">%&gt;%</span><span class="st">   </span></span>
 <span id="cb877-3"><a href="one-parameter.html#cb877-3"></a><span class="st">  </span><span class="kw">select</span>(height) <span class="op">%&gt;%</span></span>
 <span id="cb877-4"><a href="one-parameter.html#cb877-4"></a><span class="st">  </span><span class="kw">bootstraps</span>(<span class="dt">times =</span> <span class="dv">1000</span>) <span class="op">%&gt;%</span></span>
@@ -2286,23 +2288,16 @@ The plot shows some interesting stuff. Since the distributions of height for bot
 <span id="cb877-8"><a href="one-parameter.html#cb877-8"></a><span class="st">  </span><span class="kw">pull</span>(height_90th)  <span class="op">%&gt;%</span><span class="st"> </span></span>
 <span id="cb877-9"><a href="one-parameter.html#cb877-9"></a><span class="st">  </span><span class="kw">quantile</span>(., <span class="kw">c</span>(<span class="fl">0.025</span>, <span class="fl">0.975</span>))</span>
 <span id="cb877-10"><a href="one-parameter.html#cb877-10"></a>}</span></code></pre></div>
-<div class="sourceCode" id="cb878"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb878-1"><a href="one-parameter.html#cb878-1"></a><span class="kw">do_the_bootstrap</span>(heights_sample)</span></code></pre></div>
-<pre><code>## 2.5%  98% 
-##  180  186</code></pre>
-<div class="sourceCode" id="cb880"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb880-1"><a href="one-parameter.html#cb880-1"></a><span class="kw">set.seed</span>(<span class="dv">9</span>)</span>
-<span id="cb880-2"><a href="one-parameter.html#cb880-2"></a></span>
-<span id="cb880-3"><a href="one-parameter.html#cb880-3"></a>sims &lt;-<span class="st"> </span><span class="dv">1000</span></span>
-<span id="cb880-4"><a href="one-parameter.html#cb880-4"></a></span>
-<span id="cb880-5"><a href="one-parameter.html#cb880-5"></a>bootstrapchecks &lt;-<span class="st"> </span><span class="kw">tibble</span>(<span class="dt">ID =</span> <span class="dv">1</span><span class="op">:</span>sims) <span class="op">%&gt;%</span></span>
-<span id="cb880-6"><a href="one-parameter.html#cb880-6"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">heights_samples =</span> <span class="kw">map</span>(ID, <span class="op">~</span><span class="st"> </span><span class="kw">sample_n</span>(ch7_male, <span class="dv">40</span>, <span class="dt">replace =</span> <span class="ot">FALSE</span>))) <span class="op">%&gt;%</span></span>
-<span id="cb880-7"><a href="one-parameter.html#cb880-7"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">ci =</span> <span class="kw">map</span>(heights_samples, <span class="op">~</span><span class="st"> </span><span class="kw">do_the_bootstrap</span>(.))) <span class="op">%&gt;%</span></span>
-<span id="cb880-8"><a href="one-parameter.html#cb880-8"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">within_ci =</span> <span class="kw">map_lgl</span>(ci, </span>
-<span id="cb880-9"><a href="one-parameter.html#cb880-9"></a>                             <span class="op">~</span><span class="st"> </span><span class="kw">ifelse</span>(<span class="kw">between</span>(<span class="fl">184.3</span>, </span>
-<span id="cb880-10"><a href="one-parameter.html#cb880-10"></a>                                              ci[[<span class="dv">1</span>]][<span class="dv">1</span>], ci[[<span class="dv">1</span>]][<span class="dv">2</span>]), </span>
-<span id="cb880-11"><a href="one-parameter.html#cb880-11"></a>                                      <span class="ot">TRUE</span>, <span class="ot">FALSE</span>)))</span>
-<span id="cb880-12"><a href="one-parameter.html#cb880-12"></a></span>
-<span id="cb880-13"><a href="one-parameter.html#cb880-13"></a>bootstrapchecks</span></code></pre></div>
-<pre><code>## # A tibble: 1,000 x 4
+<p>Let’s not create a tibble to show whether the true value is within each confidence interval generated.</p>
+<div class="sourceCode" id="cb878"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb878-1"><a href="one-parameter.html#cb878-1"></a><span class="kw">set.seed</span>(<span class="dv">9</span>)</span>
+<span id="cb878-2"><a href="one-parameter.html#cb878-2"></a>sims &lt;-<span class="st"> </span><span class="dv">100</span></span>
+<span id="cb878-3"><a href="one-parameter.html#cb878-3"></a></span>
+<span id="cb878-4"><a href="one-parameter.html#cb878-4"></a>bootstrapchecks &lt;-<span class="st"> </span><span class="kw">tibble</span>(<span class="dt">ID =</span> <span class="dv">1</span><span class="op">:</span>sims) <span class="op">%&gt;%</span></span>
+<span id="cb878-5"><a href="one-parameter.html#cb878-5"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">heights_samples =</span> <span class="kw">map</span>(ID, <span class="op">~</span><span class="st"> </span><span class="kw">sample_n</span>(ch7_male, <span class="dv">40</span>, <span class="dt">replace =</span> <span class="ot">FALSE</span>))) <span class="op">%&gt;%</span></span>
+<span id="cb878-6"><a href="one-parameter.html#cb878-6"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">ci =</span> <span class="kw">map</span>(heights_samples, <span class="op">~</span><span class="st"> </span><span class="kw">do_the_bootstrapci</span>(.))) <span class="op">%&gt;%</span></span>
+<span id="cb878-7"><a href="one-parameter.html#cb878-7"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">within_ci =</span> <span class="kw">map_lgl</span>(ci, <span class="op">~</span><span class="st"> </span><span class="kw">ifelse</span>(<span class="kw">between</span>(<span class="fl">184.3</span>, ci[[<span class="dv">1</span>]][<span class="dv">1</span>], ci[[<span class="dv">1</span>]][<span class="dv">2</span>]), <span class="ot">TRUE</span>, <span class="ot">FALSE</span>)))</span>
+<span id="cb878-8"><a href="one-parameter.html#cb878-8"></a>bootstrapchecks</span></code></pre></div>
+<pre><code>## # A tibble: 100 x 4
 ##       ID heights_samples   ci        within_ci
 ##    &lt;int&gt; &lt;list&gt;            &lt;list&gt;    &lt;lgl&gt;    
 ##  1     1 &lt;tibble [40 × 1]&gt; &lt;dbl [2]&gt; TRUE     
@@ -2315,13 +2310,15 @@ The plot shows some interesting stuff. Since the distributions of height for bot
 ##  8     8 &lt;tibble [40 × 1]&gt; &lt;dbl [2]&gt; TRUE     
 ##  9     9 &lt;tibble [40 × 1]&gt; &lt;dbl [2]&gt; TRUE     
 ## 10    10 &lt;tibble [40 × 1]&gt; &lt;dbl [2]&gt; TRUE     
-## # … with 990 more rows</code></pre>
-<p>Of the 1000 bootstrap analyses we completed, each starting with a different sample of 40 rows from the <code>nhanes</code> data, 1000 calculated a 95% confidence interval included the true 90th percentile of 184.3.</p>
+## # … with 90 more rows</code></pre>
+<p>We have created a tibble, which indicates whether the truth is within the CI or not. To get an understanding of the coding behind the tibble, we created an <code>ID</code> for each bootstrap sample and coded the creation of bootstrap samples in the next line. We then created the <code>ci</code> of each bootstrap sample, by using function we created. Lastly, we created <code>within_ci</code> by using a standard <code>ifelse</code> statement. The reason why we use <code>map_lgl</code> is that we want to return a logical (or alphabetic) vector.</p>
+<p>Of the 100 bootstrap analyses we completed, each starting with a different sample of 40 rows from the <code>nhanes</code> data, 100 calculated a 95% confidence interval included the true 90th percentile of 184.3.</p>
+<p>All our confidence intervals contained true 90th percentile, 184.3 cm! We can conclude from our results that the bootstrap does, in fact, work!</p>
 </div>
 <div id="parameter-uncertainty-and-unmodeled-variation" class="section level2">
 <h2>
 <span class="header-section-number">7.5</span> Parameter Uncertainty and Unmodeled Variation</h2>
-<p>Although, we have used bootstrap to predict what we think the mean or a parameter like the median will be, it is important to understand what parameter uncertainty is. Paraameter uncertainty refers to when exact values of parameters are unknown to experimenters and cannot be controlled for. These values usually cannot be inferred by statistical or computational methods. Let’s look at the confidence interval of the mean as an example. Based on our bootstrap method, the 95% CI for the mean income is [128999.8, 155201.6]. However, if we take into consideration parameter uncertainty here, we fall under the trap of overconfidence. This is because we do not know for sure the way our confidence interval is elicited is perfectly accurate. We are thus overconfident here when we use a confidence interval.</p>
+<p>Although, we have used bootstrap to predict what we think the mean or a parameter like the median will be, it is important to understand what parameter uncertainty is. Parameter uncertainty refers to when exact values of parameters are unknown to experimenters and cannot be controlled for. These values usually cannot be inferred by statistical or computational methods. Let’s look at the confidence interval of the mean as an example. Based on our bootstrap method, the 95% CI for the mean income is [128999.8, 155201.6]. However, if we take into consideration parameter uncertainty here, we fall under the trap of overconfidence. This is because we do not know for sure the way our confidence interval is elicited is perfectly accurate. We are thus overconfident here when we use a confidence interval.</p>
 <p>Furthermore, it is important that we understand what a residual is. The residual in data science is the error that results. In simple terms, it is the observed value minus the predicted value. So, for example, let’s say that the actual mean income is 140,000 but the predicted mean income we got was 130,000. That means the residual in our estimation is 10,000.</p>
 <p>But the reason why residuals are so important is that they help explain why we can’t make perfect predictions, especially for an individual. In our experiments, there is a lot of unmodeled variation, or residual variation. Residual variance refers to the variance of residuals, and occurs because randomness in our data is inherently intrinsic. There will be randomness in our data even if we have full knowledge of our data. This thus implies that we cannot really make fully accurate predictions of the future; we can only make probabilistic predictions. It is essentially difficult to control for residual variation: predictions we get from methods like bootstrapping should not be taken as the final consensus.</p>
 <p>I might need to talk more about unmodeled variation here.
@@ -2417,7 +2414,7 @@ We see that of our 100 confidence intervals based on samples of size $n$ = 50, `
 <a href="two-parameters.html"><button class="btn btn-default">Next</button></a>
 </p>
 <p class="build-date">Page built: 
-2020-08-09
+2020-08-10
 </p>
 </div>
 </div>
