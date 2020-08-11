@@ -685,27 +685,69 @@ We have looked at a number of different models and their accuracy and precision.
 
 ### Joint distribution
 
-```{r}
-# set.seed(10)
-# 
-# urn_size <- 2400
-# 
-# x <- tibble(red_beads = rep(seq(0, urn_size, 25), 1000)) %>%
-#   mutate(p = red_beads/urn_size) %>% 
-#   mutate(heads = map_int(p, ~ rbinom(n = 1, size = 50, prob = .)))
-# 
-# x %>% 
-#   ggplot(aes(y = p, x = heads)) +
-#     geom_jitter(alpha = 0.01) +
-#     labs(title = "Number of Heads and Probability of Heads",
-#          x = "Number of Heads out of 20 Tosses",
-#          y = "Value of *p*")
+In Chapter \@ref(probability) we outlined the key intuition behind all inference: there is a joint distribution of data-which-we-might-see-from-our-experiment and models-which-we-are-considering. We take this joint distribution, combine it with the actual results of the experiment, and calculate a posterior distribution over the set of possible models. In other words, we start with 
+
+$$p(models, data)$$ 
+
+We then add the specific results of the experiment, and calculate the conditional distribution of the models, given the data that we have seen:
+
+
+$$p(models | data = results-of-experiment)$$
+The rest is just details.
+
+We can do the same thing with our sampling problem. Assume that we know that there are 2,400 beads in the urn, and that all of them are either red or white. Our experiment involves the one time use of a paddle with 50 slots. We have 2,401 models under consideration. There might be zero red beads or one red bead or ... 2,399 red beads or 2,400 red beads. There are 51 possible results from our experiment: zero red beads or one red bead or . . . or 49 red beads or 50 red beads. With this information we can calculate the joint distribution of models which we are considering and experiment results we might observe. 
+
+<!-- DK: I am somewhat concerned that this is not exactly correct since we really ought to sample what happens when you pick 50 beads out of an urn. This can be approximated with the binomial, which is what we have done here. And, with such big numbers, it is a good approximation. But it is not exactly correct. -->
+
+```{r, echo=FALSE, cache=TRUE}
+set.seed(10)
+
+urn_size <- 2400
+paddle_size <- 50
+
+# Make a tibble with 2.4 millions rows . . . Maybe that works OK. But making the
+# graph is then intensive.
+
+x <- tibble(red_urn = rep(seq(0, urn_size, 1), 1000)) %>%
+  mutate(red_paddle = map_int(red_urn, ~ rbinom(n = 1, 
+                                                size = paddle_size, 
+                                                prob = ./urn_size)))
+
 ```
 
 
-### Posterior distribution
+```{r, echo=FALSE, cache=TRUE}
+x %>%
+  ggplot(aes(y = red_urn, x = red_paddle)) +
+    geom_point(alpha = 0.005) +
+    labs(title = "Joint Distribution of Red Beads in Paddle and in Urn",
+         x = "Number of Red Beads in Paddle",
+         y = "Number of Red Beads in Urn")
+
+```
+
+We follow the same steps now as we did in Chapter \@ref(probability). We run the experiment. Assume that 16 of the 50 beads drawn in the paddle were red. What does that make our posterior probability? We want:
+
+$$p(models | data = 16)$$ 
+
+The same approach works again. We take a "slice" of the joint distribution where the number of red beads in the paddle is equal to 16. After normalization, that gives us this posterior probability for the number of red beads in the urn:
+
+```{r, echo=FALSE}
+x %>% 
+  filter(red_paddle == 16) %>% 
+  group_by(red_urn) %>% 
+  summarize(total = n(), .groups = "drop") %>%
+  mutate(probs = total/sum(total)) %>% 
+  ggplot(aes(x = red_urn, y = probs)) +
+    geom_col() +
+    labs(title = "Posterior Probability Distribution of Red Beads in Urn",
+         x = "Possible Number of Red Beads",
+         y = "Probability")
+```
 
 
+
+### The Leap to Continuous
 
 ## Sampling framework {#sampling-framework}
 
