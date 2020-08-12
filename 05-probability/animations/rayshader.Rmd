@@ -15,7 +15,54 @@ library(gifski)
 library(magick)
 ```
 
+```{r}
 
+# edits for joint distribution gif
+
+mydata <- tibble(die.1 = sample(1:6, size = 1000, prob =
+                                  c(0.1,0.1,0.1,0.1,0.1,0.5), replace = TRUE),
+                 die.2 = sample(1:6, size = 1000, prob =
+                                  c(0.1,0.1,0.1,0.1,0.5,0.1), replace = TRUE)) %>%
+  group_by(die.1, die.2) %>%
+  summarize(total = n())
+
+die1_factor <- as.factor(mydata$die.1)
+die2_factor <- as.factor(mydata$die.2)
+
+mtplot = ggplot(mydata) +
+ geom_point(aes(x=die1_factor,y=die2_factor,color=total)) +
+ scale_color_continuous(limits=c(0,100)) +
+ labs(x = "Dice 1", y = "Dice 2")
+
+plot_gg(mtplot, width = 3.5, multicore = F, windowsize = c(800, 800), 
+        zoom = 0.85, phi = 30, theta = 10, sunangle = 225, soliddepth = -100,
+        reduce_size = TRUE, raytrace = FALSE) +
+  labs(x = "Dice 1", y = "Dice 2")
+
+ggsave("joint.png", path = "./05-probability/images")
+
+render_snapshot("./05-probability/images/joint_distribution", clear = TRUE)
+
+plot_gg(mtplot, width = 3.5, multicore = F, windowsize = c(800, 800), 
+        zoom = 0.85, phi = 30, theta = 45, sunangle = 225, soliddepth = -100,
+        reduce_size = TRUE, raytrace = FALSE)
+
+render_snapshot("./05-probability/images/rayshader2", clear = TRUE)
+
+n_frames <- 2
+
+# create a list of all of the image frames file paths that you want in the gif
+
+img_frames <- paste0("./05-probability/images/rayshader", seq_len(n_frames), ".png")
+
+# create the gif using the magick package to read all of the image frames and
+# put save them as a gif in the specified location set by the path
+
+image_write_gif(magick::image_read(img_frames), 
+                        path = "./05-probability/animations/joint_distribution.gif", 
+                        delay = 6/n_frames)
+
+```
 
 ```{r mini_example, echo = FALSE}
 
