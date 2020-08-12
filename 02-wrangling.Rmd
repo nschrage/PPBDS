@@ -53,6 +53,7 @@ output_yaml: _output.yml
 Start by loading the packages which we will need in this chapter.
 ```{r message=FALSE, warning=FALSE, echo=FALSE}
 library(ggrepel)
+library(knitr)
 ```
 
 ```{r, message=FALSE}
@@ -154,9 +155,9 @@ You can see the data table when you visit the webpage:
 knitr::include_graphics("02-wrangling/images/murders-data-wiki-page.png")
 ```
 
-To get this data, we need to do some _web scraping_. 
+To get this data, we need to do some web scraping. 
 
-_Web scraping_, or _web harvesting_, is the term we use to describe the process of extracting data from a website. The reason we can do this is because the information used by a browser to render webpages is received as a text file from a server. The text is code written in hyper text markup language (HTML). Every browser has a way to show the html source code for a page, each one different. On Chrome, you can use Control-U on a PC and command+alt+U on a Mac. You will see something like this:
+Web scraping, or web harvesting, is the term we use to describe the process of extracting data from a website. The reason we can do this is because the information used by a browser to render webpages is received as a text file from a server. The text is code written in hyper text markup language (HTML). Every browser has a way to show the html source code for a page, each one different. On Chrome, you can use Control-U on a PC and command+alt+U on a Mac. You will see something like this:
 
 ```{r, echo=FALSE}
 knitr::include_graphics("02-wrangling/images/html-code.png")
@@ -208,7 +209,7 @@ Although we provide tools that make it possible to scrape data without knowing H
 
 ### The rvest package
 
-The __tidyverse__ provides a web harvesting package called __rvest__. The first step using this package is to import the webpage into R. The package makes this quite simple:
+The tidyverse contains a web harvesting package called rvest. The first step using this package is to import the webpage into R. The package makes this quite simple:
 
 ```{r, message=FALSE, warning=FALSE}
 library(tidyverse)
@@ -223,7 +224,7 @@ Note that the entire Murders in the US Wikipedia webpage is now contained in `h`
 class(h)
 ```
 
-The __rvest__ package is actually more general; it handles XML documents. XML is a general markup language (that's what the ML stands for) that can be used to represent any kind of data. HTML is a specific type of XML specifically developed for representing webpages. Here we focus on HTML documents.
+The rvest package is actually more general; it handles XML documents. XML is a general markup language (that's what the ML stands for) that can be used to represent any kind of data. HTML is a specific type of XML specifically developed for representing webpages. Here we focus on HTML documents.
 
 Now, how do we extract the table from the object `h`? If we print `h`, we don't really see much:
 
@@ -237,7 +238,7 @@ We can see all the code that defines the downloaded webpage using the `html_text
 html_text(h)
 ```
 
-We don't show the output here because it includes thousands of characters, but if we look at it, we can see the data we are after are stored in an HTML table: you can see this in this line of the HTML code above `<table class="wikitable sortable">`. The different parts of an HTML document, often defined with a message in between  `<` and `>`  are referred to as _nodes_. The __rvest__ package includes functions to extract nodes of an HTML document: `html_nodes` extracts all nodes of different types and `html_node` extracts the first one. To extract the tables from the html code we use:
+We don't show the output here because it includes thousands of characters, but if we look at it, we can see the data we are after are stored in an HTML table: you can see this in this line of the HTML code above `<table class="wikitable sortable">`. The different parts of an HTML document, often defined with a message in between  `<` and `>`  are referred to as nodes. The rvest package includes functions to extract nodes of an HTML document: `html_nodes` extracts all nodes of different types and `html_node` extracts the first one. To extract the tables from the html code we use:
 
 ```{r} 
 tab <- h %>% html_nodes("table")
@@ -255,8 +256,7 @@ The table we are interested is the first one:
 tab[[1]]
 ```
 
-
-This is clearly not a tidy dataset, not even a data frame. In the code above, you can definitely see a pattern and writing code to extract just the data is very doable. In fact, __rvest__ includes a function just for converting HTML tables into data frames:
+This is clearly not a tidy dataset, not even a data frame. In the code above, you can definitely see a pattern and writing code to extract just the data is very doable. In fact, rvest includes a function just for converting HTML tables into data frames:
 
 
 ```{r}
@@ -274,14 +274,14 @@ head(tab)
 We still have some wrangling to do. For example, we need to remove the commas and turn characters into numbers. Before continuing with this, we will learn a more general approach to extracting information from web sites.
 
 
-### CSS selectors {#css-selectors}
+### CSS selectors
 
-The default look of a webpage made with the most basic HTML is quite unattractive. The aesthetically pleasing pages we see today are made using CSS to define the look and style of webpages. The fact that all pages for a company have the same style usually results from their use of the same CSS file to define the style. The general way these CSS files work is by defining how each of the elements of a webpage will look. The title, headings, itemized lists, tables, and links, for example, each receive their own style including font, color, size, and distance from the margin. CSS does this by leveraging patterns used to define these elements, referred to as _selectors_. An example of such a pattern, which we used above, is `table`, but there are many, many more. 
+The default look of a webpage made with the most basic HTML is quite unattractive. The aesthetically pleasing pages we see today are made using CSS to define the look and style of webpages. The fact that all pages for a company have the same style usually results from their use of the same CSS file to define the style. The general way these CSS files work is by defining how each of the elements of a webpage will look. The title, headings, itemized lists, tables, and links, for example, each receive their own style including font, color, size, and distance from the margin. CSS does this by leveraging patterns used to define these elements, referred to as selectors. An example of such a pattern, which we used above, is `table`, but there are many, many more. 
 
 If we want to grab data from a webpage and we happen to know a selector that is unique to the part of the page containing this data, we can use the `html_nodes` function. However, knowing which selector can be quite complicated. 
 In fact, the complexity of webpages has been increasing as they become more sophisticated. For some of the more advanced ones, it seems almost impossible to find the nodes that define a particular piece of data. However, selector gadgets actually make this possible.
 
-SelectorGadget^[http://selectorgadget.com/] is piece of software that allows you to interactively determine what CSS selector you need to extract specific components from the webpage. If you plan on scraping data other than tables from html pages, we highly recommend you install it. A Chrome extension is available which permits you to turn on the gadget and then, as you click through the page, it highlights parts and shows you the selector you need to extract these parts. There are various demos of how to do this including __rvest__ author Hadley Wickham's
+SelectorGadget^[http://selectorgadget.com/] is piece of software that allows you to interactively determine what CSS selector you need to extract specific components from the webpage. If you plan on scraping data other than tables from html pages, we highly recommend you install it. A Chrome extension is available which permits you to turn on the gadget and then, as you click through the page, it highlights parts and shows you the selector you need to extract these parts. There are various demos of how to do this including rvest author Hadley Wickham's
 vignette^[https://cran.r-project.org/web/packages/rvest/vignettes/selectorgadget.html] and other tutorials based on the vignette^[https://stat4701.github.io/edav/2015/04/02/rvest_tutorial/] ^[https://www.analyticsvidhya.com/blog/2017/03/beginners-guide-on-web-scraping-in-r-using-rvest-with-hands-on-knowledge/].
 
 ### JSON
@@ -295,7 +295,7 @@ json <- toJSON(example, pretty = TRUE)
 json
 ```
 
-The file above actually represents a data frame. To read it, we can use the function `fromJSON` from the __jsonlite__ package. Note that JSON files are often made available via the internet. Several organizations provide a JSON API or a web service that you can connect directly to and obtain data. Here is an example:
+The file above actually represents a data frame. To read it, we can use the function `fromJSON` from the jsonlite package. Note that JSON files are often made available via the internet. Several organizations provide a JSON API or a web service that you can connect directly to and obtain data. Here is an example:
 
 ```{r, eval = FALSE}
 library(jsonlite)
@@ -314,8 +314,7 @@ and the second is a data table:
 citi_bike$stationBeanList %>% as_tibble() 
 ```
 
-You can learn much more by examining tutorials and help files from the __jsonlite__ package. This package is intended for relatively simple tasks such as converging data into tables. For more flexibility, we recommend `rjson`.
-
+You can learn much more by examining tutorials and help files from the jsonlite package. This package is intended for relatively simple tasks such as converging data into tables. For more flexibility, we recommend `rjson`.
 
 ## Characters 
 
@@ -662,11 +661,9 @@ But soon you will want to use regexes to transform the strings in character vect
 
 You can use parentheses inside regexes to define *groups* and you can refer to those groups later with *backreferences*.
 
-## Factors 
+## Factors
 
-#### The **forcats** package
-
-[forcats][forcats-web] is a core package in the tidyverse. It is installed via `install.packages("tidyverse")`, and loaded with `library(tidyverse)`. You can also install via `install.packages("forcats")`and load it yourself separately as needed via `library(forcats)`. Main functions start with `fct_`. There really is no coherent family of base functions that forcats replaces -- that's why it's such a welcome addition.
+To manipulate factors we will use the [forcats][forcats-web] package, a core package in the tidyverse. Like the stringr package whose functions begin with `str_`, main functions of the forcats package start with `fct_`.
 
 Get to know your factor before you start touching it! It's polite. Let's use `gapminder$continent` as our example.
 
@@ -685,7 +682,7 @@ gapminder %>%
 fct_count(gapminder$continent)
 ```
 
-#### Dropping unused levels
+### Dropping unused levels
 
 Just because you drop all the rows corresponding to a specific factor level, the levels of the factor itself do not change. Sometimes all these unused levels can come back to haunt you later, e.g., in figure legends.
 
@@ -715,12 +712,12 @@ h_gap$country %>%
   levels()
 ```
 
-#### Change order of the levels, principled {#reorder-factors}
+### Change order of the levels
 
 By default, factor levels are ordered alphabetically. Which might as well be random, when you think about it! It is preferable to order the levels according to some principle:
 
 * Frequency. Make the most common level the first and so on.
-* Another variable. Order factor levels according to a summary statistic for another variable. __Example:__ order Gapminder countries by life expectancy.
+* Another variable. Order factor levels according to a summary statistic for another variable.
 
 First, let's order continent by frequency, forwards and backwards. This is often a great idea for tables and figures, esp. frequency barplots.
 
@@ -790,7 +787,7 @@ ggplot(gap_asia_2007, aes(x = lifeExp, y = fct_reorder(country, lifeExp))) +
   geom_point()
 ```
 
-Use `fct_reorder2()` when you have a line chart of a quantitative x against another quantitative y and your factor provides the color. This way the legend appears in some order as the data! Note, the order is take by the right side of the plot (not the left). Contrast the legend on the left with the one on the right. 
+Use `fct_reorder2()` when you have a line chart of a quantitative x against another quantitative y and your factor provides the color. This way the legend appears in some order as the data! Note, the order is taken by the right side of the plot (not the left). Contrast the legend on the left with the one on the right. 
 
 ```{r legends-made-for-humans, fig.show = 'hold', out.width = '49%'}
 h_countries <- c("Egypt", "Haiti", "Romania", "Thailand", "Venezuela")
@@ -805,8 +802,6 @@ ggplot(h_gap, aes(x = year, y = lifeExp,
   labs(color = "country")
 ```
 
-#### Change order of the levels, "because I said so"
-
 Sometimes you just want to hoist one or more levels to the front. Why? Because I said so. This resembles what we do when we move variables to the front with `dplyr::select(special_var, everything())`.
 
 ```{r}
@@ -816,7 +811,7 @@ h_gap$country %>% fct_relevel("Romania", "Haiti") %>% levels()
 
 This might be useful if you are preparing a report for, say, the Romanian government. The reason for always putting Romania first has nothing to do with the *data*, it is important for external reasons and you need a way to express this.
 
-#### Recode the levels
+### Recode the levels
 
 Sometimes you have better ideas about what certain levels should be. This is called recoding.
 
@@ -829,8 +824,7 @@ i_gap$country %>%
   fct_recode("USA" = "United States", "Oz" = "Australia") %>% levels()
 ```
 
-
-#### Grow a factor
+### Grow a factor
 
 Let's create two data frames, each with data from two countries, dropping unused factor levels.
 
@@ -983,19 +977,9 @@ knitr::include_graphics("02-wrangling/images/pepper-3.jpg")
 
 ## Date-Times 
 
-At first glance, dates and times seem simple. You use them all the time in your regular life, and they don't seem to cause much confusion. However, the more you learn about dates and times, the more complicated they seem to get. To warm up, try these three seemingly simple questions:
+We will manipulate date-times using the lubridate package, which makes it easier to work with dates and times in R. `lubridate` is not part of core tidyverse because you only need it when you're working with dates/times.
 
-* Does every year have 365 days?
-* Does every day have 24 hours?
-* Does every minute have 60 seconds?
-
-I'm sure you know that not every year has 365 days, but do you know the full rule for determining if a year is a leap year? (It has three parts.) You might have remembered that many parts of the world use daylight savings time (DST), so that some days have 23 hours, and others have 25. You might not have known that some minutes have 61 seconds because every now and then leap seconds are added because the Earth's rotation is gradually slowing down.
-
-Dates and times are hard because they have to reconcile two physical phenomena (the rotation of the Earth and its orbit around the sun) with a whole raft of geopolitical phenomena including months, time zones, and DST. This chapter won't teach you every last detail about dates and times, but it will give you a solid grounding of practical skills that will help you with common data analysis challenges.
-
-In this chapter, we will manipulate date-times using the __lubridate__ package, which makes it easier to work with dates and times in R. `lubridate` is not part of core tidyverse because you only need it when you're working with dates/times.
-
-##W Creating date/times
+### Creating date/times
 
 There are three types of date/time data that refer to an instant in time:
 
@@ -1128,8 +1112,6 @@ as_date(365 * 10 + 2)
 
 Now that you know how to get date-time data into R's date-time data structures, let's explore what you can do with them. This section will focus on the accessor functions that let you get and set individual components. The next section will look at how arithmetic works with date-times.
 
-### Getting components
-
 You can pull out individual parts of the date with the accessor functions `year()`, `month()`, `mday()` (day of the month), `yday()` (day of the year), `wday()` (day of the week), `hour()`, `minute()`, and `second()`. 
 
 ```{r}
@@ -1245,26 +1227,7 @@ Setting larger components of a date to a constant is a powerful technique that a
 
 ### Time zones 
 
-Time zones are an enormously complicated topic because of their interaction with geopolitical entities. Fortunately we don't need to dig into all the details as they're not all important for data analysis, but there are a few challenges we'll need to tackle head on.
-
-The first challenge is that everyday names of time zones tend to be ambiguous. For example, if you're American you're probably familiar with EST, or Eastern Standard Time. However, both Australia and Canada also have EST! To avoid confusion, R uses the international standard IANA time zones. These use a consistent naming scheme "<area>/<location>", typically in the form "\<continent\>/\<city\>" (there are a few exceptions because not every country lies on a continent). Examples include "America/New_York", "Europe/Paris", and "Pacific/Auckland".
-
-You might wonder why the time zone uses a city, when typically you think of time zones as associated with a country or region within a country. This is because the IANA database has to record decades worth of time zone rules. In the course of decades, countries change names (or break apart) fairly frequently, but city names tend to stay the same. Another problem is that name needs to reflect not only to the current behaviour, but also the complete history. For example, there are time zones for both "America/New_York" and "America/Detroit". These cities both currently use Eastern Standard Time but in 1969-1972 Michigan (the state in which Detroit is located), did not follow DST, so it needs a different name. It's worth reading the raw time zone database (available at <http://www.iana.org/time-zones>) just to read some of these stories!
-
-You can find out what R thinks your current time zone is with `Sys.timezone()`:
-
-```{r}
-Sys.timezone()
-```
-
-(If R doesn't know, you'll get an `NA`.)
-
-And see the complete list of all time zone names with `OlsonNames()`:
-
-```{r}
-length(OlsonNames())
-head(OlsonNames())
-```
+Time zones are an enormously complicated topic because of their interaction with geopolitical entities. Fortunately we don't need to dig into all the details as they're not all important for data analysis. You can see the complete list of possible timezones with the function `OlsonNames()`. Unless otherwise specified, lubridate always uses UTC (Coordinated Universal Time).
 
 In R, the time zone is an attribute of the date-time that only controls printing. For example, these three objects represent the same instant in time:
 
@@ -1274,57 +1237,17 @@ In R, the time zone is an attribute of the date-time that only controls printing
 (x3 <- ymd_hms("2015-06-02 04:00:00", tz = "Pacific/Auckland"))
 ```
 
-You can verify that they're the same time using subtraction:
-
-```{r}
-x1 - x2
-x1 - x3
-```
-
-Unless otherwise specified, lubridate always uses UTC. UTC (Coordinated Universal Time) is the standard time zone used by the scientific community and roughly equivalent to its predecessor GMT (Greenwich Mean Time). It does not have DST, which makes a convenient representation for computation. Operations that combine date-times, like `c()`, will often drop the time zone. In that case, the date-times will display in your local time zone:
-
-```{r}
-x4 <- c(x1, x2, x3)
-x4
-```
-
-You can change the time zone in two ways:
-
-*   Keep the instant in time the same, and change how it's displayed.
-    Use this when the instant is correct, but you want a more natural
-    display.
-  
-    ```{r}
-    x4a <- with_tz(x4, tzone = "Australia/Lord_Howe")
-    x4a
-    x4a - x4
-    ```
-    
-    (This also illustrates another challenge of times zones: they're not
-    all integer hour offsets!)
-
-*   Change the underlying instant in time. Use this when you have an
-    instant that has been labelled with the incorrect time zone, and you
-    need to fix it.
-
-    ```{r}
-    x4b <- force_tz(x4, tzone = "Australia/Lord_Howe")
-    x4b
-    x4b - x4
-    ```
- 
-
 ## Combining Data
 
 There are many ways to bring data together.
 
-__Bind__ - This is basically smashing ~~rocks~~ tibbles together. You can smash things together row-wise ("row binding") or column-wise ("column binding"). Why do I characterize this as rock-smashing? They're often fairly crude operations, with lots of responsibility falling on the analyst for making sure that the whole enterprise even makes sense.
+Bind - This is basically smashing ~~rocks~~ tibbles together. You can smash things together row-wise ("row binding") or column-wise ("column binding"). Why do I characterize this as rock-smashing? They're often fairly crude operations, with lots of responsibility falling on the analyst for making sure that the whole enterprise even makes sense.
 
 When row binding, you need to consider the variables in the two tibbles. Do the same variables exist in each? Are they of the same type? Different approaches for row binding have different combinations of flexibility vs rigidity around these matters.
 
 When column binding, the onus is entirely on the analyst to make sure that the rows are aligned. I would avoid column binding whenever possible. If you can introduce new variables through any other, safer means, do so! By safer, I mean: use a mechanism where the row alignment is correct **by definition**. A proper join is the gold standard. In addition to joins, functions like `dplyr::mutate()` and `tidyr::separate()` can be very useful for forcing yourself to work inside the constraint of a tibble.
 
-__Join__ - Here you designate a variable (or a combination of variables) as a **key**. A row in one data frame gets matched with a row in another data frame because they have the same key. You can then bring information from variables in a secondary data frame into a primary data frame based on this key-based lookup. That description is incredibly oversimplified, but that's the basic idea.
+Join - Here you designate a variable (or a combination of variables) as a **key**. A row in one data frame gets matched with a row in another data frame because they have the same key. You can then bring information from variables in a secondary data frame into a primary data frame based on this key-based lookup. That description is incredibly oversimplified, but that's the basic idea.
 
 A variety of row- and column-wise operations fit into this framework, which implies there are many different flavors of join. The concepts and vocabulary around joins come from the database world. The relevant functions in dplyr follow this convention and all mention `join`. The most relevant base R function is `merge()`.
 
@@ -1358,9 +1281,7 @@ ttow <- tribble(
 (lotr_untidy <- bind_rows(fship, ttow, rking))
 ```
 
-`dplyr::bind_rows()` works like a charm with these very row-bindable data frames! So does base `rbind()` (try it!).
-
-But what if one of the data frames is somehow missing a variable? Let's mangle one and find out.
+`dplyr::bind_rows()` works like a charm with these very row-bindable data frames. But what if one of the data frames is somehow missing a variable? Let's mangle one and find out.
 
 ```{r error = TRUE}
 ttow_no_Female <- ttow %>% mutate(Female = NULL)
@@ -1368,19 +1289,11 @@ bind_rows(fship, ttow_no_Female, rking)
 rbind(fship, ttow_no_Female, rking)
 ```
 
-We see that `dplyr::bind_rows()` does the row bind and puts `NA` in for the missing values caused by the lack of `Female` data from The Two Towers. Base `rbind()` refuses to row bind in this situation.
-
-I invite you to experiment with other realistic, challenging scenarios, e.g.:
-
-* Change the order of variables. Does row binding match variables by name or position?
-* Row bind data frames where the variable `x` is of one type in one data frame and another type in the other. Try combinations that you think should work and some that should not. What actually happens?
-* Row bind data frames in which the factor `x` has different levels in one data frame and different levels in the other. What happens?
-
-In conclusion, row binding usually works when it should (especially with `dplyr::bind_rows()`) and usually doesn't when it shouldn't. The biggest risk is being aggravated.
+We see that `dplyr::bind_rows()` does the row bind and puts `NA` in for the missing values caused by the lack of `Female` data from The Two Towers. Nonetheless, this can be problematic with more dissimilar datasets. 
 
 ### Column binding
 
-Column binding is much more dangerous because it often "works" when it should not. It's **your job** to make sure the rows are aligned and it's all too easy to screw this up.
+Column binding is much more dangerous because it often "works" when it should not. It's your job to make sure the rows are aligned and it's all too easy to screw this up.
 
 The data in `gapminder` was originally excavated from 3 messy Excel spreadsheets: one each for life expectancy, population, and GDP per capital. Let's relive some of the data wrangling joy and show a column bind gone wrong.
 
@@ -1532,7 +1445,7 @@ pub_gt <- style_table(publishers, "publishers") %>%
 
 #### `inner_join()`
 
-> `inner_join(x, y)`: Return all rows from `x` where there are matching values in `y`, and all columns from `x` and `y`. If there are multiple matches between `x` and `y`, all combination of the matches are returned. This is a mutating join.
+`inner_join(x, y)`: Return all rows from `x` where there are matching values in `y`, and all columns from `x` and `y`. If there are multiple matches between `x` and `y`, all combination of the matches are returned. This is a mutating join.
 
 ```{r, echo=FALSE, fig.cap="Inner join."}
 knitr::include_graphics("02-wrangling/images/join-inner.png")
@@ -1571,7 +1484,7 @@ The `inner_join()` will solve nearly all of the problems you'll encounter in thi
 
 #### `full_join()`
 
-> `full_join(x, y)`: Return all rows and all columns from both `x` and `y`. Where there are not matching values, returns `NA` for the one missing. This is a mutating join.
+`full_join(x, y)`: Return all rows and all columns from both `x` and `y`. Where there are not matching values, returns `NA` for the one missing. This is a mutating join.
 
 ```{r}
 (fjsp <- full_join(superheroes, publishers))
@@ -1591,7 +1504,7 @@ Because `full_join()` returns all rows and all columns from both `x` and `y` the
 
 #### `left_join()`
 
-> `left_join(x, y)`: Return all rows from `x`, and all columns from `x` and `y`. If there are multiple matches between `x` and `y`, all combination of the matches are returned. This is a mutating join.
+`left_join(x, y)`: Return all rows from `x`, and all columns from `x` and `y`. If there are multiple matches between `x` and `y`, all combination of the matches are returned. This is a mutating join.
 
 ```{r}
 (ljsp <- left_join(superheroes, publishers))
@@ -1627,7 +1540,7 @@ There is a similar function, `right_join(x, y)` that return all rows from `y`, a
 
 #### `semi_join()`
 
-> `semi_join(x, y)`: Return all rows from `x` where there are matching values in `y`, keeping just columns from `x`. A semi join differs from an inner join because an inner join will return one row of `x` for each matching row of `y`, where a semi join will never duplicate rows of `x`. This is a filtering join.
+`semi_join(x, y)`: Return all rows from `x` where there are matching values in `y`, keeping just columns from `x`. A semi join differs from an inner join because an inner join will return one row of `x` for each matching row of `y`, where a semi join will never duplicate rows of `x`. This is a filtering join.
 
 ```{r}
 (sjsp <- semi_join(superheroes, publishers))
@@ -1661,7 +1574,7 @@ make_three_gt(pub_gt, super_gt, sjps_gt, super_first = FALSE)
 
 #### `anti_join(superheroes, publishers)`
 
-> `anti_join(x, y)`: Return all rows from `x` where there are not matching values in `y`, keeping just columns from `x`. This is a filtering join.
+`anti_join(x, y)`: Return all rows from `x` where there are not matching values in `y`, keeping just columns from `x`. This is a filtering join.
 
 ```{r}
 (ajsp <- anti_join(superheroes, publishers))
@@ -1722,8 +1635,6 @@ View(flights_joined)
 
 Observe that the `flights` and `flights_joined` data frames are identical except that `flights_joined` has an additional variable `name`. The values of `name` correspond to the airline companies' names as indicated in the `airlines` data frame. 
 
-#### Different "key" variable names
-
 Say instead you are interested in the destinations of all domestic flights departing NYC in 2013, and you ask yourself questions like: "What cities are these airports in?", or "Is `"ORD"` Orlando?", or "Where is `"FLL"`?".
 
 The `airports` data frame contains the airport codes for each airport:
@@ -1768,32 +1679,13 @@ flights_weather_joined <- flights %>%
 View(flights_weather_joined)
 ```
 
-## "Tidy" data {#tidy-data-ex}
+## "Tidy" data
 
 Now, we will explore the topic of "tidy" data, a manner of data formatting particularly suited to the creation of graphics and the manipulation of the dataframe. You will see that having data stored in "tidy" format is about more than just what the everyday definition of the term "tidy" might suggest: having your data "neatly organized." Instead, we define the term "tidy" as it's used by data scientists who use R, outlining a set of rules by which data is saved.
 
-Knowledge of this type of data formatting was not necessary for our treatment of data visualization in Chapter 1 and in previous data wrangling topics. This is because all the data used were already in "tidy" format. In this chapter, we'll now see that this format is essential to using the tools we covered up until now. Furthermore, it will also be useful for all subsequent chapters in this book when we cover regression and statistical inference. First, however, we'll show you how to import spreadsheet data in R.
+Knowledge of this type of data formatting was not necessary for our treatment of data visualization in Chapter 1 and in previous data wrangling topics. This is because all the data used were already in "tidy" format. In this chapter, we'll now see that this format is essential to using the tools we covered up until now. Furthermore, it will also be useful for all subsequent chapters in this book when we cover regression and statistical inference.
 
-Let's load all the packages needed for this chapter (this assumes you've already installed them). 
-
-```{r warning=FALSE, message=FALSE}
-library(dplyr)
-library(ggplot2)
-library(readr)
-library(tidyr)
-library(nycflights13)
-library(fivethirtyeight)
-```
-
-```{r message=FALSE, warning=FALSE, echo=FALSE}
-# Packages needed internally, but not in text.
-library(knitr)
-library(stringr)
-# library(scales)
-```
-
-
-Let's switch gears and learn about the concept of "tidy" data format with a motivating example from the `fivethirtyeight` package. The `fivethirtyeight` package [@R-fivethirtyeight] provides access to the datasets used in many articles published by the data journalism website, [FiveThirtyEight.com](https://fivethirtyeight.com/). For a complete list of all `r nrow(data(package = "fivethirtyeight")[[3]])` datasets included in the `fivethirtyeight` package, check out the package webpage by going to: <https://fivethirtyeight-r.netlify.com/articles/fivethirtyeight.html>.
+Let's switch gears and learn about the concept of "tidy" data format with a motivating example from the `fivethirtyeight` package. The `fivethirtyeight` package provides access to the datasets used in many articles published by the data journalism website, [FiveThirtyEight.com](https://fivethirtyeight.com/).
 
 Let's focus our attention on the `drinks` data frame and look at its first 5 rows:
 
@@ -1831,7 +1723,7 @@ drinks_smaller_tidy_plot <- ggplot(drinks_smaller_tidy,
                               labs(x = "country", y = "servings")
 ```
 
-Let's break down the grammar of graphic:
+Let's break down the graphic:
 
 1. The categorical variable `country` with four levels (China, Italy, Saudi Arabia, USA) would have to be mapped to the `x`-position of the bars.
 1. The numerical variable `servings` would have to be mapped to the `y`-position of the bars (the height of the bars).
@@ -1849,24 +1741,16 @@ In the context of doing data science in R, long/narrow format is also known as "
 
 ### Definition of "tidy" data 
 
-You have surely heard the word "tidy" in your life:
+What does it mean for your data to be "tidy"? While "tidy" has a clear English meaning of "organized," the word "tidy" in data science using R means that your data follows a standardized format. We will follow Hadley Wickham's  definition of *"tidy" data*:
 
-* "Tidy up your room!"
-* "Write your homework in a tidy way so it is easier to provide feedback."
-* Marie Kondo's best-selling book, [_The Life-Changing Magic of Tidying Up: The Japanese Art of Decluttering and Organizing_](https://www.powells.com/book/-9781607747307), and Netflix TV series [_Tidying Up with Marie Kondo_](https://www.netflix.com/title/80209379).
-* "I am not by any stretch of the imagination a tidy person, and the piles of unread books on the coffee table and by my bed have a plaintive, pleading quality to me - 'Read me, please!'" - Linda Grant
+A *dataset* is a collection of values, usually either numbers (if quantitative) or strings AKA text data (if qualitative/categorical). Values are organised in two ways. Every value belongs to a variable and an observation. A variable contains all values that measure the same underlying attribute (like height, temperature, duration) across units. An observation contains all values measured on the same unit (like a person, or a day, or a city) across attributes.
 
-What does it mean for your data to be "tidy"? While "tidy" has a clear English meaning of "organized," the word "tidy" in data science using R means that your data follows a standardized format. We will follow Hadley Wickham's  definition of *"tidy" data*  [@tidy]:
+"Tidy" data is a standard way of mapping the meaning of a dataset to its structure. A dataset is messy or tidy depending on how rows, columns and tables are matched up with observations, variables and types. In *tidy data*:
 
-> A *dataset* is a collection of values, usually either numbers (if quantitative) or strings AKA text data (if qualitative/categorical). Values are organised in two ways. Every value belongs to a variable and an observation. A variable contains all values that measure the same underlying attribute (like height, temperature, duration) across units. An observation contains all values measured on the same unit (like a person, or a day, or a city) across attributes.
-> 
-> "Tidy" data is a standard way of mapping the meaning of a dataset to its structure. A dataset is messy or tidy depending on how rows, columns and tables are matched up with observations, variables and types. In *tidy data*:
->
-> 1. Each variable forms a column.
-> 2. Each observation forms a row.
-> 3. Each type of observational unit forms a table.
+1. Each variable forms a column.
+2. Each observation forms a row.
+3. Each type of observational unit forms a table.
 
-(ref:tidy-r4ds) Tidy data graphic from *R for Data Science*.
 
 ```{r, echo=FALSE}
 knitr::include_graphics("02-wrangling/images/tidy-1.png")
@@ -1947,10 +1831,44 @@ Here are some commands which will prove useful for the rest of the book.
 
 ### `skim()`
 
+The `skim()`  function is a useful summary function that offers an overview of a dataframe. It offers users the abilities to see potential trends and outliers for each of the variables. The function creates a report of the dataframe according to variable type. First, load (and install) the `skimr` package in which `skim()` resides. We'll run skim on the `flights` dataset. 
 
-## Normal distribution
+```{r}
+skim(flights)
+```
+
+Take a quick look at the section containing numeric variables. This is of particular interest because the rightmost column offers insight into the potential distribution of the data, something that will be discussed in later depth below. 
 
 <!-- DK: Maybe we put this down below, after we introduce rnorm()? -->
+
+## Distribution 
+
+What is a distribution? The distribution of a variable shows how frequently different values of a variable occur. Looking at the visualization of a distribution can show where the values are centered, show how the values vary, and give some information about where a typical value might fall. It can also alert you to the presence of outliers. 
+
+### `runif()`
+
+Consider Uniform distribution. This is the case in which every outcome has the same chance of occurring. A Uniform distribution you might encounter everyday is rolling a fair dice. For example, you are as likely to roll a 2 as you are to roll a 6. In R, the function `runif()` (read as "r-unif") corresponds to a Uniform contribution. In other words, this function generates random values (within a specified range).
+
+The `runif()` function has three arguments: `n`, `min`, and `max`. Note that in R, `runif()` returns a continuous uniform distribution, not a discrete one. This means that if we tried to simulate our die-rolling example, we would get decimal values.
+
+Let's press on with our die-rolling example now that we have cautioned you about the difference between discrete and continuous uniform distributions. There are three arguments to `runif()`: `n`, `min`, and `max`. `n` is the number of observations, or `n = 1` since we are rolling the die once. The default value for `min` is `0` and the default value of `max` is 1. In our die-rolling example, these two values would be `min = 1` and `max = 6`, respectively. Let's plug these arguments into the function and see what we get.
+
+```{r}
+runif(n = 1,min = 1,max = 6)
+```
+Nice! We just made our first uniform distribution. Again, note that the output contains decimal numbers.
+
+### `rbinom()`
+
+Now consider Binomial distribution, the case in which the probability of some boolean variable (for instance success or failure) is calculated for repeated, independent trials. One common example would be the probability of flipping a coin and landing on heads. In R, the function `rbinom()` simulates such a distribution. This function takes three arguments, `n`, `size`, and `prob`. `n` is the number of observations, the `size` is the number of trials, and `prob` is the probability of success on each trial. Suppose we wanted to flip a fair coin one time, and let landing on hands represent success. Let `n=1` and `size = 1`, as we only want to flip the coin once. Then, since the coin is a fair coin, let `prob = 0.5`.
+
+```{r}
+rbinom(n =1 , size = 1, prob = 0.5)
+```
+
+
+
+### Normal distribution
 
 Let's next discuss one particular kind of distribution: *normal distributions*. Such bell-shaped distributions are defined by two values: (1) the *mean* $\mu$ ("mu") which locates the center of the distribution and (2) the *standard deviation* $\sigma$ ("sigma") which determines the variation of the distribution. In the figure below, we plot three normal distributions where:
 
@@ -2052,13 +1970,7 @@ ggplot(data = tibble(x = c(-4, 4)), aes(x)) +
 ```
 
 
-### Probability Functions
-
-<!-- EC: Is using this moderndive paragraph enough background for distributions? DK: Yes. Vivian goes into the deep detail. This is enough. IN fact, we could even cut it.-->
-
-What is a distribution? The distribution of a variable shows how frequently different values of a variable occur. Looking at the visualization of a distribution can show where the values are centered, show how the values vary, and give some information about where a typical value might fall. It can also alert you to the presence of outliers. If you feel like we have encountered distributions before, then you are absolutely correct. Recall that we can visualize the distribution of a numerical variable using binning in a histogram and that we can visualize the distribution of a categorical variable using a barplot.
-
-<!-- EC: What formulas do we want? I'm guessing not something as complex as a probability density function, will explaining the elements of a normal/Uniform dist be enough? DK: No formulas in this chapter are needed, although if you wanted them in a side note you could. We only need to show histograms, as you have done, and discuss sensible scenarios for the use of each function. -->
+### `rnorm()`
 
 The function `rnorm()` can be read as "r-norm". It corresponds to a Normal distribution, whose histograms look roughly like the following:
 
@@ -2113,20 +2025,6 @@ ggplot(distrib_2, aes(x = value)) +
 
 Now it's looking a lot more similar! As you just discovered, the more observations a normal distribution has, the closer it looks to a symmetrical bell curve.
 
-The function `runif()` can be read as "r-unif". It corresponds to a Uniform distribution, in which every outcome has the same chance of occurring. A Uniform distribution you might encounter everyday is rolling a fair dice. You are as likely to roll a 2 as you are to roll a 6.
-
-```{marginfigure, echo=TRUE}
-Insert uniform formula here.
-```
-
-The `runif()` function allows us to create our own uniform distributions with the specifications `n`, `min`, and `max`. Note that in R, `runif()` returns a continuous uniform distribution, not a discrete one. This means that if we tried to simulate our die-rolling example, we would get decimal values.
-
-Let's press on with our die-rolling example now that we have cautioned you about the difference between discrete and continuous uniform distributions. There are three arguments to `runif()`: `n`, `min`, and `max`. `n` is the number of observations, or `n = 1` since we are rolling the die once. The default value for `min` is `0` and the default value of `max` is 1. In our die-rolling example, these two values would be `min = 1` and `max = 6`, respectively. Let's plug these arguments into the function and see what we get.
-
-```{r}
-runif(1,1,6)
-```
-Nice! We just made our first uniform distribution. Again, note that the output contains decimal numbers.
 
 
 <!-- DK: We want to show and explain rnorm(), runif() and rbinom(), with a clear explanation of coin-tossing as an example. Like how many heads might appear of you flip a coint with p = 0.6 20 times. (Use that exact example.) -->
