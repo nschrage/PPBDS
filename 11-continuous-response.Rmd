@@ -43,12 +43,22 @@ Wouldn't it be interesting to predict `ideology` based off of other variables? T
 
 ## Exploratory Data Analysis
 
-Load `PPBDS.data` and `skimr`. `skim()` the dataset.
+Load the libraries needed for this chapter. You might notice that ***tidymodels*** and ***rsample*** are new. The ***tidymodels*** framework makes it easy to use functions from various different packages in constructing, fitting, and testing models. Similarly, the ***rsample**** package allows for machine learning by splitting the data into training and testing sets.
 
 ```{r message=FALSE}
 library(PPBDS.data)
 library(skimr)
-skim(nes)
+library(tidyverse)
+library(tidymodels)
+library(rsample)
+library(broom.mixed)
+library(rstanarm)
+```
+
+Now that we have loaded ****PPBDS.data***, let's `glimpse()` the dataset.
+
+```{r}
+glimpse(nes)
 ```
 
 Great! Before we dive in, let's identify the variables available to us in `nes`:
@@ -66,18 +76,23 @@ Great! Before we dive in, let's identify the variables available to us in `nes`:
 
 If we were given a new person who was not surveyed, and the above variables, our goal is to predict their ideology correctly. 
 
-As you also saw, there are a lot of data points in this dataset. `nes` covers 1954 through 2016, but for our sake, we will narrow our scope to just 2016. Because of the changing nature of what makes someone ideologically liberal or ideologically conservative over time, it is best to construct a model in which we eliminate as much of this variance as possible. Keep in mind that, when feeding in new data to our model, it is most accurately applied to voters in or around 2016. Indeed, a 1954 voter might act very differently than a 2016 voter.
+As you also saw, there are a lot of rows in this dataset. `nes` covers 1954 through 2016, but for our sake, we will narrow our scope to just 2016. Because of the changing nature of what makes someone ideologically liberal or ideologically conservative over time, it is best to construct a model in which we eliminate as much of this variance as possible. Keep in mind that, when feeding in new data to our model, it is most accurately applied to voters in or around 2016. Indeed, a 1954 voter might act very differently than a 2016 voter.
 
 Filter the data to only show `year == 2016`.
 
 ```{r message=FALSE}
-library(tidyverse)
 nes %>%
   select(year, state, gender, race, income, age, education, ideology) %>%
   filter(year == 2016)
 ```
 
-Note from our previous skimming of the data that all of the variables are incomplete, meaning they contain `NA` values. While there are methods to impute missing data, we will simply remove these values for now. We will save this filtered and cleaned dataset as `nes_2016`.
+Now, we would like to get some sense of what the completeness of the data looks like.
+
+```{r}
+skim(nes)
+```
+
+Note that all of the variables are incomplete, meaning they contain `NA` values. While there are methods to impute missing data, we will simply remove these values for now. We will save this filtered and cleaned dataset as `nes_2016`.
 
 ```{r}
 nes_2016 <- nes %>%
@@ -109,7 +124,7 @@ ch11 <- nes_2016 %>%
          education = factor(education, ordered= FALSE))
 ```
 
-While we're paying attention to data types, it is best practice to change character variables to factors.
+While we're paying attention to data types, it is best practice to change character variables to factors when working within this ***tidymodels*** framework.
 
 ```{r}
 ch11 <- ch11 %>%
@@ -127,9 +142,6 @@ knitr::include_graphics("other/images/justice.jpg")
 Recall the virtue of Justice: **We want to make sure our models are as just and representative of the real world as possible.** As such, we will split our `nes_2016` data into two sets: a training set and a testing set. We can do so using the ***rsample*** function, `initial_split()`.
 
 ```{r message=FALSE}
-library(tidymodels)
-library(rsample)
-
 set.seed(10)
 ch11_split <- initial_split(ch11)
 
@@ -141,13 +153,41 @@ ch11_testing <- ch11_split %>%
 
 *We will not be touching the testing set.* The testing set can be thought of as the final test to analyze the fit of the model. Never will we use the testing set to train the model. After all, that is what the training set is for! And what exactly does training the model mean? Training is simply the process in which we take the components of the given data and create as accurate a predictive machine as possible.
 
-We have mentioned that the following models will be *predictive*, not *causal*. Recall that all we care about in a predictive model is forecasting some value $y_i$ given that we know $x_{i_1}, x_{i_2}, ... x_{i_n}$. The $y_i$ in our case is `ideology`. The $x_{i_1}, x_{i_2}, ... x_{i_n}$ in this case are certain known variables, such as `state`, `age`, and `income`, among others.
+We have mentioned that the following models will be *predictive*, not *causal*. Recall that all we care about in a predictive model is forecasting some value $y_i$ given that we know $x_{i_1}, x_{i_2}, ... x_{i_n}$. The $y_i$ in our case is `ideology`. The $x_{i_1}, x_{i_2}, ... x_{i_n}$ in this case are certain known variables, such as `state`, `age`, and `income`, among others. $\beta$ stands for a vector input. As we will discuss in **Fortitude**, some of the inputs may not necessarily be linear and additive.
 
-However, we cannot infer what would happen to someone's `ideology` if their `income` level was within the 16th percentile, versus within the 96th percentile. The aforementioned inference would be a causal inference, which ignores the possibility that there are confounding variables. In our case, there are many possible confounding variables that are not represented, such as family socioeconomic background and immigration status.
+The following equation calculates the `ideology` of the *i*th respondent, $y_i$, as a function of certain linear and/or non-linear parameters. 
+
+
+$$y_i = f(x_{i_1}, x_{i_2}, ..., \beta)$$
+
+We cannot infer what would happen to someone's `ideology` if their `income` level was within the 16th percentile, versus within the 96th percentile. The aforementioned inference would be a causal inference, which ignores the possibility that there are confounding variables. In our case, there are many possible confounding variables that are not represented, such as family socioeconomic background and immigration status.
 
 Keep in mind that our goal is to create the best possible model to predict one's ideology given a number of demographic variables. That is to say, we plan on re-using our model on out-of-sample data. Hence, we have set the testing set aside to serve as one instance in which to re-use our model to make predictions.
 
 Besides the testing set, new out-of-sample data could come from other surveys that collect demographic information, or from website traffic data. These data most likely will not contain information on whether the respondent approves of the president or whether they voted in the presidential election. In order for our model to be relevant to our question, we will assume that new data will *not* provide `pres_appr` and `voted`.  When defining our formula later on, we will keep this in mind.
+
+An example Preceptor Table for 3,433 folks (the number of rows in `nes_2016`) would be something like this.
+
+```{r echo=FALSE}
+tibble(Name = c("Alex", "Betty", "...", "Carl", "Diane"),
+       Age = c("17-24", "55-64", "...", "35-44", "17-44"), 
+       State = c("WY", "NM", "...", "TX", "MA"),
+       Gender = c("Male", "Female", "...", "Male", "Female"),
+       Income = c("0 - 16", "68-95", "...", "34-67", "7-33"),
+       Education = c("Adv. Degree", "Highschool", "...", "Elementary", "Adv. Degree"),
+       Race = c("Black", "Asian", "...", "White", "Hispanic"),
+       Ideology = c("?", "?", "?...", "?", "?")
+       ) %>%
+  
+  # Then, we use the gt function to make it pretty
+  
+  gt() %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(Name))) %>%
+  cols_align(align = "center", columns = TRUE) %>%
+  tab_spanner(label = "Outcomes", columns = vars(Ideology)) %>%
+  tab_spanner(label = "Covariates", columns = vars(Age, State, Gender, Income, Education, Race))
+```
 
 ### Fortitude
 
@@ -157,11 +197,6 @@ knitr::include_graphics("other/images/fortitude.jpg")
 
 We will be using three different engines as models: `lm`, `stan`, and `nnet`. We will be using `lm` to fit a standard linear regression and `stan` to fit a Bayesian linear regression. You have encountered these two engines in previous chapters in the form of the functions `lm()` and `stan_glm()`. The last engine is based on multilayer perceptron neural networks, a supervised machine learning process in which data can be evaluated non-linearly.
 
-We have two linear regression models and one potentially non-linear model. How can we illustrate how each model will map the predictor variables to `ideology`?
-
-We can do so by writing an equation in which the `ideology` of the *i*th respondent, $y_i$, is a function of certain linear and/or non-linear parameters. 
-
-$$y_i = f(x_{i_1}, x_{i_2}, ..., \beta)$$
 Now, all that's left is to code. Let's dive right in to the first model.
 
 ## `lm()`
@@ -190,7 +225,6 @@ fit(lm_model, full_form, ch11_training)
 Note that we can use `tidy()`, just like we did in previous chapters, to take a look at the results:
 
 ```{r message=FALSE}
-library(broom)
 fit(lm_model, full_form, ch11_training) %>%
   tidy(conf.int = TRUE) %>%
   select(term, estimate, conf.low, conf.high)
@@ -322,25 +356,20 @@ The ***rstanarm*** package contains a lot of powerful functions that conduct Bay
 We will be following the exact same steps as before. First, we will construct a ***parsnip*** model that uses the "stan" engine.
 
 ```{r message=FALSE}
-library(rstanarm)
-
 stan_model <-
     linear_reg() %>%
     set_engine("stan") %>%
     set_mode("regression")
 ```
 
-Next, let's fit this model using the formula we specified before. We can select for the relevant terms after using `tidy()` to make our tibble viewable.
+Next, let's fit this model using the formula we specified before. We can select for the relevant terms after using `tidy()` to make our tibble viewable. Remember that this is `broom.mixed::tidy()`, not `broom::tidy()`.
 
 ```{r message=FALSE, warning=FALSE}
 set.seed(10)
-fit(stan_model, full_form, ch11_training)
-
-  # tidy() %>% broom.mixed
-  # select(term, estimate, std.error)
+fit(stan_model, full_form, ch11_training) %>%
+  tidy(conf.int = TRUE) %>%
+  select(term, estimate, std.error)
 ```
-
-
 
 ### Verifying fit using cross-validation
 
@@ -478,7 +507,7 @@ Next, let's fit the model.
 
 ```{r eval=FALSE}
 nnet_model %>%
-  fit(full_form, ch11_training) %>%
+  fit(full_form, ch11_training)
   tidy(conf.int = TRUE) %>%
   select(term, estimate, conf.low, conf.high)
 ```
