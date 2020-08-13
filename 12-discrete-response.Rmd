@@ -571,8 +571,7 @@ Once we are done partitioning the predictor space into regions, in each region a
 
 Classification trees have certain advantages that make them very useful. They are highly interpretable, even more so than linear models. They are easy to visualize (if small enough).  Finally, they can model human decision processes. However, in terms of accuracy, they are rarely the best performing method since they are not very flexible. Random forests, explained in the next section, improve on some of the shortcomings of classification trees.
 
-<!-- Validity/model fitting the world. bias/variance  overfitting/underfitting. goal of the model -->
-<!-- MB: Use overfitting to discuss validity/model fitting the world-->
+One limitation of CART is its lack of fitted values. Unlike a `glm()`, you can't clean predicted probabilities or point estimates from CART. Rather, you simply get a prediction of 0 or 1 for whatever observation you pass through the tree.  
 
 ### Multivariate CART
 
@@ -584,7 +583,6 @@ cart_split <- initial_split(ch12)
 cart_training <- cart_split %>% training()
 cart_testing <- cart_split %>% testing()
 ```
-
 
 To create a CART using multiple variables, we'll use the `decision_tree()` model specification and the `"rpart"` engine.  The syntax is very similar to when we used `logistic_reg()`.  Note that our binary response variable has to be a factor, just like with `logistic_reg()`. 
 
@@ -756,7 +754,7 @@ forest_test <- testing(forest_split)
 
 Next, we will use the `rand_forest()` function to create our model specification, setting the engine to `"randomForest"` and the mode to `"classification"`. 
 
-```{r}
+```{r, message = FALSE}
 library(randomForest)
 
 forest_mod <- 
@@ -778,18 +776,16 @@ Finally, let's fit our model. `fit()` will take in our model specification `logi
 forest_fit <- fit(forest_mod, forest_formula, forest_train)
 ```
 
-<!-- We see under "OOB estimate of error rate" that this model has an error rate of 18.67% (or, looking at it the other way, an accuracy of 81.33%). We can see how the error rate of our algorithm changes as we add trees by looking at `house_forest$fit$err.rate[, "OOB"]`.  By default, `randomForest()` (the engine we specified) grows 500 trees. -->
+If we graph the "OOB estimate of error rate", we can see that this model settles around an error rate of just under 40% (or, looking at it the other way, an accuracy of 60%). We can see how the error rate of our algorithm changes as we add trees by looking at `forest_fit$fit$err.rate[, "OOB"]`.  By default, `randomForest()` (the engine we specified) grows 500 trees. -->
 
+```{r}
+tibble(`Error rate` = forest_fit$fit$err.rate[, "OOB"], Trees = 1:500) %>%
+  ggplot(aes(x = Trees, y = `Error rate`)) +
+  geom_line() + 
+  theme_classic()
+```
 
-<!-- tibble(`Error rate` = approval_forest$fit$err.rate[, "OOB"], -->
-<!--        Trees = 1:500) %>% -->
-<!--   ggplot(aes(x = Trees, y = `Error rate`)) + -->
-<!--   geom_line() + -->
-<!--   theme_classic() -->
-
-
-<!-- We can see that in this case, the accuracy improves as we add more trees until about 50 trees where accuracy stabilizes. Random forests often perform better than other methods. However, a disadvantage of random forests is that we lose interpretability---we don't get anything like the coefficients from a logistic regression or the single tree from CART. -->
-
+We can see that in this case, the accuracy improves as we add more trees until about 50 trees where accuracy stabilizes. Random forests often perform better than other methods. However, a disadvantage of random forests is that we lose interpretability---we don't get anything like the coefficients from a logistic regression or the single tree from CART. 
 
 ### K-Fold Cross-Validation
 
@@ -835,9 +831,9 @@ forest_metrics %>% collect_metrics()
 Now that we saw how the training set performed, we'll use our testing set. We do so by applying `forest_test` to `predict()`.
 
 ```{r}
-logistic_mod %>%
-  fit(forest_formula, data = forest_train) %>%
-  predict(new_data = forest_test)
+#forest_mod %>%
+#  fit(forest_formula, data = forest_train) %>%
+#  predict(new_data = forest_test)
 ```
 
 To extract the rmse, we again set the "truth" to `approval` so this function can compare our predicted values to the true values.
@@ -905,7 +901,7 @@ Our forest predicted that the first three voters would disaprove of the Presiden
 
 Now that we've modelled the same formula using three different types of models (logistic regression, CART, and random forest), let's compare these models to see which was the most accurate.
 
-Here is the outpit
+Here is the output:
 
 ```{r, message = FALSE}
 fit_resamples(logistic_mod, 
@@ -927,14 +923,90 @@ fit_resamples(forest_mod,
 
 Based on `accuracy`, the random forest performed best by a small margin, followed by logistic regression and then CART. `accuracy` is the percentage of observations in the testing set that the model (which was constructed using the training set) was able to successfully predict. All of the models performed within a margin of 0.01 of eachother. However, it makes sense that random forest was the most successful. By generating many prediction trees and averaging them rather than relying on one, random forest is a more precise form of modelling than CART. 
 
-<!-- MB: Is it a worthwhile discussion to include graphs for roc_auc or -->
+`roc_auc` is similar to `accuracy` in that it is a measure of how good a model is at predicting 0s to be 0 and 1s to be 1 in the dataset. However, it is calculated by taking the area under the ROC curve. `roc_auc` itself is a shortened form of "area under the ROC curve." 
 
-`roc_auc` is similar to `accuracy` in that it is a measure of how good a model is at predicting 0s to be 0 and 1s to be 1 in the dataset. However, it is calculated by taking the area under the ROC curve. `roc_auc` itself is a shortened form of "area under the ROC curve." The ROC curve is created by graphing the rate of true positives as the y-axis (those who approved of the President who were labelled as such) against the rate of false positives (those who approved of the President but were labelled as disapproving). The area under this curve comes out to a very similar measure of accuracy. A `roc_auc` of 1 means that the testing set was perfectly predicted while a 0 means that every observation of the testing set was  falsely predicted.
+```{r}
+knitr::include_graphics("12-discrete-response/images/ROC_AUC.png")
+```
+
+The ROC curve is created by graphing the rate of true positives as the y-axis (those who approved of the President who were labelled as such) against the rate of false positives (those who approved of the President but were labelled as disapproving). The area under this curve comes out to a very similar measure of accuracy. A `roc_auc` of 1 means that the testing set was perfectly predicted, with no false positives, while a 0 means that every observation of the testing set was  falsely predicted.
 
 In the case of the `roc_auc`, our logistic regression performed best, followed by the random forest, and then CART. They were all within 0.05 of eachother, a wider range than `accuracy`. Being a cruder version of random forest, it again makes sense that it placed last. 
 
 <!-- MB: Say something about log being better than RF -->
 
 <!-- MB: bring back discussion of humility -->
+
+## The Problem
+
+There are an infinite numbers of comparisons to be made within this dataset. Let's return to our original question of how Blacks and Hispanics specifically vary in their support of the president. 
+
+First, we'll transform the data to categorize `race` into two groups: Black/Hispanic or other. We'll also code approval to be an integer, which will help when doing the math for our graphs.
+
+```{r}
+ch12 <- ch12 %>% 
+  mutate(bh = case_when(
+    race == "Black" ~ "Black/Hispanic",
+    race == "Hispanic" ~ "Black/Hispanic",
+    race == "White" ~ "Other",
+    race == "Native American" ~ "Other",
+    race == "Asian" ~ "Other",
+    race == "Other" ~ "Other",
+    race == "Middle Eastern" ~ "Other",
+    race == "Mixed" ~ "Other")) %>%
+  mutate(approval = as.integer(approval)) %>%
+  mutate(approval = case_when(
+    approval == 1 ~ 0,
+    approval == 2 ~ 1))
+```
+
+Now, let's look at a basic comparison of their rates of approval. 
+
+```{r}
+ch12 %>%
+  ggplot(aes(x = approval, fill = bh)) +
+  geom_bar() + 
+  labs(y = "Count",
+       x = "Presidential Approval",
+       title = "Presidential Approval in 2018 by Race") +
+  facet_wrap(~ bh)
+```
+
+We can get two important pieces of information from this graph. The first observation is that there are far more observations in the non-Black/Hispanic group. The second is there is noticeably stronger disapproval of the President among Blacks and Hispanics than the rest of the population. 
+
+However, we must do further analyses to better understand Black and Hispanic voters. Looking at how different covariates affect approval rate within the group is a great next step. Let's start with age:
+
+```{r, message = FALSE}
+ch12 %>%
+  group_by(age, bh) %>%
+  summarise(approval_rate = sum(approval)/n()) %>%
+  ggplot(aes(x = age, y = approval_rate, group = bh, color = bh)) +
+  geom_point() +
+  geom_line() + 
+  labs(x = "Age",
+       y = "Approval Rate",
+       title = "Presidential Approval Rate by Race and Age")
+```
+
+In keeping with our previous chart, the presidential approval is consistently higher for all ages among non-Blacks and Hispanics. You can also see that the non-Black/Hispanic population increases in their support of the president on average as they get older. Black and Hispanic voters, however continue to hover at around 25% approval, albeit with greater variation. 
+
+Now, let's add another variable by throwing gender in the mix.
+
+```{r, message = FALSE}
+ch12 %>%
+  group_by(age, bh, gender) %>%
+  summarise(approval_rate = sum(approval)/n()) %>%
+  ggplot(aes(x = age, y = approval_rate, group = bh, color = bh)) +
+  geom_point() +
+  geom_line() + 
+  facet_wrap(~gender)+
+  labs(x = "Age",
+       y = "Approval Rate",
+       title = "Presidential Approval Rate by Race, Age, and Gender")
+```
+
+Now that we've faceted by gender, we can see that the trends from the previous graph don't vary much from male to female. You could argue, based on this graph, that presidential support is mildly higher for Black/Hispanic males than Black/Hispanic females. 
+
+Now that we've done some analysis, let's use our models to help answer more questions about how Black and Hispanic voters vary in their support of the President. 
 
 
