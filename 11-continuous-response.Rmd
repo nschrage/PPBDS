@@ -136,7 +136,7 @@ Now that we have a left-hand variable to estimate with reasonable predictors, le
 
 It is important to note that **there are an infinite number of comparisons you can make**. Because our model is predictive, we can only say something about the population if one variable is tweaked and all else is kept the same. For example, we could look at how education affects the self-reported ideology of Asian respondents compared to Black respondents, given that both groups of respondents are well-educated, female, middle-aged, and reside in the Northeast. Or, we could look at the interaction between gender and race and its affect on ideology for certain values of the other variables. There is no right answer as to what question is the best one to answer. Indeed, this is another important choice you will have to make as a data scientist.
 
-For this chapter, we will seek to answer the following question: How does age*gender affect ideology for residents of the four different regions of the U.S.?
+For this chapter, we will seek to answer the following question: How does age affect ideology for residents of the four different regions of the U.S.?
 
 ### Justice
 
@@ -192,6 +192,21 @@ tibble(Name = c("Alex", "Betty", "...", "Carl", "Diane"),
   tab_spanner(label = "Outcomes", columns = vars(Ideology)) %>%
   tab_spanner(label = "Covariates", columns = vars(Age, Region, Gender, Income, Education, Race))
 ```
+
+We can preliminarily explore our guiding question by plotting age against average ideology, faceting by region.
+
+```{r}
+ch11_training %>%
+  group_by(age, region) %>%
+  mutate(avg_ideo_by_age = mean(ideology)) %>%
+  ggplot(aes(x = avg_ideo_by_age, y = age)) +
+  geom_point() +
+  facet_wrap(~region) +
+  geom_vline(xintercept= 0, color = "red", linetype = "dotted")
+```
+The Northeast, Midwest, and West all skew politically liberal in terms of average ideology per age group. Most notably, not a single age group in the Northeast had a positive average ideology; the most conservative age group is the 55-64 year old group. Meanwhile, in the West and the Midwest, there are clear trends that older age groups tend to have a more conservative average ideology. In contrast, every age group's average ideology skewed politically conservative in the South save for the 35-44 year olds.
+
+Why can't we just stop our analysis here? Well, our main question involves predicting new ideologies, which a visualization cannot tell you. There are many other factors at hand besides age that influence ideology. In order to answer our question for a subset of the population, we need to keep these factors constant among said subset. For example, if we are interested in the effect of age on ideology by region, we must *specifically* look at folks who have the same education, income, race, and gender, with different ages and regions.
 
 ### Fortitude
 
@@ -383,20 +398,22 @@ stan_fit %>%
   select(term, estimate, std.error)
 ```
 
-Let's take a look at the first ten residual values.
+Let's take a look at the first ten residual values. Here, we will calculate the residuals by hand as $y-\hat{y}$, since `augment` does not play nice with `stan_fit$fit`.
 
-<!-- EC: how to make augment work for stan_fit objects? It should work according to broom.mixed documentation.... -->
-
-```{r eval=FALSE}
-broom::augment(stan_fit$fit) %>%
-  select(ideology, .fitted, .resid, gender, race, region, income, age, education)
+```{r}
+stan_fit %>%
+  predict(ch11_training) %>%
+  bind_cols(ch11_training) %>%
+  mutate(residuals = ideology - .pred) %>%
+  select(residuals) %>%
+  slice(1:10)
 ```
 
 ### Verifying fit using cross-validation
 
 Let's practice K-Fold validation with the `stan` model.
 
-```{r eval=FALSE}
+```{r cache=TRUE, message=FALSE}
 set.seed(10)
 fit_resamples(object = stan_model,
               preprocessor = formula_rec,
@@ -511,11 +528,15 @@ nnet_fit <- nnet_model %>%
   fit(full_form, ch11_training)
 ```
 
-Note that there is no tidy method for neural network models. This makes sense, as the terms are not necessarily additive. However, we can still view the predictions by using `bind_cols()`.
+Note that there is no tidy method for neural network models. This makes sense, as the terms are not necessarily additive. However, we can still view the predictions by using `bind_cols()`. Then, we can easily calculate the residuals by subtracting the fitted value from the actual ideology.
 
 ```{r}
-bind_cols(
-  predict(nnet_fit, new_data = ch11_training))
+nnet_fit %>%
+  predict(new_data = ch11_training) %>%
+  bind_cols(ch11_training) %>%
+  mutate(residuals = ideology - .pred) %>%
+  select(residuals) %>%
+  slice(1:10)
 ```
 
 ### Verifying fit with cross-validation
