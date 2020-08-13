@@ -43,7 +43,7 @@ Wouldn't it be interesting to predict `ideology` based off of other variables? T
 
 ## Exploratory Data Analysis
 
-Load the libraries needed for this chapter. You might notice that ***tidymodels*** and ***rsample*** are new. The ***tidymodels*** framework makes it easy to use functions from various different packages in constructing, fitting, and testing models. Similarly, the ***rsample**** package allows for machine learning by splitting the data into training and testing sets.
+Load the libraries needed for this chapter. You might notice that ***tidymodels*** and ***rsample*** are new. The ***tidymodels*** framework makes it easy to use functions from various different packages in constructing, fitting, and testing models. Similarly, the ***rsample*** package allows for machine learning by splitting the data into training and testing sets.
 
 ```{r message=FALSE}
 library(PPBDS.data)
@@ -53,9 +53,10 @@ library(tidymodels)
 library(rsample)
 library(broom.mixed)
 library(rstanarm)
+library(gt)
 ```
 
-Now that we have loaded ****PPBDS.data***, let's `glimpse()` the dataset.
+Now that we have loaded ***PPBDS.data***, let's `glimpse()` the dataset.
 
 ```{r}
 glimpse(nes)
@@ -64,7 +65,6 @@ glimpse(nes)
 Great! Before we dive in, let's identify the variables available to us in `nes`:
 
 * `year`: the year the study was conducted
-* `state`: the two-letter abbreviation corresponding to the state of the respondent
 * `gender`: identifies respondents with values "Male" and "Female"
 * `race`: race/ethnicity respondent identification
 * `income`: 5 income groups: 1 as 0-16th percentile, 2 as 17-33rd, 3 as 34 to 67, 4 as 68 to 95, 5 as 96 to 100 
@@ -82,7 +82,7 @@ Filter the data to only show `year == 2016`.
 
 ```{r message=FALSE}
 nes %>%
-  select(year, state, gender, race, income, age, education, ideology) %>%
+  select(year, gender, race, income, age, education, ideology, region) %>%
   filter(year == 2016)
 ```
 
@@ -111,7 +111,7 @@ knitr::include_graphics("other/images/prudence.jpg")
 
 Recall the first of the four Cardinal Virtues of data science. We need to carefully consider how we would like to approach our problem. In fact, what is our problem to solve?
 
-Our problem is that we may not know someone's ideology right off of the bat. This is true in real life, in which it is an awkward question to pose a stranger. This is also true in surveys that may not have asked respondents to politically self-identify, but would find that information useful. What we are given, however, are a number of demographic variables that can be used to predict someone's ideology. We need to keep the defining problem (How can we predict someone's ideology based off of certain demographic variables) in mind as we navigate the models ahead.
+We may not know someone's ideology right off of the bat outside of the respondents in the `nes` dataset. This is true in real life, in which it is an awkward question to pose a stranger. This is also true in surveys that may not have asked respondents to politically self-identify, but would find that information useful. What we are given, however, are a number of demographic variables that can be used to predict someone's ideology.
 
 Taking a look again at the variables in `nes_2016`, we might decide against including `pres_appr` and `voted` in our models. Why exclude variables, especially variables that may make your model even better? 
 
@@ -128,10 +128,15 @@ While we're paying attention to data types, it is best practice to change charac
 
 ```{r}
 ch11 <- ch11 %>%
-  mutate(state = as.factor(state),
-         gender = as.factor(gender),
+  mutate(gender = as.factor(gender),
          race = as.factor(race))
 ```
+
+Now that we have a left-hand variable to estimate with reasonable predictors, let's think about a substantive question that we would like to answer this chapter. The models we will construct are predictive, not causal, and therefore can only be used for comparisons.
+
+It is important to note that **there are an infinite number of comparisons you can make**. Because our model is predictive, we can only say something about the population if one variable is tweaked and all else is kept the same. For example, we could look at how education affects the self-reported ideology of Asian respondents compared to Black respondents, given that both groups of respondents are well-educated, female, middle-aged, and reside in the Northeast. Or, we could look at the interaction between gender and race and its affect on ideology for certain values of the other variables. There is no right answer as to what question is the best one to answer. Indeed, this is another important choice you will have to make as a data scientist.
+
+For this chapter, we will seek to answer the following question: How does age*gender affect ideology for residents of the four different regions of the U.S.?
 
 ### Justice
 
@@ -157,7 +162,6 @@ We have mentioned that the following models will be *predictive*, not *causal*. 
 
 The following equation calculates the `ideology` of the *i*th respondent, $y_i$, as a function of certain linear and/or non-linear parameters. 
 
-
 $$y_i = f(x_{i_1}, x_{i_2}, ..., \beta)$$
 
 We cannot infer what would happen to someone's `ideology` if their `income` level was within the 16th percentile, versus within the 96th percentile. The aforementioned inference would be a causal inference, which ignores the possibility that there are confounding variables. In our case, there are many possible confounding variables that are not represented, such as family socioeconomic background and immigration status.
@@ -166,17 +170,17 @@ Keep in mind that our goal is to create the best possible model to predict one's
 
 Besides the testing set, new out-of-sample data could come from other surveys that collect demographic information, or from website traffic data. These data most likely will not contain information on whether the respondent approves of the president or whether they voted in the presidential election. In order for our model to be relevant to our question, we will assume that new data will *not* provide `pres_appr` and `voted`.  When defining our formula later on, we will keep this in mind.
 
-An example Preceptor Table for 3,433 folks (the number of rows in `nes_2016`) would be something like this.
+An example Preceptor Table that would answer our guiding question would look something like this.
 
 ```{r echo=FALSE}
 tibble(Name = c("Alex", "Betty", "...", "Carl", "Diane"),
        Age = c("17-24", "55-64", "...", "35-44", "17-44"), 
-       State = c("WY", "NM", "...", "TX", "MA"),
+       Region = c("Midwest", "Northeast", "...", "West", "South"),
        Gender = c("Male", "Female", "...", "Male", "Female"),
-       Income = c("0 - 16", "68-95", "...", "34-67", "7-33"),
-       Education = c("Adv. Degree", "Highschool", "...", "Elementary", "Adv. Degree"),
-       Race = c("Black", "Asian", "...", "White", "Hispanic"),
-       Ideology = c("?", "?", "?...", "?", "?")
+       Income = c("34 - 67", "34 - 67", "...", "34 - 67", "34 - 67"),
+       Education = c("College", "College", "...", "College", "College"),
+       Race = c("White", "White", "...", "White", "White"),
+       Ideology = c("?", "-2", "...", "?", "1")
        ) %>%
   
   # Then, we use the gt function to make it pretty
@@ -186,7 +190,7 @@ tibble(Name = c("Alex", "Betty", "...", "Carl", "Diane"),
             location = cells_body(columns = vars(Name))) %>%
   cols_align(align = "center", columns = TRUE) %>%
   tab_spanner(label = "Outcomes", columns = vars(Ideology)) %>%
-  tab_spanner(label = "Covariates", columns = vars(Age, State, Gender, Income, Education, Race))
+  tab_spanner(label = "Covariates", columns = vars(Age, Region, Gender, Income, Education, Race))
 ```
 
 ### Fortitude
@@ -215,19 +219,26 @@ Here, we are using the ***parsnip*** package to create an engine that can run th
 Fit the model to the data. We will first create a regression formula and save it as an R object for future recall. There are a lot of different combinations we could use for the formula, but which will yield the *best* model? In previous chapters, we discussed this dilemma. For now, we will build a full model containing all of the predictor variables and some interactions.
 
 ```{r}
-full_form <- formula(ideology ~ gender + race + state + income + age + education)
+full_form <- formula(ideology ~ gender + race + region + income + age + education)
 ```
 
-```{r eval=FALSE}
-fit(lm_model, full_form, ch11_training)
+```{r}
+lm_fit <- fit(lm_model, full_form, ch11_training)
 ```
 
 Note that we can use `tidy()`, just like we did in previous chapters, to take a look at the results:
 
 ```{r message=FALSE}
-fit(lm_model, full_form, ch11_training) %>%
+lm_fit %>%
   tidy(conf.int = TRUE) %>%
   select(term, estimate, conf.low, conf.high)
+```
+
+If we want to take a look at the residuals $y-\hat{y}$, we can use the `augment()` function. `augment()` subtracts the fitted value from the actual value. Note that `lm_fit` is actually a parsnip model, so we have to extract the fitted R model with `lm_fit$fit`.
+
+```{r}
+augment(lm_fit$fit) %>%
+  select(ideology, .fitted, .resid, gender, race, region, income, age, education)
 ```
 
 How do we know if this is a good model? We can check using cross-validation. Cross-validation seeks to minimizes the MSE (mean squared error) of its predicted and real outcomes. There are two important characteristics of the MSE we should always keep in mind:
@@ -273,18 +284,14 @@ There are a number of useful functions that can be piped into recipes. One parti
 We need to convert all of the nominal variables, which are unordered character values, to dummy variables. Dummy variables are binary variables that are 1 when the categorical event occurs and 0 when it does not occur. For example, each level within `education` would be converted into its own variable, with the value 1 if the respondent had that level of education, and 0 otherwise.
 
 ```{r message=FALSE, warning=FALSE}
-# formula_rec <- recipe(ideology ~ gender + race + state + income + age + education, data = ch11_training) %>%
-#   step_interact(terms = ~ gender*race + state*income) %>%
-#   step_dummy(all_nominal())
-
-formula_rec <- recipe(ideology ~ gender + race + state + income + age + education, data = ch11_training) %>%
+formula_rec <- recipe(ideology ~ gender + race + region + income + age + education, data = ch11_training) %>%
   step_dummy(all_nominal())
 ```
 
 Finally, the `resamples` argument is where you input the cross-validation dataset.
 
 
-```{r}
+```{r message=FALSE}
 set.seed(10)
 fit_resamples(object = lm_model,
               preprocessor = formula_rec,
@@ -293,7 +300,7 @@ fit_resamples(object = lm_model,
 
 Because the metrics are in list-columns, we can extract the average metrics across all the folds using the `collect_metrics()` function:
 
-```{r}
+```{r message=FALSE}
 set.seed(10)
 fit_resamples(lm_model,
               formula_rec,
@@ -312,26 +319,29 @@ lm_model %>%
 To extract the rmse, we set the "truth" to `ideology` so this function can compare our predicted values to the true values.
 
 ```{r}
-lm_model %>%
-  fit(full_form, data = ch11_training) %>%
+lm_fit %>%
   predict(new_data = ch11_testing) %>%
   bind_cols(ch11_testing) %>%
   rmse(truth = ideology, estimate = .pred)
 ```
 
-The mean squared error is about 2.06.
+<!-- EC: How to display residuals after predict on testing set? -->
 
-What if we create completely new data outside of the testing set? Time to make up some imaginary people. Let's say we have four individuals whose ideology in 2016 we wanted to predict. We can create a tibble with the values of their demographic information, like so:
+<!-- EC: discuss rmse value -->
+
+What if we create completely new data outside of the testing set? Keep in mind that just because you have a variable in this training data today, does not mean you are going to get it in your production data tomorrow.
+
+Time to make up some imaginary people. Let's say we have four individuals whose ideology in 2016 we wanted to predict. We can create a tibble with the values of their demographic information, like so:
 
 <!-- Just because you have a variable in this training data today, does not mean you are going to get it in your production data tomorrow. -->
 
 ```{r}
-new_people <- tibble("Name" = c("Alice", "Bob", "Chelsea", "Darren"),
-                     "state" = as.factor(c("VA", "AL", "VA", "AL")),
-                     "gender" = as.factor(c("Female", "Male", "Female", "Male")),
-                     "income" = as.factor(c("34 - 67", "0 - 16", "34 - 67", "96 - 100")),
-                     "age" = c("35 - 44", "55 - 64", "35 - 44", "55 - 64"),
-                     "education" = c("Elementary", "Highschool", "Adv. Degree", "Highschool"),
+new_people <- tibble("name" = c("Alice", "Betty", "Chelsea", "Danielle"),
+                     "region" = as.factor(c("Midwest", "Northeast", "South", "West")),
+                     "gender" = as.factor(c("Female", "Female", "Female", "Female")),
+                     "income" = as.factor(c("34 - 67", "34 - 67", "34 - 67", "34 - 67")),
+                     "age" = c("17 - 24", "17 - 24", "17 - 24", "17 - 24"),
+                     "education" = c("College", "College", "College", "College"),
                      "race" = c("White", "White", "White", "White"))
 ```
 
@@ -345,9 +355,7 @@ lm_model %>%
   rename("ideology" = ".pred")
 ```
 
-As you can see, the two women, Alice and Chelsea, have similar values for their variables save for one: education. Alice is educated at the elementary level, whereas Chelsea holds an advanced degree. Their predicted ideologies are 2.22 and 2.42 respectively, showing that a 35-44 year old white woman from Virginia who approved of the sitting President in 2016 with an advanced degree was on average 0.20 more conservative than her counterpart with an elementary degree.
-
-Meanwhile, white 55-64 year old men with high school diplomas from Alabama differ in their income; Bob is two standard deviations above average, whereas Darren is two standard deviations below average in earnings. All else held equal, Bob's ideology was estimated to be more conservative than Darren's by 0.13. Let's see if these observations hold up with our other models.
+As you can see, the constant variables are `gender`, `income`, `education`, `age`, and `race`. The most conservative woman was Chelsea, from the South, and the most liberal woman was Betty, from the Northeast. This, of course, can simply be calculated algebraically from the `lm` model. However, we cannot generalize by saying that all young women can be expected to follow this pattern based off of their region. This prediction is only valid for the levels of the variables that we have set.
 
 ## Using `stan_glm()`
 
@@ -364,18 +372,31 @@ stan_model <-
 
 Next, let's fit this model using the formula we specified before. We can select for the relevant terms after using `tidy()` to make our tibble viewable. Remember that this is `broom.mixed::tidy()`, not `broom::tidy()`.
 
-```{r message=FALSE, warning=FALSE}
+```{r}
+stan_fit <- fit(stan_model, full_form, ch11_training)
+```
+
+```{r}
 set.seed(10)
-fit(stan_model, full_form, ch11_training) %>%
+stan_fit %>%
   tidy(conf.int = TRUE) %>%
   select(term, estimate, std.error)
+```
+
+Let's take a look at the first ten residual values.
+
+<!-- EC: how to make augment work for stan_fit objects? It should work according to broom.mixed documentation.... -->
+
+```{r eval=FALSE}
+broom::augment(stan_fit$fit) %>%
+  select(ideology, .fitted, .resid, gender, race, region, income, age, education)
 ```
 
 ### Verifying fit using cross-validation
 
 Let's practice K-Fold validation with the `stan` model.
 
-```{r cache=TRUE, eval=FALSE}
+```{r eval=FALSE}
 set.seed(10)
 fit_resamples(object = stan_model,
               preprocessor = formula_rec,
@@ -383,64 +404,72 @@ fit_resamples(object = stan_model,
 ```   
 
 
-```{r cache=TRUE, eval=FALSE}
+```{r cache=TRUE, message=FALSE}
 set.seed(10)
-fit_resamples(stan_model,
-              formula_rec,
-              ch11_folds) %>%
+fit_resamples(object = stan_model,
+              preprocessor = formula_rec,
+              resamples = ch11_folds) %>%
   collect_metrics()
 ```
 
-Let's test the stan model using our four `new_people`.
+Let's test the stan model using new people. This time, let's change it up so that the variable levels are different:
 
-```{r message=FALSE, eval=FALSE}
+```{r}
+new_people_2 <- tibble("name" = c("Anne", "Ben", "Chandler", "Diane"),
+                     "region" = as.factor(c("Midwest", "Northeast", "South", "West")),
+                     "gender" = as.factor(c("Female", "Male", "Male", "Female")),
+                     "income" = as.factor(c("34 - 67", "0 - 16", "34 - 67", "17 - 33")),
+                     "age" = c("17 - 24", "17 - 24", "25 - 34", "65 - 74"),
+                     "education" = c("College", "Adv. Degree", "Elementary", "Highschool"),
+                     "race" = c("Black", "Hispanic", "White", "Asian"))
+```
+
+```{r message=FALSE}
 stan_model %>%
   fit(full_form, data = ch11_training) %>%
-  predict(new_people) %>%
-  bind_cols(new_people) %>%
+  predict(new_people_2) %>%
+  bind_cols(new_people_2) %>%
   rename("ideology" = ".pred")
 ```
 
-What if we created a bunch of different formulas that used different permutations of predictor variables? For example, one would exclude `state`, which has 50 different levels.
+What if we created a bunch of different formulas that used different permutations of predictor variables and their interactions?
 
-First, let's create a basic formula that only takes in `race`.
+First, let's create a basic formula that only takes in `age`.
 
 ```{r}
-race_form <- formula(ideology ~ race)
+age_form <- formula(ideology ~ age)
 ```
 
 Next, we can use `update()` to create the more complicated formulas.  `update()` takes as its first argument a formula and as its second argument the additions you want to make.  To keep all the predictors from the first formula and add more, you will start with `~ . + ` and then add more predictors, like so:
 
 ```{r}
-race_gender_form <- update(race_form,
-                    ~ . + gender + race:gender)
-
-demo_form <- formula(ideology ~ race + gender + income + age + education)
+race_gender_form <- update(age_form,
+                    ~ . + race + gender + race:gender)
 
 interact_form <- update(race_gender_form,
-                        ~ . + income*age + education)
+                        ~ . + income*region + education)
 ```
+
+<!-- EC: I tried using a nonsensical interaction model to demonstrate that lm overfits but that actually has a similar rmse to every other formula -->
 
 Next, we will save these different formulas, along with the original `interact_form`, in a tibble to easily remember and recall the formulas.
 
 ```{r}
-ch11_formulas <- tibble(formula = c(race_form,
+ch11_formulas <- tibble(formula = c(age_form,
                                    race_gender_form,
-                                   demo_form,
                                    full_form,
                                    interact_form),
-                       group = c("Race only model",
+                       group = c("Age only model",
                                  "Race and gender model",
-                                 "Demographic model",
                                  "Full model without interaction",
-                                 "Sensible interaction model"))
+                                 "Interaction model"))
 ```
 
 Now, we can use `map_*` to apply all of these models and view their metrics to see which ones have the lowest rmse values.
 
-```{r cache=TRUE, warning=FALSE}
+```{r cache=TRUE, message=FALSE}
 set.seed(10)
-folds_metrics<- ch11_formulas %>%
+folds_metrics <- ch11_formulas %>%
   mutate(metrics = map(formula, ~ fit_resamples(object = lm_model,
                                                 preprocessor = .,
                                                 resamples = ch11_folds) %>%
@@ -449,7 +478,7 @@ folds_metrics<- ch11_formulas %>%
 
 Let's present the results stored in our `folds_metrics` object. We are simply extracting the `rmse` metric from each formula:
 
-```{r message=FALSE, warning=FALSE}
+```{r}
 folds_metrics %>%
   mutate(mean_rmse = map_dbl(metrics, ~ filter(., .metric == "rmse") %>% pull(mean)),
          se_rmse = map_dbl(metrics, ~ filter(., .metric == "rmse") %>% pull(std_err))) %>%
@@ -458,33 +487,7 @@ folds_metrics %>%
 
 Looking at the results, all of the formulas seem to yield a relatively close mean `rmse`.
 
-The models with the lowest rmse values seem to be the Full model without interaction and the Demographic model. The Demographic model includes the following variables:
-
-* `education`
-* `race`
-* `gender`
-* `age`
-* `income`
-
-It is very similar to the Full model without interaction, which includes `state` in addition.
-
-Let's test the Demographic model on the testing set.
-
-```{r}
-lm_model %>%
-  fit(demo_form, data = ch11_training) %>%
-  predict(new_data = ch11_testing)
-```
-
-To extract the rmse, we set the "truth" to `ideology` so this function can compare our predicted values to the true values.
-
-```{r}
-lm_model %>%
-  fit(demo_form, data = ch11_training) %>%
-  predict(new_data = ch11_testing) %>%
-  bind_cols(ch11_testing) %>%
-  rmse(truth = ideology, estimate = .pred)
-```
+The models with the lowest rmse value seems to be the Full model without interaction. The mean squared error is close in value to that of the interaction model.
 
 ## Using a neural network
 
@@ -503,33 +506,38 @@ nnet_model %>%
 
 Next, let's fit the model.
 
-<!-- EC: Tidy method for nnet doesn't exist? -->
-
-```{r eval=FALSE}
-nnet_model %>%
+```{r}
+nnet_fit <- nnet_model %>%
   fit(full_form, ch11_training)
-  tidy(conf.int = TRUE) %>%
-  select(term, estimate, conf.low, conf.high)
+```
+
+Note that there is no tidy method for neural network models. This makes sense, as the terms are not necessarily additive. However, we can still view the predictions by using `bind_cols()`.
+
+```{r}
+bind_cols(
+  predict(nnet_fit, new_data = ch11_training))
 ```
 
 ### Verifying fit with cross-validation
 
 Let's cross-validate our predictions using `vfold_cv()`.
 
-```{r message=FALSE, eval=FALSE}
+```{r message=FALSE}
 set.seed(10)
 fit_resamples(object = nnet_model,
               preprocessor = formula_rec,
               resamples = ch11_folds)
 ```   
 
-```{r eval=FALSE}
+```{r message=FALSE}
 set.seed(10)
 fit_resamples(nnet_model,
               formula_rec,
               ch11_folds) %>%
   collect_metrics()
 ```
+
+Again, note that the rmse value is quite similar to those of the `stan` and `lm` models. Not to worry! In the real world, you might find that a model is wildly better than others. Or, you might find that all yield similar rmses. However, rmse values are not the only indicator of fit.
 
 ### Predicting new data
 
@@ -567,9 +575,10 @@ However, remember that `rmse` and `rsq` values are not end-all-be-all. There are
 
 ## Wrap-Up
 
-So, how can we predict someone's ideology based off of other information?
+Let's loop back to the original guiding question. How does age affect ideology for respondents from different regions?
 
-* `pres_appr`
-* trends in `age`, `income`, `gender`, `race`, `education`
-* caveat interaction variables
-* caveat applying to other data before 2016
+Assume that the segment of the population we are interested in is college educated men making an average income. These are vital assumptions to make, as without setting baselines for the other predictor variables, we cannot make any comparisons on region and age.
+
+```{r}
+# Here goes the ggplot.
+```
