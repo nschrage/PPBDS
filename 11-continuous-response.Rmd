@@ -136,7 +136,7 @@ Now that we have a left-hand variable to estimate with reasonable predictors, le
 
 It is important to note that **there are an infinite number of comparisons you can make**. Because our model is predictive, we can only say something about the population if one variable is tweaked and all else is kept the same. For example, we could look at how education affects the self-reported ideology of Asian respondents compared to Black respondents, given that both groups of respondents are well-educated, female, middle-aged, and reside in the Northeast. Or, we could look at the interaction between gender and race and its affect on ideology for certain values of the other variables. There is no right answer as to what question is the best one to answer. Indeed, this is another important choice you will have to make as a data scientist.
 
-For this chapter, we will seek to answer the following question: How does age affect ideology for residents of the four different regions of the U.S.?
+For this chapter, we will seek to answer the following question: How does age affect ideology for residents of the Northeast vs. the South of the U.S.?
 
 ### Justice
 
@@ -582,7 +582,11 @@ nnet_model %>%
   rename("ideology" = ".pred")
 ```
 
-## Model selection
+## Temperance
+
+```{r echo=FALSE, fig.margin=TRUE}
+knitr::include_graphics("other/images/temperance.jpg")
+```
 
 By now, we have created three different linear regression models: one using the `lm` engine, one using the Bayesian `stan` engine, and one using the machine learning `nnet` engine. We have also explored K-fold cross-validation to verify the fit of the model on out-of-sample data. Lastly, we've seen how variable selection can change our models.
 
@@ -594,12 +598,69 @@ Secondly, we have two quantitative metrics to help guide our decision: the `rmse
 
 However, remember that `rmse` and `rsq` values are not end-all-be-all. There are other ways to to determine the best model: Did it predict low ideologies well? What about high ideologies? Did it do a good job of generally sorting people into the right end of politically liberal or politically conservative? Were there frequent outlandish answers generated, such as a quantity of `ideology` too high to exist?
 
-## Wrap-Up
+Indeed, even the `rmse` value's validity can be up for debate, as it takes the mean squared error. Why not take an absolute value so that larger differences do not seem even larger after getting squared? These are questions you should be asking when relying on a metric to compare models.
+
+## Wrap-up
 
 Let's loop back to the original guiding question. How does age affect ideology for respondents from different regions?
 
 Assume that the segment of the population we are interested in is college educated men making an average income. These are vital assumptions to make, as without setting baselines for the other predictor variables, we cannot make any comparisons on region and age.
 
+Say we are specifically interested in the different effects of ages on college-educated men in the Northeast versus the South. Let's use our second model, `stan_model`, to explore this problem.
+
+First, create a tibble in which all respondents are college-educated white men making average income. Half of the group will be from the Northeast, and half from the South.
+
 ```{r}
-# Here goes the ggplot.
+wrap_up <- tibble("region" = as.factor(c("Northeast", "South", "Northeast", "South",
+                                            "Northeast", "South", "Northeast", "South",
+                                            "Northeast", "South", "Northeast", "South",
+                                            "Northeast", "South")),
+                     "gender" = as.factor(c("Male", "Male", "Male", "Male",
+                                            "Male", "Male", "Male", "Male",
+                                            "Male", "Male", "Male", "Male",
+                                            "Male", "Male")),
+                     "income" = as.factor(c("34 - 67", "34 - 67", "34 - 67", "34 - 67",
+                                            "34 - 67", "34 - 67", "34 - 67", "34 - 67",
+                                            "34 - 67", "34 - 67", "34 - 67", "34 - 67",
+                                            "34 - 67", "34 - 67")),
+                     "age" = c("17 - 24", "17 - 24", "25 - 34", "25 - 34",
+                               "35 - 44", "35 - 44", "45 - 54", "45 - 54",
+                               "55 - 64", "55 - 64", "65 - 74", "65 - 74", "75 +", "75 +"),
+                     "education" = c("College", "College", "College", "College", "College", "College", "College", "College", "College", "College", "College", "College", "College", "College"),
+                     "race" = c("White", "White", "White", "White", "White", "White", "White", "White", "White", "White", "White", "White", "White", "White"))
 ```
+
+Next, obtain the `ideology` values by fitting like we did before:
+
+```{r}
+ideo_diff <- lm_fit %>%
+  predict(new_data = wrap_up) %>%
+  bind_cols(wrap_up) 
+```
+
+Now, let's plot these predicted ideologies for men in the Northeast versus men in the South.
+
+```{r}
+ideo_diff %>%
+  ggplot(aes(x = age, y = .pred, color = region)) +
+  geom_point()
+```
+Interestingly, note that both regions' male voters dip in ideology around ages 33-44 years old. The reason these two graphs look the same is because we are using a linear model. What about if we use our `stan_model` or `nnet_model`?
+
+```{r}
+stan_fit %>%
+  predict(new_data = wrap_up) %>%
+  bind_cols(wrap_up)  %>%
+  ggplot(aes(x = age, y = .pred, color = region)) +
+  geom_point()
+```
+
+```{r}
+nnet_fit %>%
+  predict(new_data = wrap_up) %>%
+  bind_cols(wrap_up)  %>%
+  ggplot(aes(x = age, y = .pred, color = region)) +
+  geom_point()
+```
+
+
