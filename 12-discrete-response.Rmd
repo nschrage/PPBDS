@@ -157,11 +157,94 @@ ch12 %>%
        title = "Presidential Approval by State")
 ```
 
+## The Question
+
+Now that we've seen some EDA for the general dataset, let's narrow our focus. When creating models, it is important to have a specific question in mind that you can use your model to answer. For our chapter, that question will be "How do Blacks and Hispanic voters vary in their support of the President?" At the end of this chapter, we'll use the three models we created to address answer this. Before then, however, we'll do some exploratory data analysis on this part of the data. 
+
+First, we'll filter `race` to two groups: Black or Hispanic. We'll also code approval to be an integer, which will help when doing the math for our graphs.
+
+```{r}
+ch12 <- ch12 %>% 
+  filter(race == "Black" | race == "Hispanic") %>%
+  mutate(approval = as.integer(approval)) %>%
+  mutate(approval = case_when(
+    approval == 1 ~ 0,
+    approval == 2 ~ 1))
+```
+
+Now, let's look at a basic comparison of their rates of approval. 
+
+```{r}
+ch12 %>%
+  ggplot(aes(x = approval, fill = race)) +
+  geom_bar() + 
+  labs(y = "Count",
+       x = "Presidential Approval",
+       title = "Presidential Approval in 2018 for Black and Hispanic voters") +
+  facet_wrap(~ race)
+```
+
+We can get two important pieces of information from this graph. The first observation is that, although it seems there are a few more black voters, these populations are very similar in size. The second is there is slightly stronger disapproval of the President among Black voters. 
+
+However, we must do further analyses to better understand Black and Hispanic voters. Looking at how different covariates affect approval rate within the group is a great next step. Let's start with age:
+
+```{r, message = FALSE}
+ch12 %>%
+  group_by(age, race) %>%
+  summarise(approval_rate = sum(approval)/n()) %>%
+  ggplot(aes(x = age, y = approval_rate, group = race, color = race)) +
+  geom_point() +
+  geom_line() + 
+  labs(x = "Age",
+       y = "Approval Rate",
+       title = "Presidential Approval Rate by Age")
+```
+
+You can see that the difference in the approval ratings increases with age. Older Hispanic voters approve more strongly of the President while older Black voters approve of the President at even lower rates than younger Black voters. This graph shows us why covariates are important. Even adding just one -- age -- added a new complexity to our understanding of question at hand. 
+
+Now, let's add another variable by throwing gender in the mix.
+
+```{r, message = FALSE}
+ch12 %>%
+  group_by(age, race, gender) %>%
+  summarise(approval_rate = sum(approval)/n()) %>%
+  ggplot(aes(x = age, y = approval_rate, group = race, color = race)) +
+  geom_point() +
+  geom_line() + 
+  facet_wrap(~gender)+
+  labs(x = "Age",
+       y = "Approval Rate",
+       title = "Presidential Approval Rate by Age and Gender")
+```
+
+Now that we've faceted by gender, we can see that the trends from the previous graph don't vary much from male to female. 
+
+```{r, echo = FALSE}
+ch12 <- cces %>%
+  filter(year == 2018) %>%
+  select(state, age, gender, race, education, ideology, approval) %>%
+  mutate(approval = as.factor(case_when(
+    approval == 1 ~ 0,
+    approval == 2 ~ 0,
+    approval == 3 ~ 1,
+    approval == 4 ~ 1,
+    approval == 5 ~ 1))) %>% 
+  drop_na()
+```
+
 ### Themes
 
 As stated at the beginning of the chapter, this chapter will look into three different types of models, all modelling presidential approval against several explanatory variables. Before we do so, let's take a moment to discuss our themes of prudence, courage, temperance, and justice.
 
+```{r echo=FALSE, fig.margin=TRUE}
+knitr::include_graphics("other/images/prudence.jpg")
+```
+
 *Prudence* addresses the matter of *validity*. Validity is the measure of how well our data captures the concept we are setting out to analyze and the relevance of the estimand for which we are modelling. So, is `approval` a good measure of what we are trying to estimate? The most obvious problem is that the `approval` variable began as a 5-point scale from "Strongly Disapprove" to "Strongly Approve". Converting this to a binary variable of 0 and 1 may not be a valid measure of presidential approval -- think to yourself, would our data be the same if we asked the exact same respondents to respond to a "Yes" or "No" question rather than transforming their data? Finally, does stating your approval or disapproval of the president on a survey capture what we are trying to study? Perhaps so, but in a practical application, it may be true that whether or not an individual donated money to the President's campaign or if they voted for him in 2016 more accurately captures what we are setting out to study. Finally, are our right hand side variables valid? For example, the 5 point scale of `ideology` from "Strongly Liberal" to "Strongly Conservative" seems rather subjective. 
+
+```{r echo=FALSE, fig.margin=TRUE}
+knitr::include_graphics("other/images/justice.jpg")
+```
 
 *Justice* deals with the theme of *model structure*. When establishing your model structure, there are a few steps. Firstly, will our model be predictive or causal? This chapter deals with passing our data through three different model types to predict presidential approval. We are not trying to measure the causal effect of any specific treatment variable, so these will be predictive models. Next, we must make a mathematical formula for our models. Because we are doing several different model types, our formula can be abstracted to... 
 
@@ -190,7 +273,15 @@ tibble(subject = c("1", "2", "...", "10,052", "...", "120,892", "20,400,100", ".
 
 The purpose of a Preceptor Table is to capture all of the data such that if the question marks were filled out, one wouldn't need to construct a model. The rows in this Preceptor Table represent the full population of N American voters that the cces sampled from for this dataset. For this reason, some have recorded data while other do not. If all of the "?"s were filled out, we would not need to make a predictive model for approval because we know everyone's value for approval. 
 
+```{r echo=FALSE, fig.margin=TRUE}
+#knitr::include_graphics("other/images/courage.jpg")
+```
+
 Our discussion of *courage*, or the *data-generating mechanism*, will be brief, as we will discuss our three model types in-depth throughout the chapter. We will begin with a logistical regression using `glm()`, like in previous chapters. Then we will use a regression tree, which creates partitions based on the right hand side variables and has a prediction of `approval` for each partition. Finally, we will use random forests, which are created by generating and averaging many different regression trees. Each of these models will use the binary variable of `approval` as their left hand variable.
+
+```{r echo=FALSE, fig.margin=TRUE}
+knitr::include_graphics("other/images/temperance.jpg")
+```
 
 Finally, *temperance* (or *humility*). Because the world is extremely complex and ever-changing, our models are never as good as they appear. We will hold off on our full discussion of *temperance* until the end of the chapter when we've completed the models. Until then, keep in mind these questions: Is our model *representative* of the greater world? How accurately does our model predict *unknown unknowns*? What are the flaws in our modelling process?
 
@@ -703,7 +794,7 @@ newdata <- tibble(race = c("Asian", "Black", "White", "Native American"),
                   age = c(54, 41, 56, 70),
                   gender = c("Male", "Female", "Male", "Female"))
 
-#predict(cart_fit, new_data = newdata) 
+predict(cart_fit, new_data = newdata) 
 
 ```
 
@@ -935,76 +1026,65 @@ In the case of the `roc_auc`, our logistic regression performed best, followed b
 
 <!-- MB: bring back discussion of humility -->
 
-## The Problem
+## The Question Pt. 2
 
-There are an infinite numbers of comparisons to be made within this dataset. Let's return to our original question of how Blacks and Hispanics specifically vary in their support of the president. 
+There are an infinite numbers of comparisons to be made within this dataset. When creating a model, it's best to have a specific question in mind. At the end, you can answer that question, using your model to learn more about the world.
 
-First, we'll transform the data to categorize `race` into two groups: Black/Hispanic or other. We'll also code approval to be an integer, which will help when doing the math for our graphs.
+Let's return to our original question of how Asians and Whites specifically vary in their support of the president. We'll use our logistic regression first, as that model performed with the highest roc_auc. 
+
+<!-- imprtnt: When comparing blacks and hispanics, the approval was predicted to be 0 for every age. So i switched to white and asian here. Need to go back and fix in earlier work (in The Question section) -->
+
+```{r, echo = FALSE}
+
+# Creating dataset
+
+newdata <- tibble(race = c(rep("Asian", 12),
+                           rep("White", 12)),
+                  age = rep(c(24, 24, 36, 36, 48, 48, 65, 65, 73, 73, 84, 84), 2),
+                  gender = rep(c("Female", "Male"), 12))
+
+```
+
+We've created a dataset of 24 new Asian and White voters so that we can use our model to predict if they will vote for the President. Each voter's race, age, and gender have been included as these are the 3 demographic factors our model uses to predict approval. 
 
 ```{r}
-ch12 <- ch12 %>% 
-  mutate(bh = case_when(
-    race == "Black" ~ "Black/Hispanic",
-    race == "Hispanic" ~ "Black/Hispanic",
-    race == "White" ~ "Other",
-    race == "Native American" ~ "Other",
-    race == "Asian" ~ "Other",
-    race == "Other" ~ "Other",
-    race == "Middle Eastern" ~ "Other",
-    race == "Mixed" ~ "Other")) %>%
-  mutate(approval = as.integer(approval)) %>%
-  mutate(approval = case_when(
-    approval == 1 ~ 0,
-    approval == 2 ~ 1))
+newdata
 ```
 
-Now, let's look at a basic comparison of their rates of approval. 
+Next, we'll use the `predict()` function to see how our model thinks these voters will regard the President. 
 
 ```{r}
-ch12 %>%
-  ggplot(aes(x = approval, fill = bh)) +
-  geom_bar() + 
-  labs(y = "Count",
-       x = "Presidential Approval",
-       title = "Presidential Approval in 2018 by Race") +
-  facet_wrap(~ bh)
+
+x <- predict(logistic_fit, new_data = newdata) 
+x
+
 ```
 
-We can get two important pieces of information from this graph. The first observation is that there are far more observations in the non-Black/Hispanic group. The second is there is noticeably stronger disapproval of the President among Blacks and Hispanics than the rest of the population. 
+Well, now what? We have our predictions for each of the new voters, but it isn't helpful to answering our question yet. To see greater trends between White and Asian voters, let's visualize our predictions! The new data had an intentionally even spread of age, race, and gender to make our comparisons easier.
 
-However, we must do further analyses to better understand Black and Hispanic voters. Looking at how different covariates affect approval rate within the group is a great next step. Let's start with age:
+Let's use the same strategy from our exploratory data analysis earlier. We can graph age against approval, facet by gender, and color the observations by race. This way, we can view trends across all three variables in one graph.
 
-```{r, message = FALSE}
-ch12 %>%
-  group_by(age, bh) %>%
-  summarise(approval_rate = sum(approval)/n()) %>%
-  ggplot(aes(x = age, y = approval_rate, group = bh, color = bh)) +
-  geom_point() +
-  geom_line() + 
+```{r}
+
+# Cleaning the data 
+
+y <- x %>% 
+  bind_cols(newdata) %>%
+  mutate(approval = .pred_class) %>%
+  select(-.pred_class)
+
+# Graphing the data
+
+y %>%
+  ggplot(aes(x = age, y = approval, color = race)) + 
+  geom_jitter(size = 2, width = 8, height = 0) + # Adding width so that the dots don't block eachother
+  facet_wrap(~gender) + 
   labs(x = "Age",
-       y = "Approval Rate",
-       title = "Presidential Approval Rate by Race and Age")
+       y = "Predicted Approval",
+       title = "Predicted Approval of President for White and Asian Voters")
+
 ```
 
-In keeping with our previous chart, the presidential approval is consistently higher for all ages among non-Blacks and Hispanics. You can also see that the non-Black/Hispanic population increases in their support of the president on average as they get older. Black and Hispanic voters, however continue to hover at around 25% approval, albeit with greater variation. 
+So, how do White and Asian voters vary in their support of the President in 2018? As we can see, this is a more complex question than one may think. For example, if one were only considering race, they would guess an White voter to be more likely to approve of the President than an Asian voter. However, a 40-year-old White male, according to our model, is not as likely to approve of the President as a 70-year-old Asian man. This is useful information to consider: when using our model to its full extent, we can make predictions based on more than one variable at a time. 
 
-Now, let's add another variable by throwing gender in the mix.
-
-```{r, message = FALSE}
-ch12 %>%
-  group_by(age, bh, gender) %>%
-  summarise(approval_rate = sum(approval)/n()) %>%
-  ggplot(aes(x = age, y = approval_rate, group = bh, color = bh)) +
-  geom_point() +
-  geom_line() + 
-  facet_wrap(~gender)+
-  labs(x = "Age",
-       y = "Approval Rate",
-       title = "Presidential Approval Rate by Race, Age, and Gender")
-```
-
-Now that we've faceted by gender, we can see that the trends from the previous graph don't vary much from male to female. You could argue, based on this graph, that presidential support is mildly higher for Black/Hispanic males than Black/Hispanic females. 
-
-Now that we've done some analysis, let's use our models to help answer more questions about how Black and Hispanic voters vary in their support of the President. 
-
-
+What else can we learn from this graph? Both races follow the trend of older voters being more likely to approve of the President. However, we see that Asian woman were predicted to *disapprove* of the President at any age, while the older Asian men were predicted to approve of him. The margin was much closer for White voters, with both older men and women being predicted to approve.   
