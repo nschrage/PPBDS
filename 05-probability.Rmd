@@ -149,7 +149,8 @@ ggplot(mydata, aes(x = results)) +
        subtitle = "Flipping One Coin",
        x = "Outcome\nResult of Coin Flip",
        y = "Probability") +
-  scale_x_continuous(breaks = seq(0,1,1), labels = c("Heads", "Tails"))
+  scale_x_continuous(breaks = seq(0,1,1), labels = c("Heads", "Tails")) +
+  theme_classic()
 
 ```
 
@@ -178,7 +179,8 @@ ggplot(mydata, aes(x = results)) +
        subtitle = "Flipping One Coin A Hundred Times",
        x = "Outcome\nResult of Coin Flip",
        y = "Probability") +
-  scale_x_continuous(breaks = seq(0,1,1), labels = c("Heads", "Tails"))
+  scale_x_continuous(breaks = seq(0,1,1), labels = c("Heads", "Tails")) +
+  theme_classic()
 
 ```
 
@@ -202,7 +204,8 @@ ggplot(mydata, aes(x = results)) +
        subtitle = "Your Beliefs About Flipping One Coin to Bet Your Friend",
        x = "Outcome\nResult of Coin Flip",
        y = "Probability") +
-  scale_x_continuous(breaks = seq(0,1,1), labels = c("Heads", "Tails"))
+  scale_x_continuous(breaks = seq(0,1,1), labels = c("Heads", "Tails")) +
+  theme_classic()
 
 ```
 
@@ -799,9 +802,48 @@ The immediate, but *wrong*, answer would be 99%. Why is this wrong? Isn't 99% th
 
 Imagine you're part of a population of 10000 people. Now, the frequency of the disease is 1%. In terms of a count, that means 100 people have this disease of the 10000 in the population. The test would probably (99% chance) correctly identify these individuals, meaning that around 99 will test positive. However, a test with an accuracy of 99% would also identify 100 other perfectly healthy people out of 10000 people as sick! That means that the number of people who would test positive for the disease is 199 but *only 99 of them have the disease*. So, in simple terms, the probability of you having the disease given a positive test is $99\div200$!
 
-<!-- 3) Make 2 model case like N model case. Start with unnormalized. Finish with discussion of *What sort of distribution is this?* Need two paragraphs to explain.  1) It is conditional, only for people with with a positive text. But, really, all probability distributions are conditional on something. Even our coin and dice distributions are conditional on assumptions about fairness and all the other assumptions that went into constructing the joint distribution of models and data. 2) Is it empirical or mathematical or posterior? Well . . . all of them . . . Almost every time we make a claim about the world, it is a claim about our beliefs, what we think. We could be wrong! Your beliefs will differ. So, since almost all pds are posterior, we often leave out the word posterior!  -->
+Here is an unnormalized distribution showing the number of true positives you would expect out of around 199 anticipated positive tests. As you can see, the y-axis displays the count instead of the probability, making this graph unnormalized.
 
-It becomes easier to understand when you model this!  
+```{r, echo = F}
+
+x <- tibble(disease = rbinom(n = 199, size = 199, p = (99/200)))
+
+x %>%
+  group_by(disease) %>%
+  summarize(total = n(), .groups = "drop") %>%
+  ggplot(aes(disease, total)) +
+  geom_col() +
+  labs(title = "Distribution of the Number of Having the Disease Given a Positive Test",
+       subtitle = "Comparing Two Models",
+       x = "Outcome \nNumber of People with the Disease",
+       y = "Probability") +
+  theme_classic()
+
+```
+Here is the normalized version of the above graph, with the y-axis displaying the probability of each outcome.
+
+```{r, echo = F}
+
+x %>%
+  group_by(disease) %>%
+  summarize(total = n(), .groups = "drop") %>%
+  mutate(prob = total/sum(total)) %>%
+  ggplot(aes(disease, prob)) +
+  geom_col() +
+  labs(title = "Distribution of the Number of Having the Disease Given a Positive Test",
+       subtitle = "Comparing Two Models",
+       x = "Outcome \nNumber of People with the Disease",
+       y = "Probability") +
+  theme_classic()
+
+```
+What kind of distribution are you looking at? The first feature to notice is that the graph is conditional since we are only displaying cases where the person has already tested positive. The graph is asking, given the positive test, how many people actually have the disease. It may seem odd to zoom in on only those who have tested positive. However, in reality, all probability distributions are conditional on something. Even our coin and dice distributions are conditional on assumptions of fairness. In constructing joint distributions, we made assumptions about just how crooked the die at the crooked casinos were (ex. that one dice would return 5 50% of the time while the other would return 6 50% of the time).
+
+The next question: is the distribution you see displayed above mathematical, empirical, or posterior? Well, technically all of them! Everytime we make a claim about the world, it is technically a claim about our beliefs. We could definitely be wrong and beliefs differ amongst people. In the case of the rare disease called $X$, we believe that the illness only affects 1% of the population. Since almost all probability distributions are posteriors in some way, shape, or form, we often leave out the word "posterior" when we call something a probability distribution. Up to now, we have distinguished between the three -- however, it is good to know that there is actually significant overlap.
+
+However, just because the probability of having the disease is 1% and the test is 99% accurate, it doesn't mean that these are the exact numbers that always work out in the real world. That is, for a *sample* of 100000, a disease frequency of 1% doesn't necessarily mean that 100 people have the disease. It could be 101. Or 98. Or 105! Given that uncertainty, we model. We built an understanding of the world and now we can express it in counts. We can use our model to understand what the implications of an event (testing positive) are on our belief that we have the disease.
+
+Let's visualize our two model distribution.
 
 ```{r disease, fig.align="center", echo = FALSE}
 
@@ -810,6 +852,10 @@ pop <- tibble(patient_id = 1:10000, positive_test = c(rep(1, 199),
               have_disease = c(rep(1, 99),
                                rep(0, 9900),
                                rep(1, 1)))
+
+```
+
+```{r}
 
 ggplot(pop, aes(x = as.factor(have_disease), y = as.factor(positive_test))) +
   geom_point() +
@@ -820,21 +866,6 @@ ggplot(pop, aes(x = as.factor(have_disease), y = as.factor(positive_test))) +
     y = "Do you have the disease?")
 
 ```
-
-Remember, we're currently conceptualizing probability in counts. Therefore, a .1% chance of having the disease means 10 people have it and a 99% chance of testing correctly (a 1% chance of testing incorrectly) means 100 people were incorrectly identified as positive (in addition to the 10 people who tested positive correctly). So, to recap:
-
-* 10 people have the disease
-
-* They all tested positive
-
-* 9990 people don't have the disease
-
-* 100 of them still tested positive
-
-There's a population of 110 people who tested positive and only 10 of them have the disease. So, if you test positive, your chances of having the disease are $10\div110$, which is equal to 9%!
-
-Now, let's switch back to proportion-based probabilities and think about it. Just because the probability of having the disease is .1% and the test is 99% accurate, it doesn't mean that these are the exact numbers that always work out in the real world. That is, for a *sample* of 10,000, a disease frequency of .1% doesn't necessarily mean that 10 people have the disease. It could be 11. Or 9. Or 20! Given that uncertainty, we do what we did above. We model. We built and understanding of the world and expressed it in counts. We then used that to understand what the implications of an event (testing positive) are on our belief that we have the disease. In the next section, we'll follow the same principle but make this a little more complicated.
-
 
 ## Three models
 
