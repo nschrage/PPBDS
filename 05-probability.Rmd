@@ -420,7 +420,7 @@ Let's say that you are rolling two six-sided die simultaneously. One is weighted
 
 ```{r, echo=FALSE, fig.fullwidth = TRUE}
 
-knitr::include_graphics("05-probability/images/joint_distribution.png")
+knitr::include_graphics("05-probability/images/joint.png")
 
 ```
 
@@ -528,7 +528,7 @@ Now the tree branches out.
 
 We decide to go down the top branch *if* our random person has the disease. We go down the bottom branch *if* they do not. This is called **conditional probability**. The probability of testing positive is **dependent** on whether the person has the disease.
 
-How would you express this in statistical notation? p(A|B) is the same thing as the probability of A *given* B. p(A|B) essentially means the probability of A *if* we know for sure the value of B. You should also remember that $p_{A|B}$ is not the same thing as $p_{B|A}$.
+How would you express this in statistical notation? $p(A|B)$ is the same thing as the probability of A *given* B. $p(A|B)$ essentially means the probability of A *if* we know for sure the value of B. You should also remember that $p(A|B)$ is not the same thing as $p(B|A)$.
 
 ```{marginfigure}
 **Positive:** The test results suggest that the patient has the disease.
@@ -730,7 +730,7 @@ aGivenb <- aANDb / b
  
 node1<-"p"
 node2<-"p(H)"
-node3<-"P(T)"
+node3<-"p(T)"
 node4<-"p(H given H)"
 node5<-"p(T given H)"
 node6<-"p(H given T)"
@@ -775,92 +775,21 @@ plot(rEG, edgeAttrs=eAttrs, attrs=attributes)
 
 ## Two models
 
-<!-- # Section 3: Two Models, Scatterplots and Bayes Theorem -->
-
-<!-- 3 a) Key point of this section is how we deal with the simplest possible situation. There are only two possibilities. Either you have the disease, or you don't. Walk through this problem with counts first. There are 100,000 people in the country. (Top of tree.) 0.1% have the disease, which is 100 people. 999,900 do not. (These are the two branches from the top.) We give the test to all 100,000 people. And so on. We have the four leaves, and then we just add the two branches which positive test results together, and then divide that into the total with the disease who tested positive. Presto! Your true odds.
-
-See page 330 of the Bayesian Workshop for the use of the frequency format. Don't think in terms of percentages. Think in terms of counts. Would this be useful to show students?
-
-       1000
-      10   990
-     8  2  95 895
-     8/(8 + 95)
-
-Should we start with counts and then go to probabilities, or just start with probabilities? Flip a coin 100 times, and get 53 heads and 47 tails. Or maybe explain with counts each time we learn a new thing, and then do with percentages. Note how all this ties into the below discussion. When we are playing with models, we just "know" what the percentages are. We use this knowledge to determine what a single data point means. But we also do the opposite! (Call this the inverse?) We collect a lot of data (counts?) and then use that data to estimate the probabilities in the tree. Hmmm. 
-
-Then do another example, but point out we don't need the counts. Numbers are abritrary because we divide at the end. Show that.
-
-Now that we understand trees, we can do some Bayes' Theorem examples by hand. We don't even show the formula! Just walk through the four leaves, and how we add two and then divide into one of them. -->
-
 <!-- Then, with those ideas fixed, we make a Bayes Scatterplot with just two rows on the y-axis: have the disease or don't have the disease. (Or maybe we use another exmaple each time.) Since these two models have no fixed numeric meaning, we can just place them at 0 and 1 on the y-axis, which sort of corresponds to FALSE and TRUE. Then, we can x-axis we have the actual data. Which, in this case, is also a TRUE/FAlSE value: Either you tested positive or you tested negative, so also 0 and 1. Then, we can simulate. Put a 100,000 people through, fill out the values. There are only 4 possibilities, so we will need to jittter. (See below for an example of how to do this. And then explore the marginal distributions. Show how this gives you the same answer, roughly, as the math we did before.) -->
 
 <!-- 3 b) Code up a full featured simulation exercise, like the cookie problem but with more complexity. See the old 1005 problem set. Connect this to how 538 does things. 99.99% of real world problems are solved with simulation, not analytically. -->
 
-Imagine you wake up one morning and feel a little bit under the weather. Not sick, just not 100%.
-So, you go to your doctor and your doctor is confused. So, she runs a slew of tests and in a couple of days, one of them comes back positive. You've tested positive for a rare disease, called $X$. Only *1%* of the population has this disease. And the test correctly identifies you as positive *99%* of the time!
+You are in a city of 100,000 people. We know for a fact that exactly 1% of the population has a disease. Everyone received a test for the disease, which returned accurate results exactly 99% of the time. In terms of a count, that means 1,000 people have this disease of the 100,000 in the population. The correctly identified these individuals 99% of the time, meaning that around 990 correctly tested positive and 10 incorrectly tested negative. This city also has 99,000 people who do not have the disease, 990 of which incorrectly tested positive and 98010 of which correctly tested negative. That means that the number of people who would test positive for the disease is 1980 but *only 990 of them have the disease*. So, in simple terms, the probability of you having the disease given a positive test is $990\div1980$!
 
-So, understandably worried, you ask yourself: what is the probability I have this disease?
+Here is the joint empirical distribution of the test result and disease status. Note that this is an unnormalized distribution because each dot represents a person in this city.
 
-The immediate, but *wrong*, answer would be 99%. Why is this wrong? Isn't 99% the accuracy of the test? To understand, we're going to abandon probability as a *proportion* (i.e. 99%) and think of it in *counts*. 
+```{r, echo = FALSE}
 
-Imagine you're part of a population of 10000 people. Now, the frequency of the disease is 1%. In terms of a count, that means 100 people have this disease of the 10000 in the population. The test would probably (99% chance) correctly identify these individuals, meaning that around 99 will test positive. However, a test with an accuracy of 99% would also identify 100 other perfectly healthy people out of 10000 people as sick! That means that the number of people who would test positive for the disease is 199 but *only 99 of them have the disease*. So, in simple terms, the probability of you having the disease given a positive test is $99\div200$!
-
-Here is an unnormalized distribution showing the number of true positives you would expect out of around 199 anticipated positive tests. As you can see, the y-axis displays the count instead of the probability, making this graph unnormalized.
-
-```{r, echo = F}
-
-x <- tibble(disease = rbinom(n = 199, size = 199, p = (99/200)))
-
-x %>%
-  group_by(disease) %>%
-  summarize(total = n(), .groups = "drop") %>%
-  ggplot(aes(disease, total)) +
-  geom_col() +
-  labs(title = "Distribution of the Number of Having the Disease Given a Positive Test",
-       subtitle = "Comparing Two Models",
-       x = "Outcome \nNumber of People with the Disease",
-       y = "Probability") +
-  theme_classic()
-
-```
-Here is the normalized version of the above graph, with the y-axis displaying the probability of each outcome.
-
-```{r, echo = F}
-
-x %>%
-  group_by(disease) %>%
-  summarize(total = n(), .groups = "drop") %>%
-  mutate(prob = total/sum(total)) %>%
-  ggplot(aes(disease, prob)) +
-  geom_col() +
-  labs(title = "Distribution of the Number of Having the Disease Given a Positive Test",
-       subtitle = "Comparing Two Models",
-       x = "Outcome \nNumber of People with the Disease",
-       y = "Probability") +
-  theme_classic()
-
-```
-What kind of distribution are you looking at? The first feature to notice is that the graph is conditional since we are only displaying cases where the person has already tested positive. The graph is asking, given the positive test, how many people actually have the disease. It may seem odd to zoom in on only those who have tested positive. However, in reality, all probability distributions are conditional on something. Even our coin and dice distributions are conditional on assumptions of fairness. In constructing joint distributions, we made assumptions about just how crooked the die at the crooked casinos were (ex. that one dice would return 5 50% of the time while the other would return 6 50% of the time).
-
-The next question: is the distribution you see displayed above mathematical, empirical, or posterior? Well, technically all of them! Everytime we make a claim about the world, it is technically a claim about our beliefs. We could definitely be wrong and beliefs differ amongst people. In the case of the rare disease called $X$, we believe that the illness only affects 1% of the population. Since almost all probability distributions are posteriors in some way, shape, or form, we often leave out the word "posterior" when we call something a probability distribution. Up to now, we have distinguished between the three -- however, it is good to know that there is actually significant overlap.
-
-However, just because the probability of having the disease is 1% and the test is 99% accurate, it doesn't mean that these are the exact numbers that always work out in the real world. That is, for a *sample* of 100000, a disease frequency of 1% doesn't necessarily mean that 100 people have the disease. It could be 101. Or 98. Or 105! Given that uncertainty, we model. We built an understanding of the world and now we can express it in counts. We can use our model to understand what the implications of an event (testing positive) are on our belief that we have the disease.
-
-Let's visualize our two model distribution.
-
-```{r disease, fig.align="center", echo = FALSE}
-
-pop <- tibble(patient_id = 1:10000, positive_test = c(rep(1, 199),
-                                                       rep(0, 9801)),
-              have_disease = c(rep(1, 99),
-                               rep(0, 9900),
-                               rep(1, 1)))
-
-```
-
-<!-- hello! Welcome to my city of 100,000 people. Some people have a disease. Some people do not. Some people have a positibve result when we give them a test for the disease. Some people have a negative result when we test them. Here is the joint empirical distribution of test result and disease status. -->
-
-```{r}
+pop <- tibble(patient_id = 1:100000, positive_test = c(rep(1, 1980),
+                                                       rep(0, 98020)),
+              have_disease = c(rep(1, 990),
+                               rep(0, 99000),
+                               rep(1, 10)))
 
 ggplot(pop, aes(x = as.factor(have_disease), y = as.factor(positive_test))) +
   geom_point() +
@@ -868,8 +797,36 @@ ggplot(pop, aes(x = as.factor(have_disease), y = as.factor(positive_test))) +
   theme_classic() +
   labs(title = "Joint Unnormalized Empirical Distribution of Test Results and Disease Status",
     x = "Test Result",
-    y = "Disease Status")
+    y = "Disease Status") +
+  scale_x_discrete(breaks = seq(0,1,1), labels = c("Negative", "Positive")) +
+  scale_y_discrete(breaks = seq(0,1,1), labels = c("Negative", "Positive"))
 
+```
+
+Here is a joint distribution displayed in 3D. Instead of using the "jitter" feature in R to unstack the dots, we are using a 3D Rayshader plot to visualize the number of dots in each box. The number of people who correctly test negative in this city is 98010, far outweighing any of the other categories. There are 990 false positives, 990 true positives, and only 10 false negatives. This is why we can barely see the 3D bar coming from those sections.
+
+```{r, echo=FALSE}
+
+knitr::include_graphics("05-probability/images/rayshader_disease.png")
+
+```
+
+What is the difference between these distributions? How can they be useful in data analysis?
+
+We want to analyze these plots by looking at different slices. For instance, let's say that you have tested positive for the disease. Since the test is not always accurate, you cannot be 100% certain that you have it. We would isolate the slice where the test result equals 1 (meaning positive). If we zoom in on the plot, 990 people who tested positive have the disease and 990 who tested positive do not have the disease. In this case, we are focusing on one slice of the probability distribution where the test result was positive. There are two disease outcomes: positive or negative. By isolating a section, we are looking at a conditional distribution. Conditional on a positive test, you can visualize the likelihood of actually having the disease versus not.
+
+This is what looks like when we take the slice where the test result is positive and zoom in.
+
+```{r, echo=FALSE}
+
+knitr::include_graphics("05-probability/images/rayshader_disease_zoom.png")
+
+```
+
+This Stat 110 Animations video does a really good job of explaining a similar concept.
+
+```{r, echo=FALSE}
+knitr::include_app("https://www.youtube.com/embed/by3_weGwnMg")
 ```
 
 ## Three models
