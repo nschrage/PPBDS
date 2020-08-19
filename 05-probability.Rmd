@@ -7,13 +7,9 @@ output_yaml:
 
 <!-- 1) Make rayshader.R. Creates all images and animations, places them in either images or animations folder. Lots of info and advice for whomever needs to work with this later. ->
 
-<!-- 3) Make 2 model case like N model case. Start with unnormalized. Finish with discussion of *What sort of distribution is this?* Need two paragraphs to explain.  1) It is conditional, only for people with with a positive text. But, really, all probability distributions are conditional on something. Even our coin and dice distributions are conditional on assumptions about fairness and all the other assumptions that went into constructing the joint distribution of models and data. 2) Is it empirical or mathematical or posterior? Well . . . all of them . . . Almost every time we make a claim about the world, it is a claim about our beliefs, what we think. We could be wrong! Your beliefs will differ. So, since almost all pds are posterior, we often leave out the word posterior!  Put this at end. done VZ -->
-
-<!-- In other words, almost every probability distribution is conditional and posterior, so we leave out both words, as we generally will in this book. They are always implicit. done (added to the end) VZ -->
 
 <!-- Add Four Cardinal Virtues section at end, with a subsection about each virtue, with the image, just like Cass.  -->
 
-<!-- 3) Adding three model example. Situation is that there is a bag with two marbles: either both white, both black or one of each. Those are the three models. Then, you take (and then replace) one marble three times. Possible values you can get: three blacks, two blacks, one black, zero blacks. So, we have three models and four possible experimental results. This is the bridge between the simple Bayes example with two models (disease or no) and two possible experiment results (positive test or negative test) and the N model example. done VZ-->
 
 <!-- Parameter means no parathesis. Anytime you talk about a specific p, you must add a subscript, otherwise how do you know what you are talking about. But, at the same time, it is annoying to write long subscripts, like $p_{Bidengets370electorvotes}$, so it is better to just come up with a short subscript, like $p_370$, where the context makes clear what this refers to. -->
 
@@ -1003,10 +999,42 @@ The most likely value of $p$ is still 0.4, as before. But, it is much more likel
 Models are useless unless we use them for something. Let's make some predictions. What are the chances that, if we toss this coin 10 times, we will get 7 or more heads? Because our posterior distribution is centered around $p = 0.4$, we don't expect to see 7 heads, but it is certainly not impossible.
   
 
-<!-- DK: Two ways to do this. First (and best?) using x_with_heads_equal_8 and just draw samples from this vector. Second feeding p_posterior directly to rbinom, with one column the p and one column the probs.  -->
+<!-- DK: 
+
+1> First wrong way to do this is with assuming that p is certain, based on seeing 8 heads. Ignore the uncertainty on your estimate of p.
+
+sims <- 100000
+
+tibble(sim_ID = 1:sims) %>%
+  mutate(heads = map_int(sim_ID, ~ rbinom(n = 1, size = 10, p = .4))) %>% 
+  mutate(result = ifelse(heads >= 7, TRUE, FALSE)) %>% 
+  summarize(success = sum(result)/sims)
+  
+About 5%. So, I might offer you 19:1 odds on a bet. But this is wrong!
+
+Second way, it to just sample from the whole distribution posterior distribution vector that you created.
+
+p_draws <- x %>% 
+  filter(heads == 8)
+  
+tibble(p = sample(p_draws$p, size = sims, replace = TRUE)) %>%
+  mutate(heads = map_int(p, ~ rbinom(n = 1, size = 10, p = .))) %>% 
+  mutate(result = ifelse(heads >= 7, TRUE, FALSE)) %>% 
+  summarize(success = sum(result)/sims)
+
+Third way is to sample from the actual distribution, which is a small dataset with just a few rows, but it includes both p and the probability of each p.
+
+tibble(p = sample(p_posterior$p, 
+                  size = sims, prob = p_posterior$probs, replace = TRUE)) %>%
+  mutate(heads = map_int(p, ~ rbinom(n = 1, size = 10, p = .))) %>% 
+  mutate(result = ifelse(heads >= 7, TRUE, FALSE)) %>% 
+  summarize(success = sum(result)/sims)
 
 
-## Testing is evil
+-->
+
+
+<!-- ## Testing is evil -->
 
 <!-- Introduce concepts like the null model, testing, and p-values. Connect to permutation tests from chapter 3.  Side note quotation: "Amatuers test. Professionals summarize." Maybe we should pick an example in which the number of heads is low enough to provide some reasonable evidence against p = 0.5. -->
 
