@@ -85,7 +85,7 @@ mtplot = ggplot(x) +
   scale_color_continuous() +
   theme(legend.position = "none") +
   labs(x = "Number of White Marbles Out of 3 Samples",
-       y = "Value of p")
+       y = "Number of White Marbles in the Bag")
 
 plot_gg(mtplot, width = 3.5, multicore = F, windowsize = c(800, 800), 
         zoom = 0.85, phi = 30, theta = 10, sunangle = 225, soliddepth = -100,
