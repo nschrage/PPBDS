@@ -938,7 +938,8 @@ We are going to run an experiment in which you flip the coin 20 times and record
 
 To start, it is useful to consider all the things which might happen if, for example, $p = 0.4$. Fortunately, the R functions for simulating random variables makes this easy
 
-```{r}
+```{r, echo=FALSE}
+
 set.seed(9)
 
 x <- tibble(heads = rbinom(n = 1000, size = 20, p = 0.4))
@@ -952,12 +953,15 @@ x %>%
     labs(title = "Empirical Distribution of Number of Heads",
          subtitle = "Based on 1,000 simulations with p = 0.4",
          x = "Number of Heads out of 20 Tosses",
-         y = "Probability")
+         y = "Probability") +
+  theme_classic()
+
 ```
 
 First, notice that many different things can happen! Even if we *know*, for certain, that $p = 0.4$, many outcomes are possible. Life is remarkably random. Second, the most likely result of the experiment is 8 heads, as we would expect. Third, we have transformed the raw counts of how many times each total appeared into a probability distribution. Sometimes, however, it is convenient to just keep track of the raw counts. The shape of the figure is the same in both cases.
 
-```{r}
+```{r, echo=FALSE}
+
 x %>%
   group_by(heads) %>%
   summarize(total = n(), .groups = "drop") %>%
@@ -966,14 +970,17 @@ x %>%
     labs(title = "Total Count of the Number of Heads Out of 20 Tosses",
          subtitle = "Based on 1,000 simulations with p = 0.4",
          x = "Number of Heads out of 20 Tosses",
-         y = "Count")
+         y = "Count") +
+  theme_classic()
+
 ```
 
 Either way, the figures show *what would have happened if that model --- that $p = 0.4$ --- were true.*
 
 We can do the same thing for all 11 possible models, calculating what would happen if each of them were true. This is somewhat counterfactual since only one of them can be true. Yet this assumption does allow us to create the *joint distribution* of *models which might be true* and of *data which our experiment might generate*. Let's simplify this is p(models, data), although you should keep the precise meaning in mind.
 
-```{r}
+```{r, echo=FALSE}
+
 set.seed(10)
 
 x <- tibble(p = rep(seq(0, 1, 0.1), 1000)) %>%
@@ -984,7 +991,9 @@ x %>%
     geom_jitter(alpha = 0.1) +
     labs(title = "Number of Heads and Probability of Heads",
          x = "Number of Heads out of 20 Tosses",
-         y = "Value of *p*")
+         y = "Value of *p*") +
+  theme_classic()
+
 ```
 
 Here is the 3D version of the same plot.
@@ -1007,29 +1016,27 @@ This animation shows what we want to do with joint distributions. We take a slic
 
 ![](05-probability/animations/color_red_combo.gif)
 
-This is the only part of the joint distribution that we care about. We aren't interested in what the object looks like where, for example, the number of heads is 11. That portion is irrelevant because we observed 8 heads, not 11. There are a total of 465 times in our simulation in which 8 heads were observed.
-
-
-```{r}
-x_with_heads_equal_8 <- x %>% 
-  filter(heads == 8)
-```
+This is the only part of the joint distribution that we care about. We aren't interested in what the object looks like where, for example, the number of heads is 11. That portion is irrelevant because we observed 8 heads, not 11. By using the filter function on the simulation tibble we created, we can conclude that there are a total of 465 times in our simulation in which 8 heads were observed.
 
 As we would expect, most of the time when 8 coin tosses came up heads, the value of $p$ was 0.4. But, on numerous occasions, it was not. It is quite common for a value of $p$ like 0.3 or 0.5 to generate 8 heads. Consider:
 
-```{r}
+```{r, echo=FALSE}
+
 x %>% 
   filter(heads == 8) %>% 
   ggplot(aes(p)) +
     geom_bar() +
     labs(title = "Values of p Associated with 8 Heads",
          x = "Assumed value of p in simulation",
-         y = "Count")
+         y = "Count") +
+  theme_classic()
+
 ```
 
-Yet this is a distribution of raw counts. It is an unnormalized density. To turn it into a proper probability density --- i.e., one in which the sum of the probabilities across possible outcomes sums to one --- we just divide everything by the total number of observations.
+Yet this is a distribution of raw counts. It is an unnormalized density. To turn it into a proper probability density (i.e., one in which the sum of the probabilities across possible outcomes sums to one) we just divide everything by the total number of observations.
 
-```{r}
+```{r, echo=FALSE}
+
 p_posterior <- x %>% 
   filter(heads == 8) %>% 
   group_by(p) %>% 
@@ -1041,51 +1048,70 @@ p_posterior %>%
     geom_col() +
     labs(title = "Posterior Probability Distribution of p",
          x = "Possible Values of p",
-         y = "Probability")
+         y = "Probability") +
+  theme_classic()
+
 ```
 
 The most likely value of $p$ is still 0.4, as before. But, it is much more likely that $p$ is either 0.3 or 0.5. And there is about an 8% chance that $p \ge 0.6$.
 
+You might be wondering: what is the use of a model? Well, let's say we toss the coin 20 times and get 8 heads again. Given this result, what is the probability that future samples of 20 flips will result in 10 or more heads?
 
-## Predictions
+There are three main ways you could go about solving this problem with simulations.
 
-Models are useless unless we use them for something. Let's make some predictions. What are the chances that, if we toss this coin 10 times, we will get 7 or more heads? Because our posterior distribution is centered around $p = 0.4$, we don't expect to see 7 heads, but it is certainly not impossible.
-  
+The first *wrong* way to do this is assuming that p is certain because we observed 8 heads after 20 tosses. We would conclude that 8/20 gives us 0.4. The big problem with this is that you are ignoring your uncertainty when estimating p. This would lead us to the following code.
 
-<!-- DK: 
+```{r}
 
-1> First wrong way to do this is with assuming that p is certain, based on seeing 8 heads. Ignore the uncertainty on your estimate of p.
+sims <- 10000000
 
-sims <- 100000
-
-tibble(sim_ID = 1:sims) %>%
-  mutate(heads = map_int(sim_ID, ~ rbinom(n = 1, size = 10, p = .4))) %>% 
-  mutate(result = ifelse(heads >= 7, TRUE, FALSE)) %>% 
+odds <- tibble(sim_ID = 1:sims) %>%
+  mutate(heads = map_int(sim_ID, ~ rbinom(n = 1, size = 20, p = .4))) %>% 
+  mutate(result = ifelse(heads >= 10, TRUE, FALSE)) %>% 
   summarize(success = sum(result)/sims)
-  
-About 5%. So, I might offer you 19:1 odds on a bet. But this is wrong!
 
-Second way, it to just sample from the whole distribution posterior distribution vector that you created.
+odds
 
-p_draws <- x %>% 
+```
+
+The second method involves sampling the whole posterior distribution vector we previously created. This would lead to the following correct code.
+
+```{r}
+
+p_draws <- tibble(p = rep(seq(0, 1, 0.1), 1000)) %>%
+  mutate(heads = map_int(p, ~ rbinom(n = 1, size = 20, p = .))) %>%
   filter(heads == 8)
   
-tibble(p = sample(p_draws$p, size = sims, replace = TRUE)) %>%
-  mutate(heads = map_int(p, ~ rbinom(n = 1, size = 10, p = .))) %>% 
-  mutate(result = ifelse(heads >= 7, TRUE, FALSE)) %>% 
+odds <- tibble(p = sample(p_draws$p, size = sims, replace = TRUE)) %>%
+  mutate(heads = map_int(p, ~ rbinom(n = 1, size = 20, p = .))) %>% 
+  mutate(result = ifelse(heads >= 10, TRUE, FALSE)) %>% 
   summarize(success = sum(result)/sims)
 
-Third way is to sample from the actual distribution, which is a small dataset with just a few rows, but it includes both p and the probability of each p.
+odds
 
-tibble(p = sample(p_posterior$p, 
+```
+
+Third way is to sample from the actual distribution, which is a small dataset with just a few rows, but it includes both $p$ and the probability of each $p$. This also gives the correct answer.
+
+```{r}
+
+p_posterior <- x %>% 
+  filter(heads == 8) %>% 
+  group_by(p) %>% 
+  summarize(total = n(), .groups = "drop") %>%
+  mutate(probs = total/sum(total))
+
+odds <- tibble(p = sample(p_posterior$p, 
                   size = sims, prob = p_posterior$probs, replace = TRUE)) %>%
-  mutate(heads = map_int(p, ~ rbinom(n = 1, size = 10, p = .))) %>% 
-  mutate(result = ifelse(heads >= 7, TRUE, FALSE)) %>% 
+  mutate(heads = map_int(p, ~ rbinom(n = 1, size = 20, p = .))) %>% 
+  mutate(result = ifelse(heads >= 10, TRUE, FALSE)) %>% 
   summarize(success = sum(result)/sims)
 
+odds
 
--->
+```
 
+As you may have noticed, if you calculated the value using the first method, you would believe that getting 10 or more heads is less likely than it really is. If you were to run a crooked casino based on these assumptions, you might end up losing money. It is very important to be careful about the assumptions you are making. We tossed a coin 20 times and got 8 heads. However, you would be worng to assume that p = 0.4 just based on this result.
 
 <!-- ## Testing is evil -->
 
