@@ -93,10 +93,6 @@ plot_gg(mtplot, width = 3.5, multicore = F, windowsize = c(800, 800),
 
 # Code for N models plot
 
-library(rayshader)
-
-library(rayshader)
-
 set.seed(10)
 
 x <- tibble(p = rep(seq(0, 1, 0.1), 1000)) %>%
