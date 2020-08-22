@@ -80,20 +80,25 @@ library(tidyverse)
 library(PPBDS.data)
 library(lubridate)
 library(skimr)
+library(janitor)
 library(gapminder)
 library(nycflights13)
 library(fivethirtyeight)
 ```
 
-The **tidyverse** package will be used in every chapter. **PPBDS.data** is the data package created specifically for this course. **lubridate** is a package for working with dates and times. **skimr** contains functions that are useful for providing summary statistics. **nycflights** includes data associated with flights out of New York City's three major airports. **gapminder** has data for countries across decades. **fivethirtyeight** cleans up data from the [FiveThirtyEight](https://fivethirtyeight.com/) team.  **PPBDS.data** includes, as you might guess, data organized for use with this textbook.
+The **tidyverse** package will be used in every chapter. **PPBDS.data** is the data package created specifically for this course. **lubridate** is a package for working with dates and times. **janitor** offers functions for cleaning up dirty data. **skimr** contains functions that are useful for providing summary statistics. **nycflights** includes data associated with flights out of New York City's three major airports. **gapminder** has data for countries across decades. **fivethirtyeight** cleans up data from the [FiveThirtyEight](https://fivethirtyeight.com/) team.  **PPBDS.data** includes, as you might guess, data organized for use with this textbook.
 
 ## Data Gathering
 
-Recall the `read_csv()` function introduced in chapter 1 of this textbook. In a previous exercise, we ran the following code chunk:
+Recall the `read_csv()` function introduced briefly in chapter 1 of this textbook. Let’s import a Comma Separated Values .csv file that exists on the internet. The .csv file dem_score.csv contains ratings of the level of democracy in different countries spanning 1952 to 1992 and is accessible at https://moderndive.com/data/dem_score.csv. Let’s use the read_csv() function from the readr package to read it off the web, import it into R, and save it in a data frame called dem_score. 
 
 ```{r}
 dem_score <- read_csv(file = "https://moderndive.com/data/dem_score.csv")
 ```
+
+In this dem_score data frame, the minimum value of -10 corresponds to a highly autocratic nation, whereas a value of 10 corresponds to a highly democratic nation. Note also that backticks surround the different variable names. Variable names in R by default are not allowed to start with a number nor include spaces, but we can get around this fact by surrounding the column name with backticks.
+
+Note that the read_csv() function included in the readr package is different than the read.csv() function that comes installed with R. While the difference in the names might seem trivial (an _ instead of a .), the read_csv() function is, in our opinion, easier to use since it can more easily read data off the web and generally imports data at a much faster speed. Furthermore, the read_csv() function included in the readr saves data frames as tibbles by default.
 
 The result of this code chunk is pretty tame. It tells us that each comma from the .csv file corresponds to a column, and the column names are taken from the first line of the file. Then, the function "guesses" an appropriate data type for each of the columns it creates. Sometimes .csv files are a lot dirtier and require significant wrangling before you can explore the data and create usable graphics. 
 
@@ -163,7 +168,7 @@ tail(gender_data)
 
 ### HTML
 
-The data we need to answer a question is not always in a spreadsheet ready for us to read. For example, the US murders dataset we used in the R Basics chapter originally comes from [this Wikipedia page](https://en.wikipedia.org/w/index.php?title=Gun_violence_in_the_United_States_by_state): 
+The data we need to answer a question is not always in a spreadsheet ready for us to read. For example, we can find interesting data about murders in the US in [this Wikipedia page](https://en.wikipedia.org/w/index.php?title=Gun_violence_in_the_United_States_by_state): 
 
 ```{r}
 url <- paste0("https://en.wikipedia.org/w/index.php?title=",
@@ -179,7 +184,7 @@ knitr::include_graphics("02-wrangling/images/murders-data-wiki-page.png")
 
 To get this data, we need to do some web scraping. 
 
-Web scraping, or web harvesting, is the term we use to describe the process of extracting data from a website. The reason we can do this is because the information used by a browser to render webpages is received as a text file from a server. The text is code written in hyper text markup language (HTML). Every browser has a way to show the html source code for a page, each one different. On Chrome, you can use Control-U on a PC and command+alt+U on a Mac. You will see something like this:
+Web scraping, or web harvesting, is the term we use to describe the process of extracting data from a website. The reason we can do this is because the information used by a browser to render webpages is received as a text file from a server. The text is code written in hyper text markup language (HTML). Every browser has a way to show the html source code for a page, each one different. On Chrome, you can use Control-U on a PC and command+option+U on a Mac. You will see something like this:
 
 ```{r, echo=FALSE}
 knitr::include_graphics("02-wrangling/images/html-code.png")
@@ -258,7 +263,7 @@ We can see all the code that defines the downloaded webpage using the `html_text
 html_text(h)
 ```
 
-We don't show the output here because it includes thousands of characters, but if we look at it, we can see the data we are after are stored in an HTML table: you can see this in this line of the HTML code above `<table class="wikitable sortable">`. The different parts of an HTML document, often defined with a message in between  `<` and `>`  are referred to as nodes. The rvest package includes functions to extract nodes of an HTML document: `html_nodes` extracts all nodes of different types and `html_node` extracts the first one. To extract the tables from the html code we use:
+We don't show the output here because it includes thousands of characters, but if we look at it, we can see the data we are after is stored in an HTML table: you can see this in this line of the HTML code above `<table class="wikitable sortable">`. The different parts of an HTML document, often defined with a message in between  `<` and `>`  are referred to as nodes. The rvest package includes functions to extract nodes of an HTML document: `html_nodes` extracts all nodes of different types and `html_node` extracts the first one. To extract the tables from the html code we use:
 
 ```{r} 
 tab <- h %>% html_nodes("table")
@@ -315,30 +320,13 @@ json <- toJSON(example, pretty = TRUE)
 json
 ```
 
-The file above actually represents a data frame. To read it, we can use the function `fromJSON` from the jsonlite package. Note that JSON files are often made available via the internet. Several organizations provide a JSON API or a web service that you can connect directly to and obtain data. Here is an example:
-
-```{r, eval = FALSE}
-library(jsonlite)
-citi_bike <- fromJSON("http://citibikenyc.com/stations/json")
-```
-
-This downloads a list. The first argument tells you when you downloaded it:
-
-```{r, eval = FALSE}
-citi_bike$executionTime
-```
-
-and the second is a data table:
-
-```{r, eval = FALSE}
-citi_bike$stationBeanList %>% as_tibble() 
-```
+The file above actually represents a data frame. To read it, we can use the function `fromJSON` from the jsonlite package. Note that JSON files are often made available via the internet. Several organizations provide a JSON API or a web service that you can connect directly to and obtain data. 
 
 You can learn much more by examining tutorials and help files from the jsonlite package. This package is intended for relatively simple tasks such as converging data into tables. For more flexibility, we recommend `rjson`.
 
 ## Characters 
 
-We've spent a lot of time working with big, beautiful data frames. That are clean and wholesome, like the Gapminder and nycflights13 data.
+We've spent a lot of time working with big, beautiful data frames that are clean and wholesome, like the `gapminder` and `nycflights13` data.
 
 But real life will be much nastier. You will bring data into R from the outside world and discover there are problems. You might think: how hard can it be to deal with character data? And the answer is: it can be very hard!
 
@@ -515,7 +503,7 @@ The country names in the `gapminder` dataset are convenient for examples. Load i
 countries <- levels(gapminder$country)
 ```
 
-The first metacharacter is the period `.`, which stands for any single character, except a newline (which by the way, is represented by `\n`). The regex `a.b` will match all countries that have an `a`, followed by any single character, followed by `b`. Yes, regexes are case sensitive, i.e. "Italy" does not match.
+The first metacharacter is the period `.`, which stands for any single character, except a newline (which by the way, is represented by `\n`). The regex `i.a` will match all countries that have an `i`, followed by any single character, followed by `a`. Yes, regexes are case sensitive, i.e. "Italy" does not match.
 
 ```{r}
 str_subset(countries, pattern = "i.a")
@@ -622,6 +610,10 @@ r"(Do you use "airquotes" much?)"
 
 The `\` preceding each quote is what is known as escaping. It signals to the computer that the quotations are part of the string. Now, what happens if we have a backslash within the string. 
 
+```{r echo=FALSE, fig.margin=TRUE}
+knitr::include_graphics("https://imgs.xkcd.com/comics/backslashes.png")
+```
+
 ```{r}
 r"(\)"
 ```
@@ -630,7 +622,7 @@ As you can see, a backslash is used to escape the initial backslash.
 
 ## Factors
 
-To manipulate factors we will use the [forcats][forcats-web] package, a core package in the tidyverse. Like the stringr package whose functions begin with `str_`, main functions of the forcats package start with `fct_`.
+Factors are categorical variables that may only take on a specified set of values. Thus, they are known as categorical variables, as they can be separated into categories. To manipulate factors we will use the [forcats][forcats-web] package, a core package in the tidyverse. Like the stringr package whose functions begin with `str_`, main functions of the forcats package start with `fct_`.
 
 Get to know your factor before you start touching it! It's polite. Let's use `gapminder$continent` as our example.
 
@@ -641,7 +633,7 @@ nlevels(gapminder$continent)
 class(gapminder$continent)
 ```
 
-To get a frequency table as a tibble, from a tibble, use `dplyr::count()`. To get similar from a free-range factor, use `forcats::fct_count()`.
+To get a frequency table as a tibble, from a tibble, use `dplyr::count()`. To get a similar result from a free-range factor, use `forcats::fct_count()`.
 
 ```{r}
 gapminder %>% 
@@ -681,7 +673,7 @@ h_gap$country %>%
 
 ### Change order of the levels
 
-By default, factor levels are ordered alphabetically. Which might as well be random, when you think about it! It is preferable to order the levels according to some principle:
+By default, factor levels are ordered alphabetically. When you think about it, this ordering might as well be random! It is preferable to order the levels according to some principle:
 
 * Frequency. Make the most common level the first and so on.
 * Another variable. Order factor levels according to a summary statistic for another variable.
@@ -733,7 +725,7 @@ Now we order `country` by another variable, forwards and backwards. This other v
 fct_reorder(gapminder$country, gapminder$lifeExp) %>% 
   levels() %>% head()
 
-# Order accoring to minimum life exp instead of median
+# Order according to minimum life exp instead of median
 
 fct_reorder(gapminder$country, gapminder$lifeExp, min) %>% 
   levels() %>% head()
@@ -744,7 +736,7 @@ fct_reorder(gapminder$country, gapminder$lifeExp, .desc = TRUE) %>%
   levels() %>% head()
 ```
 
-Example of why we reorder factor levels: often makes plots much better! When a factor is mapped to x or y, it should almost always be reordered by the quantitative variable you are mapping to the other one.
+So why do we reorder factor levels? It often makes plots much better! When a factor is mapped to x or y, it should almost always be reordered by the quantitative variable you are mapping to the other one.
 Compare the interpretability of these two plots of life expectancy in Asian countries in 2007. The only difference is the order of the `country` factor. Which one do you find easier to learn from?
 
 ```{r alpha-order-silly, fig.show = 'hold', out.width = '49%'}
@@ -754,7 +746,7 @@ ggplot(gap_asia_2007, aes(x = lifeExp, y = fct_reorder(country, lifeExp))) +
   geom_point()
 ```
 
-Use `fct_reorder2()` when you have a line chart of a quantitative x against another quantitative y and your factor provides the color. This way the legend appears in some order as the data! Note, the order is taken by the right side of the plot (not the left). Contrast the legend on the left with the one on the right. 
+Use `fct_reorder2()` when you have a line chart of a quantitative x against another quantitative y and your factor provides the color. This way the legend appears in the same order as the data! Note, the order is taken by the right side of the plot (not the left). Contrast the legend on the left with the one on the right. 
 
 ```{r legends-made-for-humans, fig.show = 'hold', out.width = '49%'}
 h_countries <- c("Egypt", "Haiti", "Romania", "Thailand", "Venezuela")
@@ -943,7 +935,11 @@ knitr::include_graphics("02-wrangling/images/pepper-3.jpg")
 
 ## Date-Times 
 
-We will manipulate date-times using the lubridate package, which makes it easier to work with dates and times in R. `lubridate` is not part of core tidyverse because you only need it when you're working with dates/times.
+We will manipulate date-times using the lubridate package, which makes it easier to work with dates and times in R. `lubridate` is not part of the core tidyverse because you only need it when you're working with dates/times.
+
+```{r echo=FALSE, fig.margin=TRUE}
+knitr::include_graphics("https://imgs.xkcd.com/comics/iso_8601.png")
+```
 
 There are three types of date/time data that refer to an instant in time:
 
@@ -971,7 +967,7 @@ Otherwise, there are three ways you're likely to create a date/time:
 * From individual date-time components.
 * From an existing date/time object.
 
-They work as follows.
+They work as follows:
 
 ### From strings
 
@@ -1167,7 +1163,7 @@ Setting larger components of a date to a constant is a powerful technique that a
 
 ### Time zones 
 
-Time zones are an enormously complicated topic because of their interaction with geopolitical entities. Fortunately we don't need to dig into all the details as they're not all important for data analysis. You can see the complete list of possible timezones with the function `OlsonNames()`. Unless otherwise specified, lubridate always uses UTC (Coordinated Universal Time).
+Time zones are an enormously complicated topic because of their interaction with geopolitical entities. Fortunately we don't need to dig into all the details as they're not all that important for data analysis. You can see the complete list of possible timezones with the function `OlsonNames()`. Unless otherwise specified, lubridate always uses UTC (Coordinated Universal Time).
 
 In R, the time zone is an attribute of the date-time that only controls printing. For example, these three objects represent the same instant in time:
 
@@ -1195,9 +1191,7 @@ Let's explore each type of operation with a few examples.
 
 ### Row binding
 
-We used word count data from the Lord of the Rings trilogy to explore the concept of tidy data. That kicked off with a quiet, successful row bind. Let's revisit that.
-
-Here's what a perfect row bind of three (untidy!) data frames looks like.
+Here's what a perfect row bind of three (untidy!) data frames looks like using data from the Lord of the Rings trilogy.
 
 ```{r}
 fship <- tribble(
@@ -1277,7 +1271,7 @@ gapminder_nonsense <- cbind(gapminder_mostly, gapminder_leftovers_filtered)
 head(gapminder_nonsense, 14)
 ```
 
-This data frame isn't obviously wrong, but it is wrong. See how the Canada's population and GDP per capita repeat for each country?
+This data frame isn't obviously wrong, but it is wrong. See how Canada's population and GDP per capita repeat for each country?
 
 Bottom line: Row bind when you need to, but inspect the results re: coercion. Column bind only if you must and be extremely paranoid.
 
@@ -1369,7 +1363,7 @@ publishers <- tibble::tribble(
   )
 ```
 
-Sorry, cheat sheet does not illustrate "multiple match" situations terribly well.
+Sorry, the cheat sheet does not illustrate "multiple match" situations terribly well.
 
 Sub-plot: watch the row and variable order of the join results for a healthy reminder of why it's dangerous to rely on any of that in an analysis.
 
@@ -1784,7 +1778,7 @@ flights %>%
   summarize(mean = mean(gain, na.rm = TRUE))
 ```
 
-Suppose we wanted to simply remove all missing values from the `gain` column. We can filter and remove missing values using the helper function `is.na()`. `is.na()` is a boolean function that takes in an observation in a dataframe and returns TRUE if the observation is a missing value and FALSE otherwise. In this case, we will have to use `!is.na()`, as the `!` means "not". Thus, we can filter observations that are NOT missing values.
+Suppose we wanted to simply remove all missing values from the `gain` column. We can filter and remove missing values using the helper function `is.na()`. `is.na()` is a boolean function that takes in an observation in a dataframe and returns TRUE if the observation is a missing value and FALSE otherwise. In this case, we will have to use `!is.na()`, as the `!` operator means "not". Thus, we can filter observations that are NOT missing values.
 
 ```{r}
 flights %>%
@@ -1793,7 +1787,60 @@ flights %>%
   summarize(mean = mean(gain))
 ```
 
-<!-- EWF: replace_na() --> 
+We can also remove the missing values from the dataset instead of merely filtering them out using the `drop_na()` function. The `flights` dataset contains 336,776 rows. And when 
+
+```{r}
+flights %>%
+  mutate(gain = arr_delay - dep_delay) %>%
+  filter(is.na(gain))
+```
+As we see here, there are 9,430 rows of the `flights` dataset that contain missing values in the gain column. So using `drop_na()`, we get:
+
+```{r}
+flights %>%
+  mutate(gain = arr_delay - dep_delay) %>%
+  drop_na(gain)
+```
+
+Note that 336,776 - 9,430 = 327346, so `drop_na()` seems to check out. Be careful with `drop_na()`, however, because you may be removing rows with valuable data in other columns. 
+
+Suppose you did not want to remove the missing values but instead replace them with a number. We can use `replace_na()` as a helper function to `mutate()`. Here we replace each missing value in the gain column with a value of 0. 
+
+```{r}
+flights %>%
+  mutate(gain = arr_delay - dep_delay) %>%
+  mutate(gain = replace_na(data = gain, replace = 0))
+```
+
+You must be careful with this, though. Replacing missing values will affect any statistical result, such as the mean or standard deviation. Below we computer the mean: 
+
+```{r}
+flights %>%
+  mutate(gain = arr_delay - dep_delay) %>%
+  mutate(gain = replace_na(data = gain, replace = 0)) %>%
+  summarize(mean = mean(gain))
+```
+
+Comparing it with the previous mean variable we see that the computed value is different. 
+
+There are many additional ways to manipulate missing values, but these three functions cover most of the ways you will need to work with such observations in your data.   
+
+### `clean_names()`
+
+Another useful function is the `clean_names()` function, which is included in the **janitor** package. This function allows you to standardize the column names of a dataset. This can be particularly useful when reading in a dataset from the web. Look at the `flights` dataset, again. 
+```{r}
+glimpse(flights)
+```
+
+As you can see the column names are in all lowercase, and each space in between words is represented by an underscore character. This is the default result of `clean_names()`, so running `clean_names(flights)` will have no effect. 
+
+Suppose, instead, we wanted to change the column names to camel case, where word boundaries are demarcated by an upper case letter.  
+
+```{r}
+flights %>% clean_names("small_camel")
+```
+
+Nonetheless, you will likely only ever be required to use `clean_names()` with the default snake case. 
 
 ### `skim()`
 
@@ -1809,6 +1856,36 @@ Take a quick look at the section containing numeric variables. This is of partic
 ## Distribution 
 
 What is a distribution? The distribution of a variable shows how frequently different values of a variable occur. Looking at the visualization of a distribution can show where the values are centered, show how the values vary, and give some information about where a typical value might fall. It can also alert you to the presence of outliers. 
+
+Before we examine distributions in greater depth, let's first explore the `sample()` function. `sample()` takes a sample of some size from some vector either with replacement or without replacement. This might seem very abstract, so consider a six-sided dice represented as a vector. 
+
+```{r}
+dice <- c(1, 2, 3, 4, 5, 6)
+```
+
+Suppose we wanted to simulate rolling this dice once. We can use the `sample()` function to achieve this. 
+```{r}
+sample(x = dice, size = 1)
+```
+
+Now, suppose we wanted to roll this dice 10 times. One of the arguments of the `sample()` function is replace. We must specify if a certain value can be rolled more than once. In this case, should replace be TRUE or FALSE. 
+
+```{r}
+sample(x = dice, size = 10, replace = TRUE)
+```
+
+Here replace should be TRUE. In other words, rolling a 1 on the first roll should not preclude you from rolling a one on a later roll. 
+
+The final argument of the `sample()` function is the prob argument. It takes a vector (of the same length as the initial vector x) that contains all of the probabilities of "landing on" one of the elements of x. Suppose that the probability of rolling a 1 was 0.5, and the probability of rolling any other value is 0.1. Note, these probabilities should sum to 1. 
+
+```{r}
+probs = c(0.5, 0.1, 0.1, 0.1, 0.1, 0.1)
+
+sample(x = dice, size = 10, replace = TRUE, prob = probs)
+
+```
+
+Now, let's return to our discussion of distributions. 
 
 ### `runif()`
 
@@ -1828,10 +1905,33 @@ Nice! We just made our first uniform distribution. Again, note that the output c
 Now consider Binomial distribution, the case in which the probability of some boolean variable (for instance success or failure) is calculated for repeated, independent trials. One common example would be the probability of flipping a coin and landing on heads. In R, the function `rbinom()` simulates such a distribution. This function takes three arguments, `n`, `size`, and `prob`. `n` is the number of observations, the `size` is the number of trials, and `prob` is the probability of success on each trial. Suppose we wanted to flip a fair coin one time, and let landing on hands represent success. Let `n=1` and `size = 1`, as we only want to flip the coin once. Then, since the coin is a fair coin, let `prob = 0.5`.
 
 ```{r}
-rbinom(n =1 , size = 1, prob = 0.5)
+rbinom(n = 1 , size = 1, prob = 0.5)
 ```
 
+```{r}
+coin_flip <- tibble(heads = rbinom(n = 100, size = 1, prob = 0.5))
 
+ggplot(data = coin_flip, aes(x = heads)) +
+  geom_bar() +
+  labs(title = "Flipping a Fair Coin 100 Times") +
+  xlab(label = "Flips") +
+  ylab(label = "Count")
+
+```
+
+As you can see there is a pretty even distribution of Heads (1s) and Tails (0s). An even larger sample size would result in a more even spread of Heads and Tails values. 
+
+Suppose instead we wanted to simulate an unfair cin, where the probability of landing on Heads was 0.75 instead of 0.25. 
+
+```{r}
+coin_flip_2 <- tibble(heads = rbinom(n = 100, size = 1, prob = 0.75))
+
+ggplot(data = coin_flip_2, aes(x = heads)) +
+  geom_bar() +
+  labs(title = "Flipping a Fair Coin 100 Times") +
+  xlab(label = "Flips") +
+  ylab(label = "Count")
+```
 
 ### Normal distribution
 
@@ -1937,13 +2037,13 @@ ggplot(data = tibble(x = c(-4, 4)), aes(x)) +
 
 ### `rnorm()`
 
+```{r, echo = FALSE}
+set.seed(5)
+```
+
 The function `rnorm()` can be read as "r-norm". It corresponds to a Normal distribution.
 
 `rnorm()` has three arguments: `n`, `mean`, and `sd`. `n` corresponds to the number of observations, `mean` corresponds to the average as a whole, and `sd` corresponds to the size of the standard deviation from the mean. We will go further in depth in future chapters on what the statistical mechanics are behind these distributions, but for now, let's focus on creating a Normal distribution.
-
-```{marginfigure, echo=TRUE}
-# Insert Normal formula here.
-```
 
 If we run the following:
 ```{r}
@@ -1952,32 +2052,47 @@ rnorm(10)
 
 We get 10 observations centered around a default `mean` of 0 with a default `sd` of 1. What if we create a histogram of the values?
 
-<!-- DK: hist() is too ugly. Use the full ggplot() approach -->
-
 ```{r}
-distrib <- data.frame(value=rnorm(10))
+distrib <- tibble(value = rnorm(10))
 
-ggplot(distrib, aes(x=value)) + 
+ggplot(distrib, aes(x = value)) + 
   geom_histogram(bins = 10)
 ```
 As you can see, it's not as symmetrical as the one displayed before. Now what if we try taking 100 observations, then 1000?
 
 ```{r}
-distrib_2 <- data.frame(value = rnorm(100))
+distrib_2 <- tibble(value = rnorm(100))
 
 ggplot(distrib_2, aes(x = value)) +
   geom_histogram(bins = 10)
 ```
 
 ```{r}
-distrib_3 <- data.frame(value = rnorm(1000))
+distrib_3 <- tibble(value = rnorm(1000))
 
 ggplot(distrib_2, aes(x = value)) +
   geom_histogram(bins = 10)
 ```
 
-Now it's looking a lot more similar! As you just discovered, the more observations a normal distribution has, the closer it looks to a symmetrical bell curve.
+Now it's looking a lot more similar (although imperfect)! As you just discovered, the more observations a normal distribution has, the closer it looks to a symmetrical bell curve.
 
+Now, let's compare normal distributions with varying means and standard deviations, which can be set using the mean and sd arguments included with the function. 
 
+```{r}
+normal_distrib <- tibble(rnorm_5_1 = rnorm(n = 1000, mean = 5, sd = 1), 
+                        rnorm_0_3 = rnorm(n = 1000, mean = 0, sd = 3),
+                        rnorm_0_1 = rnorm(n = 1000, mean = 0, sd = 1)) %>%
+  pivot_longer(cols = everything(), 
+               names_to = "distribution", 
+               values_to = "samples")
+
+ggplot(normal_distrib, aes(x = samples, fill = distribution)) +
+  geom_density(alpha = 0.5) +
+  labs(title = "Comparison of Normal Distributions with Differing Mean and Standard Deviation Values", 
+       fill = "Distribution") +
+  xlab("X") + 
+  ylab("Density")
+
+```
 
 <!-- DK: We want to show and explain rnorm(), runif() and rbinom(), with a clear explanation of coin-tossing as an example. Like how many heads might appear of you flip a coin with p = 0.6 20 times. (Use that exact example.) -->
