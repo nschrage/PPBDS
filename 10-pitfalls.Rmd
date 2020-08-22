@@ -389,6 +389,9 @@ The line in the resulting figure is called a "regression line." The regression l
 
 Furthermore, a regression line is "best-fitting" in that it minimizes some mathematical criteria. We present these mathematical criteria in Section \@ref(leastsquares), but we suggest you read this subsection only after first reading the rest of this section on regression with one numerical explanatory variable.
 
+<<<<<<< HEAD
+# Machine Learning {#machine-learning}
+=======
 ### Prudence
 
 
@@ -467,7 +470,7 @@ In practice, we often report the root mean squared error (RMSE), which is $\sqrt
 
 If the outcomes are binary, both RMSE and MSE are equivalent to accuracy, since $(\hat{y} - y)^2$ is 0 if the prediction was correct and 1 otherwise. In general, our goal is to build an algorithm that minimizes the loss so it is as close to 0 as possible.
 
-## Data: Cooperative Congressional Election Study (CCES)
+## Data: Q Scores for Harvard Academic Year 2018-2019
 
 Now that we have a way to evaluate models, we're almost ready to start going through the modeling process using **tidymodels**.  However, we'll first need some data! We will continue to use the data from our earlier EDA, but this time extend our focus to the entire dataset rather than simply the scores for the Music department.
 
@@ -531,7 +534,7 @@ Next, we can use `update()` to create the more complicated formulas.  `update()`
 adding_terms <- update(basic_form,
                     ~ enrollment + department + division + term)
 
-adding_interaction <- update(adding_enrollment,
+adding_interaction <- update(adding_terms,
                     ~ enrollment * department)
 
 # more_interactions <- 
@@ -687,18 +690,18 @@ This function takes a `formula` object and fits it a linear regression on the tr
 It's not a great leap to can then create a tibble that has all the predictions for every specification in `qscores_formualas`, using our old friend `map()`:
 
 ```{r}
-qscores_test_preds <- qscores_formulas %>%
-  mutate(preds = map(formula, ~ fit_lm_split(., qscores_train, qscores_test))) %>%
-  unnest(preds)
+#qscores_test_preds <- qscores_formulas %>%
+ # mutate(preds = map(formula, ~ fit_lm_split(., qscores_train, qscores_test))) %>%
+ # unnest(preds)
 #not working at the moment
 ```
 
 Finally, we can use the `rmse()` function to compare our five specifications.
 
 ```{r}
-qscores_test_preds %>%
-  group_by(group) %>%
-  rmse(truth = rating, estimate = .pred)
+#qscores_test_preds %>%
+  #group_by(group) %>%
+  #rmse(truth = rating, estimate = .pred)
 ```
 
 <!-- EG: Will change predictions once the code above is working again. "Here we see that adding ideology to the model above and beyond partisanship makes the predictions worse.  The two demographic models perform similarly.  Interestingly, adding back in ideology to the demographic model with interactions performs the best on the test set." -->
@@ -745,13 +748,13 @@ The first approach we describe is _K-fold cross validation_.
 Generally speaking, a machine learning challenge starts with a dataset (blue in the image below). We need to build an algorithm using this dataset that will eventually be used in completely independent datasets (yellow).
 
 ```{r, echo=FALSE}
-knitr::include_graphics("images/cv-1.png")
+#knitr::include_graphics("images/cv-1.png")
 ```
 
 But we don't get to see these independent datasets. 
 
 ```{r, echo=FALSE}
-knitr::include_graphics("images/cv-2.png")
+#knitr::include_graphics("images/cv-2.png")
 ```
 
 So to imitate this situation, we carve out a piece of our dataset and pretend it is an independent dataset: we divide the dataset into a _training set_ (blue) and a _test set_ (red). We will train our algorithm exclusively on the training set and use the test set only for evaluation purposes.
@@ -759,7 +762,7 @@ So to imitate this situation, we carve out a piece of our dataset and pretend it
 We usually try to select a small piece of the dataset so that we have as much data as possible to train. However, we also want the test set to be large so that we obtain a stable estimate of the loss without fitting an impractical number of models. The `initial_split()` function reserves 25% of the data for testing by default. 
 
 ```{r, echo=FALSE}
-knitr::include_graphics("images/cv-3.png")
+#knitr::include_graphics("images/cv-3.png")
 ```
 
 Let's reiterate that it is indispensable that we not use the test set at all: not for filtering out rows, not for selecting predictors, nothing! 
@@ -772,14 +775,14 @@ Let's start by describing how to construct the first "fold": we simply pick $M=N
 
 
 ```{r, echo=FALSE}
-knitr::include_graphics("images/cv-4.png")
+#knitr::include_graphics("images/cv-4.png")
 ```
 
 Now we can fit the model in the training set, then compute the MSE on the validation set.  Note that this is just one sample and will therefore return a noisy estimate of the true error. This is why we take $K$ samples, not just one. In K-cross validation, we randomly split the observations into $K$ non-overlapping sets:
 
 
 ```{r, echo=FALSE}
-knitr::include_graphics("images/cv-5.png")
+#knitr::include_graphics("images/cv-5.png")
 ```
 
 Then, for our final estimate, we compute the average MSE across our $K$ samples.
@@ -788,14 +791,14 @@ We have described how to use cross validation to optimize parameters. However, w
 
 
 ```{r, echo=FALSE}
-knitr::include_graphics("images/cv-6.png")
+#knitr::include_graphics("images/cv-6.png")
 ```
 
 Once we are satisfied with this model and want to make it available to others, we could refit the model on the entire dataset, without changing the optimized parameters.
 
 
 ```{r, echo=FALSE}
-knitr::include_graphics("images/cv-8.png")
+#knitr::include_graphics("images/cv-8.png")
 ```
 
 Now how do we pick the cross validation $K$? Large values of $K$ are preferable because the training data better imitates the original dataset. However, larger values of $K$ will have much slower computation time: for example, 100-fold cross validation will be 10 times slower than 10-fold cross validation. For this reason, the choices of $K=5$ and $K=10$ are popular.
@@ -831,11 +834,11 @@ lm_spec %>%
 It's not that hard to extend this to all of our formulas using `map()`.
 
 ```{r, message = FALSE}
-folds_metrics <- qscores_formulas %>%
-  mutate(metrics = map(formula, ~ fit_resamples(lm_spec,
-                                                preprocessor = .,
-                                                resamples = qscores_folds) %>%
-                         collect_metrics()))
+#folds_metrics <- qscores_formulas %>%
+ # mutate(metrics = map(formula, ~ fit_resamples(lm_spec,
+                                               # preprocessor = .,
+                                              #  resamples = qscores_folds) %>%
+                        # collect_metrics()))
 ```
 
 (Note that `fit_resamples()` currently gives the warning message "prediction from a rank-deficient fit may be misleading" whenever a factor or character variable is used as a predictor; this does not necessarily mean that the fit was actually rank-deficient.)
@@ -846,10 +849,10 @@ recipes and then step_dummy() the factor variables -->
 Let's present the results stored in our `folds_metrics` object:
 
 ```{r}
-folds_metrics %>%
-  mutate(mean_rmse = map_dbl(metrics, ~ filter(., .metric == "rmse") %>% pull(mean)),
-         se_rmse = map_dbl(metrics, ~ filter(., .metric == "rmse") %>% pull(std_err))) %>%
-  select(group, mean_rmse, se_rmse)
+#folds_metrics %>%
+  #mutate(mean_rmse = map_dbl(metrics, ~ filter(., .metric == "rmse") %>% pull(mean)),
+        # se_rmse = map_dbl(metrics, ~ filter(., .metric == "rmse") %>% pull(std_err))) %>%
+  #select(group, mean_rmse, se_rmse)
 ```
 
 ### Bootstrap
@@ -879,16 +882,16 @@ lm_spec %>%
 And we can also adapt our code to run this for every formula in `qscores_formulas`:
 
 ```{r, eval = FALSE}
-boots_metrics <- qscores_formulas %>%
-  mutate(metrics = map(formula, ~ fit_resamples(lm_spec,
-                                                preprocessor = .,
-                                                resamples = qscores_boots) %>%
-                         collect_metrics()))
+#boots_metrics <- qscores_formulas %>%
+  #mutate(metrics = map(formula, ~ fit_resamples(lm_spec,
+                                                #preprocessor = .,
+                                                #resamples = qscores_boots) %>%
+                         #collect_metrics()))
 
-boots_metrics %>%
-  mutate(mean_rmse = map_dbl(metrics, ~ filter(., .metric == "rmse") %>% pull(mean)),
-         se_rmse = map_dbl(metrics, ~ filter(., .metric == "rmse") %>% pull(std_err))) %>%
-  select(group, mean_rmse, se_rmse)
+#boots_metrics %>%
+  #mutate(mean_rmse = map_dbl(metrics, ~ filter(., .metric == "rmse") %>% pull(mean)),
+         #se_rmse = map_dbl(metrics, ~ filter(., .metric == "rmse") %>% pull(std_err))) %>%
+  #select(group, mean_rmse, se_rmse)
 ```
 
 
@@ -905,12 +908,12 @@ this if you need to run this code again -->
 # boots_metrics %>%
 #   write_rds(path = "data/boots_metrics.rds")
 
-boots_metrics <- read_rds(path = "data/boots_metrics.rds")
+#boots_metrics <- read_rds(path = "data/boots_metrics.rds")
 
-boots_metrics %>%
-  mutate(mean_rmse = map_dbl(metrics, ~ filter(., .metric == "rmse") %>% pull(mean)),
-         se_rmse = map_dbl(metrics, ~ filter(., .metric == "rmse") %>% pull(std_err))) %>%
-  select(group, mean_rmse, se_rmse)
+#boots_metrics %>%
+ # mutate(mean_rmse = map_dbl(metrics, ~ filter(., .metric == "rmse") %>% pull(mean)),
+         #se_rmse = map_dbl(metrics, ~ filter(., .metric == "rmse") %>% pull(std_err))) %>%
+  #select(group, mean_rmse, se_rmse)
 ```
 
 Cross-validation and the bootstrap lead to similar estimates of the RMSE, but note that the standard error of the RMSE goes down using the bootstrap method, since more samples were taken.  However, the trade-off is that the more samples you take, the more computing time you'll use.
