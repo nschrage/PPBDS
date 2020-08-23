@@ -5,7 +5,7 @@
 <meta charset="utf-8" />
 <meta name="generator" content="pandoc" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<meta property="og:title" content="Chapter 10 Continuous Response | Gov 50: Data" />
+<meta property="og:title" content="Chapter 11 Continuous Response | Gov 50: Data" />
 <meta property="og:type" content="book" />
 
 
@@ -21,9 +21,9 @@ MathJax.Hub.Config({
 </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS_CHTML-full" type="text/javascript"></script>
 
-<meta name="description" content="Chapter 10 Continuous Response | Gov 50: Data">
+<meta name="description" content="Chapter 11 Continuous Response | Gov 50: Data">
 
-<title>Chapter 10 Continuous Response | Gov 50: Data</title>
+<title>Chapter 11 Continuous Response | Gov 50: Data</title>
 
 <link href="libs/tufte-css-2015.12.29/tufte.css" rel="stylesheet" />
 <link href="libs/tufte-css-2015.12.29/envisioned.css" rel="stylesheet" />
@@ -143,11 +143,12 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <a href="rubin-causal-model.html"><span class="toc-section-number">3</span> Rubin Causal Model</a>
 <a href="functions.html"><span class="toc-section-number">4</span> Functions</a>
 <a href="probability.html"><span class="toc-section-number">5</span> Probability</a>
-<a href="two-parameters.html"><span class="toc-section-number">6</span> Two Parameters</a>
-<a href="three-parameters.html"><span class="toc-section-number">7</span> Three Parameters</a>
-<a href="n-parameters.html"><span class="toc-section-number">8</span> N Parameters</a>
-<a href="pitfalls.html"><span class="toc-section-number">9</span> Pitfalls</a>
-<a id="active-page" href="continuous-response.html"><span class="toc-section-number">10</span> Continuous Response</a><ul class="toc-sections">
+<a href="one-parameter.html"><span class="toc-section-number">6</span> One Parameter</a>
+<a href="two-parameters.html"><span class="toc-section-number">7</span> Two Parameters</a>
+<a href="three-parameters.html"><span class="toc-section-number">8</span> Three Parameters</a>
+<a href="n-parameters.html"><span class="toc-section-number">9</span> N Parameters</a>
+<a href="pitfalls.html"><span class="toc-section-number">10</span> Pitfalls</a>
+<a id="active-page" href="continuous-response.html"><span class="toc-section-number">11</span> Continuous Response</a><ul class="toc-sections">
 <li class="toc"><a href="#exploratory-data-analysis"> Exploratory Data Analysis</a></li>
 <li class="toc"><a href="#lm"> <code>lm()</code></a></li>
 <li class="toc"><a href="#NA"> Using <code>stan_glm()</code></a></li>
@@ -155,7 +156,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li class="toc"><a href="#temperance"> Temperance</a></li>
 <li class="toc"><a href="#wrap-up"> Wrap-up</a></li>
 </ul>
-<a href="discrete-response.html"><span class="toc-section-number">11</span> Discrete Response</a>
+<a href="discrete-response.html"><span class="toc-section-number">12</span> Discrete Response</a>
 <a href="appendices.html">Appendices</a>
 <a href="tools.html">Tools</a>
 <a href="shiny.html">Shiny</a>
@@ -173,7 +174,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
 <html><body><div id="continuous-response" class="section level1">
 <h1>
-<span class="header-section-number">Chapter 10</span> Continuous Response</h1>
+<span class="header-section-number">Chapter 11</span> Continuous Response</h1>
 <!-- Overview: The main structure of the this chapter is three full scale linear modeling approaches to the same data set, where the response variable is continuous. (Maybe we have two data sets, and apply all three models to each one?) In each case, we use the tidymodels framework. I am not sure what the best dataset would be. I am not sure what the three approaches should be. Presumably lm() and stan_glm() would be included. Maybe gam() also. Or loess(). Or robust_lm(). Could be something fancier like svm(). Or neural network. -->
 <!-- 0) Preamble. Plan out to chapter. Nothing more to learn. Just apply. Review themes.Rmd, and the three problems which we confronted in 9 and solved in 10. What specific questions are we going to answer? -->
 <!-- 1) EDA of nes. drop na. Talk about Prudence at the end. It's own ### and with image in the side margin. OK if its only a paragraph or two.  -->
@@ -192,18 +193,18 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <p>Wouldn’t it be interesting to predict <code>ideology</code> based off of other variables? This question has wide-reaching consequences for political polling and election outcomes. Throughout this chapter, we seek to answer this question: Which factors influences one’s ideology, and how so?</p>
 <div id="exploratory-data-analysis" class="section level2">
 <h2>
-<span class="header-section-number">10.1</span> Exploratory Data Analysis</h2>
+<span class="header-section-number">11.1</span> Exploratory Data Analysis</h2>
 <p>Load the libraries needed for this chapter. You might notice that <strong><em>tidymodels</em></strong> and <strong><em>rsample</em></strong> are new. The <strong><em>tidymodels</em></strong> framework makes it easy to use functions from various different packages in constructing, fitting, and testing models. Similarly, the <strong><em>rsample</em></strong> package allows for machine learning by splitting the data into training and testing sets.</p>
-<div class="sourceCode" id="cb946"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb946-1"><a href="continuous-response.html#cb946-1"></a><span class="kw">library</span>(PPBDS.data)</span>
-<span id="cb946-2"><a href="continuous-response.html#cb946-2"></a><span class="kw">library</span>(skimr)</span>
-<span id="cb946-3"><a href="continuous-response.html#cb946-3"></a><span class="kw">library</span>(tidyverse)</span>
-<span id="cb946-4"><a href="continuous-response.html#cb946-4"></a><span class="kw">library</span>(tidymodels)</span>
-<span id="cb946-5"><a href="continuous-response.html#cb946-5"></a><span class="kw">library</span>(rsample)</span>
-<span id="cb946-6"><a href="continuous-response.html#cb946-6"></a><span class="kw">library</span>(broom.mixed)</span>
-<span id="cb946-7"><a href="continuous-response.html#cb946-7"></a><span class="kw">library</span>(rstanarm)</span>
-<span id="cb946-8"><a href="continuous-response.html#cb946-8"></a><span class="kw">library</span>(gt)</span></code></pre></div>
+<div class="sourceCode" id="cb991"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb991-1"><a href="continuous-response.html#cb991-1"></a><span class="kw">library</span>(PPBDS.data)</span>
+<span id="cb991-2"><a href="continuous-response.html#cb991-2"></a><span class="kw">library</span>(skimr)</span>
+<span id="cb991-3"><a href="continuous-response.html#cb991-3"></a><span class="kw">library</span>(tidyverse)</span>
+<span id="cb991-4"><a href="continuous-response.html#cb991-4"></a><span class="kw">library</span>(tidymodels)</span>
+<span id="cb991-5"><a href="continuous-response.html#cb991-5"></a><span class="kw">library</span>(rsample)</span>
+<span id="cb991-6"><a href="continuous-response.html#cb991-6"></a><span class="kw">library</span>(broom.mixed)</span>
+<span id="cb991-7"><a href="continuous-response.html#cb991-7"></a><span class="kw">library</span>(rstanarm)</span>
+<span id="cb991-8"><a href="continuous-response.html#cb991-8"></a><span class="kw">library</span>(gt)</span></code></pre></div>
 <p>Now that we have loaded <strong><em>PPBDS.data</em></strong>, let’s <code>glimpse()</code> the dataset.</p>
-<div class="sourceCode" id="cb947"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb947-1"><a href="continuous-response.html#cb947-1"></a><span class="kw">glimpse</span>(nes)</span></code></pre></div>
+<div class="sourceCode" id="cb992"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb992-1"><a href="continuous-response.html#cb992-1"></a><span class="kw">glimpse</span>(nes)</span></code></pre></div>
 <pre><code>## Rows: 38,558
 ## Columns: 11
 ## $ year      &lt;int&gt; 1952, 1952, 1952, 1952, 1952, 1952, 1952, 1952, 1952, 1952,…
@@ -241,9 +242,9 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <p>If we were given a new person who was not surveyed, and the above variables, our goal is to predict their ideology correctly.</p>
 <p>As you also saw, there are a lot of rows in this dataset. <code>nes</code> covers 1954 through 2016, but for our sake, we will narrow our scope to just 2016. Because of the changing nature of what makes someone ideologically liberal or ideologically conservative over time, it is best to construct a model in which we eliminate as much of this variance as possible. Keep in mind that, when feeding in new data to our model, it is most accurately applied to voters in or around 2016. Indeed, a 1954 voter might act very differently than a 2016 voter.</p>
 <p>Filter the data to only show <code>year == 2016</code>.</p>
-<div class="sourceCode" id="cb949"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb949-1"><a href="continuous-response.html#cb949-1"></a>nes <span class="op">%&gt;%</span></span>
-<span id="cb949-2"><a href="continuous-response.html#cb949-2"></a><span class="st">  </span><span class="kw">select</span>(year, gender, race, income, age, education, ideology, region) <span class="op">%&gt;%</span></span>
-<span id="cb949-3"><a href="continuous-response.html#cb949-3"></a><span class="st">  </span><span class="kw">filter</span>(year <span class="op">==</span><span class="st"> </span><span class="dv">2016</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb994"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb994-1"><a href="continuous-response.html#cb994-1"></a>nes <span class="op">%&gt;%</span></span>
+<span id="cb994-2"><a href="continuous-response.html#cb994-2"></a><span class="st">  </span><span class="kw">select</span>(year, gender, race, income, age, education, ideology, region) <span class="op">%&gt;%</span></span>
+<span id="cb994-3"><a href="continuous-response.html#cb994-3"></a><span class="st">  </span><span class="kw">filter</span>(year <span class="op">==</span><span class="st"> </span><span class="dv">2016</span>)</span></code></pre></div>
 <pre><code>## # A tibble: 4,270 x 8
 ##     year gender race  income   age     education       ideology region   
 ##    &lt;int&gt; &lt;chr&gt;  &lt;chr&gt; &lt;ord&gt;    &lt;ord&gt;   &lt;ord&gt;              &lt;int&gt; &lt;fct&gt;    
@@ -259,9 +260,9 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 ## 10  2016 Female White 34 - 67  25 - 34 Some College          -1 South    
 ## # … with 4,260 more rows</code></pre>
 <p>Now, we would like to get some sense of what the completeness of the data looks like.</p>
-<div class="sourceCode" id="cb951"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb951-1"><a href="continuous-response.html#cb951-1"></a><span class="kw">skim</span>(nes)</span></code></pre></div>
+<div class="sourceCode" id="cb996"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb996-1"><a href="continuous-response.html#cb996-1"></a><span class="kw">skim</span>(nes)</span></code></pre></div>
 <p><!--
-<caption>--><span class="marginnote shownote"><span id="tab:unnamed-chunk-712">TABLE 10.1: </span>Data summary</span><!--</caption>--></p>
+<caption>--><span class="marginnote shownote"><span id="tab:unnamed-chunk-791">TABLE 11.1: </span>Data summary</span><!--</caption>--></p>
 <table><tbody>
 <tr class="odd">
 <td align="left">Name</td>
@@ -459,12 +460,12 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 <p>Note that all of the variables are incomplete, meaning they contain <code>NA</code> values. While there are methods to impute missing data, we will simply remove these values for now. We will save this filtered and cleaned dataset as <code>nes_2016</code>.</p>
-<div class="sourceCode" id="cb952"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb952-1"><a href="continuous-response.html#cb952-1"></a>nes_<span class="dv">2016</span> &lt;-<span class="st"> </span>nes <span class="op">%&gt;%</span></span>
-<span id="cb952-2"><a href="continuous-response.html#cb952-2"></a><span class="st">  </span><span class="kw">filter</span>(year <span class="op">==</span><span class="st"> </span><span class="dv">2016</span>) <span class="op">%&gt;%</span></span>
-<span id="cb952-3"><a href="continuous-response.html#cb952-3"></a><span class="st">  </span><span class="kw">select</span>(<span class="op">-</span>year) <span class="op">%&gt;%</span></span>
-<span id="cb952-4"><a href="continuous-response.html#cb952-4"></a><span class="st">  </span><span class="kw">drop_na</span>()</span>
-<span id="cb952-5"><a href="continuous-response.html#cb952-5"></a></span>
-<span id="cb952-6"><a href="continuous-response.html#cb952-6"></a>nes_<span class="dv">2016</span></span></code></pre></div>
+<div class="sourceCode" id="cb997"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb997-1"><a href="continuous-response.html#cb997-1"></a>nes_<span class="dv">2016</span> &lt;-<span class="st"> </span>nes <span class="op">%&gt;%</span></span>
+<span id="cb997-2"><a href="continuous-response.html#cb997-2"></a><span class="st">  </span><span class="kw">filter</span>(year <span class="op">==</span><span class="st"> </span><span class="dv">2016</span>) <span class="op">%&gt;%</span></span>
+<span id="cb997-3"><a href="continuous-response.html#cb997-3"></a><span class="st">  </span><span class="kw">select</span>(<span class="op">-</span>year) <span class="op">%&gt;%</span></span>
+<span id="cb997-4"><a href="continuous-response.html#cb997-4"></a><span class="st">  </span><span class="kw">drop_na</span>()</span>
+<span id="cb997-5"><a href="continuous-response.html#cb997-5"></a></span>
+<span id="cb997-6"><a href="continuous-response.html#cb997-6"></a>nes_<span class="dv">2016</span></span></code></pre></div>
 <pre><code>## # A tibble: 3,433 x 10
 ##    state gender income  age    education   race  ideology pres_appr voted region
 ##    &lt;chr&gt; &lt;chr&gt;  &lt;ord&gt;   &lt;ord&gt;  &lt;ord&gt;       &lt;chr&gt;    &lt;int&gt; &lt;chr&gt;     &lt;chr&gt; &lt;fct&gt; 
@@ -481,7 +482,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 ## # … with 3,423 more rows</code></pre>
 <div id="prudence" class="section level3">
 <h3>
-<span class="header-section-number">10.1.1</span> Prudence</h3>
+<span class="header-section-number">11.1.1</span> Prudence</h3>
 <p>
 <span class="marginnote shownote">
 <!--
@@ -493,21 +494,21 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <p>We may not know someone’s ideology right off of the bat outside of the respondents in the <code>nes</code> dataset. This is true in real life, in which it is an awkward question to pose a stranger. This is also true in surveys that may not have asked respondents to politically self-identify, but would find that information useful. What we are given, however, are a number of demographic variables that can be used to predict someone’s ideology.</p>
 <p>Taking a look again at the variables in <code>nes_2016</code>, we might decide against including <code>pres_appr</code> and <code>voted</code> in our models. Why exclude variables, especially variables that may make your model even better?</p>
 <p>From glimpsing <code>ch11</code>, we see that there are three data types: factors, characters, and integers. However, <code>income</code>, <code>age</code>, and <code>education</code> are ordered factors. This means that each factor level is considered additively. Ordered factors are dangerous because we do not know how they will interact with our regression models. Therefore, we will use <code>factor()</code> and <code>ordered = FALSE</code> to remove their level orders.</p>
-<div class="sourceCode" id="cb954"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb954-1"><a href="continuous-response.html#cb954-1"></a>ch11 &lt;-<span class="st"> </span>nes_<span class="dv">2016</span> <span class="op">%&gt;%</span></span>
-<span id="cb954-2"><a href="continuous-response.html#cb954-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">income =</span> <span class="kw">factor</span>(income, <span class="dt">ordered =</span> <span class="ot">FALSE</span>),</span>
-<span id="cb954-3"><a href="continuous-response.html#cb954-3"></a>         <span class="dt">age =</span> <span class="kw">factor</span>(age, <span class="dt">ordered =</span> <span class="ot">FALSE</span>),</span>
-<span id="cb954-4"><a href="continuous-response.html#cb954-4"></a>         <span class="dt">education =</span> <span class="kw">factor</span>(education, <span class="dt">ordered=</span> <span class="ot">FALSE</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb999"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb999-1"><a href="continuous-response.html#cb999-1"></a>ch11 &lt;-<span class="st"> </span>nes_<span class="dv">2016</span> <span class="op">%&gt;%</span></span>
+<span id="cb999-2"><a href="continuous-response.html#cb999-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">income =</span> <span class="kw">factor</span>(income, <span class="dt">ordered =</span> <span class="ot">FALSE</span>),</span>
+<span id="cb999-3"><a href="continuous-response.html#cb999-3"></a>         <span class="dt">age =</span> <span class="kw">factor</span>(age, <span class="dt">ordered =</span> <span class="ot">FALSE</span>),</span>
+<span id="cb999-4"><a href="continuous-response.html#cb999-4"></a>         <span class="dt">education =</span> <span class="kw">factor</span>(education, <span class="dt">ordered=</span> <span class="ot">FALSE</span>))</span></code></pre></div>
 <p>While we’re paying attention to data types, it is best practice to change character variables to factors when working within this <strong><em>tidymodels</em></strong> framework.</p>
-<div class="sourceCode" id="cb955"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb955-1"><a href="continuous-response.html#cb955-1"></a>ch11 &lt;-<span class="st"> </span>ch11 <span class="op">%&gt;%</span></span>
-<span id="cb955-2"><a href="continuous-response.html#cb955-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">gender =</span> <span class="kw">as.factor</span>(gender),</span>
-<span id="cb955-3"><a href="continuous-response.html#cb955-3"></a>         <span class="dt">race =</span> <span class="kw">as.factor</span>(race))</span></code></pre></div>
+<div class="sourceCode" id="cb1000"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1000-1"><a href="continuous-response.html#cb1000-1"></a>ch11 &lt;-<span class="st"> </span>ch11 <span class="op">%&gt;%</span></span>
+<span id="cb1000-2"><a href="continuous-response.html#cb1000-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">gender =</span> <span class="kw">as.factor</span>(gender),</span>
+<span id="cb1000-3"><a href="continuous-response.html#cb1000-3"></a>         <span class="dt">race =</span> <span class="kw">as.factor</span>(race))</span></code></pre></div>
 <p>Now that we have a left-hand variable to estimate with reasonable predictors, let’s think about a substantive question that we would like to answer this chapter. The models we will construct are predictive, not causal, and therefore can only be used for comparisons.</p>
 <p>It is important to note that <strong>there are an infinite number of comparisons you can make</strong>. Because our model is predictive, we can only say something about the population if one variable is tweaked and all else is kept the same. For example, we could look at how education affects the self-reported ideology of Asian respondents compared to Black respondents, given that both groups of respondents are well-educated, female, middle-aged, and reside in the Northeast. Or, we could look at the interaction between gender and race and its affect on ideology for certain values of the other variables. There is no right answer as to what question is the best one to answer. Indeed, this is another important choice you will have to make as a data scientist.</p>
 <p>For this chapter, we will seek to answer the following question: How does age affect ideology for residents of the Northeast vs. the South of the U.S.?</p>
 </div>
 <div id="justice" class="section level3">
 <h3>
-<span class="header-section-number">10.1.2</span> Justice</h3>
+<span class="header-section-number">11.1.2</span> Justice</h3>
 <p>
 <span class="marginnote shownote">
 <!--
@@ -516,13 +517,13 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <p class="caption marginnote">--><!--</p>--><!--</div>--></span>
 </p>
 <p>Recall the virtue of Justice: <strong>We want to make sure our models are as just and representative of the real world as possible.</strong> As such, we will split our <code>nes_2016</code> data into two sets: a training set and a testing set. We can do so using the <strong><em>rsample</em></strong> function, <code>initial_split()</code>.</p>
-<div class="sourceCode" id="cb956"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb956-1"><a href="continuous-response.html#cb956-1"></a><span class="kw">set.seed</span>(<span class="dv">10</span>)</span>
-<span id="cb956-2"><a href="continuous-response.html#cb956-2"></a>ch11_split &lt;-<span class="st"> </span><span class="kw">initial_split</span>(ch11)</span>
-<span id="cb956-3"><a href="continuous-response.html#cb956-3"></a></span>
-<span id="cb956-4"><a href="continuous-response.html#cb956-4"></a>ch11_training &lt;-<span class="st"> </span>ch11_split <span class="op">%&gt;%</span></span>
-<span id="cb956-5"><a href="continuous-response.html#cb956-5"></a><span class="st">  </span><span class="kw">training</span>()</span>
-<span id="cb956-6"><a href="continuous-response.html#cb956-6"></a>ch11_testing &lt;-<span class="st"> </span>ch11_split <span class="op">%&gt;%</span></span>
-<span id="cb956-7"><a href="continuous-response.html#cb956-7"></a><span class="st">  </span><span class="kw">testing</span>()</span></code></pre></div>
+<div class="sourceCode" id="cb1001"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1001-1"><a href="continuous-response.html#cb1001-1"></a><span class="kw">set.seed</span>(<span class="dv">10</span>)</span>
+<span id="cb1001-2"><a href="continuous-response.html#cb1001-2"></a>ch11_split &lt;-<span class="st"> </span><span class="kw">initial_split</span>(ch11)</span>
+<span id="cb1001-3"><a href="continuous-response.html#cb1001-3"></a></span>
+<span id="cb1001-4"><a href="continuous-response.html#cb1001-4"></a>ch11_training &lt;-<span class="st"> </span>ch11_split <span class="op">%&gt;%</span></span>
+<span id="cb1001-5"><a href="continuous-response.html#cb1001-5"></a><span class="st">  </span><span class="kw">training</span>()</span>
+<span id="cb1001-6"><a href="continuous-response.html#cb1001-6"></a>ch11_testing &lt;-<span class="st"> </span>ch11_split <span class="op">%&gt;%</span></span>
+<span id="cb1001-7"><a href="continuous-response.html#cb1001-7"></a><span class="st">  </span><span class="kw">testing</span>()</span></code></pre></div>
 <p><em>We will not be touching the testing set.</em> The testing set can be thought of as the final test to analyze the fit of the model. Never will we use the testing set to train the model. After all, that is what the training set is for! And what exactly does training the model mean? Training is simply the process in which we take the components of the given data and create as accurate a predictive machine as possible.</p>
 <p>We have mentioned that the following models will be <em>predictive</em>, not <em>causal</em>. Recall that all we care about in a predictive model is forecasting some value <span class="math inline">\(y_i\)</span> given that we know <span class="math inline">\(x_{i_1}, x_{i_2}, ... x_{i_n}\)</span>. The <span class="math inline">\(y_i\)</span> in our case is <code>ideology</code>. The <span class="math inline">\(x_{i_1}, x_{i_2}, ... x_{i_n}\)</span> in this case are certain known variables, such as <code>state</code>, <code>age</code>, and <code>income</code>, among others. <span class="math inline">\(\beta\)</span> stands for a vector input. As we will discuss in <strong>Fortitude</strong>, some of the inputs may not necessarily be linear and additive.</p>
 <p>The following equation calculates the <code>ideology</code> of the <em>i</em>th respondent, <span class="math inline">\(y_i\)</span>, as a function of certain linear and/or non-linear parameters.</p>
@@ -942,20 +943,20 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table></div>
 <p>We can preliminarily explore our guiding question by plotting age against average ideology, faceting by region.</p>
-<div class="sourceCode" id="cb957"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb957-1"><a href="continuous-response.html#cb957-1"></a>ch11_training <span class="op">%&gt;%</span></span>
-<span id="cb957-2"><a href="continuous-response.html#cb957-2"></a><span class="st">  </span><span class="kw">group_by</span>(age, region) <span class="op">%&gt;%</span></span>
-<span id="cb957-3"><a href="continuous-response.html#cb957-3"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">avg_ideo_by_age =</span> <span class="kw">mean</span>(ideology)) <span class="op">%&gt;%</span></span>
-<span id="cb957-4"><a href="continuous-response.html#cb957-4"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> avg_ideo_by_age, <span class="dt">y =</span> age)) <span class="op">+</span></span>
-<span id="cb957-5"><a href="continuous-response.html#cb957-5"></a><span class="st">  </span><span class="kw">geom_point</span>() <span class="op">+</span></span>
-<span id="cb957-6"><a href="continuous-response.html#cb957-6"></a><span class="st">  </span><span class="kw">facet_wrap</span>(<span class="op">~</span>region) <span class="op">+</span></span>
-<span id="cb957-7"><a href="continuous-response.html#cb957-7"></a><span class="st">  </span><span class="kw">geom_vline</span>(<span class="dt">xintercept=</span> <span class="dv">0</span>, <span class="dt">color =</span> <span class="st">"red"</span>, <span class="dt">linetype =</span> <span class="st">"dotted"</span>)</span></code></pre></div>
-<p><img src="book_temp_files/figure-html/unnamed-chunk-720-1.png" width="500px" style="display: block; margin-left: auto; margin-right: auto; background-color: #000; padding:3px;">
+<div class="sourceCode" id="cb1002"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1002-1"><a href="continuous-response.html#cb1002-1"></a>ch11_training <span class="op">%&gt;%</span></span>
+<span id="cb1002-2"><a href="continuous-response.html#cb1002-2"></a><span class="st">  </span><span class="kw">group_by</span>(age, region) <span class="op">%&gt;%</span></span>
+<span id="cb1002-3"><a href="continuous-response.html#cb1002-3"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">avg_ideo_by_age =</span> <span class="kw">mean</span>(ideology)) <span class="op">%&gt;%</span></span>
+<span id="cb1002-4"><a href="continuous-response.html#cb1002-4"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> avg_ideo_by_age, <span class="dt">y =</span> age)) <span class="op">+</span></span>
+<span id="cb1002-5"><a href="continuous-response.html#cb1002-5"></a><span class="st">  </span><span class="kw">geom_point</span>() <span class="op">+</span></span>
+<span id="cb1002-6"><a href="continuous-response.html#cb1002-6"></a><span class="st">  </span><span class="kw">facet_wrap</span>(<span class="op">~</span>region) <span class="op">+</span></span>
+<span id="cb1002-7"><a href="continuous-response.html#cb1002-7"></a><span class="st">  </span><span class="kw">geom_vline</span>(<span class="dt">xintercept=</span> <span class="dv">0</span>, <span class="dt">color =</span> <span class="st">"red"</span>, <span class="dt">linetype =</span> <span class="st">"dotted"</span>)</span></code></pre></div>
+<p><img src="book_temp_files/figure-html/unnamed-chunk-799-1.png" width="500px" style="display: block; margin-left: auto; margin-right: auto; background-color: #000; padding:3px;">
 The Northeast, Midwest, and West all skew politically liberal in terms of average ideology per age group. Most notably, not a single age group in the Northeast had a positive average ideology; the most conservative age group is the 55-64 year old group. Meanwhile, in the West and the Midwest, there are clear trends that older age groups tend to have a more conservative average ideology. In contrast, every age group’s average ideology skewed politically conservative in the South save for the 35-44 year olds.</p>
 <p>Why can’t we just stop our analysis here? Well, our main question involves predicting new ideologies, which a visualization cannot tell you. There are many other factors at hand besides age that influence ideology. In order to answer our question for a subset of the population, we need to keep these factors constant among said subset. For example, if we are interested in the effect of age on ideology by region, we must <em>specifically</em> look at folks who have the same education, income, race, and gender, with different ages and regions.</p>
 </div>
 <div id="fortitude" class="section level3">
 <h3>
-<span class="header-section-number">10.1.3</span> Fortitude</h3>
+<span class="header-section-number">11.1.3</span> Fortitude</h3>
 <p>
 <span class="marginnote shownote">
 <!--
@@ -969,21 +970,21 @@ The Northeast, Midwest, and West all skew politically liberal in terms of averag
 </div>
 <div id="lm" class="section level2">
 <h2>
-<span class="header-section-number">10.2</span> <code>lm()</code>
+<span class="header-section-number">11.2</span> <code>lm()</code>
 </h2>
 <p>First, we have to construct the linear regression model.</p>
-<div class="sourceCode" id="cb958"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb958-1"><a href="continuous-response.html#cb958-1"></a>lm_model &lt;-</span>
-<span id="cb958-2"><a href="continuous-response.html#cb958-2"></a><span class="st">    </span><span class="kw">linear_reg</span>() <span class="op">%&gt;%</span></span>
-<span id="cb958-3"><a href="continuous-response.html#cb958-3"></a><span class="st">    </span><span class="kw">set_engine</span>(<span class="st">"lm"</span>) <span class="op">%&gt;%</span></span>
-<span id="cb958-4"><a href="continuous-response.html#cb958-4"></a><span class="st">    </span><span class="kw">set_mode</span>(<span class="st">"regression"</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb1003"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1003-1"><a href="continuous-response.html#cb1003-1"></a>lm_model &lt;-</span>
+<span id="cb1003-2"><a href="continuous-response.html#cb1003-2"></a><span class="st">    </span><span class="kw">linear_reg</span>() <span class="op">%&gt;%</span></span>
+<span id="cb1003-3"><a href="continuous-response.html#cb1003-3"></a><span class="st">    </span><span class="kw">set_engine</span>(<span class="st">"lm"</span>) <span class="op">%&gt;%</span></span>
+<span id="cb1003-4"><a href="continuous-response.html#cb1003-4"></a><span class="st">    </span><span class="kw">set_mode</span>(<span class="st">"regression"</span>)</span></code></pre></div>
 <p>Here, we are using the <strong><em>parsnip</em></strong> package to create an engine that can run this linear regression model easily and repeatedly. <code>linear_reg()</code> tells the engine that this is a linear regression. <code>set_engine("lm")</code> tells the engine to use the <code>lm()</code> function. <code>set_mode()</code> has to options, “regression” and “classification”. Since our left-hand variable is a continuous one, we will set it to “regression”. If it were categorical, we would set the mode to “classification”.</p>
 <p>Fit the model to the data. We will first create a regression formula and save it as an R object for future recall. There are a lot of different combinations we could use for the formula, but which will yield the <em>best</em> model? In previous chapters, we discussed this dilemma. For now, we will build a full model containing all of the predictor variables and some interactions.</p>
-<div class="sourceCode" id="cb959"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb959-1"><a href="continuous-response.html#cb959-1"></a>full_form &lt;-<span class="st"> </span><span class="kw">formula</span>(ideology <span class="op">~</span><span class="st"> </span>gender <span class="op">+</span><span class="st"> </span>race <span class="op">+</span><span class="st"> </span>region <span class="op">+</span><span class="st"> </span>income <span class="op">+</span><span class="st"> </span>age <span class="op">+</span><span class="st"> </span>education)</span></code></pre></div>
-<div class="sourceCode" id="cb960"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb960-1"><a href="continuous-response.html#cb960-1"></a>lm_fit &lt;-<span class="st"> </span><span class="kw">fit</span>(lm_model, full_form, ch11_training)</span></code></pre></div>
+<div class="sourceCode" id="cb1004"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1004-1"><a href="continuous-response.html#cb1004-1"></a>full_form &lt;-<span class="st"> </span><span class="kw">formula</span>(ideology <span class="op">~</span><span class="st"> </span>gender <span class="op">+</span><span class="st"> </span>race <span class="op">+</span><span class="st"> </span>region <span class="op">+</span><span class="st"> </span>income <span class="op">+</span><span class="st"> </span>age <span class="op">+</span><span class="st"> </span>education)</span></code></pre></div>
+<div class="sourceCode" id="cb1005"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1005-1"><a href="continuous-response.html#cb1005-1"></a>lm_fit &lt;-<span class="st"> </span><span class="kw">fit</span>(lm_model, full_form, ch11_training)</span></code></pre></div>
 <p>Note that we can use <code>tidy()</code>, just like we did in previous chapters, to take a look at the results:</p>
-<div class="sourceCode" id="cb961"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb961-1"><a href="continuous-response.html#cb961-1"></a>lm_fit <span class="op">%&gt;%</span></span>
-<span id="cb961-2"><a href="continuous-response.html#cb961-2"></a><span class="st">  </span><span class="kw">tidy</span>(<span class="dt">conf.int =</span> <span class="ot">TRUE</span>) <span class="op">%&gt;%</span></span>
-<span id="cb961-3"><a href="continuous-response.html#cb961-3"></a><span class="st">  </span><span class="kw">select</span>(term, estimate, conf.low, conf.high)</span></code></pre></div>
+<div class="sourceCode" id="cb1006"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1006-1"><a href="continuous-response.html#cb1006-1"></a>lm_fit <span class="op">%&gt;%</span></span>
+<span id="cb1006-2"><a href="continuous-response.html#cb1006-2"></a><span class="st">  </span><span class="kw">tidy</span>(<span class="dt">conf.int =</span> <span class="ot">TRUE</span>) <span class="op">%&gt;%</span></span>
+<span id="cb1006-3"><a href="continuous-response.html#cb1006-3"></a><span class="st">  </span><span class="kw">select</span>(term, estimate, conf.low, conf.high)</span></code></pre></div>
 <pre><code>## # A tibble: 27 x 4
 ##    term                estimate conf.low conf.high
 ##    &lt;chr&gt;                  &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;
@@ -999,8 +1000,8 @@ The Northeast, Midwest, and West all skew politically liberal in terms of averag
 ## 10 regionSouth           0.454    0.251     0.657 
 ## # … with 17 more rows</code></pre>
 <p>If we want to take a look at the residuals <span class="math inline">\(y-\hat{y}\)</span>, we can use the <code>augment()</code> function. <code>augment()</code> subtracts the fitted value from the actual value. Note that <code>lm_fit</code> is actually a parsnip model, so we have to extract the fitted R model with <code>lm_fit$fit</code>.</p>
-<div class="sourceCode" id="cb963"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb963-1"><a href="continuous-response.html#cb963-1"></a><span class="kw">augment</span>(lm_fit<span class="op">$</span>fit) <span class="op">%&gt;%</span></span>
-<span id="cb963-2"><a href="continuous-response.html#cb963-2"></a><span class="st">  </span><span class="kw">select</span>(ideology, .fitted, .resid, gender, race, region, income, age, education)</span></code></pre></div>
+<div class="sourceCode" id="cb1008"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1008-1"><a href="continuous-response.html#cb1008-1"></a><span class="kw">augment</span>(lm_fit<span class="op">$</span>fit) <span class="op">%&gt;%</span></span>
+<span id="cb1008-2"><a href="continuous-response.html#cb1008-2"></a><span class="st">  </span><span class="kw">select</span>(ideology, .fitted, .resid, gender, race, region, income, age, education)</span></code></pre></div>
 <pre><code>## # A tibble: 2,575 x 9
 ##    ideology  .fitted .resid gender race     region    income  age    education  
 ##       &lt;int&gt;    &lt;dbl&gt;  &lt;dbl&gt; &lt;fct&gt;  &lt;fct&gt;    &lt;fct&gt;     &lt;fct&gt;   &lt;fct&gt;  &lt;fct&gt;      
@@ -1024,28 +1025,28 @@ The Northeast, Midwest, and West all skew politically liberal in terms of averag
 <p>However, we only have available one set of outcomes: the ones we actually observed. Cross validation is based on the idea of generating a series of different random samples on which to apply our algorithm. There are several approaches we can use, but the general idea for all of them is to randomly generate smaller datasets that are not used for training, and instead used to estimate the true error.</p>
 <div id="k-fold-cross-validation" class="section level3">
 <h3>
-<span class="header-section-number">10.2.1</span> K-Fold Cross-validation</h3>
+<span class="header-section-number">11.2.1</span> K-Fold Cross-validation</h3>
 <p>Generally speaking, a machine learning challenge starts with a dataset. We need to build an algorithm using this dataset that will eventually be used in completely independent datasets.</p>
 <p>So to imitate this situation, we carve out a piece of our dataset and pretend it is an independent dataset: previously, we divided the dataset into a <em>training set</em> and a <em>test set</em>. We will train our algorithm exclusively on the training set and use the test set <em>only for evaluation purposes</em>.</p>
 <p>We usually try to select a small piece of the dataset so that we have as much data as possible to train. However, we also want the test set to be large so that we obtain a stable estimate of the loss without fitting an impractical number of models. The <code>initial_split()</code> function reserves 25% of the data for testing by default.</p>
 <p>Remember, we cannot touch the testing set! One way we can check whether the model we created works is to use cross-validation, which avoids the problem of overtraining by splitting the data into smaller sections. We’ll show you how to do using the <strong><em>rsample</em></strong> package.</p>
 <p>The function <code>vfold_cv()</code> splits your training set into <code>v</code>, a specified number of smaller sections. The most common values for <code>v</code> are 5 and 10. To keep things simple, we will be using <code>v = 5</code> to keep the individual sections large enough to accurately train the models. The first four folds will be used to train the model, and the last fold is always used to assess the accuracy of the model.</p>
 <p>Below, we will create a new object called <code>ch11_folds</code> that contains equally sized sections of <code>ch11_training</code>.</p>
-<div class="sourceCode" id="cb965"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb965-1"><a href="continuous-response.html#cb965-1"></a><span class="kw">set.seed</span>(<span class="dv">10</span>)</span>
-<span id="cb965-2"><a href="continuous-response.html#cb965-2"></a>ch11_folds &lt;-<span class="st"> </span>ch11_training <span class="op">%&gt;%</span></span>
-<span id="cb965-3"><a href="continuous-response.html#cb965-3"></a><span class="st">  </span><span class="kw">vfold_cv</span>(<span class="dt">v =</span> <span class="dv">5</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb1010"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1010-1"><a href="continuous-response.html#cb1010-1"></a><span class="kw">set.seed</span>(<span class="dv">10</span>)</span>
+<span id="cb1010-2"><a href="continuous-response.html#cb1010-2"></a>ch11_folds &lt;-<span class="st"> </span>ch11_training <span class="op">%&gt;%</span></span>
+<span id="cb1010-3"><a href="continuous-response.html#cb1010-3"></a><span class="st">  </span><span class="kw">vfold_cv</span>(<span class="dt">v =</span> <span class="dv">5</span>)</span></code></pre></div>
 <p>How can we work with the <code>ch11_folds</code> object? <strong>tidymodels</strong> makes it easy by using the <code>fit_resamples()</code> function in the <strong>tune</strong> package. The <code>fit_resamples()</code> function takes as its first argument a model specification (such as <code>lm_model</code>). It takes a formula as its second argument, either in traditional form or as a <code>recipe()</code>.</p>
-<p><label for="tufte-mn-69" class="margin-toggle">⊕</label><input type="checkbox" id="tufte-mn-69" class="margin-toggle"><span class="marginnote"><span style="display: block;">Recipes are what <strong><em>tidymodels</em></strong> use in lieu of defining a formula traditionally. <code>recipe()</code> is useful because you can define both the formula and any transformations you want to make with the data. Recipes are easily called and re-used, making it easy to use the same recipe with different models.</span>
+<p><label for="tufte-mn-76" class="margin-toggle">⊕</label><input type="checkbox" id="tufte-mn-76" class="margin-toggle"><span class="marginnote"><span style="display: block;">Recipes are what <strong><em>tidymodels</em></strong> use in lieu of defining a formula traditionally. <code>recipe()</code> is useful because you can define both the formula and any transformations you want to make with the data. Recipes are easily called and re-used, making it easy to use the same recipe with different models.</span>
 <span style="display: block;">There are a number of useful functions that can be piped into recipes. One particularly useful family of functions is the family of step functions. These functions conduct a variety of transformations, from removing variables with high correlations to other variables (<code>step_corr()</code>) to adding in an interaction term (<code>step_interact()</code>). To learn more about recipes, you can visit the <a href="https://recipes.tidymodels.org/reference/index.html">Tidymodels website.</a></span></span></p>
 <!-- EC: Commented out because not relevant: Usually, a simple formula without interaction terms can be plugged right in to `fit_resamples()`. However, ***tidymodels*** does not allow in-line functions in recipes, meaning we need to use a `step_*` function to add the interaction terms. Let's create our recipe. First, we define a formula without interaction terms. Then, using `step_interact()`, we add in the relevant interaction terms.   -->
 <p>We need to convert all of the nominal variables, which are unordered character values, to dummy variables. Dummy variables are binary variables that are 1 when the categorical event occurs and 0 when it does not occur. For example, each level within <code>education</code> would be converted into its own variable, with the value 1 if the respondent had that level of education, and 0 otherwise.</p>
-<div class="sourceCode" id="cb966"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb966-1"><a href="continuous-response.html#cb966-1"></a>formula_rec &lt;-<span class="st"> </span><span class="kw">recipe</span>(ideology <span class="op">~</span><span class="st"> </span>gender <span class="op">+</span><span class="st"> </span>race <span class="op">+</span><span class="st"> </span>region <span class="op">+</span><span class="st"> </span>income <span class="op">+</span><span class="st"> </span>age <span class="op">+</span><span class="st"> </span>education, <span class="dt">data =</span> ch11_training) <span class="op">%&gt;%</span></span>
-<span id="cb966-2"><a href="continuous-response.html#cb966-2"></a><span class="st">  </span><span class="kw">step_dummy</span>(<span class="kw">all_nominal</span>())</span></code></pre></div>
+<div class="sourceCode" id="cb1011"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1011-1"><a href="continuous-response.html#cb1011-1"></a>formula_rec &lt;-<span class="st"> </span><span class="kw">recipe</span>(ideology <span class="op">~</span><span class="st"> </span>gender <span class="op">+</span><span class="st"> </span>race <span class="op">+</span><span class="st"> </span>region <span class="op">+</span><span class="st"> </span>income <span class="op">+</span><span class="st"> </span>age <span class="op">+</span><span class="st"> </span>education, <span class="dt">data =</span> ch11_training) <span class="op">%&gt;%</span></span>
+<span id="cb1011-2"><a href="continuous-response.html#cb1011-2"></a><span class="st">  </span><span class="kw">step_dummy</span>(<span class="kw">all_nominal</span>())</span></code></pre></div>
 <p>Finally, the <code>resamples</code> argument is where you input the cross-validation dataset.</p>
-<div class="sourceCode" id="cb967"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb967-1"><a href="continuous-response.html#cb967-1"></a><span class="kw">set.seed</span>(<span class="dv">10</span>)</span>
-<span id="cb967-2"><a href="continuous-response.html#cb967-2"></a><span class="kw">fit_resamples</span>(<span class="dt">object =</span> lm_model,</span>
-<span id="cb967-3"><a href="continuous-response.html#cb967-3"></a>              <span class="dt">preprocessor =</span> formula_rec,</span>
-<span id="cb967-4"><a href="continuous-response.html#cb967-4"></a>              <span class="dt">resamples =</span> ch11_folds)</span></code></pre></div>
+<div class="sourceCode" id="cb1012"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1012-1"><a href="continuous-response.html#cb1012-1"></a><span class="kw">set.seed</span>(<span class="dv">10</span>)</span>
+<span id="cb1012-2"><a href="continuous-response.html#cb1012-2"></a><span class="kw">fit_resamples</span>(<span class="dt">object =</span> lm_model,</span>
+<span id="cb1012-3"><a href="continuous-response.html#cb1012-3"></a>              <span class="dt">preprocessor =</span> formula_rec,</span>
+<span id="cb1012-4"><a href="continuous-response.html#cb1012-4"></a>              <span class="dt">resamples =</span> ch11_folds)</span></code></pre></div>
 <pre><code>## # Resampling results
 ## # 5-fold cross-validation 
 ## # A tibble: 5 x 4
@@ -1057,20 +1058,20 @@ The Northeast, Midwest, and West all skew politically liberal in terms of averag
 ## 4 &lt;split [2.1K/515]&gt; Fold4 &lt;tibble [2 × 3]&gt; &lt;tibble [0 × 1]&gt;
 ## 5 &lt;split [2.1K/515]&gt; Fold5 &lt;tibble [2 × 3]&gt; &lt;tibble [0 × 1]&gt;</code></pre>
 <p>Because the metrics are in list-columns, we can extract the average metrics across all the folds using the <code>collect_metrics()</code> function:</p>
-<div class="sourceCode" id="cb969"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb969-1"><a href="continuous-response.html#cb969-1"></a><span class="kw">set.seed</span>(<span class="dv">10</span>)</span>
-<span id="cb969-2"><a href="continuous-response.html#cb969-2"></a><span class="kw">fit_resamples</span>(lm_model,</span>
-<span id="cb969-3"><a href="continuous-response.html#cb969-3"></a>              formula_rec,</span>
-<span id="cb969-4"><a href="continuous-response.html#cb969-4"></a>              ch11_folds) <span class="op">%&gt;%</span></span>
-<span id="cb969-5"><a href="continuous-response.html#cb969-5"></a><span class="st">  </span><span class="kw">collect_metrics</span>()</span></code></pre></div>
+<div class="sourceCode" id="cb1014"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1014-1"><a href="continuous-response.html#cb1014-1"></a><span class="kw">set.seed</span>(<span class="dv">10</span>)</span>
+<span id="cb1014-2"><a href="continuous-response.html#cb1014-2"></a><span class="kw">fit_resamples</span>(lm_model,</span>
+<span id="cb1014-3"><a href="continuous-response.html#cb1014-3"></a>              formula_rec,</span>
+<span id="cb1014-4"><a href="continuous-response.html#cb1014-4"></a>              ch11_folds) <span class="op">%&gt;%</span></span>
+<span id="cb1014-5"><a href="continuous-response.html#cb1014-5"></a><span class="st">  </span><span class="kw">collect_metrics</span>()</span></code></pre></div>
 <pre><code>## # A tibble: 2 x 5
 ##   .metric .estimator  mean     n std_err
 ##   &lt;chr&gt;   &lt;chr&gt;      &lt;dbl&gt; &lt;int&gt;   &lt;dbl&gt;
 ## 1 rmse    standard   2.00      5  0.0283
 ## 2 rsq     standard   0.138     5  0.0133</code></pre>
 <p>Now that we’ve viewed the cross-validation metrics, it’s time to use new data: namely, the testing set. Remember, we only touch the testing set for evaluation purposes. To apply our model to <code>ch11_testing</code>, use the <code>predict()</code> function.</p>
-<div class="sourceCode" id="cb971"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb971-1"><a href="continuous-response.html#cb971-1"></a>lm_model <span class="op">%&gt;%</span></span>
-<span id="cb971-2"><a href="continuous-response.html#cb971-2"></a><span class="st">  </span><span class="kw">fit</span>(full_form, <span class="dt">data =</span> ch11_training) <span class="op">%&gt;%</span></span>
-<span id="cb971-3"><a href="continuous-response.html#cb971-3"></a><span class="st">  </span><span class="kw">predict</span>(<span class="dt">new_data =</span> ch11_testing)</span></code></pre></div>
+<div class="sourceCode" id="cb1016"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1016-1"><a href="continuous-response.html#cb1016-1"></a>lm_model <span class="op">%&gt;%</span></span>
+<span id="cb1016-2"><a href="continuous-response.html#cb1016-2"></a><span class="st">  </span><span class="kw">fit</span>(full_form, <span class="dt">data =</span> ch11_training) <span class="op">%&gt;%</span></span>
+<span id="cb1016-3"><a href="continuous-response.html#cb1016-3"></a><span class="st">  </span><span class="kw">predict</span>(<span class="dt">new_data =</span> ch11_testing)</span></code></pre></div>
 <pre><code>## # A tibble: 858 x 1
 ##     .pred
 ##     &lt;dbl&gt;
@@ -1086,10 +1087,10 @@ The Northeast, Midwest, and West all skew politically liberal in terms of averag
 ## 10  1.10 
 ## # … with 848 more rows</code></pre>
 <p>To extract the rmse, we set the “truth” to <code>ideology</code> so this function can compare our predicted values to the true values.</p>
-<div class="sourceCode" id="cb973"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb973-1"><a href="continuous-response.html#cb973-1"></a>lm_fit <span class="op">%&gt;%</span></span>
-<span id="cb973-2"><a href="continuous-response.html#cb973-2"></a><span class="st">  </span><span class="kw">predict</span>(<span class="dt">new_data =</span> ch11_testing) <span class="op">%&gt;%</span></span>
-<span id="cb973-3"><a href="continuous-response.html#cb973-3"></a><span class="st">  </span><span class="kw">bind_cols</span>(ch11_testing) <span class="op">%&gt;%</span></span>
-<span id="cb973-4"><a href="continuous-response.html#cb973-4"></a><span class="st">  </span><span class="kw">rmse</span>(<span class="dt">truth =</span> ideology, <span class="dt">estimate =</span> .pred)</span></code></pre></div>
+<div class="sourceCode" id="cb1018"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1018-1"><a href="continuous-response.html#cb1018-1"></a>lm_fit <span class="op">%&gt;%</span></span>
+<span id="cb1018-2"><a href="continuous-response.html#cb1018-2"></a><span class="st">  </span><span class="kw">predict</span>(<span class="dt">new_data =</span> ch11_testing) <span class="op">%&gt;%</span></span>
+<span id="cb1018-3"><a href="continuous-response.html#cb1018-3"></a><span class="st">  </span><span class="kw">bind_cols</span>(ch11_testing) <span class="op">%&gt;%</span></span>
+<span id="cb1018-4"><a href="continuous-response.html#cb1018-4"></a><span class="st">  </span><span class="kw">rmse</span>(<span class="dt">truth =</span> ideology, <span class="dt">estimate =</span> .pred)</span></code></pre></div>
 <pre><code>## # A tibble: 1 x 3
 ##   .metric .estimator .estimate
 ##   &lt;chr&gt;   &lt;chr&gt;          &lt;dbl&gt;
@@ -1099,19 +1100,19 @@ The Northeast, Midwest, and West all skew politically liberal in terms of averag
 <p>What if we create completely new data outside of the testing set? Keep in mind that just because you have a variable in this training data today, does not mean you are going to get it in your production data tomorrow.</p>
 <p>Time to make up some imaginary people. Let’s say we have four individuals whose ideology in 2016 we wanted to predict. We can create a tibble with the values of their demographic information, like so:</p>
 <!-- Just because you have a variable in this training data today, does not mean you are going to get it in your production data tomorrow. -->
-<div class="sourceCode" id="cb975"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb975-1"><a href="continuous-response.html#cb975-1"></a>new_people &lt;-<span class="st"> </span><span class="kw">tibble</span>(<span class="st">"name"</span> =<span class="st"> </span><span class="kw">c</span>(<span class="st">"Alice"</span>, <span class="st">"Betty"</span>, <span class="st">"Chelsea"</span>, <span class="st">"Danielle"</span>),</span>
-<span id="cb975-2"><a href="continuous-response.html#cb975-2"></a>                     <span class="st">"region"</span> =<span class="st"> </span><span class="kw">as.factor</span>(<span class="kw">c</span>(<span class="st">"Midwest"</span>, <span class="st">"Northeast"</span>, <span class="st">"South"</span>, <span class="st">"West"</span>)),</span>
-<span id="cb975-3"><a href="continuous-response.html#cb975-3"></a>                     <span class="st">"gender"</span> =<span class="st"> </span><span class="kw">as.factor</span>(<span class="kw">c</span>(<span class="st">"Female"</span>, <span class="st">"Female"</span>, <span class="st">"Female"</span>, <span class="st">"Female"</span>)),</span>
-<span id="cb975-4"><a href="continuous-response.html#cb975-4"></a>                     <span class="st">"income"</span> =<span class="st"> </span><span class="kw">as.factor</span>(<span class="kw">c</span>(<span class="st">"34 - 67"</span>, <span class="st">"34 - 67"</span>, <span class="st">"34 - 67"</span>, <span class="st">"34 - 67"</span>)),</span>
-<span id="cb975-5"><a href="continuous-response.html#cb975-5"></a>                     <span class="st">"age"</span> =<span class="st"> </span><span class="kw">c</span>(<span class="st">"17 - 24"</span>, <span class="st">"17 - 24"</span>, <span class="st">"17 - 24"</span>, <span class="st">"17 - 24"</span>),</span>
-<span id="cb975-6"><a href="continuous-response.html#cb975-6"></a>                     <span class="st">"education"</span> =<span class="st"> </span><span class="kw">c</span>(<span class="st">"College"</span>, <span class="st">"College"</span>, <span class="st">"College"</span>, <span class="st">"College"</span>),</span>
-<span id="cb975-7"><a href="continuous-response.html#cb975-7"></a>                     <span class="st">"race"</span> =<span class="st"> </span><span class="kw">c</span>(<span class="st">"White"</span>, <span class="st">"White"</span>, <span class="st">"White"</span>, <span class="st">"White"</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb1020"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1020-1"><a href="continuous-response.html#cb1020-1"></a>new_people &lt;-<span class="st"> </span><span class="kw">tibble</span>(<span class="st">"name"</span> =<span class="st"> </span><span class="kw">c</span>(<span class="st">"Alice"</span>, <span class="st">"Betty"</span>, <span class="st">"Chelsea"</span>, <span class="st">"Danielle"</span>),</span>
+<span id="cb1020-2"><a href="continuous-response.html#cb1020-2"></a>                     <span class="st">"region"</span> =<span class="st"> </span><span class="kw">as.factor</span>(<span class="kw">c</span>(<span class="st">"Midwest"</span>, <span class="st">"Northeast"</span>, <span class="st">"South"</span>, <span class="st">"West"</span>)),</span>
+<span id="cb1020-3"><a href="continuous-response.html#cb1020-3"></a>                     <span class="st">"gender"</span> =<span class="st"> </span><span class="kw">as.factor</span>(<span class="kw">c</span>(<span class="st">"Female"</span>, <span class="st">"Female"</span>, <span class="st">"Female"</span>, <span class="st">"Female"</span>)),</span>
+<span id="cb1020-4"><a href="continuous-response.html#cb1020-4"></a>                     <span class="st">"income"</span> =<span class="st"> </span><span class="kw">as.factor</span>(<span class="kw">c</span>(<span class="st">"34 - 67"</span>, <span class="st">"34 - 67"</span>, <span class="st">"34 - 67"</span>, <span class="st">"34 - 67"</span>)),</span>
+<span id="cb1020-5"><a href="continuous-response.html#cb1020-5"></a>                     <span class="st">"age"</span> =<span class="st"> </span><span class="kw">c</span>(<span class="st">"17 - 24"</span>, <span class="st">"17 - 24"</span>, <span class="st">"17 - 24"</span>, <span class="st">"17 - 24"</span>),</span>
+<span id="cb1020-6"><a href="continuous-response.html#cb1020-6"></a>                     <span class="st">"education"</span> =<span class="st"> </span><span class="kw">c</span>(<span class="st">"College"</span>, <span class="st">"College"</span>, <span class="st">"College"</span>, <span class="st">"College"</span>),</span>
+<span id="cb1020-7"><a href="continuous-response.html#cb1020-7"></a>                     <span class="st">"race"</span> =<span class="st"> </span><span class="kw">c</span>(<span class="st">"White"</span>, <span class="st">"White"</span>, <span class="st">"White"</span>, <span class="st">"White"</span>))</span></code></pre></div>
 <p>Now, let’s predict each new person’s ideology using the linear regression model we just created.</p>
-<div class="sourceCode" id="cb976"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb976-1"><a href="continuous-response.html#cb976-1"></a>lm_model <span class="op">%&gt;%</span></span>
-<span id="cb976-2"><a href="continuous-response.html#cb976-2"></a><span class="st">  </span><span class="kw">fit</span>(full_form, <span class="dt">data =</span> ch11_training) <span class="op">%&gt;%</span></span>
-<span id="cb976-3"><a href="continuous-response.html#cb976-3"></a><span class="st">  </span><span class="kw">predict</span>(<span class="dt">new_data =</span> new_people) <span class="op">%&gt;%</span></span>
-<span id="cb976-4"><a href="continuous-response.html#cb976-4"></a><span class="st">  </span><span class="kw">bind_cols</span>(new_people) <span class="op">%&gt;%</span></span>
-<span id="cb976-5"><a href="continuous-response.html#cb976-5"></a><span class="st">  </span><span class="kw">rename</span>(<span class="st">"ideology"</span> =<span class="st"> ".pred"</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb1021"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1021-1"><a href="continuous-response.html#cb1021-1"></a>lm_model <span class="op">%&gt;%</span></span>
+<span id="cb1021-2"><a href="continuous-response.html#cb1021-2"></a><span class="st">  </span><span class="kw">fit</span>(full_form, <span class="dt">data =</span> ch11_training) <span class="op">%&gt;%</span></span>
+<span id="cb1021-3"><a href="continuous-response.html#cb1021-3"></a><span class="st">  </span><span class="kw">predict</span>(<span class="dt">new_data =</span> new_people) <span class="op">%&gt;%</span></span>
+<span id="cb1021-4"><a href="continuous-response.html#cb1021-4"></a><span class="st">  </span><span class="kw">bind_cols</span>(new_people) <span class="op">%&gt;%</span></span>
+<span id="cb1021-5"><a href="continuous-response.html#cb1021-5"></a><span class="st">  </span><span class="kw">rename</span>(<span class="st">"ideology"</span> =<span class="st"> ".pred"</span>)</span></code></pre></div>
 <pre><code>## # A tibble: 4 x 8
 ##   ideology name     region    gender income  age     education race 
 ##      &lt;dbl&gt; &lt;chr&gt;    &lt;fct&gt;     &lt;fct&gt;  &lt;fct&gt;   &lt;chr&gt;   &lt;chr&gt;     &lt;chr&gt;
@@ -1124,20 +1125,20 @@ The Northeast, Midwest, and West all skew politically liberal in terms of averag
 </div>
 <div id="using-stan_glm" class="section level2">
 <h2>
-<span class="header-section-number">10.3</span> Using <code>stan_glm()</code>
+<span class="header-section-number">11.3</span> Using <code>stan_glm()</code>
 </h2>
 <p>The <strong><em>rstanarm</em></strong> package contains a lot of powerful functions that conduct Bayesian data analysis by using priors. One such function is <code>stan_glm()</code>, which you can think of as the Bayesian way of fitting a regression model.</p>
 <p>We will be following the exact same steps as before. First, we will construct a <strong><em>parsnip</em></strong> model that uses the “stan” engine.</p>
-<div class="sourceCode" id="cb978"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb978-1"><a href="continuous-response.html#cb978-1"></a>stan_model &lt;-</span>
-<span id="cb978-2"><a href="continuous-response.html#cb978-2"></a><span class="st">    </span><span class="kw">linear_reg</span>() <span class="op">%&gt;%</span></span>
-<span id="cb978-3"><a href="continuous-response.html#cb978-3"></a><span class="st">    </span><span class="kw">set_engine</span>(<span class="st">"stan"</span>) <span class="op">%&gt;%</span></span>
-<span id="cb978-4"><a href="continuous-response.html#cb978-4"></a><span class="st">    </span><span class="kw">set_mode</span>(<span class="st">"regression"</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb1023"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1023-1"><a href="continuous-response.html#cb1023-1"></a>stan_model &lt;-</span>
+<span id="cb1023-2"><a href="continuous-response.html#cb1023-2"></a><span class="st">    </span><span class="kw">linear_reg</span>() <span class="op">%&gt;%</span></span>
+<span id="cb1023-3"><a href="continuous-response.html#cb1023-3"></a><span class="st">    </span><span class="kw">set_engine</span>(<span class="st">"stan"</span>) <span class="op">%&gt;%</span></span>
+<span id="cb1023-4"><a href="continuous-response.html#cb1023-4"></a><span class="st">    </span><span class="kw">set_mode</span>(<span class="st">"regression"</span>)</span></code></pre></div>
 <p>Next, let’s fit this model using the formula we specified before. We can select for the relevant terms after using <code>tidy()</code> to make our tibble viewable. Remember that this is <code>broom.mixed::tidy()</code>, not <code>broom::tidy()</code>.</p>
-<div class="sourceCode" id="cb979"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb979-1"><a href="continuous-response.html#cb979-1"></a>stan_fit &lt;-<span class="st"> </span><span class="kw">fit</span>(stan_model, full_form, ch11_training)</span></code></pre></div>
-<div class="sourceCode" id="cb980"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb980-1"><a href="continuous-response.html#cb980-1"></a><span class="kw">set.seed</span>(<span class="dv">10</span>)</span>
-<span id="cb980-2"><a href="continuous-response.html#cb980-2"></a>stan_fit <span class="op">%&gt;%</span></span>
-<span id="cb980-3"><a href="continuous-response.html#cb980-3"></a><span class="st">  </span><span class="kw">tidy</span>(<span class="dt">conf.int =</span> <span class="ot">TRUE</span>) <span class="op">%&gt;%</span></span>
-<span id="cb980-4"><a href="continuous-response.html#cb980-4"></a><span class="st">  </span><span class="kw">select</span>(term, estimate, std.error)</span></code></pre></div>
+<div class="sourceCode" id="cb1024"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1024-1"><a href="continuous-response.html#cb1024-1"></a>stan_fit &lt;-<span class="st"> </span><span class="kw">fit</span>(stan_model, full_form, ch11_training)</span></code></pre></div>
+<div class="sourceCode" id="cb1025"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1025-1"><a href="continuous-response.html#cb1025-1"></a><span class="kw">set.seed</span>(<span class="dv">10</span>)</span>
+<span id="cb1025-2"><a href="continuous-response.html#cb1025-2"></a>stan_fit <span class="op">%&gt;%</span></span>
+<span id="cb1025-3"><a href="continuous-response.html#cb1025-3"></a><span class="st">  </span><span class="kw">tidy</span>(<span class="dt">conf.int =</span> <span class="ot">TRUE</span>) <span class="op">%&gt;%</span></span>
+<span id="cb1025-4"><a href="continuous-response.html#cb1025-4"></a><span class="st">  </span><span class="kw">select</span>(term, estimate, std.error)</span></code></pre></div>
 <pre><code>## # A tibble: 27 x 3
 ##    term                estimate std.error
 ##    &lt;chr&gt;                  &lt;dbl&gt;     &lt;dbl&gt;
@@ -1153,12 +1154,12 @@ The Northeast, Midwest, and West all skew politically liberal in terms of averag
 ## 10 regionSouth           0.450     0.110 
 ## # … with 17 more rows</code></pre>
 <p>Let’s take a look at the first ten residual values. Here, we will calculate the residuals by hand as <span class="math inline">\(y-\hat{y}\)</span>, since <code>augment</code> does not play nice with <code>stan_fit$fit</code>.</p>
-<div class="sourceCode" id="cb982"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb982-1"><a href="continuous-response.html#cb982-1"></a>stan_fit <span class="op">%&gt;%</span></span>
-<span id="cb982-2"><a href="continuous-response.html#cb982-2"></a><span class="st">  </span><span class="kw">predict</span>(ch11_training) <span class="op">%&gt;%</span></span>
-<span id="cb982-3"><a href="continuous-response.html#cb982-3"></a><span class="st">  </span><span class="kw">bind_cols</span>(ch11_training) <span class="op">%&gt;%</span></span>
-<span id="cb982-4"><a href="continuous-response.html#cb982-4"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">residuals =</span> ideology <span class="op">-</span><span class="st"> </span>.pred) <span class="op">%&gt;%</span></span>
-<span id="cb982-5"><a href="continuous-response.html#cb982-5"></a><span class="st">  </span><span class="kw">select</span>(residuals) <span class="op">%&gt;%</span></span>
-<span id="cb982-6"><a href="continuous-response.html#cb982-6"></a><span class="st">  </span><span class="kw">slice</span>(<span class="dv">1</span><span class="op">:</span><span class="dv">10</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb1027"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1027-1"><a href="continuous-response.html#cb1027-1"></a>stan_fit <span class="op">%&gt;%</span></span>
+<span id="cb1027-2"><a href="continuous-response.html#cb1027-2"></a><span class="st">  </span><span class="kw">predict</span>(ch11_training) <span class="op">%&gt;%</span></span>
+<span id="cb1027-3"><a href="continuous-response.html#cb1027-3"></a><span class="st">  </span><span class="kw">bind_cols</span>(ch11_training) <span class="op">%&gt;%</span></span>
+<span id="cb1027-4"><a href="continuous-response.html#cb1027-4"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">residuals =</span> ideology <span class="op">-</span><span class="st"> </span>.pred) <span class="op">%&gt;%</span></span>
+<span id="cb1027-5"><a href="continuous-response.html#cb1027-5"></a><span class="st">  </span><span class="kw">select</span>(residuals) <span class="op">%&gt;%</span></span>
+<span id="cb1027-6"><a href="continuous-response.html#cb1027-6"></a><span class="st">  </span><span class="kw">slice</span>(<span class="dv">1</span><span class="op">:</span><span class="dv">10</span>)</span></code></pre></div>
 <pre><code>## # A tibble: 10 x 1
 ##    residuals
 ##        &lt;dbl&gt;
@@ -1174,12 +1175,12 @@ The Northeast, Midwest, and West all skew politically liberal in terms of averag
 ## 10    -3.00</code></pre>
 <div id="verifying-fit-using-cross-validation" class="section level3">
 <h3>
-<span class="header-section-number">10.3.1</span> Verifying fit using cross-validation</h3>
+<span class="header-section-number">11.3.1</span> Verifying fit using cross-validation</h3>
 <p>Let’s practice K-Fold validation with the <code>stan</code> model.</p>
-<div class="sourceCode" id="cb984"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb984-1"><a href="continuous-response.html#cb984-1"></a><span class="kw">set.seed</span>(<span class="dv">10</span>)</span>
-<span id="cb984-2"><a href="continuous-response.html#cb984-2"></a><span class="kw">fit_resamples</span>(<span class="dt">object =</span> stan_model,</span>
-<span id="cb984-3"><a href="continuous-response.html#cb984-3"></a>              <span class="dt">preprocessor =</span> formula_rec,</span>
-<span id="cb984-4"><a href="continuous-response.html#cb984-4"></a>              <span class="dt">resamples =</span> ch11_folds)</span></code></pre></div>
+<div class="sourceCode" id="cb1029"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1029-1"><a href="continuous-response.html#cb1029-1"></a><span class="kw">set.seed</span>(<span class="dv">10</span>)</span>
+<span id="cb1029-2"><a href="continuous-response.html#cb1029-2"></a><span class="kw">fit_resamples</span>(<span class="dt">object =</span> stan_model,</span>
+<span id="cb1029-3"><a href="continuous-response.html#cb1029-3"></a>              <span class="dt">preprocessor =</span> formula_rec,</span>
+<span id="cb1029-4"><a href="continuous-response.html#cb1029-4"></a>              <span class="dt">resamples =</span> ch11_folds)</span></code></pre></div>
 <pre><code>## # Resampling results
 ## # 5-fold cross-validation 
 ## # A tibble: 5 x 4
@@ -1190,29 +1191,29 @@ The Northeast, Midwest, and West all skew politically liberal in terms of averag
 ## 3 &lt;split [2.1K/515]&gt; Fold3 &lt;tibble [2 × 3]&gt; &lt;tibble [0 × 1]&gt;
 ## 4 &lt;split [2.1K/515]&gt; Fold4 &lt;tibble [2 × 3]&gt; &lt;tibble [0 × 1]&gt;
 ## 5 &lt;split [2.1K/515]&gt; Fold5 &lt;tibble [2 × 3]&gt; &lt;tibble [0 × 1]&gt;</code></pre>
-<div class="sourceCode" id="cb986"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb986-1"><a href="continuous-response.html#cb986-1"></a><span class="kw">set.seed</span>(<span class="dv">10</span>)</span>
-<span id="cb986-2"><a href="continuous-response.html#cb986-2"></a><span class="kw">fit_resamples</span>(<span class="dt">object =</span> stan_model,</span>
-<span id="cb986-3"><a href="continuous-response.html#cb986-3"></a>              <span class="dt">preprocessor =</span> formula_rec,</span>
-<span id="cb986-4"><a href="continuous-response.html#cb986-4"></a>              <span class="dt">resamples =</span> ch11_folds) <span class="op">%&gt;%</span></span>
-<span id="cb986-5"><a href="continuous-response.html#cb986-5"></a><span class="st">  </span><span class="kw">collect_metrics</span>()</span></code></pre></div>
+<div class="sourceCode" id="cb1031"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1031-1"><a href="continuous-response.html#cb1031-1"></a><span class="kw">set.seed</span>(<span class="dv">10</span>)</span>
+<span id="cb1031-2"><a href="continuous-response.html#cb1031-2"></a><span class="kw">fit_resamples</span>(<span class="dt">object =</span> stan_model,</span>
+<span id="cb1031-3"><a href="continuous-response.html#cb1031-3"></a>              <span class="dt">preprocessor =</span> formula_rec,</span>
+<span id="cb1031-4"><a href="continuous-response.html#cb1031-4"></a>              <span class="dt">resamples =</span> ch11_folds) <span class="op">%&gt;%</span></span>
+<span id="cb1031-5"><a href="continuous-response.html#cb1031-5"></a><span class="st">  </span><span class="kw">collect_metrics</span>()</span></code></pre></div>
 <pre><code>## # A tibble: 2 x 5
 ##   .metric .estimator  mean     n std_err
 ##   &lt;chr&gt;   &lt;chr&gt;      &lt;dbl&gt; &lt;int&gt;   &lt;dbl&gt;
 ## 1 rmse    standard   2.00      5  0.0282
 ## 2 rsq     standard   0.138     5  0.0133</code></pre>
 <p>Let’s test the stan model using new people. This time, let’s change it up so that the variable levels are different:</p>
-<div class="sourceCode" id="cb988"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb988-1"><a href="continuous-response.html#cb988-1"></a>new_people_<span class="dv">2</span> &lt;-<span class="st"> </span><span class="kw">tibble</span>(<span class="st">"name"</span> =<span class="st"> </span><span class="kw">c</span>(<span class="st">"Anne"</span>, <span class="st">"Ben"</span>, <span class="st">"Chandler"</span>, <span class="st">"Diane"</span>),</span>
-<span id="cb988-2"><a href="continuous-response.html#cb988-2"></a>                     <span class="st">"region"</span> =<span class="st"> </span><span class="kw">as.factor</span>(<span class="kw">c</span>(<span class="st">"Midwest"</span>, <span class="st">"Northeast"</span>, <span class="st">"South"</span>, <span class="st">"West"</span>)),</span>
-<span id="cb988-3"><a href="continuous-response.html#cb988-3"></a>                     <span class="st">"gender"</span> =<span class="st"> </span><span class="kw">as.factor</span>(<span class="kw">c</span>(<span class="st">"Female"</span>, <span class="st">"Male"</span>, <span class="st">"Male"</span>, <span class="st">"Female"</span>)),</span>
-<span id="cb988-4"><a href="continuous-response.html#cb988-4"></a>                     <span class="st">"income"</span> =<span class="st"> </span><span class="kw">as.factor</span>(<span class="kw">c</span>(<span class="st">"34 - 67"</span>, <span class="st">"0 - 16"</span>, <span class="st">"34 - 67"</span>, <span class="st">"17 - 33"</span>)),</span>
-<span id="cb988-5"><a href="continuous-response.html#cb988-5"></a>                     <span class="st">"age"</span> =<span class="st"> </span><span class="kw">c</span>(<span class="st">"17 - 24"</span>, <span class="st">"17 - 24"</span>, <span class="st">"25 - 34"</span>, <span class="st">"65 - 74"</span>),</span>
-<span id="cb988-6"><a href="continuous-response.html#cb988-6"></a>                     <span class="st">"education"</span> =<span class="st"> </span><span class="kw">c</span>(<span class="st">"College"</span>, <span class="st">"Adv. Degree"</span>, <span class="st">"Elementary"</span>, <span class="st">"Highschool"</span>),</span>
-<span id="cb988-7"><a href="continuous-response.html#cb988-7"></a>                     <span class="st">"race"</span> =<span class="st"> </span><span class="kw">c</span>(<span class="st">"Black"</span>, <span class="st">"Hispanic"</span>, <span class="st">"White"</span>, <span class="st">"Asian"</span>))</span></code></pre></div>
-<div class="sourceCode" id="cb989"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb989-1"><a href="continuous-response.html#cb989-1"></a>stan_model <span class="op">%&gt;%</span></span>
-<span id="cb989-2"><a href="continuous-response.html#cb989-2"></a><span class="st">  </span><span class="kw">fit</span>(full_form, <span class="dt">data =</span> ch11_training) <span class="op">%&gt;%</span></span>
-<span id="cb989-3"><a href="continuous-response.html#cb989-3"></a><span class="st">  </span><span class="kw">predict</span>(new_people_<span class="dv">2</span>) <span class="op">%&gt;%</span></span>
-<span id="cb989-4"><a href="continuous-response.html#cb989-4"></a><span class="st">  </span><span class="kw">bind_cols</span>(new_people_<span class="dv">2</span>) <span class="op">%&gt;%</span></span>
-<span id="cb989-5"><a href="continuous-response.html#cb989-5"></a><span class="st">  </span><span class="kw">rename</span>(<span class="st">"ideology"</span> =<span class="st"> ".pred"</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb1033"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1033-1"><a href="continuous-response.html#cb1033-1"></a>new_people_<span class="dv">2</span> &lt;-<span class="st"> </span><span class="kw">tibble</span>(<span class="st">"name"</span> =<span class="st"> </span><span class="kw">c</span>(<span class="st">"Anne"</span>, <span class="st">"Ben"</span>, <span class="st">"Chandler"</span>, <span class="st">"Diane"</span>),</span>
+<span id="cb1033-2"><a href="continuous-response.html#cb1033-2"></a>                     <span class="st">"region"</span> =<span class="st"> </span><span class="kw">as.factor</span>(<span class="kw">c</span>(<span class="st">"Midwest"</span>, <span class="st">"Northeast"</span>, <span class="st">"South"</span>, <span class="st">"West"</span>)),</span>
+<span id="cb1033-3"><a href="continuous-response.html#cb1033-3"></a>                     <span class="st">"gender"</span> =<span class="st"> </span><span class="kw">as.factor</span>(<span class="kw">c</span>(<span class="st">"Female"</span>, <span class="st">"Male"</span>, <span class="st">"Male"</span>, <span class="st">"Female"</span>)),</span>
+<span id="cb1033-4"><a href="continuous-response.html#cb1033-4"></a>                     <span class="st">"income"</span> =<span class="st"> </span><span class="kw">as.factor</span>(<span class="kw">c</span>(<span class="st">"34 - 67"</span>, <span class="st">"0 - 16"</span>, <span class="st">"34 - 67"</span>, <span class="st">"17 - 33"</span>)),</span>
+<span id="cb1033-5"><a href="continuous-response.html#cb1033-5"></a>                     <span class="st">"age"</span> =<span class="st"> </span><span class="kw">c</span>(<span class="st">"17 - 24"</span>, <span class="st">"17 - 24"</span>, <span class="st">"25 - 34"</span>, <span class="st">"65 - 74"</span>),</span>
+<span id="cb1033-6"><a href="continuous-response.html#cb1033-6"></a>                     <span class="st">"education"</span> =<span class="st"> </span><span class="kw">c</span>(<span class="st">"College"</span>, <span class="st">"Adv. Degree"</span>, <span class="st">"Elementary"</span>, <span class="st">"Highschool"</span>),</span>
+<span id="cb1033-7"><a href="continuous-response.html#cb1033-7"></a>                     <span class="st">"race"</span> =<span class="st"> </span><span class="kw">c</span>(<span class="st">"Black"</span>, <span class="st">"Hispanic"</span>, <span class="st">"White"</span>, <span class="st">"Asian"</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb1034"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1034-1"><a href="continuous-response.html#cb1034-1"></a>stan_model <span class="op">%&gt;%</span></span>
+<span id="cb1034-2"><a href="continuous-response.html#cb1034-2"></a><span class="st">  </span><span class="kw">fit</span>(full_form, <span class="dt">data =</span> ch11_training) <span class="op">%&gt;%</span></span>
+<span id="cb1034-3"><a href="continuous-response.html#cb1034-3"></a><span class="st">  </span><span class="kw">predict</span>(new_people_<span class="dv">2</span>) <span class="op">%&gt;%</span></span>
+<span id="cb1034-4"><a href="continuous-response.html#cb1034-4"></a><span class="st">  </span><span class="kw">bind_cols</span>(new_people_<span class="dv">2</span>) <span class="op">%&gt;%</span></span>
+<span id="cb1034-5"><a href="continuous-response.html#cb1034-5"></a><span class="st">  </span><span class="kw">rename</span>(<span class="st">"ideology"</span> =<span class="st"> ".pred"</span>)</span></code></pre></div>
 <pre><code>## # A tibble: 4 x 8
 ##   ideology name     region    gender income  age     education   race    
 ##      &lt;dbl&gt; &lt;chr&gt;    &lt;fct&gt;     &lt;fct&gt;  &lt;fct&gt;   &lt;chr&gt;   &lt;chr&gt;       &lt;chr&gt;   
@@ -1222,35 +1223,35 @@ The Northeast, Midwest, and West all skew politically liberal in terms of averag
 ## 4  -0.746  Diane    West      Female 17 - 33 65 - 74 Highschool  Asian</code></pre>
 <p>What if we created a bunch of different formulas that used different permutations of predictor variables and their interactions?</p>
 <p>First, let’s create a basic formula that only takes in <code>age</code>.</p>
-<div class="sourceCode" id="cb991"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb991-1"><a href="continuous-response.html#cb991-1"></a>age_form &lt;-<span class="st"> </span><span class="kw">formula</span>(ideology <span class="op">~</span><span class="st"> </span>age)</span></code></pre></div>
+<div class="sourceCode" id="cb1036"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1036-1"><a href="continuous-response.html#cb1036-1"></a>age_form &lt;-<span class="st"> </span><span class="kw">formula</span>(ideology <span class="op">~</span><span class="st"> </span>age)</span></code></pre></div>
 <p>Next, we can use <code>update()</code> to create the more complicated formulas. <code>update()</code> takes as its first argument a formula and as its second argument the additions you want to make. To keep all the predictors from the first formula and add more, you will start with <code>~ . +</code> and then add more predictors, like so:</p>
-<div class="sourceCode" id="cb992"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb992-1"><a href="continuous-response.html#cb992-1"></a>race_gender_form &lt;-<span class="st"> </span><span class="kw">update</span>(age_form,</span>
-<span id="cb992-2"><a href="continuous-response.html#cb992-2"></a>                    <span class="op">~</span><span class="st"> </span>. <span class="op">+</span><span class="st"> </span>race <span class="op">+</span><span class="st"> </span>gender <span class="op">+</span><span class="st"> </span>race<span class="op">:</span>gender)</span>
-<span id="cb992-3"><a href="continuous-response.html#cb992-3"></a></span>
-<span id="cb992-4"><a href="continuous-response.html#cb992-4"></a>interact_form &lt;-<span class="st"> </span><span class="kw">update</span>(race_gender_form,</span>
-<span id="cb992-5"><a href="continuous-response.html#cb992-5"></a>                        <span class="op">~</span><span class="st"> </span>. <span class="op">+</span><span class="st"> </span>income<span class="op">*</span>region <span class="op">+</span><span class="st"> </span>education)</span></code></pre></div>
+<div class="sourceCode" id="cb1037"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1037-1"><a href="continuous-response.html#cb1037-1"></a>race_gender_form &lt;-<span class="st"> </span><span class="kw">update</span>(age_form,</span>
+<span id="cb1037-2"><a href="continuous-response.html#cb1037-2"></a>                    <span class="op">~</span><span class="st"> </span>. <span class="op">+</span><span class="st"> </span>race <span class="op">+</span><span class="st"> </span>gender <span class="op">+</span><span class="st"> </span>race<span class="op">:</span>gender)</span>
+<span id="cb1037-3"><a href="continuous-response.html#cb1037-3"></a></span>
+<span id="cb1037-4"><a href="continuous-response.html#cb1037-4"></a>interact_form &lt;-<span class="st"> </span><span class="kw">update</span>(race_gender_form,</span>
+<span id="cb1037-5"><a href="continuous-response.html#cb1037-5"></a>                        <span class="op">~</span><span class="st"> </span>. <span class="op">+</span><span class="st"> </span>income<span class="op">*</span>region <span class="op">+</span><span class="st"> </span>education)</span></code></pre></div>
 <!-- EC: I tried using a nonsensical interaction model to demonstrate that lm overfits but that actually has a similar rmse to every other formula -->
 <p>Next, we will save these different formulas, along with the original <code>interact_form</code>, in a tibble to easily remember and recall the formulas.</p>
-<div class="sourceCode" id="cb993"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb993-1"><a href="continuous-response.html#cb993-1"></a>ch11_formulas &lt;-<span class="st"> </span><span class="kw">tibble</span>(<span class="dt">formula =</span> <span class="kw">c</span>(age_form,</span>
-<span id="cb993-2"><a href="continuous-response.html#cb993-2"></a>                                   race_gender_form,</span>
-<span id="cb993-3"><a href="continuous-response.html#cb993-3"></a>                                   full_form,</span>
-<span id="cb993-4"><a href="continuous-response.html#cb993-4"></a>                                   interact_form),</span>
-<span id="cb993-5"><a href="continuous-response.html#cb993-5"></a>                       <span class="dt">group =</span> <span class="kw">c</span>(<span class="st">"Age only model"</span>,</span>
-<span id="cb993-6"><a href="continuous-response.html#cb993-6"></a>                                 <span class="st">"Race and gender model"</span>,</span>
-<span id="cb993-7"><a href="continuous-response.html#cb993-7"></a>                                 <span class="st">"Full model without interaction"</span>,</span>
-<span id="cb993-8"><a href="continuous-response.html#cb993-8"></a>                                 <span class="st">"Interaction model"</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb1038"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1038-1"><a href="continuous-response.html#cb1038-1"></a>ch11_formulas &lt;-<span class="st"> </span><span class="kw">tibble</span>(<span class="dt">formula =</span> <span class="kw">c</span>(age_form,</span>
+<span id="cb1038-2"><a href="continuous-response.html#cb1038-2"></a>                                   race_gender_form,</span>
+<span id="cb1038-3"><a href="continuous-response.html#cb1038-3"></a>                                   full_form,</span>
+<span id="cb1038-4"><a href="continuous-response.html#cb1038-4"></a>                                   interact_form),</span>
+<span id="cb1038-5"><a href="continuous-response.html#cb1038-5"></a>                       <span class="dt">group =</span> <span class="kw">c</span>(<span class="st">"Age only model"</span>,</span>
+<span id="cb1038-6"><a href="continuous-response.html#cb1038-6"></a>                                 <span class="st">"Race and gender model"</span>,</span>
+<span id="cb1038-7"><a href="continuous-response.html#cb1038-7"></a>                                 <span class="st">"Full model without interaction"</span>,</span>
+<span id="cb1038-8"><a href="continuous-response.html#cb1038-8"></a>                                 <span class="st">"Interaction model"</span>))</span></code></pre></div>
 <p>Now, we can use <code>map_*</code> to apply all of these models and view their metrics to see which ones have the lowest rmse values.</p>
-<div class="sourceCode" id="cb994"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb994-1"><a href="continuous-response.html#cb994-1"></a><span class="kw">set.seed</span>(<span class="dv">10</span>)</span>
-<span id="cb994-2"><a href="continuous-response.html#cb994-2"></a>folds_metrics &lt;-<span class="st"> </span>ch11_formulas <span class="op">%&gt;%</span></span>
-<span id="cb994-3"><a href="continuous-response.html#cb994-3"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">metrics =</span> <span class="kw">map</span>(formula, <span class="op">~</span><span class="st"> </span><span class="kw">fit_resamples</span>(<span class="dt">object =</span> lm_model,</span>
-<span id="cb994-4"><a href="continuous-response.html#cb994-4"></a>                                                <span class="dt">preprocessor =</span> .,</span>
-<span id="cb994-5"><a href="continuous-response.html#cb994-5"></a>                                                <span class="dt">resamples =</span> ch11_folds) <span class="op">%&gt;%</span></span>
-<span id="cb994-6"><a href="continuous-response.html#cb994-6"></a><span class="st">                         </span><span class="kw">collect_metrics</span>()))</span></code></pre></div>
+<div class="sourceCode" id="cb1039"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1039-1"><a href="continuous-response.html#cb1039-1"></a><span class="kw">set.seed</span>(<span class="dv">10</span>)</span>
+<span id="cb1039-2"><a href="continuous-response.html#cb1039-2"></a>folds_metrics &lt;-<span class="st"> </span>ch11_formulas <span class="op">%&gt;%</span></span>
+<span id="cb1039-3"><a href="continuous-response.html#cb1039-3"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">metrics =</span> <span class="kw">map</span>(formula, <span class="op">~</span><span class="st"> </span><span class="kw">fit_resamples</span>(<span class="dt">object =</span> lm_model,</span>
+<span id="cb1039-4"><a href="continuous-response.html#cb1039-4"></a>                                                <span class="dt">preprocessor =</span> .,</span>
+<span id="cb1039-5"><a href="continuous-response.html#cb1039-5"></a>                                                <span class="dt">resamples =</span> ch11_folds) <span class="op">%&gt;%</span></span>
+<span id="cb1039-6"><a href="continuous-response.html#cb1039-6"></a><span class="st">                         </span><span class="kw">collect_metrics</span>()))</span></code></pre></div>
 <p>Let’s present the results stored in our <code>folds_metrics</code> object. We are simply extracting the <code>rmse</code> metric from each formula:</p>
-<div class="sourceCode" id="cb995"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb995-1"><a href="continuous-response.html#cb995-1"></a>folds_metrics <span class="op">%&gt;%</span></span>
-<span id="cb995-2"><a href="continuous-response.html#cb995-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">mean_rmse =</span> <span class="kw">map_dbl</span>(metrics, <span class="op">~</span><span class="st"> </span><span class="kw">filter</span>(., .metric <span class="op">==</span><span class="st"> "rmse"</span>) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">pull</span>(mean)),</span>
-<span id="cb995-3"><a href="continuous-response.html#cb995-3"></a>         <span class="dt">se_rmse =</span> <span class="kw">map_dbl</span>(metrics, <span class="op">~</span><span class="st"> </span><span class="kw">filter</span>(., .metric <span class="op">==</span><span class="st"> "rmse"</span>) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">pull</span>(std_err))) <span class="op">%&gt;%</span></span>
-<span id="cb995-4"><a href="continuous-response.html#cb995-4"></a><span class="st">  </span><span class="kw">select</span>(group, mean_rmse, se_rmse)</span></code></pre></div>
+<div class="sourceCode" id="cb1040"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1040-1"><a href="continuous-response.html#cb1040-1"></a>folds_metrics <span class="op">%&gt;%</span></span>
+<span id="cb1040-2"><a href="continuous-response.html#cb1040-2"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">mean_rmse =</span> <span class="kw">map_dbl</span>(metrics, <span class="op">~</span><span class="st"> </span><span class="kw">filter</span>(., .metric <span class="op">==</span><span class="st"> "rmse"</span>) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">pull</span>(mean)),</span>
+<span id="cb1040-3"><a href="continuous-response.html#cb1040-3"></a>         <span class="dt">se_rmse =</span> <span class="kw">map_dbl</span>(metrics, <span class="op">~</span><span class="st"> </span><span class="kw">filter</span>(., .metric <span class="op">==</span><span class="st"> "rmse"</span>) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">pull</span>(std_err))) <span class="op">%&gt;%</span></span>
+<span id="cb1040-4"><a href="continuous-response.html#cb1040-4"></a><span class="st">  </span><span class="kw">select</span>(group, mean_rmse, se_rmse)</span></code></pre></div>
 <pre><code>## # A tibble: 4 x 3
 ##   group                          mean_rmse se_rmse
 ##   &lt;chr&gt;                              &lt;dbl&gt;   &lt;dbl&gt;
@@ -1264,15 +1265,15 @@ The Northeast, Midwest, and West all skew politically liberal in terms of averag
 </div>
 <div id="using-a-neural-network" class="section level2">
 <h2>
-<span class="header-section-number">10.4</span> Using a neural network</h2>
+<span class="header-section-number">11.4</span> Using a neural network</h2>
 <p>Let’s dive into the world of machine learning. Neural networks are useful for mimicking how humans make decisions. Thanks to the <strong><em>parsnip</em></strong> package, there are functions available that can fit regression models using neural networks.</p>
 <p>Let’s create the neural network engine.</p>
-<div class="sourceCode" id="cb997"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb997-1"><a href="continuous-response.html#cb997-1"></a>nnet_model &lt;-<span class="st"> </span><span class="kw">mlp</span>(<span class="dt">hidden_units =</span> <span class="dv">5</span>) <span class="op">%&gt;%</span></span>
-<span id="cb997-2"><a href="continuous-response.html#cb997-2"></a><span class="st">  </span><span class="kw">set_mode</span>(<span class="st">"regression"</span>) <span class="op">%&gt;%</span></span>
-<span id="cb997-3"><a href="continuous-response.html#cb997-3"></a><span class="st">  </span><span class="kw">set_engine</span>(<span class="st">"nnet"</span>)</span>
-<span id="cb997-4"><a href="continuous-response.html#cb997-4"></a></span>
-<span id="cb997-5"><a href="continuous-response.html#cb997-5"></a>nnet_model <span class="op">%&gt;%</span></span>
-<span id="cb997-6"><a href="continuous-response.html#cb997-6"></a><span class="st">  </span><span class="kw">translate</span>()</span></code></pre></div>
+<div class="sourceCode" id="cb1042"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1042-1"><a href="continuous-response.html#cb1042-1"></a>nnet_model &lt;-<span class="st"> </span><span class="kw">mlp</span>(<span class="dt">hidden_units =</span> <span class="dv">5</span>) <span class="op">%&gt;%</span></span>
+<span id="cb1042-2"><a href="continuous-response.html#cb1042-2"></a><span class="st">  </span><span class="kw">set_mode</span>(<span class="st">"regression"</span>) <span class="op">%&gt;%</span></span>
+<span id="cb1042-3"><a href="continuous-response.html#cb1042-3"></a><span class="st">  </span><span class="kw">set_engine</span>(<span class="st">"nnet"</span>)</span>
+<span id="cb1042-4"><a href="continuous-response.html#cb1042-4"></a></span>
+<span id="cb1042-5"><a href="continuous-response.html#cb1042-5"></a>nnet_model <span class="op">%&gt;%</span></span>
+<span id="cb1042-6"><a href="continuous-response.html#cb1042-6"></a><span class="st">  </span><span class="kw">translate</span>()</span></code></pre></div>
 <pre><code>## Single Layer Neural Network Specification (regression)
 ## 
 ## Main Arguments:
@@ -1284,15 +1285,15 @@ The Northeast, Midwest, and West all skew politically liberal in terms of averag
 ## nnet::nnet(formula = missing_arg(), data = missing_arg(), weights = missing_arg(), 
 ##     size = 5, trace = FALSE, linout = TRUE)</code></pre>
 <p>Next, let’s fit the model.</p>
-<div class="sourceCode" id="cb999"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb999-1"><a href="continuous-response.html#cb999-1"></a>nnet_fit &lt;-<span class="st"> </span>nnet_model <span class="op">%&gt;%</span></span>
-<span id="cb999-2"><a href="continuous-response.html#cb999-2"></a><span class="st">  </span><span class="kw">fit</span>(full_form, ch11_training)</span></code></pre></div>
+<div class="sourceCode" id="cb1044"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1044-1"><a href="continuous-response.html#cb1044-1"></a>nnet_fit &lt;-<span class="st"> </span>nnet_model <span class="op">%&gt;%</span></span>
+<span id="cb1044-2"><a href="continuous-response.html#cb1044-2"></a><span class="st">  </span><span class="kw">fit</span>(full_form, ch11_training)</span></code></pre></div>
 <p>Note that there is no tidy method for neural network models. This makes sense, as the terms are not necessarily additive. However, we can still view the predictions by using <code>bind_cols()</code>. Then, we can easily calculate the residuals by subtracting the fitted value from the actual ideology.</p>
-<div class="sourceCode" id="cb1000"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1000-1"><a href="continuous-response.html#cb1000-1"></a>nnet_fit <span class="op">%&gt;%</span></span>
-<span id="cb1000-2"><a href="continuous-response.html#cb1000-2"></a><span class="st">  </span><span class="kw">predict</span>(<span class="dt">new_data =</span> ch11_training) <span class="op">%&gt;%</span></span>
-<span id="cb1000-3"><a href="continuous-response.html#cb1000-3"></a><span class="st">  </span><span class="kw">bind_cols</span>(ch11_training) <span class="op">%&gt;%</span></span>
-<span id="cb1000-4"><a href="continuous-response.html#cb1000-4"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">residuals =</span> ideology <span class="op">-</span><span class="st"> </span>.pred) <span class="op">%&gt;%</span></span>
-<span id="cb1000-5"><a href="continuous-response.html#cb1000-5"></a><span class="st">  </span><span class="kw">select</span>(residuals) <span class="op">%&gt;%</span></span>
-<span id="cb1000-6"><a href="continuous-response.html#cb1000-6"></a><span class="st">  </span><span class="kw">slice</span>(<span class="dv">1</span><span class="op">:</span><span class="dv">10</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb1045"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1045-1"><a href="continuous-response.html#cb1045-1"></a>nnet_fit <span class="op">%&gt;%</span></span>
+<span id="cb1045-2"><a href="continuous-response.html#cb1045-2"></a><span class="st">  </span><span class="kw">predict</span>(<span class="dt">new_data =</span> ch11_training) <span class="op">%&gt;%</span></span>
+<span id="cb1045-3"><a href="continuous-response.html#cb1045-3"></a><span class="st">  </span><span class="kw">bind_cols</span>(ch11_training) <span class="op">%&gt;%</span></span>
+<span id="cb1045-4"><a href="continuous-response.html#cb1045-4"></a><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">residuals =</span> ideology <span class="op">-</span><span class="st"> </span>.pred) <span class="op">%&gt;%</span></span>
+<span id="cb1045-5"><a href="continuous-response.html#cb1045-5"></a><span class="st">  </span><span class="kw">select</span>(residuals) <span class="op">%&gt;%</span></span>
+<span id="cb1045-6"><a href="continuous-response.html#cb1045-6"></a><span class="st">  </span><span class="kw">slice</span>(<span class="dv">1</span><span class="op">:</span><span class="dv">10</span>)</span></code></pre></div>
 <pre><code>## # A tibble: 10 x 1
 ##    residuals
 ##        &lt;dbl&gt;
@@ -1308,12 +1309,12 @@ The Northeast, Midwest, and West all skew politically liberal in terms of averag
 ## 10    -2.63</code></pre>
 <div id="verifying-fit-with-cross-validation" class="section level3">
 <h3>
-<span class="header-section-number">10.4.1</span> Verifying fit with cross-validation</h3>
+<span class="header-section-number">11.4.1</span> Verifying fit with cross-validation</h3>
 <p>Let’s cross-validate our predictions using <code>vfold_cv()</code>.</p>
-<div class="sourceCode" id="cb1002"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1002-1"><a href="continuous-response.html#cb1002-1"></a><span class="kw">set.seed</span>(<span class="dv">10</span>)</span>
-<span id="cb1002-2"><a href="continuous-response.html#cb1002-2"></a><span class="kw">fit_resamples</span>(<span class="dt">object =</span> nnet_model,</span>
-<span id="cb1002-3"><a href="continuous-response.html#cb1002-3"></a>              <span class="dt">preprocessor =</span> formula_rec,</span>
-<span id="cb1002-4"><a href="continuous-response.html#cb1002-4"></a>              <span class="dt">resamples =</span> ch11_folds)</span></code></pre></div>
+<div class="sourceCode" id="cb1047"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1047-1"><a href="continuous-response.html#cb1047-1"></a><span class="kw">set.seed</span>(<span class="dv">10</span>)</span>
+<span id="cb1047-2"><a href="continuous-response.html#cb1047-2"></a><span class="kw">fit_resamples</span>(<span class="dt">object =</span> nnet_model,</span>
+<span id="cb1047-3"><a href="continuous-response.html#cb1047-3"></a>              <span class="dt">preprocessor =</span> formula_rec,</span>
+<span id="cb1047-4"><a href="continuous-response.html#cb1047-4"></a>              <span class="dt">resamples =</span> ch11_folds)</span></code></pre></div>
 <pre><code>## # Resampling results
 ## # 5-fold cross-validation 
 ## # A tibble: 5 x 4
@@ -1324,11 +1325,11 @@ The Northeast, Midwest, and West all skew politically liberal in terms of averag
 ## 3 &lt;split [2.1K/515]&gt; Fold3 &lt;tibble [2 × 3]&gt; &lt;tibble [0 × 1]&gt;
 ## 4 &lt;split [2.1K/515]&gt; Fold4 &lt;tibble [2 × 3]&gt; &lt;tibble [0 × 1]&gt;
 ## 5 &lt;split [2.1K/515]&gt; Fold5 &lt;tibble [2 × 3]&gt; &lt;tibble [0 × 1]&gt;</code></pre>
-<div class="sourceCode" id="cb1004"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1004-1"><a href="continuous-response.html#cb1004-1"></a><span class="kw">set.seed</span>(<span class="dv">10</span>)</span>
-<span id="cb1004-2"><a href="continuous-response.html#cb1004-2"></a><span class="kw">fit_resamples</span>(nnet_model,</span>
-<span id="cb1004-3"><a href="continuous-response.html#cb1004-3"></a>              formula_rec,</span>
-<span id="cb1004-4"><a href="continuous-response.html#cb1004-4"></a>              ch11_folds) <span class="op">%&gt;%</span></span>
-<span id="cb1004-5"><a href="continuous-response.html#cb1004-5"></a><span class="st">  </span><span class="kw">collect_metrics</span>()</span></code></pre></div>
+<div class="sourceCode" id="cb1049"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1049-1"><a href="continuous-response.html#cb1049-1"></a><span class="kw">set.seed</span>(<span class="dv">10</span>)</span>
+<span id="cb1049-2"><a href="continuous-response.html#cb1049-2"></a><span class="kw">fit_resamples</span>(nnet_model,</span>
+<span id="cb1049-3"><a href="continuous-response.html#cb1049-3"></a>              formula_rec,</span>
+<span id="cb1049-4"><a href="continuous-response.html#cb1049-4"></a>              ch11_folds) <span class="op">%&gt;%</span></span>
+<span id="cb1049-5"><a href="continuous-response.html#cb1049-5"></a><span class="st">  </span><span class="kw">collect_metrics</span>()</span></code></pre></div>
 <pre><code>## # A tibble: 2 x 5
 ##   .metric .estimator   mean     n std_err
 ##   &lt;chr&gt;   &lt;chr&gt;       &lt;dbl&gt; &lt;int&gt;   &lt;dbl&gt;
@@ -1338,28 +1339,28 @@ The Northeast, Midwest, and West all skew politically liberal in terms of averag
 </div>
 <div id="predicting-new-data" class="section level3">
 <h3>
-<span class="header-section-number">10.4.2</span> Predicting new data</h3>
+<span class="header-section-number">11.4.2</span> Predicting new data</h3>
 <p>Lastly, let’s apply our neural network model to the testing set.</p>
-<div class="sourceCode" id="cb1006"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1006-1"><a href="continuous-response.html#cb1006-1"></a>nnet_model <span class="op">%&gt;%</span></span>
-<span id="cb1006-2"><a href="continuous-response.html#cb1006-2"></a><span class="st">  </span><span class="kw">fit</span>(full_form, <span class="dt">data =</span> ch11_training) <span class="op">%&gt;%</span></span>
-<span id="cb1006-3"><a href="continuous-response.html#cb1006-3"></a><span class="st">  </span><span class="kw">predict</span>(<span class="dt">new_data =</span> ch11_testing) <span class="op">%&gt;%</span></span>
-<span id="cb1006-4"><a href="continuous-response.html#cb1006-4"></a><span class="st">  </span><span class="kw">bind_cols</span>(ch11_testing) <span class="op">%&gt;%</span></span>
-<span id="cb1006-5"><a href="continuous-response.html#cb1006-5"></a><span class="st">  </span><span class="kw">rmse</span>(<span class="dt">truth =</span> ideology, <span class="dt">estimate =</span> .pred)</span></code></pre></div>
+<div class="sourceCode" id="cb1051"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1051-1"><a href="continuous-response.html#cb1051-1"></a>nnet_model <span class="op">%&gt;%</span></span>
+<span id="cb1051-2"><a href="continuous-response.html#cb1051-2"></a><span class="st">  </span><span class="kw">fit</span>(full_form, <span class="dt">data =</span> ch11_training) <span class="op">%&gt;%</span></span>
+<span id="cb1051-3"><a href="continuous-response.html#cb1051-3"></a><span class="st">  </span><span class="kw">predict</span>(<span class="dt">new_data =</span> ch11_testing) <span class="op">%&gt;%</span></span>
+<span id="cb1051-4"><a href="continuous-response.html#cb1051-4"></a><span class="st">  </span><span class="kw">bind_cols</span>(ch11_testing) <span class="op">%&gt;%</span></span>
+<span id="cb1051-5"><a href="continuous-response.html#cb1051-5"></a><span class="st">  </span><span class="kw">rmse</span>(<span class="dt">truth =</span> ideology, <span class="dt">estimate =</span> .pred)</span></code></pre></div>
 <pre><code>## # A tibble: 1 x 3
 ##   .metric .estimator .estimate
 ##   &lt;chr&gt;   &lt;chr&gt;          &lt;dbl&gt;
 ## 1 rmse    standard        2.14</code></pre>
 <p>Now, let’s predict each new person’s ideology using the <code>nnet</code> model we created, like before.</p>
-<div class="sourceCode" id="cb1008"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1008-1"><a href="continuous-response.html#cb1008-1"></a>nnet_model <span class="op">%&gt;%</span></span>
-<span id="cb1008-2"><a href="continuous-response.html#cb1008-2"></a><span class="st">  </span><span class="kw">fit</span>(full_form, <span class="dt">data =</span> ch11_training) <span class="op">%&gt;%</span></span>
-<span id="cb1008-3"><a href="continuous-response.html#cb1008-3"></a><span class="st">  </span><span class="kw">predict</span>(new_people) <span class="op">%&gt;%</span></span>
-<span id="cb1008-4"><a href="continuous-response.html#cb1008-4"></a><span class="st">  </span><span class="kw">bind_cols</span>(new_people) <span class="op">%&gt;%</span></span>
-<span id="cb1008-5"><a href="continuous-response.html#cb1008-5"></a><span class="st">  </span><span class="kw">rename</span>(<span class="st">"ideology"</span> =<span class="st"> ".pred"</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb1053"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1053-1"><a href="continuous-response.html#cb1053-1"></a>nnet_model <span class="op">%&gt;%</span></span>
+<span id="cb1053-2"><a href="continuous-response.html#cb1053-2"></a><span class="st">  </span><span class="kw">fit</span>(full_form, <span class="dt">data =</span> ch11_training) <span class="op">%&gt;%</span></span>
+<span id="cb1053-3"><a href="continuous-response.html#cb1053-3"></a><span class="st">  </span><span class="kw">predict</span>(new_people) <span class="op">%&gt;%</span></span>
+<span id="cb1053-4"><a href="continuous-response.html#cb1053-4"></a><span class="st">  </span><span class="kw">bind_cols</span>(new_people) <span class="op">%&gt;%</span></span>
+<span id="cb1053-5"><a href="continuous-response.html#cb1053-5"></a><span class="st">  </span><span class="kw">rename</span>(<span class="st">"ideology"</span> =<span class="st"> ".pred"</span>)</span></code></pre></div>
 </div>
 </div>
 <div id="temperance" class="section level2">
 <h2>
-<span class="header-section-number">10.5</span> Temperance</h2>
+<span class="header-section-number">11.5</span> Temperance</h2>
 <p>
 <span class="marginnote shownote">
 <!--
@@ -1376,50 +1377,50 @@ The Northeast, Midwest, and West all skew politically liberal in terms of averag
 </div>
 <div id="wrap-up" class="section level2">
 <h2>
-<span class="header-section-number">10.6</span> Wrap-up</h2>
+<span class="header-section-number">11.6</span> Wrap-up</h2>
 <p>Let’s loop back to the original guiding question. How does age affect ideology for respondents from different regions?</p>
 <p>Assume that the segment of the population we are interested in is college educated men making an average income. These are vital assumptions to make, as without setting baselines for the other predictor variables, we cannot make any comparisons on region and age.</p>
 <p>Say we are specifically interested in the different effects of ages on college-educated men in the Northeast versus the South. Let’s use our second model, <code>stan_model</code>, to explore this problem.</p>
 <p>First, create a tibble in which all respondents are college-educated white men making average income. Half of the group will be from the Northeast, and half from the South.</p>
-<div class="sourceCode" id="cb1009"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1009-1"><a href="continuous-response.html#cb1009-1"></a>wrap_up &lt;-<span class="st"> </span><span class="kw">tibble</span>(<span class="st">"region"</span> =<span class="st"> </span><span class="kw">as.factor</span>(<span class="kw">c</span>(<span class="st">"Northeast"</span>, <span class="st">"South"</span>, <span class="st">"Northeast"</span>, <span class="st">"South"</span>,</span>
-<span id="cb1009-2"><a href="continuous-response.html#cb1009-2"></a>                                            <span class="st">"Northeast"</span>, <span class="st">"South"</span>, <span class="st">"Northeast"</span>, <span class="st">"South"</span>,</span>
-<span id="cb1009-3"><a href="continuous-response.html#cb1009-3"></a>                                            <span class="st">"Northeast"</span>, <span class="st">"South"</span>, <span class="st">"Northeast"</span>, <span class="st">"South"</span>,</span>
-<span id="cb1009-4"><a href="continuous-response.html#cb1009-4"></a>                                            <span class="st">"Northeast"</span>, <span class="st">"South"</span>)),</span>
-<span id="cb1009-5"><a href="continuous-response.html#cb1009-5"></a>                     <span class="st">"gender"</span> =<span class="st"> </span><span class="kw">as.factor</span>(<span class="kw">c</span>(<span class="st">"Male"</span>, <span class="st">"Male"</span>, <span class="st">"Male"</span>, <span class="st">"Male"</span>,</span>
-<span id="cb1009-6"><a href="continuous-response.html#cb1009-6"></a>                                            <span class="st">"Male"</span>, <span class="st">"Male"</span>, <span class="st">"Male"</span>, <span class="st">"Male"</span>,</span>
-<span id="cb1009-7"><a href="continuous-response.html#cb1009-7"></a>                                            <span class="st">"Male"</span>, <span class="st">"Male"</span>, <span class="st">"Male"</span>, <span class="st">"Male"</span>,</span>
-<span id="cb1009-8"><a href="continuous-response.html#cb1009-8"></a>                                            <span class="st">"Male"</span>, <span class="st">"Male"</span>)),</span>
-<span id="cb1009-9"><a href="continuous-response.html#cb1009-9"></a>                     <span class="st">"income"</span> =<span class="st"> </span><span class="kw">as.factor</span>(<span class="kw">c</span>(<span class="st">"34 - 67"</span>, <span class="st">"34 - 67"</span>, <span class="st">"34 - 67"</span>, <span class="st">"34 - 67"</span>,</span>
-<span id="cb1009-10"><a href="continuous-response.html#cb1009-10"></a>                                            <span class="st">"34 - 67"</span>, <span class="st">"34 - 67"</span>, <span class="st">"34 - 67"</span>, <span class="st">"34 - 67"</span>,</span>
-<span id="cb1009-11"><a href="continuous-response.html#cb1009-11"></a>                                            <span class="st">"34 - 67"</span>, <span class="st">"34 - 67"</span>, <span class="st">"34 - 67"</span>, <span class="st">"34 - 67"</span>,</span>
-<span id="cb1009-12"><a href="continuous-response.html#cb1009-12"></a>                                            <span class="st">"34 - 67"</span>, <span class="st">"34 - 67"</span>)),</span>
-<span id="cb1009-13"><a href="continuous-response.html#cb1009-13"></a>                     <span class="st">"age"</span> =<span class="st"> </span><span class="kw">c</span>(<span class="st">"17 - 24"</span>, <span class="st">"17 - 24"</span>, <span class="st">"25 - 34"</span>, <span class="st">"25 - 34"</span>,</span>
-<span id="cb1009-14"><a href="continuous-response.html#cb1009-14"></a>                               <span class="st">"35 - 44"</span>, <span class="st">"35 - 44"</span>, <span class="st">"45 - 54"</span>, <span class="st">"45 - 54"</span>,</span>
-<span id="cb1009-15"><a href="continuous-response.html#cb1009-15"></a>                               <span class="st">"55 - 64"</span>, <span class="st">"55 - 64"</span>, <span class="st">"65 - 74"</span>, <span class="st">"65 - 74"</span>, <span class="st">"75 +"</span>, <span class="st">"75 +"</span>),</span>
-<span id="cb1009-16"><a href="continuous-response.html#cb1009-16"></a>                     <span class="st">"education"</span> =<span class="st"> </span><span class="kw">c</span>(<span class="st">"College"</span>, <span class="st">"College"</span>, <span class="st">"College"</span>, <span class="st">"College"</span>, <span class="st">"College"</span>, <span class="st">"College"</span>, <span class="st">"College"</span>, <span class="st">"College"</span>, <span class="st">"College"</span>, <span class="st">"College"</span>, <span class="st">"College"</span>, <span class="st">"College"</span>, <span class="st">"College"</span>, <span class="st">"College"</span>),</span>
-<span id="cb1009-17"><a href="continuous-response.html#cb1009-17"></a>                     <span class="st">"race"</span> =<span class="st"> </span><span class="kw">c</span>(<span class="st">"White"</span>, <span class="st">"White"</span>, <span class="st">"White"</span>, <span class="st">"White"</span>, <span class="st">"White"</span>, <span class="st">"White"</span>, <span class="st">"White"</span>, <span class="st">"White"</span>, <span class="st">"White"</span>, <span class="st">"White"</span>, <span class="st">"White"</span>, <span class="st">"White"</span>, <span class="st">"White"</span>, <span class="st">"White"</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb1054"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1054-1"><a href="continuous-response.html#cb1054-1"></a>wrap_up &lt;-<span class="st"> </span><span class="kw">tibble</span>(<span class="st">"region"</span> =<span class="st"> </span><span class="kw">as.factor</span>(<span class="kw">c</span>(<span class="st">"Northeast"</span>, <span class="st">"South"</span>, <span class="st">"Northeast"</span>, <span class="st">"South"</span>,</span>
+<span id="cb1054-2"><a href="continuous-response.html#cb1054-2"></a>                                            <span class="st">"Northeast"</span>, <span class="st">"South"</span>, <span class="st">"Northeast"</span>, <span class="st">"South"</span>,</span>
+<span id="cb1054-3"><a href="continuous-response.html#cb1054-3"></a>                                            <span class="st">"Northeast"</span>, <span class="st">"South"</span>, <span class="st">"Northeast"</span>, <span class="st">"South"</span>,</span>
+<span id="cb1054-4"><a href="continuous-response.html#cb1054-4"></a>                                            <span class="st">"Northeast"</span>, <span class="st">"South"</span>)),</span>
+<span id="cb1054-5"><a href="continuous-response.html#cb1054-5"></a>                     <span class="st">"gender"</span> =<span class="st"> </span><span class="kw">as.factor</span>(<span class="kw">c</span>(<span class="st">"Male"</span>, <span class="st">"Male"</span>, <span class="st">"Male"</span>, <span class="st">"Male"</span>,</span>
+<span id="cb1054-6"><a href="continuous-response.html#cb1054-6"></a>                                            <span class="st">"Male"</span>, <span class="st">"Male"</span>, <span class="st">"Male"</span>, <span class="st">"Male"</span>,</span>
+<span id="cb1054-7"><a href="continuous-response.html#cb1054-7"></a>                                            <span class="st">"Male"</span>, <span class="st">"Male"</span>, <span class="st">"Male"</span>, <span class="st">"Male"</span>,</span>
+<span id="cb1054-8"><a href="continuous-response.html#cb1054-8"></a>                                            <span class="st">"Male"</span>, <span class="st">"Male"</span>)),</span>
+<span id="cb1054-9"><a href="continuous-response.html#cb1054-9"></a>                     <span class="st">"income"</span> =<span class="st"> </span><span class="kw">as.factor</span>(<span class="kw">c</span>(<span class="st">"34 - 67"</span>, <span class="st">"34 - 67"</span>, <span class="st">"34 - 67"</span>, <span class="st">"34 - 67"</span>,</span>
+<span id="cb1054-10"><a href="continuous-response.html#cb1054-10"></a>                                            <span class="st">"34 - 67"</span>, <span class="st">"34 - 67"</span>, <span class="st">"34 - 67"</span>, <span class="st">"34 - 67"</span>,</span>
+<span id="cb1054-11"><a href="continuous-response.html#cb1054-11"></a>                                            <span class="st">"34 - 67"</span>, <span class="st">"34 - 67"</span>, <span class="st">"34 - 67"</span>, <span class="st">"34 - 67"</span>,</span>
+<span id="cb1054-12"><a href="continuous-response.html#cb1054-12"></a>                                            <span class="st">"34 - 67"</span>, <span class="st">"34 - 67"</span>)),</span>
+<span id="cb1054-13"><a href="continuous-response.html#cb1054-13"></a>                     <span class="st">"age"</span> =<span class="st"> </span><span class="kw">c</span>(<span class="st">"17 - 24"</span>, <span class="st">"17 - 24"</span>, <span class="st">"25 - 34"</span>, <span class="st">"25 - 34"</span>,</span>
+<span id="cb1054-14"><a href="continuous-response.html#cb1054-14"></a>                               <span class="st">"35 - 44"</span>, <span class="st">"35 - 44"</span>, <span class="st">"45 - 54"</span>, <span class="st">"45 - 54"</span>,</span>
+<span id="cb1054-15"><a href="continuous-response.html#cb1054-15"></a>                               <span class="st">"55 - 64"</span>, <span class="st">"55 - 64"</span>, <span class="st">"65 - 74"</span>, <span class="st">"65 - 74"</span>, <span class="st">"75 +"</span>, <span class="st">"75 +"</span>),</span>
+<span id="cb1054-16"><a href="continuous-response.html#cb1054-16"></a>                     <span class="st">"education"</span> =<span class="st"> </span><span class="kw">c</span>(<span class="st">"College"</span>, <span class="st">"College"</span>, <span class="st">"College"</span>, <span class="st">"College"</span>, <span class="st">"College"</span>, <span class="st">"College"</span>, <span class="st">"College"</span>, <span class="st">"College"</span>, <span class="st">"College"</span>, <span class="st">"College"</span>, <span class="st">"College"</span>, <span class="st">"College"</span>, <span class="st">"College"</span>, <span class="st">"College"</span>),</span>
+<span id="cb1054-17"><a href="continuous-response.html#cb1054-17"></a>                     <span class="st">"race"</span> =<span class="st"> </span><span class="kw">c</span>(<span class="st">"White"</span>, <span class="st">"White"</span>, <span class="st">"White"</span>, <span class="st">"White"</span>, <span class="st">"White"</span>, <span class="st">"White"</span>, <span class="st">"White"</span>, <span class="st">"White"</span>, <span class="st">"White"</span>, <span class="st">"White"</span>, <span class="st">"White"</span>, <span class="st">"White"</span>, <span class="st">"White"</span>, <span class="st">"White"</span>))</span></code></pre></div>
 <p>Next, obtain the <code>ideology</code> values by fitting like we did before:</p>
-<div class="sourceCode" id="cb1010"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1010-1"><a href="continuous-response.html#cb1010-1"></a>ideo_diff &lt;-<span class="st"> </span>lm_fit <span class="op">%&gt;%</span></span>
-<span id="cb1010-2"><a href="continuous-response.html#cb1010-2"></a><span class="st">  </span><span class="kw">predict</span>(<span class="dt">new_data =</span> wrap_up) <span class="op">%&gt;%</span></span>
-<span id="cb1010-3"><a href="continuous-response.html#cb1010-3"></a><span class="st">  </span><span class="kw">bind_cols</span>(wrap_up) </span></code></pre></div>
+<div class="sourceCode" id="cb1055"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1055-1"><a href="continuous-response.html#cb1055-1"></a>ideo_diff &lt;-<span class="st"> </span>lm_fit <span class="op">%&gt;%</span></span>
+<span id="cb1055-2"><a href="continuous-response.html#cb1055-2"></a><span class="st">  </span><span class="kw">predict</span>(<span class="dt">new_data =</span> wrap_up) <span class="op">%&gt;%</span></span>
+<span id="cb1055-3"><a href="continuous-response.html#cb1055-3"></a><span class="st">  </span><span class="kw">bind_cols</span>(wrap_up) </span></code></pre></div>
 <p>Now, let’s plot these predicted ideologies for men in the Northeast versus men in the South.</p>
-<div class="sourceCode" id="cb1011"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1011-1"><a href="continuous-response.html#cb1011-1"></a>ideo_diff <span class="op">%&gt;%</span></span>
-<span id="cb1011-2"><a href="continuous-response.html#cb1011-2"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> age, <span class="dt">y =</span> .pred, <span class="dt">color =</span> region)) <span class="op">+</span></span>
-<span id="cb1011-3"><a href="continuous-response.html#cb1011-3"></a><span class="st">  </span><span class="kw">geom_point</span>()</span></code></pre></div>
-<p><img src="book_temp_files/figure-html/unnamed-chunk-759-1.png" width="500px" style="display: block; margin-left: auto; margin-right: auto; background-color: #000; padding:3px;">
+<div class="sourceCode" id="cb1056"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1056-1"><a href="continuous-response.html#cb1056-1"></a>ideo_diff <span class="op">%&gt;%</span></span>
+<span id="cb1056-2"><a href="continuous-response.html#cb1056-2"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> age, <span class="dt">y =</span> .pred, <span class="dt">color =</span> region)) <span class="op">+</span></span>
+<span id="cb1056-3"><a href="continuous-response.html#cb1056-3"></a><span class="st">  </span><span class="kw">geom_point</span>()</span></code></pre></div>
+<p><img src="book_temp_files/figure-html/unnamed-chunk-838-1.png" width="500px" style="display: block; margin-left: auto; margin-right: auto; background-color: #000; padding:3px;">
 Interestingly, note that both regions’ male voters dip in ideology around ages 33-44 years old. The reason these two graphs look the same is because we are using a linear model. What about if we use our <code>stan_model</code> or <code>nnet_model</code>?</p>
-<div class="sourceCode" id="cb1012"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1012-1"><a href="continuous-response.html#cb1012-1"></a>stan_fit <span class="op">%&gt;%</span></span>
-<span id="cb1012-2"><a href="continuous-response.html#cb1012-2"></a><span class="st">  </span><span class="kw">predict</span>(<span class="dt">new_data =</span> wrap_up) <span class="op">%&gt;%</span></span>
-<span id="cb1012-3"><a href="continuous-response.html#cb1012-3"></a><span class="st">  </span><span class="kw">bind_cols</span>(wrap_up)  <span class="op">%&gt;%</span></span>
-<span id="cb1012-4"><a href="continuous-response.html#cb1012-4"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> age, <span class="dt">y =</span> .pred, <span class="dt">color =</span> region)) <span class="op">+</span></span>
-<span id="cb1012-5"><a href="continuous-response.html#cb1012-5"></a><span class="st">  </span><span class="kw">geom_point</span>()</span></code></pre></div>
-<p><img src="book_temp_files/figure-html/unnamed-chunk-760-1.png" width="500px" style="display: block; margin-left: auto; margin-right: auto; background-color: #000; padding:3px;"></p>
-<div class="sourceCode" id="cb1013"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1013-1"><a href="continuous-response.html#cb1013-1"></a>nnet_fit <span class="op">%&gt;%</span></span>
-<span id="cb1013-2"><a href="continuous-response.html#cb1013-2"></a><span class="st">  </span><span class="kw">predict</span>(<span class="dt">new_data =</span> wrap_up) <span class="op">%&gt;%</span></span>
-<span id="cb1013-3"><a href="continuous-response.html#cb1013-3"></a><span class="st">  </span><span class="kw">bind_cols</span>(wrap_up)  <span class="op">%&gt;%</span></span>
-<span id="cb1013-4"><a href="continuous-response.html#cb1013-4"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> age, <span class="dt">y =</span> .pred, <span class="dt">color =</span> region)) <span class="op">+</span></span>
-<span id="cb1013-5"><a href="continuous-response.html#cb1013-5"></a><span class="st">  </span><span class="kw">geom_point</span>()</span></code></pre></div>
-<p><img src="book_temp_files/figure-html/unnamed-chunk-761-1.png" width="500px" style="display: block; margin-left: auto; margin-right: auto; background-color: #000; padding:3px;"></p>
+<div class="sourceCode" id="cb1057"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1057-1"><a href="continuous-response.html#cb1057-1"></a>stan_fit <span class="op">%&gt;%</span></span>
+<span id="cb1057-2"><a href="continuous-response.html#cb1057-2"></a><span class="st">  </span><span class="kw">predict</span>(<span class="dt">new_data =</span> wrap_up) <span class="op">%&gt;%</span></span>
+<span id="cb1057-3"><a href="continuous-response.html#cb1057-3"></a><span class="st">  </span><span class="kw">bind_cols</span>(wrap_up)  <span class="op">%&gt;%</span></span>
+<span id="cb1057-4"><a href="continuous-response.html#cb1057-4"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> age, <span class="dt">y =</span> .pred, <span class="dt">color =</span> region)) <span class="op">+</span></span>
+<span id="cb1057-5"><a href="continuous-response.html#cb1057-5"></a><span class="st">  </span><span class="kw">geom_point</span>()</span></code></pre></div>
+<p><img src="book_temp_files/figure-html/unnamed-chunk-839-1.png" width="500px" style="display: block; margin-left: auto; margin-right: auto; background-color: #000; padding:3px;"></p>
+<div class="sourceCode" id="cb1058"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1058-1"><a href="continuous-response.html#cb1058-1"></a>nnet_fit <span class="op">%&gt;%</span></span>
+<span id="cb1058-2"><a href="continuous-response.html#cb1058-2"></a><span class="st">  </span><span class="kw">predict</span>(<span class="dt">new_data =</span> wrap_up) <span class="op">%&gt;%</span></span>
+<span id="cb1058-3"><a href="continuous-response.html#cb1058-3"></a><span class="st">  </span><span class="kw">bind_cols</span>(wrap_up)  <span class="op">%&gt;%</span></span>
+<span id="cb1058-4"><a href="continuous-response.html#cb1058-4"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> age, <span class="dt">y =</span> .pred, <span class="dt">color =</span> region)) <span class="op">+</span></span>
+<span id="cb1058-5"><a href="continuous-response.html#cb1058-5"></a><span class="st">  </span><span class="kw">geom_point</span>()</span></code></pre></div>
+<p><img src="book_temp_files/figure-html/unnamed-chunk-840-1.png" width="500px" style="display: block; margin-left: auto; margin-right: auto; background-color: #000; padding:3px;"></p>
 
 <!-- Outline: -->
 <!-- 1) Preamble: Intro paragraph to classification in general, both 0/1 and multiple categories. Discuss different approaches, all for solving the same problem. -->
@@ -1442,7 +1443,7 @@ Interestingly, note that both regions’ male voters dip in ideology around ages
 <a href="discrete-response.html"><button class="btn btn-default">Next</button></a>
 </p>
 <p class="build-date">Page built: 
-2020-08-22
+2020-08-23
 </p>
 </div>
 </div>
