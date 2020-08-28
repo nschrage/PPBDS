@@ -48,8 +48,13 @@ output_yaml:
 
 <!-- * The key part of this chapter is showing the themes.Rmd all the way through two problems, one causal and one not. In that way, it is very similar to chapter 8. Indeed, perhaps we should make these two chapters as alike as possible. -->
 
-Having created models with one parameter in Chapter \@ref(two-parameter) and two parameters in Chapter \@ref(three-parameters), you are now ready to make the jump to $N$ parameters. 
+Having created models with one parameter in Chapter \@ref(one-parameter) and two parameters in Chapter \@ref(two-parameters), you are now ready to make the jump to $N$ parameters. 
 
+Imagine you are running for Governor and want to do a better job of getting your voters to vote. You recently read about a large-scale experiment showing the effect of sending out a voting reminder that "shames" citizens who do not vote. You are considering sending out a "shaming" voting reminder yourself. What will happen if you do? Will more voters show up to the polls? Additionally, on the day of the election a female citizen is randomly selected. What is the probability she will vote?    
+
+In this chapter, we will consider models with multiple parameters and the complexities that arise from these additions. We will also learn how to make more accurate predictions using Bayesian methods that will provide us with answers to the questions posed above.
+
+<!-- HV: Should this overarching question change since we are now starting wit the governors data rather than shaming? -->
 
 ## Explorator Data Analysis of `governors`
 
@@ -66,8 +71,9 @@ library(tidyverse)
 
 <!-- Talk about the data, as we usual do. Lots of interesting things. Explain how we only have data for people who are already dead. That is an interesting restriction, and effects the Preceptor Table in interesting ways. Make sure to mention all the variables we end up keeping below. Finish with some graphics which show how various things are related to our lefthand side variable: alive_post. -->
 
+<!-- HV: Should I move my EDA introduction from the shaming EDA to here since this is now first? Same with the general descriptions of functions such as skim, glimpse, etc. -->
 
-We will start off by using a subset of the `governors` data set from the **PPBDS.data** package. This data set looks at the lifespans candidates for governor from 1945 to 2012. It corresponds to the paper "Longevity Returns to Political Office" by Barfort, Klemmensen & Larsen (2019), and aims to find out whether winning an election affects the lifespan of politicians.
+We will start off by using a subset of the `governors` data set from the `PPBDS.data` package. This data set looks at the lifespans of U.S. politicians from 1945 to 2012. It corresponds to the paper "Longevity Returns to Political Office" by Barfort, Klemmensen & Larsen (2019), and aims to find out whether winning an election influences the lifespan of politicians.
 
 Let's explore the variables and observations contained within this data set by performing an Exploratory Data Analysis (EDA). EDAs help us summarize the data, identify patterns, spot outliers or anomalies, and more. We can start by running some summarizing commands such as `glimpse()`, `sample_n()`, and `skim()`.
 
@@ -89,18 +95,17 @@ Another caveat is that for a given election, only the top two candidates are inc
 
 Finally, it is noted that for some observations, only the birth or death year of a candidate could be determined, in which case the date was taken as July 1st of that year.
 
-Now, let's continue with the EDA by running `sample_n()`. 
+Now, let's continue with the EDA by running `sample_n()` on the data. This will give us a random sample of observations to look at and may help us notice trends in the data, especially if we run it multiple times.
 
 ```{r}
-ch9_gov %>% 
-  sample_n(10)
+sample_n(ch9_gov, 10)
 ```
+From this sample, we can see some trends start to appear. For example, we see that `sex` is most often "Male", and status is most often "Challenger" rather than "Incumbent".
 
-Another useful command in summarizing data sets during and EDA is `skim()` from the **skimr** package.
+Another useful command in summarizing data sets during and EDA is `skim()`.
 
 ```{r}
-ch9_gov %>% 
-  skim()
+skim(ch9_gov)
 ```
 
 This output groups the variables together by type (character, logical, numeric, etc.). From this, we can see things like the number of unique last names, how many of the observations in our subset won versus how many lost their elections, and the mean number of days before and after a gubernatorial election that a candidate lived. We are also given histograms of the numerical data. In looking at the histogram for `year`, we see that it is skewed right, with half of the observations from election years between 1945 and 1962. This makes sense logically, because we are only looking at deceased candidates, and candidates from more recent elections are more likely to still be alive.
@@ -112,9 +117,10 @@ ch9_gov %>%
   ggplot(aes(x = year, y = alive_post)) +
   geom_point()
 ```
-Starting with the relationship between `alive_post` and `year`, we can see that the data is skewed right. Why might this be?
+Starting with the relationship between `alive_post` and `year`, we can see that the data is skewed right and that there is a defined line that data points do not exist above. There are no data points in the top right portion of the graph because it is not possible to have run in 2011, lived 20,000 days after the election took place, and still have died before the data set was created. This line represents the most a candidate could have possibly lived - and still have died - to be included the data set. The reason this line is slanted downward is because the maximum value for this scenario is greater in earlier years. That is, those candidates who ran for governor in earlier years could live a longer time after the election and still have died prior to the data set creation, giving them higher `alive_post` values than those who ran for office in later years. 
 
-<!-- Add more discussion of this graph -->
+Another note to make about this graph is that there are fewer observations in later years because less have died. Many governors who ran for office in the 21st century are still alive today and therefore excluded from this data set. 
+
 
 ```{r}
 ch9_gov %>%
@@ -142,6 +148,8 @@ Now that we have a general understanding of the data we are working with, let's 
 
 Let's explore descriptive, not causal, models of covariates associated with how long candidates for governor live after elections.
 
+To begin, let's run a Bayesian regression of gubernatorial candidate lifespan prior to the election on candidate lifespan after the election. That is, we will regress `alive_pre` on `alive_post` using `stan_glm()`. 
+
 ```{r}
 obj.gov.1 <- stan_glm(data = ch9_gov,
                       formula = alive_post ~ alive_pre,
@@ -149,16 +157,21 @@ obj.gov.1 <- stan_glm(data = ch9_gov,
                       refresh = 0)
 ```
 
-<!-- This is a simple example. Only three parameters are estimated: intercept, beta and sigma. But step through them all slowly, discussing what they mean. Not sure on the best way to display this. Maybe we just ignore sigma? Note that the intercerpt is meaningless here. How many days do you expect to live after the election if you have been alive zero days? That is nonsense. -->
+<!-- This is a simple example. Only three parameters are estimated: intercept, beta and sigma. But step through them all slowly, discussing what they mean. Not sure on the best way to display this. Maybe we just ignore sigma? -->
 
 ```{r}
 tbl_regression(obj.gov.1, intercept = TRUE)
 ```
+Now that we have this regression table, we will interpret it's meaning. This is a simple regression, similar to ones ran in Chapter 8. 
 
-<!-- You could center alive_pre and then redo the regression, and then  -->
+To start, let's interpret the intercept. Since our independent variable is `alive_pre`, the intercept is the `alive_post` value when `alive_pre` is zero. Here, we would interpret this intercept as the lifespan of a gubernatorial candidate after the election, if the candidate was alive for zero days prior to the election. Using the numbers included in the regression table, this means that a candidate who was alive for zero days prior to the election is expected to live 26,515 days after the election, on average. The 95% confidence interval tells us that we are 95% confident that the true mean value of the intercept is between 25,077 days and 27,977 days.
 
-<!-- ch9_gov <- ch9_gov %>% mutate(alive_pre_centered = alive_pre - mean(alive_pre)) -->
+Now let's discuss Beta for `alive_pre`. This value, -0.86, represents the slope of the model. For every unit increase in our independent variable, our dependent variable will change by this beta value. Putting this slope definition in terms of our model, this means that for every additional day a candidate is alive before an election, their lifespan after the election will decrease by 0.86 days on average. If we are given the number of days a candidate lived before the election and want to estimate how long they will live for after, we will multiply the days they were alive prior by this beta of -0.86, then subtract that from the intercept. Our 95% confidence interval here tells us that we are 95% confident that the true mean slope of this regression is contained between -0.93 and -0.78.
 
+<!-- HV: should this regression be somewhere else later on to introduce centering? or should i start here with centering before moving on to alive_post ~ sex? -->
+
+
+Let's regress `sex` on `alive_post` to see how sex affects candidates' post-election lifespans.
 
 ```{r}
 obj.gov.2 <- stan_glm(data = ch9_gov,
@@ -175,6 +188,13 @@ obj.gov.2 <- stan_glm(data = ch9_gov,
 ```{r}
 tbl_regression(obj.gov.2, intercept = TRUE)
 ```
+In this regression, we use the -1 in the formula to make the output more straightforward, with no intercept to interpret. Now looking at the regression table output, let's interpret the Beta values for Female and Male, starting with a mathematical formula.
+
+You may recall from algebra that the equation of a line is $$ y = a + b*x $$. It is defined by two coefficients *a* and *b*. The intercept coefficient *a* is the value of *y* when $$ x = 0 $$. The slope cofficient *b* for *x* is the increase in *y* for every increase of one in *x*.
+
+However, when defining a regression line, we use slightly different notation: the equation of the regression line is $$ \hat{y} = {b_0} + {b_1} x  $$. The intercept coefficient is $$ {b_0} $$, so $$ {b_0} $$ is the value of $$ \hat{y} $$ when $$ x = 0 $$. The slope coefficient for *x* is $$ {b_1} $$, i.e., the increase in $$ \hat{y} $$ for every increase of one in *x*. Why do we put a "hat" on top of the *y*? It's a form of notation commonly used in regression to indicate that we have a "fitted value," or the value of *y* on the regression line for a given *x* value.
+
+In many of the examples we will be discussing in this chapter, our regression equations will contain multiple beta values for all the different parameters we are interpreting. 
 
 <!-- DK: Weird result, huh? Men live twice as long as women! Useful to discuss why that might be the case. -->
 
@@ -235,8 +255,6 @@ tbl_regression(obj.gov.4, intercept = TRUE)
 ```
 
 <!-- DK: Take your time explaining what this means! It is not trivial. Note that this is a non-parallel slopes model. -->
-
-<!-- Consider using: ch9_gov %>% filter(sex == "Female") %>% ggplot(aes(alive_pre, alive_post)) + geom_point() + geom_smooth(method = "lm") -->
 
 
 ```{r, cache=TRUE}
@@ -352,7 +370,7 @@ By running the `skim()` command, we get a summary of the data set as a whole, as
 
 
 
-Having created models with one parameter in Chapter \@ref(#two-parameter) and two parameters in Chapter \@ref(#three-parameters), you are now ready to make the jump to $N$ parameters.  The more parameters we include in our models, the more flexible they can become. But we must be careful of *overfitting*, of making models which are inaccurate because they don't use enough data to accurately estimate those parameters. The tension between overfitting and underfitting is central to the practice of data science.
+Having created models with one parameter in Chapter \@ref(#one-parameter) and two parameters in Chapter \@ref(#two-parameters), you are now ready to make the jump to $N$ parameters.  The more parameters we include in our models, the more flexible they can become. But we must be careful of *overfitting*, of making models which are inaccurate because they don't use enough data to accurately estimate those parameters. The tension between overfitting and underfitting is central to the practice of data science.
 <!-- HV: Where does this belong? -->
 
 ## Causal Effects of `treament`
