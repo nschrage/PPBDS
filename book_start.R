@@ -14,7 +14,7 @@ library(tufte)
 library(scales)
 library(gt)
 library(gtsummary)
-library(ggtext)
+library(equatiomatic)
 library(patchwork)
 library(msmbstyle)
 
