@@ -370,7 +370,7 @@ facet_compare
 ### Using the virtual shovel 1,000 times {#shovel-1000-times}
 
 ```{r, echo=FALSE, fig.cap="So much sampling, so little time.", fig.margin = TRUE}
-# knitr::include_graphics("06-one-parameter/images/sample_bernie.png")
+knitr::include_graphics("06-one-parameter/images/sample_bernie.png")
 ```
 
 Now say we want to study the effects of sampling variation not for 33 samples, but for a larger number of samples (1000). We have two choices at this point. We could have our groups of friends manually take 1,000 samples of 50 beads and compute the corresponding 1,000 proportions. However, this would be time-consuming. This is where computers excel: automating long and repetitive tasks while performing them quickly. At this point, we will abandon tactile sampling in favor of virtual sampling. Let's once again use the `rep_sample_n()` function with sample `size` set to be 50 once again, but this time with the number of replicates `reps` set to `1000`. Be sure to scroll through the contents of `virtual_samples` in RStudio's viewer. 
@@ -554,9 +554,6 @@ comparing_n_table  %>%
   )
 ```
 
-```{r, echo=FALSE, fig.cap="Enlightened sampling.", fig.margin = TRUE}
-# knitr::include_graphics("06-one-parameter/images/big brain.png")
-```
 
 As we observed earlier, as the sample size increases, the variation decreases. In other words, there is less variation in the 1,000 values of the proportion red. So as the sample size increases, our guesses at the true proportion of the urn's beads that are red get more precise. Therefore, the larger the shovel, the more precise the result! 
 
@@ -587,7 +584,7 @@ use_shovel(x = urn, size = 25, reps = 1000)
 We can now create the object `virtual_samples_25` with the code `virtual_samples_25 <- use_shovel(x = urn, size = 25, reps = 1000)`.  This is far more succinct than our previous code, and it allows us to use a shovel of any size we'd like.
 
 ```{r, echo=FALSE, fig.cap="That's right! Functions can be passed into more functions. How fun.", fig.margin = TRUE}
-# knitr::include_graphics("06-one-parameter/images/function_meme.png")
+knitr::include_graphics("06-one-parameter/images/function_meme.png")
 ```
 
 Now, we can use our `use_shovel()` function to develop another function, `prop_red()`:
@@ -672,107 +669,12 @@ Now, we have the standard deviation of `prop_red` for all shovel sizes from 1 to
 `r margin_note("The formula for standard error is the sample standard deviation (s) divided by the square root of the number of samples (n). This may be written as: SE = s/(√n).")`
 
 ```{r, echo=FALSE, fig.cap="To any poets and philosophers confused about this: don't worry! It won't be on a problem set.", fig.margin = TRUE}
-# knitr::include_graphics("06-one-parameter/images/meme_math.png")
+knitr::include_graphics("06-one-parameter/images/meme_math.png")
 ```
 
 This is interesting!  You may recognize that the standard deviation of the proportion red is declining at a rate proportional to the square root of the shovel size. This is something you could have discovered by finding a formula in a statistics textbook, but it's easier to understand if you see it for yourself.
 
 This is the power of running many analyses at once using `map_*` functions and list columns: before, we could tell that the standard deviation was decreasing as the shovel size increased, but when only looking at shovel sizes of 25, 50, and 100, it wasn't clear *how quickly* it was decreasing.
-
-## Returning to our question
-
-<!-- MF: When we actually answer this question, should it address the fact that we know the true proportion of red bead sto be 37.5% as stated earlier in the chapter? If so, would the ultimate solution just build a model showing the # of beads at which we get a proportion red between 32.5 - 42.5 90% of the time? How do we show that? -->
-
-Recall the question we asked at the beginning of our chapter: how many beads must we sample to have a 90% chance of being within 5% of the true proportion of red beads in the entire urn? 
-
-We have looked at a number of different models and their accuracy and precision. To delve into our primary question, we must return to our discussion of distributions: posterior, joint, and marginal. 
-
-### Joint distribution
-
-In Chapter \@ref(probability) we outlined the key intuition behind all inference: there is a joint distribution of data-which-we-might-see-from-our-experiment and models-which-we-are-considering. We take this joint distribution, combine it with the actual results of the experiment, and calculate a posterior distribution over the set of possible models. In other words, we start with 
-
-$$p(models, data)$$ 
-
-We then add the specific results of the experiment, and calculate the conditional distribution of the models, given the data that we have seen:
-
-
-$$p(models | data = results-of-experiment)$$
-The rest is just details.
-
-We can do the same thing with our sampling problem. Assume that we know that there are 2,400 beads in the urn, and that all of them are either red or white. Our experiment involves the one time use of a paddle with 50 slots. We have 2,401 models under consideration. There might be zero red beads or one red bead or ... 2,399 red beads or 2,400 red beads. With a paddle of size 50, there are 51 possible results from our experiment: zero red beads or one red bead or . . . or 49 red beads or 50 red beads. With this information we can calculate the joint distribution of models which we are considering and experiment results we might observe. 
-
-<!-- DK: I am somewhat concerned that this is not exactly correct since we really ought to sample what happens when you pick 50 beads out of an urn. This can be approximated with the binomial, which is what we have done here. And, with such big numbers, it is a good approximation. But it is not exactly correct. -->
-
-```{r, echo=FALSE, cache=TRUE}
-set.seed(10)
-
-urn_size <- 2400
-paddle_size <- 50
-
-# Make a tibble with 2.4 millions rows . . . Maybe that works OK. But making the
-# graph is then intensive.
-
-x <- tibble(red_urn = rep(seq(0, urn_size, 1), 1000)) %>%
-  mutate(red_paddle = map_int(red_urn, ~ rbinom(n = 1, 
-                                                size = paddle_size, 
-                                                prob = ./urn_size)))
-
-```
-
-
-```{r, echo=FALSE, cache=TRUE}
-x %>%
-  ggplot(aes(y = red_urn, x = red_paddle)) +
-    geom_point(alpha = 0.005) +
-    labs(title = "Joint Distribution of Red Beads in Paddle and in Urn",
-         x = "Number of Red Beads in Paddle",
-         y = "Number of Red Beads in Urn")
-
-```
-
-We follow the same steps now as we did in Chapter \@ref(probability). We run the experiment. Assume that 16 of the 50 beads drawn in the paddle were red. What does that make our posterior probability? We want:
-
-$$p(models | data = 16)$$ 
-
-The same approach works again. We take a "slice" of the joint distribution where the number of red beads in the paddle is equal to 16. After normalization, that gives us this posterior probability for the number of red beads in the urn:
-
-```{r, echo=FALSE}
-x %>% 
-  filter(red_paddle == 16) %>% 
-  group_by(red_urn) %>% 
-  summarize(total = n(), .groups = "drop") %>%
-  mutate(probs = total/sum(total)) %>% 
-  ggplot(aes(x = red_urn, y = probs)) +
-    geom_col() +
-    labs(title = "Posterior Probability Distribution of Red Beads in Urn",
-         x = "Possible Number of Red Beads",
-         y = "Probability")
-```
-
-### Data Generating Mechanism
-
-```{r, echo=FALSE}
-
-# probs_from_experiment = x %>% 
-#   filter(red_paddle == 16) %>% 
-#   group_by(red_urn) %>% 
-#   summarize(total = n(), .groups = "drop") %>%
-#   mutate(probs = total/sum(total)) %>% 
-#   pull(probs)
-# 
-# tibble(posterior_p = probs_from_experiment) %>% 
-#   mutate(results = map_int(posterior_p, ~ rbinom(n = 1, 
-#                                                 size = 100, 
-#                                                 prob = .))) %>% 
-#   mutate(bigger_than_33 = ifelse(results > 33, TRUE, FALSE))
-
-```
-
-
-
-### The Leap to Continuous
-
-<!-- DK: I will take a shot at this. -->
 
 ## Sampling framework {#sampling-framework}
 
@@ -787,7 +689,7 @@ Let's now introduce some terminology and notation as well as statistical definit
 ### Terminology and notation {#terminology-and-notation}
 
 ```{r, echo=FALSE, fig.cap="Let Yoda's wisdom dull the pain of this terminology section.", fig.margin = TRUE}
-# knitr::include_graphics("06-one-parameter/images/yoda.png")
+knitr::include_graphics("06-one-parameter/images/yoda.png")
 ```
 
 Here is a list of terminology and mathematical notation relating to sampling.
@@ -1052,7 +954,7 @@ Our problem, estimating Obama's electability in young people, is not solved by t
 First, not all young Americans vote! In fact, many do not. Therefore, if we wanted to draw a conclusion about Obama's favorability among young American **voters**, the sample population would need to be modified to only include registered voters with the intention of voting in the next election. A sample population of random young Americans, with no question on voting behavior, tells us almost nothing about our key problem.
 
 ```{r, echo=FALSE, fig.cap="Sampling doesn't work if the data doesn't map to our research question!", fig.margin = TRUE}
-# knitr::include_graphics("06-one-parameter/images/tree_meme.png")
+knitr::include_graphics("06-one-parameter/images/tree_meme.png")
 ```
 
 Second, we need to change the question. The *true* question is not Obama's favoribility among young Americans, but is actually: will you or will you not vote for Obama in the next election? To allow more flexibility in responses and get a range of responses that accurately refect uncertainty and likelihood, we might pose the following question: on a scale from one to ten, with one being "most definitely not" and ten being "most definitely", how likely are you to vote for Obama in the next election?
@@ -1179,7 +1081,7 @@ In order to investigate this concept, let's revisit our Preceptor Tables.
 Recall that a Preceptor Table is a table with rows and columns for all the data we would (reasonably) like to have. There are two different types of Preceptor Tables that are applicable to our urn example: actual and ideal.
 
 ```{r, echo=FALSE, fig.cap="When you see another Precetor Table section.", fig.margin = TRUE}
-# knitr::include_graphics("06-one-parameter/images/here_we_go.png")
+knitr::include_graphics("06-one-parameter/images/here_we_go.png")
 ```
 
 An actual Preceptor Table shows what we *actually* know. Accordingly, the table is riddled with question marks that the real world saddles us with. The ideal Preceptor Table is the Preceptor Table with no question marks, and a reasonable number of rows and columns. With an ideal Preceptor Table, there is need for inference; the estimand is a simple matter of arithmetic. 
@@ -1261,24 +1163,25 @@ What if we had the option to use a shovel with **200** slots, but it had a minor
 ### El Jefe's or Felipe's?
 
 ```{r, echo=FALSE, fig.cap="El Jefe's, a Harvard Square staple, is known for its large portions and delicious horchata.", fig.margin = TRUE}
-# knitr::include_graphics("06-one-parameter/images/el_jefes.png")
+knitr::include_graphics("06-one-parameter/images/el_jefes.png")
 ```
 
 ```{r, echo=FALSE, fig.cap="Felipe's, another staple, is said to have a more authentic experience and addicting churros.", fig.margin = TRUE}
-# knitr::include_graphics("06-one-parameter/images/felipes.png")
+knitr::include_graphics("06-one-parameter/images/felipes.png")
 ```
-To apply this to a more complex example than an urn, imagine we are conducting a poll to gather information on whether Harvard students prefer El Jefe's Taqueria or Felipe's Taqueria. We are given two options: 1) we can conduct the poll on 200 students walking out of Lamont Library or 2) we can conduct the poll on 500 students walking outside of El Jefe's Taqueria. 
+
+To apply this to a more complex example than an urn, imagine we are conducting a poll to gather information on whether Harvard students prefer El Jefe's Taqueria or Felipe's Taqueria. We are given two options: 1) we can conduct the poll on 200 students walking out of Lamont Library or 2) we can conduct the poll on 300 students walking outside of El Jefe's Taqueria. 
 
 The first scenario provides a more accurate estimate, since Lamont Library ensures an unbiased sample. The second scenario, however, provides a more precise estimate due to the larger sample size. Even though the students **outside** of El Jefe's might not be patrons, it is safe to assume that at least some will be patrons, making our sample somewhat biased. What is the better option? Here, the risk of bias is too high in the second scenario, even if our estimate would be more precise. Choosing the first scenario means sacrificing some precision for the sake of an unbiased result. Here, accuracy beats precision.
 
 ### Shake Shack or Tasty Burger?
 
 ```{r, echo=FALSE, fig.cap="Shake Shack is known for its plethora of shake flavors, crinkle cut fries, and interaction-less checkout stands.", fig.margin = TRUE}
-# knitr::include_graphics("06-one-parameter/images/shake shack.png")
+knitr::include_graphics("06-one-parameter/images/shake_shack.png")
 ```
 
 ```{r, echo=FALSE, fig.cap="Tasty Burger is famous for its late-night hours, huge vats of mustard, and beer (for those of drinking age).", fig.margin = TRUE}
-# knitr::include_graphics("06-one-parameter/images/tasty burger.png")
+knitr::include_graphics("06-one-parameter/images/tasty_burger.png")
 ``` 
 
 Now, let's imagine we are conducting a different poll to gather information on whether Harvard students prefer Tasty Burger or Shake Shack. We are given two different options: 1) we can conduct the poll on 25 students walking out of Widener Library or 2) we can conduct the poll on 600 students walking outside of Tasty Burger. 
@@ -1286,7 +1189,7 @@ Now, let's imagine we are conducting a different poll to gather information on w
 Though our first scenario involves polling in a food neutral space (ensuring an unbiased and therefore accurate sample), the sample size is rather small. A sample of 25 students to represent the opinions of over 6000 Harvard students is sacrificing a lot of precision. The second scenario presents the same issue as the Felipe's example: though it is not guaranteed, it is likely that sampling outside of one of our two dining options will result in biased data. However, the significantly larger sample size, which would show the results for almost 10% of the total student population, means that our estimate is likely to be closer to the truth. In this case, precision wins over accuracy. 
 
 ```{r, echo=FALSE, fig.cap="Which one? Hard choice!", fig.margin = TRUE}
-# knitr::include_graphics("06-one-parameter/images/accurate_precise_meme.png")
+knitr::include_graphics("06-one-parameter/images/accurate_precise_meme.png")
 ```
 
 ### Sampling is hard!
@@ -1300,6 +1203,105 @@ As we just learned, there are often decisions that we, as data scientists, must 
 Here's a harder question: given the ease of errors in sampling, how can we say whether our estimates are valid? 
 
 The easiest way to do this would be to re-run the experiment and compare the new results to our predictions. The validity of our predications, derived from the predictive Preceptor Table, is how we confirm that our conclusions are correct. 
+
+## Returning to our question
+
+<!-- MF: When we actually answer this question, should it address the fact that we know the true proportion of red bead sto be 37.5% as stated earlier in the chapter? If so, would the ultimate solution just build a model showing the # of beads at which we get a proportion red between 32.5 - 42.5 90% of the time? How do we show that? -->
+
+Recall the question we asked at the beginning of our chapter: how many beads must we sample to have a 90% chance of being within 5% of the true proportion of red beads in the entire urn? 
+
+We have looked at a number of different models and their accuracy and precision. To delve into our primary question, we must return to our discussion of distributions: posterior, joint, and marginal. 
+
+### Joint distribution
+
+In Chapter \@ref(probability) we outlined the key intuition behind all inference: there is a joint distribution of data-which-we-might-see-from-our-experiment and models-which-we-are-considering. We take this joint distribution, combine it with the actual results of the experiment, and calculate a posterior distribution over the set of possible models. In other words, we start with 
+
+$$p(models, data)$$ 
+
+We then add the specific results of the experiment, and calculate the conditional distribution of the models, given the data that we have seen:
+
+
+$$p(models | data = results-of-experiment)$$
+The rest is just details.
+
+We can do the same thing with our sampling problem. Assume that we know that there are 2,400 beads in the urn, and that all of them are either red or white. Our experiment involves the one time use of a paddle with 50 slots. We have 2,401 models under consideration. There might be zero red beads or one red bead or ... 2,399 red beads or 2,400 red beads. With a paddle of size 50, there are 51 possible results from our experiment: zero red beads or one red bead or . . . or 49 red beads or 50 red beads. With this information we can calculate the joint distribution of models which we are considering and experiment results we might observe. 
+
+<!-- DK: I am somewhat concerned that this is not exactly correct since we really ought to sample what happens when you pick 50 beads out of an urn. This can be approximated with the binomial, which is what we have done here. And, with such big numbers, it is a good approximation. But it is not exactly correct. -->
+
+```{r, echo=FALSE, cache=TRUE}
+set.seed(10)
+
+urn_size <- 2400
+paddle_size <- 50
+
+# Make a tibble with 2.4 millions rows . . . Maybe that works OK. But making the
+# graph is then intensive.
+
+x <- tibble(red_urn = rep(seq(0, urn_size, 1), 1000)) %>%
+  mutate(red_paddle = map_int(red_urn, ~ rbinom(n = 1, 
+                                                size = paddle_size, 
+                                                prob = ./urn_size)))
+
+```
+
+
+```{r, echo=FALSE, cache=TRUE}
+x %>%
+  ggplot(aes(y = red_urn, x = red_paddle)) +
+    geom_point(alpha = 0.005) +
+    labs(title = "Joint Distribution of Red Beads in Paddle and in Urn",
+         x = "Number of Red Beads in Paddle",
+         y = "Number of Red Beads in Urn")
+
+```
+
+We follow the same steps now as we did in Chapter \@ref(probability). We run the experiment. Assume that 16 of the 50 beads drawn in the paddle were red. What does that make our posterior probability? We want:
+
+$$p(models | data = 16)$$ 
+
+The same approach works again. We take a "slice" of the joint distribution where the number of red beads in the paddle is equal to 16. After normalization, that gives us this posterior probability for the number of red beads in the urn:
+
+```{r, echo=FALSE}
+x %>% 
+  filter(red_paddle == 16) %>% 
+  group_by(red_urn) %>% 
+  summarize(total = n(), .groups = "drop") %>%
+  mutate(probs = total/sum(total)) %>% 
+  ggplot(aes(x = red_urn, y = probs)) +
+    geom_col() +
+    labs(title = "Posterior Probability Distribution of Red Beads in Urn",
+         x = "Possible Number of Red Beads",
+         y = "Probability")
+```
+
+### Data Generating Mechanism (DGM)
+
+To answer our question, "what is the proportion of red beads in the urn?", we used a Data Generating Mechanism (DGM). First, we created a virtual analog of our real-life urn. Then, we used a virtual shovel to draw samples from our virtual urn. We then used handy data science tools to 1) simulate the proportion of red beads using different virtual shovel sizes, 2) calculate the proportion of red beads using a thousand repetitions of different shovel sizes, and 3) show the standard error between the different shovel sizes and their respective proportions of red beads. 
+
+We need a "machine" which generates these predictions, which is the same thing as a machine which fills in all the question marks in the Actual Preceptor Table, which is the same thing as a machine which produces "fake data" which looks a lot like our actual data. This part of the work (the code, our virtual machine) is the DGM. 
+
+<!-- ELABORATE on fitted model & unmodeled variation here -->
+
+```{r, echo=FALSE}
+
+# probs_from_experiment = x %>% 
+#   filter(red_paddle == 16) %>% 
+#   group_by(red_urn) %>% 
+#   summarize(total = n(), .groups = "drop") %>%
+#   mutate(probs = total/sum(total)) %>% 
+#   pull(probs)
+# 
+# tibble(posterior_p = probs_from_experiment) %>% 
+#   mutate(results = map_int(posterior_p, ~ rbinom(n = 1, 
+#                                                 size = 100, 
+#                                                 prob = .))) %>% 
+#   mutate(bigger_than_33 = ifelse(results > 33, TRUE, FALSE))
+
+```
+
+### The Leap to Continuous
+
+<!-- DK: I will take a shot at this. -->
 
 
 ## Conclusion
