@@ -47,6 +47,13 @@ if(f.classList.contains('fa-plus-square')) {
 </script>
 <script src="libs/accessible-code-block-0.0.1/empty-anchor.js"></script>
 <script src="libs/htmlwidgets-1.5.1/htmlwidgets.js"></script>
+<script src="libs/plotly-binding-4.9.2.1/plotly.js"></script>
+<script src="libs/typedarray-0.1/typedarray.min.js"></script>
+<script src="libs/jquery-1.11.3/jquery.min.js"></script>
+<link href="libs/crosstalk-1.1.0.1/css/crosstalk.css" rel="stylesheet" />
+<script src="libs/crosstalk-1.1.0.1/js/crosstalk.min.js"></script>
+<link href="libs/plotly-htmlwidgets-css-1.52.2/plotly-htmlwidgets.css" rel="stylesheet" />
+<script src="libs/plotly-main-1.52.2/plotly-latest.min.js"></script>
 <link href="libs/str_view-0.1.0/str_view.css" rel="stylesheet" />
 <script src="libs/str_view-binding-1.4.0/str_view.js"></script>
 
@@ -149,7 +156,10 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li class="toc"><a href="#eda-for-nhanes"> EDA for <code>nhanes</code></a></li>
 <li class="toc"><a href="#using-bootstraps-with-nhanes"> Using Bootstraps with <code>nhanes</code></a></li>
 <li class="toc"><a href="#show-that-bootstrap-works"> Show that Bootstrap Works</a></li>
-<li class="toc"><a href="#NA"> <code>stan_glm()</code></a></li>
+<li class="toc"><a href="#prudence"> Prudence</a></li>
+<li class="toc"><a href="#justice"> Justice</a></li>
+<li class="toc"><a href="#fortitude"> Fortitude</a></li>
+<li class="toc"><a href="#temperance"> Temperance</a></li>
 </ul>
 <a href="three-parameters.html"><span class="toc-section-number">8</span> Three Parameters</a>
 <a href="n-parameters.html"><span class="toc-section-number">9</span> N Parameters</a>
@@ -180,7 +190,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <span class="header-section-number">7.1</span> Pennies example</h2>
 <p>In Chapter <a href="one-parameter.html#one-parameter">6</a>, we studied sampling. We started with a “tactile” exercise where we wanted to know the proportion of balls in the urn that are red. While we could have performed an exhaustive count, this would have been a tedious process. So instead, we used a shovel to extract a sample of 50 balls and used the resulting proportion that were red as an <em>estimate</em>. Furthermore, we made sure to mix the urn’s contents before every use of the shovel. Because of the randomness created by the mixing, different uses of the shovel yielded different proportions red and hence different estimates of the proportion of the urn’s balls that are red.</p>
 <p>Remember: There is a <em>truth</em> here. There is an urn. It has red and white balls in it. An exact, but unknown, number of the balls are red. An exact, but unknown, number of the balls are white. An exact, but unknown, percentage of the balls are red – defined as the number red divided by the sum of the number red and the number white. Our goal was to estimate that unknown percentage. We wanted to make statements about the world, even if we can never be certain that those statements are <em>true</em>. We will never have the time or inclination to actually count all the balls. We use the term <em>parameter</em> for things that exist but which are unknown. We use statistics to estimate the true values of parameters.</p>
-<p>We then mimicked this <em>physical</em> sampling exercise with an equivalent <em>virtual</em> sampling exercise using the computer. In Subsection <a href="one-parameter.html#different-shovels">6.2.4</a>, we repeated this sampling procedure 1,000 times, using three different virtual shovels with 25, 50, and 100 slots. We visualized these three sets of 1,000 estimates in Figure <a href="#fig:comparing-sampling-distributions-3"><strong>??</strong></a> and saw that as the sample size increased, the variation in the estimates decreased. We then expanded this for all sample sizes from 1 to 100.</p>
+<p>We then mimicked this <em>physical</em> sampling exercise with an equivalent <em>virtual</em> sampling exercise using the computer. In Subsection <a href="one-parameter.html#different-shovels">6.2.4</a>, we repeated this sampling procedure 1,000 times, using three different virtual shovels with 25, 50, and 100 slots. We visualized these three sets of 1,000 estimates in Chapter 6 and saw that as the sample size increased, the variation in the estimates decreased. We then expanded this for all sample sizes from 1 to 100.</p>
 <p>In doing so, we constructed <em>sampling distributions</em>. The motivation for taking a 1,000 repeated samples and visualizing the resulting estimates was to study how these estimates varied from one sample to another; in other words, we wanted to study the effect of <em>sampling variation</em>. We quantified the variation of these estimates using their standard deviation, which has a special name: the <em>standard error</em>. In particular, we saw that as the sample size increased from 1 to 100, the standard error decreased and thus the sampling distributions narrowed. Larger sample sizes led to more <em>precise</em> estimates that varied less around the center.</p>
 <!-- Distinguish further the difference between standard deviation and standard error in the above paragraph. Readers can confuse the two. -->
 <p>We then tied these sampling exercises to terminology and mathematical notation related to sampling in Subsection <a href="one-parameter.html#terminology-and-notation">6.3.1</a>. Our <em>study population</em> was the large urn with <span class="math inline">\(N\)</span> = 2,400 balls, while the <em>population parameter</em>, the unknown quantity of interest, was the population proportion <span class="math inline">\(p\)</span> of the urn’s balls that were red. Since performing a <em>census</em> would be expensive in terms of time and energy, we instead extracted a <em>sample</em> of size <span class="math inline">\(n\)</span> = 50. The <em>point estimate</em>, also known as a <em>sample statistic</em>, used to estimate <span class="math inline">\(p\)</span> was the sample proportion <span class="math inline">\(\hat{p}\)</span> of these 50 sampled balls that were red. Furthermore, since the sample was obtained at <em>random</em>, it can be considered as <em>unbiased</em> and as <em>representative</em> of the population. Thus any results based on the sample could be <em>generalized</em> to the population. Therefore, the proportion of the shovel’s balls that were red was a “good guess” of the proportion of the urn’s balls that are red. In other words, we used the sample to draw <em>inferences</em> about the population.</p>
@@ -201,25 +211,24 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <div id="what-is-the-average-year-on-us-pennies-in-2019" class="section level3">
 <h3>
 <span class="header-section-number">7.1.2</span> What is the average year on US pennies in 2019?</h3>
-<p>Try to imagine all the pennies being used in the United States in 2019. That’s a lot of pennies! Now say we’re interested in the average year of minting of <em>all</em> these pennies. One way to compute this value would be to gather up all pennies being used in the US, record the year, and compute the average. However, this would be near impossible! So instead, let’s collect a <em>sample</em> of 50 pennies from a local bank in downtown Northampton, Massachusetts, USA as seen in Figure <a href="#fig:resampling-exercise-a"><strong>??</strong></a>.</p>
-<!-- CB: I think it would help  with the Preceptor table concept to ask the question of 'If we are given a random penny in 2019, what would we predict the year to be on that penny?' And that way you can tie in and reinforce the idea of the predictive model which is introduced in my chapter like we talked about. Either introduce here or around line 246? -->
+<p>Try to imagine all the pennies being used in the United States in 2019. That’s a lot of pennies! Now say we’re interested in the average year of minting of <em>all</em> these pennies. One way to compute this value would be to gather up all pennies being used in the US, record the year, and compute the average. However, this would be near impossible! So instead, let’s collect a <em>sample</em> of 50 pennies from a local bank in downtown Northampton, Massachusetts, USA as seen in the photo below</p>
 <div class="figure">
-<span id="fig:unnamed-chunk-642-1"></span>
+<span id="fig:unnamed-chunk-645-1"></span>
 <p class="caption marginnote shownote">
 FIGURE 7.1: Collecting a sample of 50 US pennies from a local bank.
 </p>
 <img src="07-two-parameters/images/bank.jpg" alt="Collecting a sample of 50 US pennies from a local bank." width="2016">
 </div>
 <div class="figure">
-<span id="fig:unnamed-chunk-642-2"></span>
+<span id="fig:unnamed-chunk-645-2"></span>
 <p class="caption marginnote shownote">
 FIGURE 7.2: Collecting a sample of 50 US pennies from a local bank.
 </p>
 <img src="07-two-parameters/images/roll.jpg" alt="Collecting a sample of 50 US pennies from a local bank." width="2016">
 </div>
-<p>An image of these 50 pennies can be seen in Figure <a href="#fig:resampling-exercise-c"><strong>??</strong></a>. For each of the 50 pennies starting in the top left, progressing row-by-row, and ending in the bottom right, note there is an “ID” identification variable printed in black and the year of minting printed in white.</p>
+<p>An image of these 50 pennies can be seen in below. For each of the 50 pennies starting in the top left, progressing row-by-row, and ending in the bottom right, note there is an “ID” identification variable printed in black and the year of minting printed in white.</p>
 <div class="figure">
-<span id="fig:unnamed-chunk-643"></span>
+<span id="fig:unnamed-chunk-646"></span>
 <p class="caption marginnote shownote">
 FIGURE 7.3: 50 US pennies labelled.
 </p>
@@ -250,7 +259,8 @@ FIGURE 7.3: 50 US pennies labelled.
 ##  9     9  2004
 ## 10    10  2000
 ## # … with 40 more rows</code></pre>
-<p>The <code>pennies_sample</code> data frame has 50 rows corresponding to each penny with two variables. The first variable <code>ID</code> corresponds to the ID labels in Figure <a href="#fig:resampling-exercise-c"><strong>??</strong></a>, whereas the second variable <code>year</code> corresponds to the year of minting saved as a numeric variable, also known as a double (<code>dbl</code>).</p>
+<p>The <code>pennies_sample</code> data frame has 50 rows corresponding to each penny with two variables. The first variable <code>ID</code> corresponds to the ID labels in our table above, whereas the second variable <code>year</code> corresponds to the year of minting saved as a numeric variable, also known as a double (<code>dbl</code>).</p>
+<p>Additionally, let’s look at what a Preceptor Table would look like in this <code>pennies_sample example</code>. Essentially, what we are seeing is that if you are given a random penny in 2019, we are trying to estimate what they year is for that random penny. The last row is your best guess if that random year is given, because given that we are dealing with one parameter we are only dealing with one row. This would be different with two paramters because then we would have two rows.</p>
 <style>html {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
 }
@@ -635,16 +645,16 @@ FIGURE 7.3: 50 US pennies labelled.
     </tr>
 </tbody>
 </table></div>
-<p>Based on these 50 sampled pennies, what can we say about <em>all</em> US pennies in 2019? Let’s study some properties of our sample by performing an exploratory data analysis. Let’s first visualize the distribution of the year of these 50 pennies using our data visualization tools from Chapter <a href="#viz"><strong>??</strong></a>. Since <code>year</code> is a numerical variable, we use a histogram in Figure <a href="#fig:pennies-sample-histogram"><strong>??</strong></a> to visualize its distribution.</p>
+<p>Based on these 50 sampled pennies, what can we say about <em>all</em> US pennies in 2019? Let’s study some properties of our sample by performing an exploratory data analysis. Let’s first visualize the distribution of the year of these 50 pennies using our data visualization tools from before. Since <code>year</code> is a numerical variable, we use a histogram to visualize its distribution.</p>
 <div class="sourceCode" id="cb835"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb835-1"><a href="two-parameters.html#cb835-1"></a>pennies_sample <span class="op">%&gt;%</span></span>
 <span id="cb835-2"><a href="two-parameters.html#cb835-2"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> year)) <span class="op">+</span></span>
 <span id="cb835-3"><a href="two-parameters.html#cb835-3"></a><span class="st">  </span><span class="kw">geom_histogram</span>(<span class="dt">binwidth =</span> <span class="dv">10</span>, <span class="dt">color =</span> <span class="st">"white"</span>)</span></code></pre></div>
 <div class="figure">
-<span id="fig:unnamed-chunk-646"></span>
+<span id="fig:unnamed-chunk-649"></span>
 <p class="caption marginnote shownote">
 FIGURE 7.4: Distribution of year on 50 US pennies.
 </p>
-<img src="book_temp_files/figure-html/unnamed-chunk-646-1.png" alt="Distribution of year on 50 US pennies." width="672">
+<img src="book_temp_files/figure-html/unnamed-chunk-649-1.png" alt="Distribution of year on 50 US pennies." width="672">
 </div>
 <p>Observe a slightly left-skewed distribution, since most pennies fall between 1980 and 2010 with only a few pennies older than 1970. What is the average year for the 50 sampled pennies? Eyeballing the histogram it appears to be around 1990. Let’s now compute this value exactly using our data wrangling tools from Chapter <a href="wrangling.html#wrangling">2</a>.</p>
 <div class="sourceCode" id="cb836"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb836-1"><a href="two-parameters.html#cb836-1"></a>pennies_sample <span class="op">%&gt;%</span><span class="st"> </span></span>
@@ -654,6 +664,7 @@ FIGURE 7.4: Distribution of year on 50 US pennies.
 ##       &lt;dbl&gt;
 ## 1     1995.</code></pre>
 <p>Thus, if we’re willing to assume that <code>pennies_sample</code> is a representative sample from <em>all</em> US pennies, a “good guess” of the average year of minting of all US pennies would be 1995.44. In other words, around 1995. This should all start sounding similar to what we did previously in Chapter <a href="one-parameter.html#one-parameter">6</a>!</p>
+<p>After calculating our “good guess”, we can fill in the question mark for our original Preceptor Table. Essentially, any random penny in 2019, the best guess would be 1995.44.</p>
 <style>html {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
 }
@@ -1040,7 +1051,7 @@ FIGURE 7.4: Distribution of year on 50 US pennies.
 </table></div>
 <p>In Chapter <a href="one-parameter.html#one-parameter">6</a>, our <em>study population</em> was the urn of <span class="math inline">\(N\)</span> = 2400 balls. Our <em>population parameter</em> was the <em>population proportion</em> of these balls that were red, denoted by <span class="math inline">\(p\)</span>. In order to estimate <span class="math inline">\(p\)</span>, we extracted a sample of 50 balls using the shovel. We then computed the relevant <em>point estimate</em>: the <em>sample proportion</em> of these 50 balls that were red, denoted mathematically by <span class="math inline">\(\hat{p}\)</span>.</p>
 <p>Here our population is <span class="math inline">\(N\)</span> = whatever the number of pennies are being used in the US, a value which we don’t know and probably never will. The population parameter of interest is now the <em>population mean</em> year of all these pennies, a value denoted mathematically by the Greek letter <span class="math inline">\(\mu\)</span> (pronounced “mu”). In order to estimate <span class="math inline">\(\mu\)</span>, we went to the bank and obtained a sample of 50 pennies and computed the relevant point estimate: the <em>sample mean</em> year of these 50 pennies, denoted mathematically by <span class="math inline">\(\overline{x}\)</span> (pronounced “x-bar”). An alternative and more intuitive notation for the sample mean is <span class="math inline">\(\hat{\mu}\)</span>. However, this is unfortunately not as commonly used, so in this book we’ll stick with convention and always denote the sample mean as <span class="math inline">\(\overline{x}\)</span>.</p>
-<p>We summarize the correspondence between the sampling urn exercise in Chapter <a href="one-parameter.html#one-parameter">6</a> and our pennies exercise in Table <a href="#tab:table-ch8-b"><strong>??</strong></a>.</p>
+<p>We summarize the correspondence between the sampling urn exercise in Chapter <a href="one-parameter.html#one-parameter">6</a> and our pennies exercise in Table below.</p>
 <style>html {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
 }
@@ -1442,7 +1453,7 @@ FIGURE 7.4: Distribution of year on 50 US pennies.
 <p>4</p>
 </div></td>
       <td class="gt_row gt_left"><div class="gt_from_md">
-<p>Difference in Pupulation means</p>
+<p>Difference in population means</p>
 </div></td>
       <td class="gt_row gt_left"><div class="gt_from_md">
 <p>$$\mu_1 - \mu_2$$</p>
@@ -1454,44 +1465,10 @@ FIGURE 7.4: Distribution of year on 50 US pennies.
 <p>$$\overline{x}_1 - \overline{x}_2$$</p>
 </div></td>
     </tr>
-<tr>
-<td class="gt_row gt_left"><div class="gt_from_md">
-<p>5</p>
-</div></td>
-      <td class="gt_row gt_left"><div class="gt_from_md">
-<p>Population regression slope</p>
-</div></td>
-      <td class="gt_row gt_left"><div class="gt_from_md">
-<p>$$\beta_1$$</p>
-</div></td>
-      <td class="gt_row gt_left"><div class="gt_from_md">
-<p>Fitted regression slope</p>
-</div></td>
-      <td class="gt_row gt_left"><div class="gt_from_md">
-<p>$$b_1$$ or $$\hat{\beta}_1$$</p>
-</div></td>
-    </tr>
-<tr>
-<td class="gt_row gt_left"><div class="gt_from_md">
-<p>6</p>
-</div></td>
-      <td class="gt_row gt_left"><div class="gt_from_md">
-<p>Population regression coefficient</p>
-</div></td>
-      <td class="gt_row gt_left"><div class="gt_from_md">
-<p>$$\beta_0$$</p>
-</div></td>
-      <td class="gt_row gt_left"><div class="gt_from_md">
-<p>Fitted regression intercept</p>
-</div></td>
-      <td class="gt_row gt_left"><div class="gt_from_md">
-<p>$$b_0$$ or $$\hat{\beta}_0$$</p>
-</div></td>
-    </tr>
 </tbody>
 </table></div>
-<p>Going back to our 50 sampled pennies in Figure <a href="#fig:resampling-exercise-c"><strong>??</strong></a>, the point estimate of interest is the sample mean <span class="math inline">\(\overline{x}\)</span> of 1995.44. This quantity is an <em>estimate</em> of the population mean year of <em>all</em> US pennies <span class="math inline">\(\mu\)</span>.</p>
-<p>Recall that we also saw in Chapter <a href="one-parameter.html#one-parameter">6</a> that such estimates are prone to <em>sampling variation</em>. For example, in this particular sample in Figure <a href="#fig:resampling-exercise-c"><strong>??</strong></a>, we observed three pennies with the year 1999. If we sampled another 50 pennies, would we observe exactly three pennies with the year 1999 again? More than likely not. We might observe none, one, two, or maybe even all 50! The same can be said for the other 26 unique years that are represented in our sample of 50 pennies.</p>
+<p>Going back to our 50 sampled pennies, the point estimate of interest is the sample mean <span class="math inline">\(\overline{x}\)</span> of 1995.44. This quantity is an <em>estimate</em> of the population mean year of <em>all</em> US pennies <span class="math inline">\(\mu\)</span>.</p>
+<p>Recall that we also saw in Chapter <a href="one-parameter.html#one-parameter">6</a> that such estimates are prone to <em>sampling variation</em>. For example, in this particular sample, we observed three pennies with the year 1999. If we sampled another 50 pennies, would we observe exactly three pennies with the year 1999 again? More than likely not. We might observe none, one, two, or maybe even all 50! The same can be said for the other 26 unique years that are represented in our sample of 50 pennies.</p>
 <p>So what do we do about this sampling variation? One solution is that we create bootstrap samples! As you already know that resampling is a significant tool in data science, bootstrapping is one such resampling method that many data scientists use today. Bootstrapping essentially repeatedly draws independent samples from our data set with replacement. By sampling with replacement, the same observation can be sampled multiple times and each bootstrap sample will have the same number of observations as the original data set.</p>
 <p><label for="tufte-mn-79" class="margin-toggle">⊕</label><input type="checkbox" id="tufte-mn-79" class="margin-toggle"><span class="marginnote">To conduct bootstraps, make sure your dowload both rsample and tidyverse libraries</span></p>
 <p>Before the computer age, scientists would use direct standard error formulas and complex Taylor Series to compute confidence intervals for an estimate. However, the bootstrap was developed as an alternative to compute standard errors and confidence intervals for any statistic in a much faster and easier way.</p>
@@ -1596,9 +1573,9 @@ much simpler to carry out. — Elements of Statistical Learning, 2nd edition, by
 <span id="cb846-3"><a href="two-parameters.html#cb846-3"></a><span class="st">    </span><span class="kw">geom_histogram</span>(<span class="kw">aes</span>(<span class="dt">x =</span> year_mean, <span class="dt">y=</span>..count..<span class="op">/</span><span class="kw">sum</span>(..count..)), <span class="dt">binwidth =</span> <span class="fl">.5</span>, <span class="dt">fill =</span> <span class="st">"red"</span>) <span class="op">+</span></span>
 <span id="cb846-4"><a href="two-parameters.html#cb846-4"></a><span class="st">    </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">"Estimate in Year"</span>, <span class="dt">y =</span> <span class="st">"Probability"</span>,</span>
 <span id="cb846-5"><a href="two-parameters.html#cb846-5"></a>         <span class="dt">title =</span> <span class="st">"Posterior Distribution for the Mean Year of American Pennies in 2019"</span>) </span></code></pre></div>
-<p><img src="book_temp_files/figure-html/unnamed-chunk-655-1.png" width="672">
+<p><img src="book_temp_files/figure-html/unnamed-chunk-658-1.png" width="672">
 Recall from chapter 5 that posterior distribution is based on beliefs and expectations. In the case of the bootstrap samples we made, the posterior distribution represents our knowledge about the mean year of American Pennies in 2019 after taking into account the the data we gathered from our bootstrap sample means. As demonstrated in the plot above, we can see that the mean year of pennies in 2019 is most likely between 1995 and 1998 from our posterior distribution.</p>
-<p>Recall that in the “resampling with replacement” scenario we are illustrating here, this histogram has a special name: the <em>bootstrap distribution of the sample mean</em>. Furthermore, recall it is an approximation to the <em>sampling distribution</em> of the sample mean, a concept you saw in Chapter <a href="#sampling"><strong>??</strong></a> on sampling. This distribution allows us to study the effect of sampling variation on our estimates of the true population mean, in this case the true mean year for <em>all</em> US pennies. However, unlike in Chapter <a href="one-parameter.html#one-parameter">6</a> where we took multiple samples (something one would never do in practice), bootstrap distributions are constructed by taking multiple resamples from a <em>single</em> sample: in this case, the 50 original pennies from the bank.</p>
+<p>Recall that in the “resampling with replacement” scenario we are illustrating here, this histogram has a special name: the <em>bootstrap distribution of the sample mean</em>. Furthermore, recall it is an approximation to the <em>sampling distribution</em> of the sample mean, a concept you saw before. This distribution allows us to study the effect of sampling variation on our estimates of the true population mean, in this case the true mean year for <em>all</em> US pennies. However, unlike in Chapter <a href="one-parameter.html#one-parameter">6</a> where we took multiple samples (something one would never do in practice), bootstrap distributions are constructed by taking multiple resamples from a <em>single</em> sample: in this case, the 50 original pennies from the bank.</p>
 <p>Congratulations! You’ve just constructed your first bootstrap distribution! In the next section, you’ll see how to use this bootstrap distribution to construct <em>confidence intervals</em>.</p>
 </div>
 <div id="ci-build-up" class="section level3">
@@ -1606,11 +1583,11 @@ Recall from chapter 5 that posterior distribution is based on beliefs and expect
 <span class="header-section-number">7.1.3</span> Measuring uncertainty with confidence intervals</h3>
 <p>Let’s start this section with an analogy involving fishing. Say you are trying to catch a fish. On the one hand, you could use a spear, while on the other you could use a net. Using the net will probably allow you to catch more fish!</p>
 <p>Now think back to our pennies exercise where you are trying to estimate the true population mean year <span class="math inline">\(\mu\)</span> of <em>all</em> US pennies. Think of the value of <span class="math inline">\(\mu\)</span> as a fish.</p>
-<p>On the one hand, we could use the appropriate <em>point estimate/sample statistic</em> to estimate <span class="math inline">\(\mu\)</span>, which we saw in Table <a href="#tab:table-ch8-b"><strong>??</strong></a> is the sample mean <span class="math inline">\(\overline{x}\)</span>. Based on our sample of 50 pennies from the bank, the sample mean was 1995.44. Think of using this value as “fishing with a spear.”</p>
-<p>What would “fishing with a net” correspond to? Look at the bootstrap distribution in Figure <a href="#fig:one-thousand-sample-means"><strong>??</strong></a> once more. Between which two years would you say that “most” sample means lie? While this question is somewhat subjective, saying that most sample means lie between 1992 and 2000 would not be unreasonable. Think of this interval as the “net.”</p>
+<p>On the one hand, we could use the appropriate <em>point estimate/sample statistic</em> to estimate <span class="math inline">\(\mu\)</span>, which we saw in the table in the previous section, is the sample mean <span class="math inline">\(\overline{x}\)</span>. Based on our sample of 50 pennies from the bank, the sample mean was 1995.44. Think of using this value as “fishing with a spear.”</p>
+<p>What would “fishing with a net” correspond to? Look at the bootstrap distribution we created once more. Between which two years would you say that “most” sample means lie? While this question is somewhat subjective, saying that most sample means lie between 1992 and 2000 would not be unreasonable. Think of this interval as the “net.”</p>
 <p>What we’ve just illustrated is the concept of a <em>confidence interval</em>, which we’ll abbreviate with “CI” throughout this book. As opposed to a point estimate/sample statistic that estimates the value of an unknown population parameter with a single value, a <em>confidence interval</em>  gives what can be interpreted as a range of plausible values. Going back to our analogy, point estimates/sample statistics can be thought of as spears, whereas confidence intervals can be thought of as nets.</p>
 <div class="figure" style="text-align: center">
-<span id="fig:unnamed-chunk-656"></span>
+<span id="fig:unnamed-chunk-659"></span>
 <p class="caption marginnote shownote">
 FIGURE 7.5: Analogy of difference between point estimates and confidence intervals.
 </p>
@@ -1618,6 +1595,7 @@ FIGURE 7.5: Analogy of difference between point estimates and confidence interva
 </div>
 <p>Our proposed interval of 1992 to 2000 was constructed by eye and was thus somewhat subjective. We now introduce two methods for constructing such intervals in a more exact fashion: the <em>lm method</em> and the <em>quantile method</em>.</p>
 <p>Second, they both require you to specify the <em>confidence level</em>. Commonly used confidence levels include 90%, 95%, and 99%. All other things being equal, higher confidence levels correspond to wider confidence intervals, and lower confidence levels correspond to narrower confidence intervals. In this book, we’ll be mostly using 95% and hence constructing “95% confidence intervals for <span class="math inline">\(\mu\)</span>” for our pennies activity.</p>
+<p>Using confidence intervals, we can again look back at our Preceptor Tables. We are not entirely sure that 1995.44 is the perfect guess. However, if we use confidence intervals we can be 95% sure that whatever year we get for a penny in 2019 is the truth. Thus, we will see a confidence interval yet to be created for the “Year” of our random penny from 2019.</p>
 <style>html {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
 }
@@ -1998,7 +1976,7 @@ FIGURE 7.5: Analogy of difference between point estimates and confidence interva
     </tr>
 <tr>
 <td class="gt_row gt_center" style="border-right-width: 1px; border-right-style: solid; border-right-color: #000000; font-weight: bold;">X</td>
-      <td class="gt_row gt_center">1995</td>
+      <td class="gt_row gt_center">(?,?)</td>
     </tr>
 </tbody>
 </table></div>
@@ -2098,7 +2076,7 @@ Shifting away from dealing with pennies, let’s look at bootstrap modeling with
 <div class="sourceCode" id="cb863"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb863-1"><a href="two-parameters.html#cb863-1"></a>ch7 <span class="op">%&gt;%</span><span class="st"> </span></span>
 <span id="cb863-2"><a href="two-parameters.html#cb863-2"></a><span class="st">  </span><span class="kw">skim</span>()</span></code></pre></div>
 <p><!--
-<caption>--><span class="marginnote shownote"><span id="tab:unnamed-chunk-667">TABLE 7.1: </span>Data summary</span><!--</caption>--></p>
+<caption>--><span class="marginnote shownote"><span id="tab:unnamed-chunk-670">TABLE 7.1: </span>Data summary</span><!--</caption>--></p>
 <table><tbody>
 <tr class="odd">
 <td align="left">Name</td>
@@ -2215,7 +2193,7 @@ Shifting away from dealing with pennies, let’s look at bootstrap modeling with
 <span id="cb865-3"><a href="two-parameters.html#cb865-3"></a><span class="st">  </span><span class="kw">geom_density</span>() <span class="op">+</span><span class="st"> </span></span>
 <span id="cb865-4"><a href="two-parameters.html#cb865-4"></a><span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">"Height"</span>,</span>
 <span id="cb865-5"><a href="two-parameters.html#cb865-5"></a>       <span class="dt">title =</span> <span class="st">"Height by Gender in Nhanes Dataset"</span>)</span></code></pre></div>
-<p><img src="book_temp_files/figure-html/unnamed-chunk-669-1.png" width="672">
+<p><img src="book_temp_files/figure-html/unnamed-chunk-672-1.png" width="672">
 The plot shows some interesting stuff. Since the distributions of height for both genders are skewed left, we can infer that this data set included children and thus age played a role in our data. Additionally, we can see the the most probable heights for both genders and that men are generally taller than women.</p>
 </div>
 <div id="using-bootstraps-with-nhanes" class="section level2">
@@ -2265,7 +2243,7 @@ The plot shows some interesting stuff. Since the distributions of height for bot
 <span id="cb870-3"><a href="two-parameters.html#cb870-3"></a><span class="st">    </span><span class="kw">geom_histogram</span>(<span class="kw">aes</span>(<span class="dt">x =</span> height_90th, <span class="dt">y=</span>..count..<span class="op">/</span><span class="kw">sum</span>(..count..)), <span class="dt">binwidth =</span> <span class="fl">.5</span>, <span class="dt">fill =</span> <span class="st">"red"</span>) <span class="op">+</span></span>
 <span id="cb870-4"><a href="two-parameters.html#cb870-4"></a><span class="st">    </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">"Estimate in 90th Percentile of Male Height"</span>, <span class="dt">y =</span> <span class="st">"Probability"</span>,</span>
 <span id="cb870-5"><a href="two-parameters.html#cb870-5"></a>         <span class="dt">title =</span> <span class="st">"Posterior Distribution for the 90th Percentile of Male Heights in 2009"</span>) </span></code></pre></div>
-<p><img src="book_temp_files/figure-html/unnamed-chunk-673-1.png" width="672"></p>
+<p><img src="book_temp_files/figure-html/unnamed-chunk-676-1.png" width="672"></p>
 <p>We have just created the posterior distribution of the 90th percentile from our bootstraps. The histogram appears to be skewed to the right. Frankly, the posterior distribution looks weird, but that is okay because the posterior distribution includes the truth.</p>
 <!-- Bootstrap creates posterior distribution for your estimate of the unknown parametr: the 90th percentile of heights in the 2370 observations from nhanes -->
 <p>DK: Discuss our posterior distribution of the 90th percentile. Why it is weird. Does it include the truth in the 95% interval? Yes!</p>
@@ -2315,156 +2293,25 @@ bootstrap samples and the 97.5th percentile. In general, a 95% confidence interv
 <p>All our confidence intervals contained true 90th percentile, 184.3 cm! We can conclude from our results that the bootstrap does, in fact, work!</p>
 <!-- DK: Write a few paragraphs of transition. Bayesian models are the bootstrap, except much more easier to use. -->
 </div>
-<div id="stan_glm" class="section level2">
+<div id="prudence" class="section level2">
 <h2>
-<span class="header-section-number">7.5</span> <code>stan_glm()</code>
-</h2>
-<div class="sourceCode" id="cb874"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb874-1"><a href="two-parameters.html#cb874-1"></a><span class="kw">library</span>(rstanarm)</span>
-<span id="cb874-2"><a href="two-parameters.html#cb874-2"></a><span class="kw">library</span>(broom.mixed)</span>
-<span id="cb874-3"><a href="two-parameters.html#cb874-3"></a><span class="kw">library</span>(gtsummary)</span>
-<span id="cb874-4"><a href="two-parameters.html#cb874-4"></a></span>
-<span id="cb874-5"><a href="two-parameters.html#cb874-5"></a><span class="kw">stan_glm</span>(<span class="dt">data =</span> ch7_male, height <span class="op">~</span><span class="st"> </span><span class="dv">1</span>)</span></code></pre></div>
-<pre><code>## 
-## SAMPLING FOR MODEL 'continuous' NOW (CHAIN 1).
-## Chain 1: 
-## Chain 1: Gradient evaluation took 0.000591 seconds
-## Chain 1: 1000 transitions using 10 leapfrog steps per transition would take 5.91 seconds.
-## Chain 1: Adjust your expectations accordingly!
-## Chain 1: 
-## Chain 1: 
-## Chain 1: Iteration:    1 / 2000 [  0%]  (Warmup)
-## Chain 1: Iteration:  200 / 2000 [ 10%]  (Warmup)
-## Chain 1: Iteration:  400 / 2000 [ 20%]  (Warmup)
-## Chain 1: Iteration:  600 / 2000 [ 30%]  (Warmup)
-## Chain 1: Iteration:  800 / 2000 [ 40%]  (Warmup)
-## Chain 1: Iteration: 1000 / 2000 [ 50%]  (Warmup)
-## Chain 1: Iteration: 1001 / 2000 [ 50%]  (Sampling)
-## Chain 1: Iteration: 1200 / 2000 [ 60%]  (Sampling)
-## Chain 1: Iteration: 1400 / 2000 [ 70%]  (Sampling)
-## Chain 1: Iteration: 1600 / 2000 [ 80%]  (Sampling)
-## Chain 1: Iteration: 1800 / 2000 [ 90%]  (Sampling)
-## Chain 1: Iteration: 2000 / 2000 [100%]  (Sampling)
-## Chain 1: 
-## Chain 1:  Elapsed Time: 0.024595 seconds (Warm-up)
-## Chain 1:                0.177828 seconds (Sampling)
-## Chain 1:                0.202423 seconds (Total)
-## Chain 1: 
-## 
-## SAMPLING FOR MODEL 'continuous' NOW (CHAIN 2).
-## Chain 2: 
-## Chain 2: Gradient evaluation took 1.8e-05 seconds
-## Chain 2: 1000 transitions using 10 leapfrog steps per transition would take 0.18 seconds.
-## Chain 2: Adjust your expectations accordingly!
-## Chain 2: 
-## Chain 2: 
-## Chain 2: Iteration:    1 / 2000 [  0%]  (Warmup)
-## Chain 2: Iteration:  200 / 2000 [ 10%]  (Warmup)
-## Chain 2: Iteration:  400 / 2000 [ 20%]  (Warmup)
-## Chain 2: Iteration:  600 / 2000 [ 30%]  (Warmup)
-## Chain 2: Iteration:  800 / 2000 [ 40%]  (Warmup)
-## Chain 2: Iteration: 1000 / 2000 [ 50%]  (Warmup)
-## Chain 2: Iteration: 1001 / 2000 [ 50%]  (Sampling)
-## Chain 2: Iteration: 1200 / 2000 [ 60%]  (Sampling)
-## Chain 2: Iteration: 1400 / 2000 [ 70%]  (Sampling)
-## Chain 2: Iteration: 1600 / 2000 [ 80%]  (Sampling)
-## Chain 2: Iteration: 1800 / 2000 [ 90%]  (Sampling)
-## Chain 2: Iteration: 2000 / 2000 [100%]  (Sampling)
-## Chain 2: 
-## Chain 2:  Elapsed Time: 0.028525 seconds (Warm-up)
-## Chain 2:                0.177852 seconds (Sampling)
-## Chain 2:                0.206377 seconds (Total)
-## Chain 2: 
-## 
-## SAMPLING FOR MODEL 'continuous' NOW (CHAIN 3).
-## Chain 3: 
-## Chain 3: Gradient evaluation took 1.1e-05 seconds
-## Chain 3: 1000 transitions using 10 leapfrog steps per transition would take 0.11 seconds.
-## Chain 3: Adjust your expectations accordingly!
-## Chain 3: 
-## Chain 3: 
-## Chain 3: Iteration:    1 / 2000 [  0%]  (Warmup)
-## Chain 3: Iteration:  200 / 2000 [ 10%]  (Warmup)
-## Chain 3: Iteration:  400 / 2000 [ 20%]  (Warmup)
-## Chain 3: Iteration:  600 / 2000 [ 30%]  (Warmup)
-## Chain 3: Iteration:  800 / 2000 [ 40%]  (Warmup)
-## Chain 3: Iteration: 1000 / 2000 [ 50%]  (Warmup)
-## Chain 3: Iteration: 1001 / 2000 [ 50%]  (Sampling)
-## Chain 3: Iteration: 1200 / 2000 [ 60%]  (Sampling)
-## Chain 3: Iteration: 1400 / 2000 [ 70%]  (Sampling)
-## Chain 3: Iteration: 1600 / 2000 [ 80%]  (Sampling)
-## Chain 3: Iteration: 1800 / 2000 [ 90%]  (Sampling)
-## Chain 3: Iteration: 2000 / 2000 [100%]  (Sampling)
-## Chain 3: 
-## Chain 3:  Elapsed Time: 0.02697 seconds (Warm-up)
-## Chain 3:                0.185306 seconds (Sampling)
-## Chain 3:                0.212276 seconds (Total)
-## Chain 3: 
-## 
-## SAMPLING FOR MODEL 'continuous' NOW (CHAIN 4).
-## Chain 4: 
-## Chain 4: Gradient evaluation took 9e-06 seconds
-## Chain 4: 1000 transitions using 10 leapfrog steps per transition would take 0.09 seconds.
-## Chain 4: Adjust your expectations accordingly!
-## Chain 4: 
-## Chain 4: 
-## Chain 4: Iteration:    1 / 2000 [  0%]  (Warmup)
-## Chain 4: Iteration:  200 / 2000 [ 10%]  (Warmup)
-## Chain 4: Iteration:  400 / 2000 [ 20%]  (Warmup)
-## Chain 4: Iteration:  600 / 2000 [ 30%]  (Warmup)
-## Chain 4: Iteration:  800 / 2000 [ 40%]  (Warmup)
-## Chain 4: Iteration: 1000 / 2000 [ 50%]  (Warmup)
-## Chain 4: Iteration: 1001 / 2000 [ 50%]  (Sampling)
-## Chain 4: Iteration: 1200 / 2000 [ 60%]  (Sampling)
-## Chain 4: Iteration: 1400 / 2000 [ 70%]  (Sampling)
-## Chain 4: Iteration: 1600 / 2000 [ 80%]  (Sampling)
-## Chain 4: Iteration: 1800 / 2000 [ 90%]  (Sampling)
-## Chain 4: Iteration: 2000 / 2000 [100%]  (Sampling)
-## Chain 4: 
-## Chain 4:  Elapsed Time: 0.023487 seconds (Warm-up)
-## Chain 4:                0.178211 seconds (Sampling)
-## Chain 4:                0.201698 seconds (Total)
-## Chain 4:</code></pre>
-<pre><code>## stan_glm
-##  family:       gaussian [identity]
-##  formula:      height ~ 1
-##  observations: 2370
-##  predictors:   1
-## ------
-##             Median MAD_SD
-## (Intercept) 167.5    0.4 
-## 
-## Auxiliary parameter(s):
-##       Median MAD_SD
-## sigma 21.8    0.3  
-## 
-## ------
-## * For help interpreting the printed output see ?print.stanreg
-## * For info on the priors used see ?prior_summary.stanreg</code></pre>
-<!-- Follow Gelman. Use some math, from the themes.Rmd file. -->
-<div class="sourceCode" id="cb877"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb877-1"><a href="two-parameters.html#cb877-1"></a>mod.obj &lt;-<span class="st"> </span><span class="kw">stan_glm</span>(<span class="dt">data =</span> ch7_male, height <span class="op">~</span><span class="st"> </span><span class="dv">1</span>, <span class="dt">refresh =</span> <span class="dv">0</span>)</span>
-<span id="cb877-2"><a href="two-parameters.html#cb877-2"></a></span>
-<span id="cb877-3"><a href="two-parameters.html#cb877-3"></a>mod.obj</span></code></pre></div>
-<pre><code>## stan_glm
-##  family:       gaussian [identity]
-##  formula:      height ~ 1
-##  observations: 2370
-##  predictors:   1
-## ------
-##             Median MAD_SD
-## (Intercept) 167.5    0.4 
-## 
-## Auxiliary parameter(s):
-##       Median MAD_SD
-## sigma 21.8    0.3  
-## 
-## ------
-## * For help interpreting the printed output see ?print.stanreg
-## * For info on the priors used see ?prior_summary.stanreg</code></pre>
-<!-- Explain in detail all aspects of the model. -->
-<div class="sourceCode" id="cb879"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb879-1"><a href="two-parameters.html#cb879-1"></a><span class="co"># tbl_regression(mod.obj)</span></span></code></pre></div>
-<div id="justice" class="section level3">
-<h3>
-<span class="header-section-number">7.5.1</span> Justice</h3>
+<span class="header-section-number">7.5</span> Prudence</h2>
+<p>
+<span class="marginnote shownote">
+<!--
+<div class="figure">-->
+<img src="other/images/prudence.jpg" alt=" " width="1280"><!--
+<p class="caption marginnote">--><!--</p>--><!--</div>--></span>
+</p>
+<p>Let’s look at how our key theme, Prudence, fits in with two-parameter estimates. Just like in the previous chapter, prudence covers the relevance of the estimands and the map from concept to data.</p>
+<p>In our NHANES data, we focused on the mean and 90th percentile of male heights. We can easily extract both estimands from our bootstrap samples. However, are these estimands accurately capturing what we care about? Probably, but we are not fully sure. What we want optimally is if we can accurately predict the mean and 90th percentile of male heights in the US. We want a model that should generalize its points of interests and include all predictors. For example, with regard to the outcome variable, a model of heights will not necessarily tell you about patterns of male heights.</p>
+<p>Our problem, estimating both mean and 90th percentile of male heights, is by taking care of our confounding variables.</p>
+<p>First, there are both genders in the data. We had to adjust for that by filtering to only men. Additionally, males have a certain age range, typically above 18 years old. We also had to account for that. By using bootstraps, we were able to use random samples to thus help get more representative samples.</p>
+<p>Second, it’s important to understand that data is always missing. We could easily calculate our estimands through arithmetic means, but because we don’t have perfect data we will have to estimate. In this case, by using bootstrap samples we were able to create confidence intervals to give us some quantitative measure of confidence.</p>
+</div>
+<div id="justice" class="section level2">
+<h2>
+<span class="header-section-number">7.6</span> Justice</h2>
 <p>
 <span class="marginnote shownote">
 <!--
@@ -2472,8 +2319,49 @@ bootstrap samples and the 97.5th percentile. In general, a 95% confidence interv
 <img src="other/images/justice.jpg" alt=" " width="960"><!--
 <p class="caption marginnote">--><!--</p>--><!--</div>--></span>
 </p>
-
+<p>Let’s try to understand the math behind our height model. For one, height is normally distributed because our data is continuous. Unlike in the previous chapter where data is discrete, we are dealing with continuous data. In addition, we can find the mean height and standard deviation of height, both of which are parameters for the normal distribution. Therefore, we will see the following:</p>
+<p><span class="math display">\[ height_i \sim N(\beta, \sigma^2)\]</span>
+But what about the standard error in our data. What does its distribution look like? Well the distribution of our standard error is also normally distributed. This is because the errors from our bootstrap samples are random and continuous, which will also follow a normal distribution.</p>
+<p><span class="math display">\[ \epsilon_i \sim N(0, \sigma^2)\]</span>
+Standard deviation of the bootstrap is the same thing as <span class="math inline">\(\sigma\)</span>.</p>
 </div>
+<div id="fortitude" class="section level2">
+<h2>
+<span class="header-section-number">7.7</span> Fortitude</h2>
+<p>
+<span class="marginnote shownote">
+<!--
+<div class="figure">-->
+<img src="other/images/fortitude.jpg" alt=" " width="1024"><!--
+<p class="caption marginnote">--><!--</p>--><!--</div>--></span>
+</p>
+<p>In data science, we deal with words, math, and code. The most important term is code. We need some sort of framework to detail the structure of our model using all three terms. However, fortitude is needed to implement the coded model.</p>
+<p>The data we have seen is generated by the complex and confusing world. We have to build a model to create some sort of computational mechanism that creates fake data that is consistent with the real, true data in the world. This is our “Data Generating Mechanism,” which provides predictions and uncertainty.</p>
+<p>We need a “machine” that generates our predictions, which is the same thing as a machine which fills in all the question marks in the Actual Preceptor Table and provides confidence intervals, which is the same thing as a machine which produces “fake data” which looks a lot like our actual data.</p>
+<p>We are ultimately looking at our code and uncertainty under fortitude.</p>
+</div>
+<div id="temperance" class="section level2">
+<h2>
+<span class="header-section-number">7.8</span> Temperance</h2>
+<p>
+<span class="marginnote shownote">
+<!--
+<div class="figure">-->
+<img src="other/images/temperance.jpg" alt=" " width="960"><!--
+<p class="caption marginnote">--><!--</p>--><!--</div>--></span>
+</p>
+<p>Temperance is probably the most important virtue in data science. We won’t have the models that look as good as they appear. We are living in a constantly changing and complex world. There will be unknown unknowns, which factors in the representation of our data, realism in our assumptions, and the call for testing.</p>
+<p>In data science, we are focused on that missing data, the data from the future. But the world is always changing, and so it’s hard to capture that missing data. Our predictions are going to have some sort of uncertainty.</p>
+<p>In the case of male heights, what would be the average male height if the data was collected a week later? What if there was a pandemic? What if the world lost a great amount of Vitamin D? As you can see, there are events that are considered unknown unknowns. It’s so hard to account for the future, and so our models are likely going to be wrong.</p>
+<p>Another reason why we deal with temperance in data science is that there is realism. Does the structure of our bootstrap match the world? While we hope we won’t be wrong, it never matches frankly and we will see that our conclusions are wrong.</p>
+<p>Last but not least, getting the wrong conclusions suck. But at least we are not dealing with null hypotheses. Playing the prediction game could be fun, but if we reject the null hypothesis if p is less than .05, what if we get .06 as our p-value? Will that honestly make a difference? Probably not!</p>
+<!-- Follow Gelman. Use some math, from the themes.Rmd file. -->
+<div class="sourceCode" id="cb874"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb874-1"><a href="two-parameters.html#cb874-1"></a><span class="co"># mod.obj &lt;- stan_glm(data = ch7_male, height ~ 1, refresh = 0)</span></span>
+<span id="cb874-2"><a href="two-parameters.html#cb874-2"></a><span class="co"># </span></span>
+<span id="cb874-3"><a href="two-parameters.html#cb874-3"></a><span class="co"># mod.obj</span></span></code></pre></div>
+<!-- Explain in detail all aspects of the model. -->
+<div class="sourceCode" id="cb875"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb875-1"><a href="two-parameters.html#cb875-1"></a><span class="co"># tbl_regression(mod.obj)</span></span></code></pre></div>
+
 </div>
 </div></body></html>
 
@@ -2482,7 +2370,7 @@ bootstrap samples and the 97.5th percentile. In general, a 95% confidence interv
 <a href="three-parameters.html"><button class="btn btn-default">Next</button></a>
 </p>
 <p class="build-date">Page built: 
-2020-08-31
+2020-09-02
 </p>
 </div>
 </div>
