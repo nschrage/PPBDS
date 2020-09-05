@@ -946,7 +946,7 @@ Notice that you can also choose any other variable for the z-value that is not d
 knitr::include_graphics("01-visualization/images/ggplot2-cheatsheet.jpg")
 ```
 
-In the previous section we have seen the three components that every plot must include: data, data mappings, and a geom. You may have found that the graphics from before look a bit boring. Luckily, the Grammar of Graphics allows us to add more layers to our own to customize our plots. We will go over some of the additional layers here, but the [Data Visualization with ggplot2 Cheat Sheet](https://rstudio.com/wp-content/uploads/2015/03/ggplot2-cheatsheet.pdf) is a great resource to refer to as your ggplot visualizations get more complicated.
+In the previous section we have seen the three components that every plot must include: data, data mappings, and a geom. You may have found that the graphics from before look a bit boring. Luckily, the Grammar of Graphics allows us to add more layers on our own in order to customize our plots. We will go over some of the additional layers here, but the [Data Visualization with ggplot2 Cheat Sheet](https://rstudio.com/wp-content/uploads/2015/03/ggplot2-cheatsheet.pdf) is a great resource to refer to as your ggplot visualizations get more complicated.
 
 <!-- Links to relevant readings in Healy.  -->
 
@@ -954,7 +954,7 @@ To keep it simple, we will change the Gapminder plot from the beginning of the c
 
 ```{r}
 gapminder_07 <- gapminder %>% 
-                    filter(year == 2007)
+                    filter(year == 2007, continent != "Oceania")
 ```
 
 ```{r}
@@ -1006,14 +1006,14 @@ ggplot(data = gapminder_07,
   stat_boxplot()
 ```
 
-Now we not only recognize the differences between the continents, but also within the continents better. However, the interpretation of box plots is not so intuitive, at least at first glance. An easier to understand alternative is a density plot, which we can add with `stat_ydensity()`:
+Now we not only recognize the differences between the continents, but also within the continents better. However, the interpretation of box plots is not so intuitive, at least at first glance. An easier to understand alternative is a straight line, which we can add with `stat_smooth(formula = y ~ x, method = "lm", se = FALSE)`:
 
 ```{r}
 ggplot(data = gapminder_07, 
        mapping = aes(x = gdpPercap, y = lifeExp, color = continent)) +
   geom_point() +
   facet_wrap(~ continent, nrow = 1) +
-  stat_ydensity(aes(alpha = 0.5))
+  stat_smooth(formula = y ~ x, method = "lm", se = FALSE)
 ```
 
 Notice that we used the alpha argument again here. This is optional, but it makes the plot clearer. You can also see that R did not draw a line for Oceania - this is normal and often happens when there is not enough data for an operation.
@@ -1031,11 +1031,11 @@ ggplot(data = gapminder_07,
        mapping = aes(x = gdpPercap, y = lifeExp, color = continent)) +
   geom_point() +
   facet_wrap(~ continent, nrow = 1) +
-  stat_ydensity(aes(alpha = 0.5)) +
+  stat_smooth(formula = y ~ x, method = "lm", se = FALSE) + 
   coord_flip()
 ```
 
-As can be seen, lifeExp is now on the x-axis and gdpPercap on the y-axis. Compared to the previous plot it is now easier to observe the distribution of life expectancy in the respective continents. For example, we can see that many countries in Africa are at about 55 years, in the Americas and Asia at 75 years, and in Europe at 80 years.
+As can be seen, lifeExp is now on the x-axis and gdpPercap on the y-axis. Compared to the previous plot it is now easier to observe the distribution of life expectancy in the respective continents. For example, we can see that many countries in Africa are at about 55 years, in the Americas and Asia at 75 years, and in Europe at 80 years. However, we think it makes more sense to consider `lifeExp` as the dependent variable, so don't use `coord_flip()` in the subsequent plots.
 
 
 ### Positions, Axis Limits and Scales
@@ -1047,8 +1047,7 @@ ggplot(data = gapminder_07,
        mapping = aes(x = gdpPercap, y = lifeExp, color = continent)) +
   geom_point(position = position_jitter(width = 10, height = 15)) +
   facet_wrap(~ continent, nrow = 1) +
-  stat_ydensity(aes(alpha = 0.5)) +
-  coord_flip() 
+  stat_smooth(formula = y ~ x, method = "lm", se = FALSE)
 ```
 
 Notice several things about this code. First, positions should be placed in the geom they refer to (in our case `geom_point()`). Second, positions always start with *position =* followed by the position type (in our case `position_jitter()`). The width and height are optional and can be freely defined. You might wonder what the difference between `position_jitter()` and `geom_jitter()` is. The answer is: Nothing. In R there are often several functions which can lead to the same result. However, it is practical to start with `geom_point()` first, because then you still have the choice of changing the position by shaking the dots - with `geom_jitter()` the plot is constructed like this from the beginning.
@@ -1060,22 +1059,20 @@ ggplot(gapminder_07,
        aes(x = gdpPercap, y = lifeExp, color = continent)) +
   geom_point() +
   facet_wrap(~ continent, nrow = 1) +
-  stat_ydensity(aes(alpha = 0.5)) +
-  coord_flip() +
+  stat_smooth(formula = y ~ x, method = "lm", se = FALSE) + 
   xlim(0, 30000)
 ```
 
-We can see that the GDP per capita on the y-axis is now only shown from 0 to 30000. But why did we use `xlim()` when we changed the y-axis? The reason is that `xlim()` does not refer to the axes, but to the mapping. Remember that the first line of the code is *x = gdpPercap*. Although we used `coord_flip()` to flip the axes, this only affects the visual representation and not the variable specification. Don't worry if that doesn't seem intuitive. You will quickly notice once you set the axis limits the wrong way round (try to run the same code using `ylim()`).
+We can see that the GDP per capita on the y-axis is now only shown from 0 to 30000. 
 
-Finally we can change the scaling of the axes. For example, it might be useful to display the axes with `scale_x_log10()` or `scale_y_log10()` on a logarithmic scale. Let's try this out on GDP per capita. Also, note that we can (lazily!) not provide the explicit `x` and `y` argument names to `aes()` as long as we provide the values in the right order -- `x` comes before `y`. 
+Finally we can change the scaling of the axes. For example, it might be useful to display the axes with `scale_x_log10()` or `scale_y_log10()` on a logarithmic scale. Let's try this out on GDP per capita. Also, note that we can (lazily!) not provide the explicit `x` and `y` argument names to `aes()` as long as we provide the values in the right order: `x` comes before `y`. 
 
 ```{r}
 ggplot(gapminder_07, 
        aes(gdpPercap, lifeExp, color = continent)) +
   geom_point() +
   facet_wrap(~ continent, nrow = 1) +
-  stat_ydensity(aes(alpha = 0.5)) +
-  coord_flip() +
+  stat_smooth(formula = y ~ x, method = "lm", se = FALSE) + 
   scale_x_log10()
 ```
 
@@ -1090,8 +1087,7 @@ ggplot(gapminder_07,
        aes(gdpPercap, lifeExp, color = continent)) +
   geom_point() +
   facet_wrap(~ continent, nrow = 1) +
-  stat_ydensity(aes(alpha = 0.5)) +
-  coord_flip() +
+  stat_smooth(formula = y ~ x, method = "lm", se = FALSE) + 
   scale_x_log10() +
   labs(title = "Life Expectancy and GDP per Capita (2007)",
        subtitle = "Selected Nations by Continent",
@@ -1111,8 +1107,7 @@ ggplot(gapminder_07,
        aes(gdpPercap, lifeExp, color = continent)) +
   geom_point() +
   facet_wrap(~ continent, nrow = 1) +
-  stat_ydensity(aes(alpha = 0.5)) +
-  coord_flip() +
+  stat_smooth(formula = y ~ x, method = "lm", se = FALSE) + 
   scale_x_log10() +
   labs(title = "Life Expectancy and GDP per Capita (2007)",
        subtitle = "Selected Nations by Continent",
@@ -1125,7 +1120,7 @@ ggplot(gapminder_07,
             color = "black", check_overlap = TRUE)
 ```
 
-Great! Now we also see that the two lonely countries in Oceania are Australia and New Zealand. Notice that we need to determine an aestethic called *label*. This defines the character variable which will be used as the basis for the labels.
+Great! Notice that we need to determine an aesthetic called *label*. This defines the character variable which will be used as the basis for the labels.
 
 
 ### Themes
@@ -1137,8 +1132,7 @@ ggplot(gapminder_07,
        aes(gdpPercap, lifeExp, color = continent)) +
   geom_point() +
   facet_wrap(~ continent, nrow = 1) +
-  stat_ydensity(aes(alpha = 0.5)) +
-  coord_flip() +
+  stat_smooth(formula = y ~ x, method = "lm", se = FALSE) + 
   scale_x_log10() +
   labs(title = "Life Expectancy and GDP per Capita (2007)",
        subtitle = "Selected Nations by Continent",
@@ -1152,17 +1146,16 @@ ggplot(gapminder_07,
   theme_linedraw()
 ```
 
-You can find an overview of the different themes in ggplot [here](https://ggplot2.tidyverse.org/reference/ggtheme.html). The **ggthemes* package even adds some additional themes.
+You can find an overview of the different themes in ggplot [here](https://ggplot2.tidyverse.org/reference/ggtheme.html). The **ggthemes** package even adds some additional themes.
 
-In addition to ready-to-use themes, the `theme()` function also offers a wide [selection](https://ggplot2.tidyverse.org/reference/theme.html) of functions for manually changing individual elements. Let's remove the two legends, change the font in the plot and enlarge the axis labels a bit:
+In addition to ready-to-use themes, the `theme()` function also offers a wide [selection](https://ggplot2.tidyverse.org/reference/theme.html) of functions for manually changing individual elements. Let's remove the legend, change the font in the plot and enlarge the axis labels a bit:
 
 ```{r}
 ggplot(gapminder_07, 
        aes(gdpPercap, lifeExp, color = continent)) +
   geom_point() +
   facet_wrap(~ continent, nrow = 1) +
-  stat_ydensity(aes(alpha = 0.5)) +
-  coord_flip() +
+  stat_smooth(formula = y ~ x, method = "lm", se = FALSE) + 
   scale_x_log10() +
   labs(title = "Life Expectancy and GDP per Capita (2007)",
        subtitle = "Selected Nations by Continent",
@@ -1196,13 +1189,11 @@ You can see that while some things are not *necessary* to create a plot, they ca
 Let's go over some important points about specifying the arguments (i.e., inputs) to functions. Run the following two segments of code:
 
 ```{r, eval=FALSE}
-# Segment 1:
-
 ggplot(data = flights, mapping = aes(x = carrier)) +
   geom_bar()
+```
 
-# Segment 2:
-
+```{r, eval=FALSE}
 ggplot(flights, aes(x = carrier)) +
   geom_bar()
 ```
@@ -1770,28 +1761,29 @@ Congratulations for making it to the end of the chapter. At this point you have 
 
 Finally, it should be mentioned that we have only seen a small part of what R offers. Since R is an open source software, there are many independent developers who are constantly releasing new R packages with new features and functions. For example, we can use the **gganimate** package to bring our gapminder plot to life:
 
-```{r fig.align="center", message=FALSE, warning=FALSE, echo=FALSE}
-library(gganimate)
-library(gifski)
+<!-- DK: This is a nice way to end the chapter. But . . . 1) We should provide the code for all these plots, given that we are going to show them at all. 2) We should make these plots more consistent with the series which we worked through above, and with each other. For example, we should use the same axis labels. 3) We should clean up the code. For example, there is no reason that the plotly code could not start with the gapminder data. Also, isn't there a way to go straight from a ggplot2 object into a plotly object? Seems unlikely that we should be exposing the students to a radically different syntax. 4) If we are going to show rayshader, maybe make it more impressive? -->
 
-ggplot(gapminder, aes(gdpPercap, lifeExp, size = pop, color = continent)) +
-  geom_point(show.legend = FALSE, alpha = 0.7) +
-  scale_color_viridis_d() +
-  scale_size(range = c(2, 12)) +
-  scale_x_log10() +
-  labs(x = "GDP per capita",
-       y = "Life expectancy") +
-  facet_wrap(~continent, nrow = 1) +
-  transition_time(year) +
-  labs(title = "Year: {frame_time}") +
-  shadow_wake(wake_length = 0.1, alpha = FALSE) 
+```{r}
+library(gganimate)
+
+gapminder %>% 
+  filter(continent != "Oceania") %>% 
+  ggplot(aes(gdpPercap, lifeExp, size = pop, color = continent)) +
+    geom_point(show.legend = FALSE, alpha = 0.7) +
+    scale_color_viridis_d() +
+    scale_size(range = c(2, 12)) +
+    scale_x_log10() +
+    labs(x = "GDP per capita",
+         y = "Life expectancy") +
+    facet_wrap(~continent, nrow = 1) +
+    transition_time(year) +
+    labs(title = "Year: {frame_time}") +
+    shadow_wake(wake_length = 0.1, alpha = FALSE) 
 ```
 
 Or the **plotly** package to make it an interactive 3D plot.
 
-```{r fig.align="center", message=FALSE, warning=FALSE, echo=FALSE}
-
-
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
 library(plotly)
 
 data <- read.csv("https://raw.githubusercontent.com/plotly/datasets/master/gapminderDataFiveYear.csv")
@@ -1833,7 +1825,7 @@ fig
 
 Or the **rayshader** package that allows us to create beautiful landscapes and maps.
 
-```{r fig.align="center", echo=FALSE}
+```{r, echo=FALSE}
 knitr::include_graphics("01-visualization/images/rayshade-plot.png")
 ```
 
