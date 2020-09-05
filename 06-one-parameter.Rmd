@@ -8,15 +8,15 @@ output_yaml:
 
 <!-- Priorities:  --> 
 
-<!-- 0) Add sqrt(n) plot to show how standard error decreases. There is  ahandy stat_ for doing this in ggplot2. But I deleted it when told me you had done this already. -->
+<!-- 0) Add sqrt(n) plot to show how standard error decreases. There is  ahandy stat_ for doing this in ggplot2. But I deleted it when told me you had done this already. NOTE: this works for me as is. Maybe because my version of R is old? -->
 
-<!-- Remove video unavailable. -->
+<!-- Remove video unavailable. DONE. -->
 
 <!-- 1) Make a 15 second video, put it on YouTube, add it as as sidemargin. "We don't estimate parameters because we care about parameters. Parameters are imaginary! Like unicorns! [Put finger on forehead and imitate unicorn.] We estimate parameters to build Data Generating Mechanisms. And with a DGM, you can move the world!" NOTE: will do when I can get access to better internet. -->
 
-<!-- Create three-D plot, like Vivian does in chapter 5 with rayshader. Recommend having separate code which creates the plot, then save the png in images/ and then just read it in. -->
+<!-- Create three-D plot, like Vivian does in chapter 5 with rayshader. Recommend having separate code which creates the plot, then save the png in images/ and then just read it in. DONE but I am working on getting rid of the axis labels in the slice rayshader (even though I took them out in ggplot, they are staying). -->
 
-<!-- Add forecast/betting example, like in chapter 5. Maybe, what are the odds that a paddle of size 25 will pull out at least 20 reds? -->
+<!-- Add forecast/betting example, like in chapter 5. Maybe, what are the odds that a paddle of size 25 will pull out at least 20 reds? IN PROGRESS. -->
 
 <!-- 3) What is the posterior for the number of red beads? **What is your posterior distribution for p, which is the same thing as number of red beads divided by 2400?** Everything has been frequentist so far. Nothing has been Bayesian yet.  Connect to joint distribution, marginal distribution, posterior distribution. One new complexity with the notion of the "model" is that we can "parameterize" the same thing in different ways. We want to show that. First, we parameterize it in the same way as chapter 5. There is a p, which can have certain values, but we restrict the set of possible values. Although perhaps making it different from previously. Maybe 0 to 1 by 0.05, so 21 values. Then we do the same thing as before, look at one sample from the urn, look at the marginal distribution, posterior predict the outcomes of the next draw, and so on. Just like before. We might make the transition from this case to the next by noting two things:  First, even though we often assume that p is continuous, it never really is. In this case, since we are told that there are 2400 beads, p can only take on 2401 possible values. Second, we can (sort of!) use some prior knowledge by noting that values near p = 0 and p = 1 are impossible. Just look at the urn! It is wasteful to even consider those possibilities in doing our analysis. Better to consider more values of p in a more plausible range. Our second parameterization might, instead of looking at p, look at specific values of the number of red beans (out of 2400), chosen from near where we thing the truth might be. These are now the numbers of the y-axis. Note how this elides the distinction between a "model" and the "data". (Keep in mind that the data in the x-axis the data we gathered in our experiment.) The data of the number of red beads in the urn is an empirical reality of the world, something independent of us and our experiment. "Model" just means "Assumption about the world." Same steps afterward as above, although maybe more precise, since we have narrowed our search.  -->
 
@@ -40,13 +40,15 @@ output_yaml:
 
 <!-- Might also use Topic 16 from the Workshop here, or save it for the next chapter. -->
 
+```{r, echo=FALSE, fig.cap="Mr. DeVito is correct: sampling *is* badass. Let's get started!"}
+knitr::include_graphics("06-one-parameter/images/danny_sampling.png")
+```
+
 Last chapter, we learned about probability, the act of quantifying uncertainty. This chapter, we will learn about *sampling*, the beginning of our journey toward inference. When we sample, we take a *portion* of a total population and attempt to draw a conclusion about the portion that is generalizable to the total population. 
 
 When we see a headline of the approval rating of a politician, we are **not** being given a number that represents the approval rating of every citizen in the total population. We are looking at an inference based on a much smaller sample of people. If the source is reputable, this sample mirrors the real world as closely as possible. That being said, there will be variation in the reported approval rating depending on the specific sample taken that day. This is why we see different approval ratings from different news sources.
 
 Despite this variation, we *normally* see estimates that are in the same ballpark. It would be surprising to see two approval ratings that are more than 10% apart on any given day. It is possible, however! There could be a number of reasons for such a large gap, many of which result from errors in the sampling itself. It could also just be a consequence of **sampling variation**. 
-
-Let's assume our process of sampling is unbiased, representative, and valid, eliminating all possible error with the sampling mechanism. How many people would we need to survey to have a 90% chance of being within 5% of the true approval rating? 
 
 Because we cannot conduct polling, let's look instead at an easier scenario. Observe the urn in Figure 6.1. It has a certain number of red and a certain number of white beads all of equal size. It appears the urn has been mixed beforehand, as there does not seem to be any coherent pattern to the spatial distribution of the red and white beads.
 
@@ -58,7 +60,7 @@ knitr::include_graphics("06-one-parameter/images/sampling_bowl_1.jpg")
 
 One way to answer this question would be to perform an exhaustive count: remove each bead individually, count the number of red beads and the number of white beads, and divide the number of red beads by the total number of beads. However, this would be a long and tedious process. Therefore, we will use sampling!
 
-The final question, derived from the polling example, is how many beads must we sample to have a 90% chance of being within 5% of the true proportion of red beads in the entire urn? 
+Our final question, once we have mastered sampling, will be: what are the odds that, with a shovel of size 50, we pull out 40 red beads?
 
 As always, we will need the **tidyverse** package. The **infer** package has a handy function, `rep_sample_n()`, for simulating the process of sampling.
 
@@ -649,12 +651,12 @@ glimpse(shovels_100)
 Now, we have the standard deviation of `prop_red` for all shovel sizes from 1 to 100.  Let's plot that value to see how it changes as the shovel gets larger:
 
 ```{r, fig.cap = "Comparing standard deviations of proportions red for 100 different shovels"}
-# shovels_100 %>%
-#   ggplot(aes(x = shovel_size, y = prop_red_sd)) +
-#   geom_point() +
-#   stat_function(aes(x = 1:100, colour = "red"), fun = sqrt) +
-#   labs(x = "Shovel size",
-#        y = "Standard deviation of the proportion red")
+shovels_100 %>%
+ ggplot(aes(x = shovel_size, y = prop_red_sd)) +
+ geom_point() +
+ stat_function(aes(x = 1:100, colour = "red"), fun = sqrt, show.legend = FALSE) +
+ labs(x = "Shovel size",
+      y = "Standard deviation of the proportion red")
 ```
 
 `r margin_note("The formula for standard error is the sample standard deviation (s) divided by the square root of the number of samples (n). This may be written as: SE = s/(√n).")`
@@ -679,7 +681,7 @@ Let's now introduce some terminology and notation as well as statistical definit
 
 ### Terminology and notation {#terminology-and-notation}
 
-```{r, echo=FALSE, fig.cap="Let Yoda's wisdom dull the pain of this terminology section.", fig.margin = TRUE}
+```{r, echo=FALSE, fig.cap="Let Yoda's wisdom dull the pain of this terminology section."}
 knitr::include_graphics("06-one-parameter/images/yoda.png")
 ```
 
@@ -703,6 +705,10 @@ Eighth, we say **biased sampling** occurs if certain individuals or observations
 
 Ninth and lastly, the idea of **random sampling**. We say a sampling procedure is *random* if we sample randomly from the population in an unbiased fashion. In our sampling activities, this would correspond to sufficiently mixing the urn before each use of the shovel. 
 
+```{r, echo=FALSE, fig.cap="Fear not if you look like Spongebob after reading this section. We will re-cap right now!"}
+knitr::include_graphics("06-one-parameter/images/cant_breathe_sponge.png")
+```
+
 Phew, that's a lot of new terminology and notation to learn! Let's put them all together to describe the paradigm of sampling.
 
 **In general:**
@@ -725,6 +731,10 @@ Note that last word we wrote in bold: **infer**. The act of "inferring" means to
 
 
 ### Statistical definitions {#sampling-definitions}
+
+```{r, echo=FALSE, fig.cap="We are almost done! Hang in there."}
+knitr::include_graphics("06-one-parameter/images/really_more.png")
+```
 
 Now, for some important statistical definitions related to sampling. As a refresher of our 1,000 repeated/replicated virtual samples of size $n$ = 25, $n$ = 50, and $n$ = 100 in Section \@ref(sampling-simulation), let's display our figure showing the difference in proportions red according to different shovel sizes.  
 
@@ -839,6 +849,9 @@ The sampling activity involving the urn is merely an *idealized version* of how 
 
 This is not how sampling is done in real life. In a real-life scenario, we won't know what the true value of the population parameter is. Furthermore, we wouldn't be able to take 1,000 replicated samples. Rather, we take a single sample that's as large as we can afford. In the next section, we'll study a real-life example of sampling: polls.
 
+```{r, echo=FALSE, fig.cap="Real life sampling is hard! In most scenarios, it's impossible to ask the entire population for their opinions."}
+knitr::include_graphics("06-one-parameter/images/that_would_be_great.png")
+```
 
 ## Case study: Polls {#sampling-case-study}
 
@@ -1024,8 +1037,8 @@ What are the odds, if we bring in 10 random young Americans, that at least 2 of 
 
 Temperance is perhaps the most important virtue in data science. Our models are never as good as they appear to be. The world is complex and, even worse, always changing. We must be aware of the *unknown unknowns*, concerned about how *representative* our data/model is to our problem, worried about the realism of our assumptions, and leery of the siren call of testing. In simpler terms, we must be humble. 
 
-```{r, echo=FALSE}
-knitr::include_app("https://www.youtube.com/embed/tvTRZJ-4EyI")
+```{r, echo=FALSE, fig.cap="Listen to Kendrick. If we are too confident, our assumptions about the world will be false!"}
+knitr::include_graphics("06-one-parameter/images/kendrick.png")
 ```
 
 ```{r echo=FALSE, fig.margin=TRUE}
@@ -1071,7 +1084,7 @@ In order to investigate this concept, let's revisit our Preceptor Tables.
 
 Recall that a Preceptor Table is a table with rows and columns for all the data we would (reasonably) like to have. There are two different types of Preceptor Tables that are applicable to our urn example: actual and ideal.
 
-```{r, echo=FALSE, fig.cap="When you see another Precetor Table section.", fig.margin = TRUE}
+```{r, echo=FALSE, fig.cap="When you see another Precetor Table section."}
 knitr::include_graphics("06-one-parameter/images/here_we_go.png")
 ```
 
@@ -1199,7 +1212,7 @@ The easiest way to do this would be to re-run the experiment and compare the new
 
 <!-- MF: When we actually answer this question, should it address the fact that we know the true proportion of red bead sto be 37.5% as stated earlier in the chapter? If so, would the ultimate solution just build a model showing the # of beads at which we get a proportion red between 32.5 - 42.5 90% of the time? How do we show that? -->
 
-Recall the question we asked at the beginning of our chapter: how many beads must we sample to have a 90% chance of being within 5% of the true proportion of red beads in the entire urn? 
+Recall the question we asked at the beginning of our chapter: what are the odds that, with a shovel of size 50, we pull out 40 red beads?
 
 We have looked at a number of different models and their accuracy and precision. To delve into our primary question, we must return to our discussion of distributions: posterior, joint, and marginal. 
 
@@ -1246,6 +1259,12 @@ x %>%
 
 ```
 
+To better visualize this distribution, take a look at the 3D version in Figure [INSERT FIG #]. Note the U shape of the graph. By this, we mean to note the peaks at the areas where the number of red beads in the paddle is 0 out of 50 and 50 out of 50. This is due to the fact that, when we draw 0 red beads in a sample of 50 beads, the possibilities for the number of red beads in the urn is consistently close to 0. Similarily, when our sample of 50 beads comes out with 50 red beads, the possibilities for the number of red beads in the urn is consistently closer to 2400. 
+
+```{r, echo=FALSE, fig.cap="A 3D image of our joint distribution created with Rayshader."}
+knitr::include_graphics("06-one-parameter/images/rayshader_full.png")
+```
+
 We follow the same steps now as we did in Chapter \@ref(probability). We run the experiment. Assume that 16 of the 50 beads drawn in the paddle were red. What does that make our posterior probability? We want:
 
 $$p(models | data = 16)$$ 
@@ -1265,6 +1284,13 @@ x %>%
          y = "Probability")
 ```
 
+To visualize this in a 3D plot, see the slice in Figure [INSERT FIG #]. There are a few things to note. First, the y-axis only extends to 1500 (rather than the total 2400) due to the fact that, when the paddle only draws 16/50 = .32 = 32% red beads, it is not possible for the ratio of red beads in the total urn to exceed 1500. The most likely number of red beads in the total urn, when the paddle draws 16/50 red beads, is somewhere in the 900-1100 range. This is signified by the peak between these points. The plot lowers below 900 and above 1100 because it is less likely that this is the number of red beads in the urn when the paddle draws 16/50 red beads. This is our posterior distribution. 
+
+For any value of red beads found in the paddle (from 1 to 50), there is a posterior distribution of possible values of red beads in the total urn. This distribution is meant to illustrate that, though our sample gives an estimate of the total proportion of red beads in the entire urn, there is much variation in what the actual proportion may be. 
+
+```{r, echo=FALSE, fig.cap="A 3D image of our joint distribution created with Rayshader."}
+knitr::include_graphics("06-one-parameter/images/slice_rayshader.png")
+```
 ### Data Generating Mechanism (DGM)
 
 To answer our question, "what is the proportion of red beads in the urn?", we used a Data Generating Mechanism (DGM). First, we created a virtual analog of our real-life urn. Then, we used a virtual shovel to draw samples from our virtual urn. We then used handy data science tools to 1) simulate the proportion of red beads using different virtual shovel sizes, 2) calculate the proportion of red beads using a thousand repetitions of different shovel sizes, and 3) show the standard error between the different shovel sizes and their respective proportions of red beads. 
