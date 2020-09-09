@@ -40,6 +40,7 @@ Then, create a tibble, first column is ID. Second column is height_sample, which
 
 
 
+
 <!-- c) Discuss how this exercise is still useful even if we begin with all our data. That is, don't sample. Just use all 5,000 people. Then, do the bootstrap to get a confidence interval. Note that the interval will be --- how much? --- smaller than the ones we got above, because we are using 116 times as much data. But it is also weird. I know exactly what the mean is! I have the entire Rubin Table! I don't need a confidence interval for the mean.  -->
 
 <!-- d) That is both true, and false. If all you truly care about is the mean these 5,000 people then, it is true, you are done. But that is generally not the case! The true Rubin Table is often bigger than you might initially think. You might also be interested in data from another time period (which has occurred but which may not be available to you) or from 2021, which has not even happened yet. Your Rubin Table includes rows for all those people. They are just missing. You also care about the millions of people who are not in the 5,000. You really want the mean for the country. (Or the world?) So, you use the model that you have to estimate stuff for the data that you don't. What is your best guess for the mean in 2011 (which you can check) or in 2021 (which you can't)? How confident are you are that estimate? What is your 50/50 prediction interval? -->
@@ -116,6 +117,8 @@ library(PPBDS.data)
 library(rsample)
 library(tidyverse)
 library(skimr)
+library(gtsummary)
+library(rstanarm)
 ```
 
 **PPBDS.data** includes the data sets for this book. **rsample** includes functions for bootstrapping, the main statistical tool which will we use in this chapter.
@@ -573,6 +576,79 @@ All our confidence intervals contained true 90th percentile, 184.3 cm! We can co
 
 
 <!-- DK: Write a few paragraphs of transition. Bayesian models are the bootstrap, except much more easier to use. -->
+
+<!--   -->
+
+
+<!-- Follow Gelman. Use some math, from the themes.Rmd file. First time doing it, show everything and go through whole output -->
+
+
+Fortunately for us, Bayesian models are not hard to execute in R. Sticking to same the filtered male 2009 data from the bootstrap example, this line of code would be able to perform a bayesian generalized linear model to estimate the mean height. This function comes from the rstanarm package, which is very useful for bayesian models.
+
+```{r}
+ch7_male <- nhanes %>%
+  filter(survey == 2009, gender == "Male") %>%
+  select(height) %>%
+  arrange(height) %>%
+  na.omit()
+
+stan_glm(data = ch7_male, height ~ 1)
+```
+
+
+Similarly to the bootstrap method we just went over, this model is taking serveral resamples of the data when anayzing the distribution of heights in our data to create a posterior distribution. More specifically, it is using sampling via the Markov chain Monte Carlo. While an in depth explanation of the functions algorithm is beyond the scope of the course, you can read up on it here https://mc-stan.org/rstanarm/reference/stan_glm.html if interested.
+
+In essence, chains 1-4 of the output are sampling in a method similar to the bootstrap that we did  to give us the main parameters of the model: the intercept and the sigma. Because all of these cacuation lines are not necessary to understanding our model, you can include refresh=0 in the function and assign it to an object to have a much cleaner output like the one below 
+
+<!-- Explain in detail all aspects of the model. -->
+
+```{r}
+mod.obj <- stan_glm(data = ch7_male, height ~ 1, refresh = 0)
+mod.obj
+```
+
+Now that have a much cleaner output, we can more easily understand what this model spit out at us. The first few lines remind us that we performed a bayesian generalized linear model of 1 predictor, height, with a gaussian distribution on a dataset of 2370 people. It is useful to know that a Gaussian, or normal, distribution is a probability distribution that is symmetric about the mean, showing that data near the mean are more frequent than data far from it.
+
+Under that, we see the output for the two parameters of the model: intercept and sigma. For each parameter, ther is a calculated point estimate (medians computed through the simulation) and uncertainty estimates (standard deviations computed from the same simulations that are proportional to the median absolute deviation from the reported median)
+
+Since we are only using one predictor, height, the intercept of the model can be interpreted as the model's best estimate of the mean height in the dataset. Recall that the function took many different resamples and found the mean of each one. The most accurate estimate of what the true mean actually is the Baysesian point estimate, the median of these means which in this case happends to be 167.5. In addition to the point estimate for the intercept, this model also provides estimates of the standard deviation of the posterior distribution (which is computed by scaling the median absolute deviation from the posterior medians). In this case, the MAD_SD for the intercept is .4, meaning that the standard deviation of the posterior distribution of mean heights is .4. As a rule of thumb, the smaller the MAD_SD, the less variation ther are among mean heights in the samples generated, and thus the more robust our estimate is 
+
+The second parameter, sigma, will be calculated for all bayesian models you compute (no matter how many predictors) and shows us the average error of  model, the deviation between the predicted value and the observed value. More specifically, sigma, the residual standard error, tells us that the mean height of males will be between plus or minus 21.8 of our prediction 68% of the time and plus or minus two times 21.8 the prediction about 95% of the time. Similar to with the intercept, the MAD_SD of the sigma reflects the standard deviation of the sigma value itself (since so many different samples were taken with each its own sigma)
+
+
+<!-- Show model output on nice table (maybe stargazer) -->
+
+```{r}
+#tidy(mod.obj)
+#tbl_regression(mod.obj)
+```
+
+The results of the bayesian linera model can also be seen with the posterior linpred function, which give a fitted model with a matrix of the estimates probabilites.
+
+```{r}
+mod.obj_linpred <- posterior_linpred(mod.obj, transform = TRUE)
+
+```
+
+From this matrix, you can use the ggplot function to create a histogram showing the distribution of mean heights across all of the samples. Looking at the histogram, it seems like the mean point estimate is between 167 and 168, which makes a lot of sense considering our median point estimate is 167.5
+
+```{r}
+mod.obj_linpred[,3] %>% 
+  as_tibble() %>% 
+  ggplot(aes(value)) +
+    geom_histogram(binwidth = 0.002)
+```
+
+Another useful tool in the rstanarm package is posterior predict, which can make predictions on new data using our model. This becomes even more useful when working with more parameters, as you will see in Chapter 8.
+```{r}
+mod.obj_predict <- posterior_predict(mod.obj, transform = TRUE)
+mod.obj_predict[,3] %>% 
+  as_tibble() %>% 
+  ggplot(aes(value)) +
+    geom_histogram(binwidth = 0.002)
+```
+
+
 
 ## Prudence
 
