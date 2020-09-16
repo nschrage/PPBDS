@@ -11,11 +11,9 @@ output_yaml:
 
 <!-- For Thomas: -->
 
-<!-- Read Gelman chapters. -->
-
 <!-- Review themes.Rmd. -->
 
-<!-- Work on age ~ party section. -->
+<!-- Work on age ~ party section. Create one model. And use that model object to discuss all our key themes. Include pictures of the cardinal virtues. Have one subsection for each virtue. -->
 
 
 <!-- Outline of the chapter -->
@@ -113,136 +111,30 @@ ch8 %>%
 On a boxplot, the top and bottom borders of the box denotes the 75th and 25th percentiles, respectively. The line inside the box denotes the mean of the data. Treated individuals have a higher mean `att_end` than the control group, and a higher distribution in general, with its 25th percentile lining up with the mean of the control group. The control group has one outlier, while the treatment group has none. 
 
 
-## Review of One Parameter Estimation
-
-
-<!--  Speak with Cass about adding a Preceptor Table here. -->
-
-Recall how we constructed bootstrap distributions for a parameter by sampling with replacement in Chapter \@ref(two-parameters). Through this bootstrapping process, we were able to construct *confidence intervals* for a parameter. Remember, confidence intervals are a tool to help us identify *parameter uncertainty*, which is the degree to which we are confident in these estimates of the *unknown* (and often unknowable) numbers. 
-
-We will once again be using the `bootstraps()` function from the **rsample** package. You might think that since we're shifting to calculating two parameters, we might need to conduct the entire bootstrapping process twice, once for each parameter. However, it's much, much easier than that. We can actually calculate as many parameters as we need to for each bootstrap sample instead of doing a separate bootstrap for each parameter we want to estimate.
-
-Let's review the material from  Chapter \@ref(two-parameters) by calculating the confidence interval for both the mean and the 90th percentile of age for Boston commuters. We will build up the code section by section.
-
-First, we select out the only variable we need, with is `age`, and then create an objects of class `bootstraps`.
-
-
-```{r}
-trains %>% 
-  select(age) %>% 
-  bootstraps(1000)
-```
-
-We discussed these objects in Chapter \@ref(two-parameters). The key trick in working with them is the use of `analysis()` from the **rsample** package to pull out the underlying data.
-
-```{r}
-trains %>% 
-  select(age) %>% 
-  bootstraps(1000) %>% 
-  mutate(boot = map(splits, ~ analysis(.)))
-```
-
-`boot` is now a list-column in the tibble. This workflow --- keep adding new columns to the tibble created after the initial call to `bootstraps()` --- is common. Let's add three more columns.
-
-```{r}
-trains %>% 
-  select(age) %>% 
-  bootstraps(1000) %>% 
-  mutate(boot = map(splits, ~ analysis(.))) %>%
-  mutate(ages = map(boot, ~ pull(., age))) %>% 
-  mutate(age_mean = map_dbl(ages, ~ mean(.))) %>% 
-  mutate(age_90th = map_dbl(ages, ~ quantile(., probs = 0.9)))
-```
-
-We could simplify this code by combining all the `mutate()` steps into a single line, create one function which does the `analyst()`, `pull()`, `mean()` and `quantile()` steps together. However, when building up an analysis like this, we prefer to go line-by-line, at least until everything is working. We could also "feed" this pipe directly into a call to `ggplot()`. However, it is better practice to save the needed results in an object and then use that object for plotting, especially if creating the data takes some time. For replication purposes, we use `set.seed()`. We only keep the variables we need.
-
-```{r}
-set.seed(9)
-
-boot_results <- trains %>% 
-  select(age) %>% 
-  bootstraps(1000) %>% 
-  mutate(ages = map(splits, ~ analysis(.) %>% 
-                              pull(., age))) %>%
-  mutate(age_mean = map_dbl(ages, ~ mean(.))) %>% 
-  mutate(age_90th = map_dbl(ages, ~ quantile(., probs = 0.9))) %>% 
-  select(age_mean, age_90th)
-```
-
-We no longer need to re-run this code each time we adjust the plot.
-
-
-```{r}
-boot_results %>% 
-  ggplot() +
-    geom_histogram(aes(x = age_mean), binwidth = .1, fill = "red") +
-    geom_histogram(aes(x = age_90th), binwidth = .1, fill = "blue") +
-    labs(x = "Estimate in Years",
-        title = "Posterior Distribution for the Mean and the 90th Percentile of 
-         Age for Boston Commuters")
-```
-
-Remember that some parameters, like the mean, are easy to calculate with built in functions like `lm()` while others require the use of the bootstrap. Note how similar the `lm()` solution is:
-
-```{r}
-trains %>% 
-  lm(age ~ 1, data = .) %>%
-  tidy(conf.int = TRUE) %>% 
-  select(conf.low, estimate, conf.high)
-```
-
-The 95% confidence interval calculated via `lm()` is, more or less, the same as the one we calculate "by hand" using the bootstrap: `r quantile(boot_results$age_mean, probs = c(0.025, 0.975))`. Of course, there is no built-in function for calculating the confidence interval for the 90th percentile, so there is nothing against which to compare the bootstrap calculation of `r quantile(boot_results$age_90th, probs = c(0.025, 0.975))`. Note, however, how the most likely value for the 90th percentile, 60, is also at the end of the confidence interval. 
-
-### Prediction
-
-Before considering the questions we want to answer with our model of mean height, let's step back and look at the big picture. All modeling problems look the same:
-
-$$outcome = model + stuff$$
-There is an outcome we care about. In this case, it is heights. But it could be anything. This is the thing that we are trying to understand. In order to understand it, we build a model. That takes time and trouble, so much so that we will sometimes forget that no model explains every outcome. There will always be other "stuff" which affects outcomes, influences that our model does not account for, *unmodeled variation*. Consider a sample from our dataset, augmented with other variables:
-
-```{r}
-trains %>% 
-  lm(age ~ 1, data = .) %>%
-  augment() %>% 
-  select(age, .fitted, .resid)
-```
-
-These three columns capture the three key components of any approach: the outcome (`age`), the model (`.fitted`) and the stuff (`.resid`). The residual is often referred to as the error term, although calling everything we don't understand an "error" is the height of hubris, as if the fault might in the world, rather than in our own ignorance.
-
-Graphically, we have:
-
-```{r}
-trains %>% 
-  lm(age ~ 1, data = .) %>%
-  augment() %>% 
-  select(age, .fitted, .resid) %>% 
-  pivot_longer(cols = everything()) %>% 
-  mutate(panels = factor(name, levels = c("age", ".fitted", ".resid"))) %>% 
-  ggplot() +
-    geom_histogram(aes(x = value), bins = 30) +
-    facet_grid(cols = vars(panels))
-```
-
-<!-- DK: Clean up this plot and make it much prettier. Add labels to connect with both the outcome, model, stuff formulation above and with the $y$, $\hat{u}$, $\epsilon$ notation. Should also add a nice caption explaining it all again.  -->
-
-In order to answer questions with this model, we need to use the `simulate()` function.
-
-```{r}
-lm.obj <- trains %>% 
-  lm(age ~ 1, data = .) 
-
-# simulate(lm.obj, seed = 9)
-```
-
-
-
-
-
-<!-- DK: Should also add a "validity" or "representativeness" discussion about what population this estimate applies to. All people? All people in Boston? All Boston commuters? Do we need to get into prediction stuff? Discuss the weird appearance of the plot for the 90th percentile? -->
-
 
 
 ## `age` as a function of `party`
+
+We want to build a predictive model and then use that model to draw conclusions about the world. What are the odds that, if a Republican and Democrat show up at the train station, their ages will be at least 5 years apart?
+
+### Wisdom
+
+
+
+### Justice
+
+
+
+### Courage
+
+```{r}
+obj <- stan_glm(age ~ party - 1, data = trains, refresh = 0)
+
+obj
+```
+
+### Temperance
+
 
 But what if, instead of having no other information about our sample beyond their ages, we also knew their political party? How would we make a model which included this other information? This is a model for prediction, rather than a model for causal inference, because `age` can not be changed regardless what happens to `party`. That is, someone's age is the same regardless of the party of which they are a member.
 
@@ -260,14 +152,13 @@ If a new Boston commuter named Jake showed up at the station, what would be a go
 
 However, instead of calculating these averages by hand, it is more convenient to use `lm()`, a function for creating linear statistical models. Start by estimating a simple model:
 
-```{r}
 
-trains %>% 
-  lm(data = ., age ~ party - 1)
-
-```
 
 Our predictive model's estimates are the same as the averages we calculated because that's most helpful number in estimating the age of an individual in the dataset knowing only their party, at least with our current set of tools. 
+
+```{r echo=FALSE, fig.margin=TRUE, fig.cap="Wisdom"}
+knitr::include_graphics("other/images/Wisdom.jpg")
+```
 
 ### Model Structure
 
@@ -329,9 +220,6 @@ Once you do this, you have a complete equation.
 To continue our discussion of these values, we'll bring back our table. We'll display a few specific observations (all of which had their data recorded) rather than representing all N commuters.
 
 ```{r, include = FALSE}
-
-library(tufte)
-
 margin_note("Note that this is no longer considered a Preceptor Table by our terminology. A Preceptor Table must account for all of the observations in the real-world population that the model is.")
 
 ```
@@ -362,9 +250,6 @@ tibble(subject = c("4", "5,051", "76", "80,050", "578", "23", "9,088", "888"),
 The fitted values are the same for all Republicans and for all Democrats, as the fitted value is one of the two estimates output by our model. However, almost all of the residuals are different due to each observation's own variation from the fitted value estimate. The only observations with the same residual are 80,050 and 888. This is because they are both Democrats that are the same age: with the same $y_i$ and $\hat{y_i}$, the calculation of their epsilon values are identical. This table shows how just a sample of 8 individuals captures a wide range of residuals, making it difficult to predict the age of a new individual who walks in the room even using our model.
 
 ```{r, include = FALSE}
-
-library(tufte)
-
 margin_note("Note that this is no longer considered a Preceptor Table by our terminology. A Preceptor Table must account for all of the observations in the real-world population that the model is.")
 
 ```
@@ -399,6 +284,8 @@ The final aspect of model structure is realism. Ask yourself, does this model re
 ### Parameter Uncertainty
 
 How uncertain are our estimates for age? Again, we use the same tools we have used before:
+
+<!-- DK: Talk about posterior_linpred() -->
 
 ```{r}
 trains %>% 
@@ -443,17 +330,17 @@ One shouldn't be too confident in that prediction. As discussed, the new Democra
 <!-- In short: If we have fewer data points, bootstrap parameter calculations are more likely to be further from the true values, and our confidence intervals will be wider as a result. It's important to understand the mechanics behind these relationships as we continue our work with confidence intervals going forward. -->
 
 
-## Estimate other things
+### Estimate other things
 
 <!-- Often functions of these parameters, which are, after all, just functions of the bootstrap samples. Consider the difference in income between treated and control. Again, this is a case in which we know every number. There is no missing data. So, we can calculate exactly the average income for control and the average income for treated, as we did above. With those two parameters estimated, we can calculate the average difference between the two --- or the difference between the averages, which is the same thing because all this is linear. But what about the uncertainty of that difference? Again, the bootstrap comes to our rescue. What does the 95% confidence interval of the difference look like? Does it include zero? Would we expect it to? How does randomization of treatment/control figure in? -->
 
-## Estimate trickier things
+### Estimate trickier things
 
 <!-- Explain how the above is a bit of a cheat since linear functions are special: the average difference is the same as the difference between the averages. This is an important point. But there are lots of things which are not like that! Consider the income ratio between the median treated and median control. This is something which, a priori, I might be as interested in as the difference in means. But the ratio of the medians is not the same thing as the median of the ratios! This is a key point. In order to calculate this, we need to, again, take the bootstrap and, in each bootstrap sample, calculate the median income of the treated, the median income of the controls, and record that ratio. We then save that ratio and look at its bootstrap distribution at the end of the exercise. -->
 
 <!-- EM: I feel like having "Estimate other things" and "Estimate trickier things" are redundant as chapter sections because they are mostly addressed through the sections that sandwich them.  -->
 
-#### Validity
+### Validity
 
 We just spent a ton of time analyzing the relationship between party and income in Enos' study. Although we have already accounted for parameter uncertainty (the confidence intervals) and unmodeled variation uncertainty (the prediction intervals), we have not accounted for the *validity* of his model — that is, whether the ideas he wishes to capture are truly represented by the data he collects.
 
@@ -476,7 +363,41 @@ It is always important to keep the problem of validity in the back of our minds 
 
 ## `att_end` as a function of `treatment`
 
-Let's establish the two types of models we've studied thus far. What we explored above was a predictive model: with someone's party affiliation, we can make a better guess as to what their age is. In this example, we'll explore a causal model, looking for the casual effect of randomly assigned treatments on att_end. 
+Let's establish the two types of models we've studied thus far. What we explored above was a predictive model: with someone's party affiliation, we can make a better guess as to what their age is. In this example, we'll explore a causal model, looking for the casual effect of treatment on `att_end`. 
+
+
+### Wisdom
+
+```{r echo=FALSE, fig.margin=TRUE, fig.cap="Wisdom"}
+knitr::include_graphics("other/images/Wisdom.jpg")
+```
+
+
+### Justice
+
+```{r echo=FALSE, fig.margin=TRUE, fig.cap="Justice"}
+knitr::include_graphics("other/images/justice.jpg")
+```
+
+
+### Courage
+
+```{r echo=FALSE, fig.margin=TRUE, fig.cap="Courage"}
+knitr::include_graphics("other/images/courage.jpg")
+```
+
+```{r}
+obj <- stan_glm(att_end ~ treatment - 1, data = trains, refresh = 0)
+
+obj
+```
+
+### Temperance
+
+```{r echo=FALSE, fig.margin=TRUE, fig.cap="Temperance"}
+knitr::include_graphics("other/images/temperance.jpg")
+```
+
 
 Here's the model using lm():
 
