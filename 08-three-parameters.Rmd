@@ -363,7 +363,7 @@ It is always important to keep the problem of validity in the back of our minds 
 
 ## `att_end` as a function of `treatment`
 
-Let's establish the two types of models we've studied thus far. What we explored above was a predictive model: with someone's party affiliation, we can make a better guess as to what their age is. In this example, we'll explore a causal model, looking for the casual effect of treatment on `att_end`. 
+Above, we created a predictive model: with someone's party affiliation, we can make a better guess as to what their age is. There was nothing causal about that model. Changing someone's party registration can not change their age. In this example, we build a causal model. What is the effect of exposing someone to Spanish-speakers on a train platform to their attitudes toward immigration? 
 
 
 ### Wisdom
@@ -392,20 +392,55 @@ obj <- stan_glm(att_end ~ treatment - 1, data = trains, refresh = 0)
 obj
 ```
 
+Note that for both Democrats and Republicans, the prediction interval is significantly wider than the confidence interval. This discrepancy illustrates the *unmodeled variation* of the dataset: while the mean values, as indicated by the "fit" column, are still the best guess you can make for any given subject, we are less confident in the value range of that individual subject than we are of the value range of the mean. *The unmodeled variation widens the prediction intervals relative to the confidence intervals.*
+
+Recall our discussion regarding the wider confidence intervals for Republican subjects than Democrat subjects. Although the Republican and Democrat average incomes had vastly different confidence intervals — the Republican confidence intervals were much wider — they have very similar prediction intervals. Although the *parameter uncertainty* of these two parameters were very different, the *unmodeled variation* for both parameters was roughly the same. Even though the data points were equally spread out for both Democrat and Republican income, were were able to more confidently pinpoint a true value for democrat income because we had more data to work with.
+
+In many cases, the most important use of a model is for prediction. We use them to make predictions about data which we have not yet seen.
+
+
+
+And we can reconstruct the table by filling in the unknowns with the predictions (note that these are unchanged) and their associated levels of uncertainty (which HAVE changed to accommodate for individual variation within the data):
+
+```{r, echo = FALSE}
+
+tibble(subject = c("7", "6,041", "67", "40,080", "758", "32", "8,809"),
+       Control = c("8.45 (2.9-14.0)", "8.45 (2.9-14.0)", "8.45 (2.9-14.0)", "8.45 (2.9-14.0)", "5", "8.45 (2.9-14.0)", "13"),
+       Treated = c("11", "10", "5", "11", "10 (4.4-15.6)", "13", "10 (4.4-15.6)")) %>% 
+  
+  gt() %>%
+  cols_label(subject = md("**Subject**"),
+                Control = md("**$$Y_c(u)$$**"),
+                Treated = md("**$$Y_t(u)$$**")) %>%
+  tab_style(cell_borders(sides = "right"),
+            location = cells_body(columns = vars(subject))) %>%
+  cols_align(align = "center", columns = TRUE) %>%
+  tab_header(title = "Ending Attitudes on Immigration of 7 Random Respondents")
+```
+
+
+
+
+
 ### Temperance
 
 ```{r echo=FALSE, fig.margin=TRUE, fig.cap="Temperance"}
 knitr::include_graphics("other/images/temperance.jpg")
 ```
 
+There are various sources of uncertainties and problems that have addressed in previous chapters and again in this chapter. It's important that you always have these in the back of your mind when working with data:
 
-Here's the model using lm():
+1) *Validity*. At the surface level, parameter names might not invoke too much thought — but once you really sit down and think about the story the numbers are trying to tell, it's not always the case that the numbers deserve to tell that story. In our earlier discussion regarding `income` and `att_end`, the conclusions we draw from these data might be misleading just because the way they were collected or computed inevitably change these conclusions. Even when there's nothing WRONG with a setup, we need to keep in mind that the smallest differences 
 
-```{r}
+2) When we dive deeper into the data, we run into the issue of *parameter uncertainty*, which is the uncertainty associated with our analysis of summary parameters, such as mean, median, and range. In our above analysis with the `trains` dataset, we account for parameter uncertainty using confidence intervals.
 
-lm(data = trains, att_end ~ treatment - 1, )
+3) As great as confidence intervals are, they don't capture the uncertainty of using summary statistics to predict parameter values of random individuals. We are more sure, for example, about the range of possible incomes for the mean income of American democrats than we are about the range of possible incomes for a single American democrat, whose income could stray far from the mean democrat income. This *unmodeled variation*, or variation between data points that is not fully captured by bootstrapping, deserves much consideration when dealing with data.
 
-```
+4) *Unknown unknowns* are an especially unavoidable source of uncertainty. The world is changing, and people 50 years from now might act differently and have vastly different lifestyles and characteristics; in the case of the `trains` dataset, it wouldn't be unreasonable to expect completely different combinations of income and party affiliation. That would render our mean income, median ratio, and prediction intervals for both those measures useless.
+
+
+
+
 
 The *fitted value* of att_end is 8.45 for the control group and 10 for the treated group. Because a higher att_end means more conservative towards stances on immigration, it seems that treated individuals had more conservative stances on this issue than the control group by the end of the study. 
 
@@ -578,83 +613,6 @@ Our measure of confidence for the ATE is known as the residual standard error, w
 
 ### Uncertainties
 
-There are various sources of uncertainties and problems that have addressed in previous chapters and again in this chapter. It's important that you always have these in the back of your mind when working with data:
-
-1) *Validity*. At the surface level, parameter names might not invoke too much thought — but once you really sit down and think about the story the numbers are trying to tell, it's not always the case that the numbers deserve to tell that story. In our earlier discussion regarding `income` and `att_end`, the conclusions we draw from these data might be misleading just because the way they were collected or computed inevitably change these conclusions. Even when there's nothing WRONG with a setup, we need to keep in mind that the smallest differences 
-
-2) When we dive deeper into the data, we run into the issue of *parameter uncertainty*, which is the uncertainty associated with our analysis of summary parameters, such as mean, median, and range. In our above analysis with the `trains` dataset, we account for parameter uncertainty using confidence intervals.
-
-3) As great as confidence intervals are, they don't capture the uncertainty of using summary statistics to predict parameter values of random individuals. We are more sure, for example, about the range of possible incomes for the mean income of American democrats than we are about the range of possible incomes for a single American democrat, whose income could stray far from the mean democrat income. This *unmodeled variation*, or variation between data points that is not fully captured by bootstrapping, deserves much consideration when dealing with data.
-
-4) *Unknown unknowns* are an especially unavoidable source of uncertainty. The world is changing, and people 50 years from now might act differently and have vastly different lifestyles and characteristics; in the case of the `trains` dataset, it wouldn't be unreasonable to expect completely different combinations of income and party affiliation. That would render our mean income, median ratio, and prediction intervals for both those measures useless.
-
-## Two parameter models which require the bootstrap
-
-
-## Prediction
-
-<!-- How do we connect this to the probability chapter? I am still thinking about this. Basic idea is that, what would we estimate would happen with a new experiment, which might include one or 10 or 1,000 new people? Just like coin-tossing from chapter 5. We need to make this connection very explicit. Read through chapter 5 and discuss.  Posterior distribution, given the data we have, of an unknown parameter.  -->
-
-<!-- Should we make an explicit connection to the probability chapter by adding another dimension to that work? We have two coins, each with their own p. Build the joint distribution for them, with one on the x-axis and one on the y-axis. You need a near graphic for each value of the H number of heads total that you get from flipping them each N times. Then, you run the experiment, and you select the correct graphic. That shows you the best guess joint distribution. This is confusing!  -->
-
-<!-- Do we want to play the prediction game? If so, how? -->
-
-We will introduce a new function here, `predict()`, which takes in a model as input and, given a specified parameter, will predict the value and confidence intervals of any given data point:
-
-```{r}
-
-trains.lm <- lm(data = trains, income ~ party)
-newdata <- tibble(party = c("Republican", "Democrat"))
-
-predict(trains.lm, newdata, interval = "prediction")
-
-```
-
-Note that for both Democrats and Republicans, the prediction interval is significantly wider than the confidence interval. This discrepancy illustrates the *unmodeled variation* of the dataset: while the mean values, as indicated by the "fit" column, are still the best guess you can make for any given subject, we are less confident in the value range of that individual subject than we are of the value range of the mean. *The unmodeled variation widens the prediction intervals relative to the confidence intervals.*
-
-Recall our discussion regarding the wider confidence intervals for Republican subjects than Democrat subjects (*would like to attach a link here that takes reader up to that part of the chapter*). Although the Republican and Democrat average incomes had vastly different confidence intervals — the Republican convidence intervals were much wider — they have very similar prediction intervals. Although the *parameter uncertainty* of these two parameters were very different, the *unmodeled variation* for both parameters was roughly the same. Even though the data points were equally spread out for both Democrat and Republican income, were were able to more confidently pinpoint a true value for democrat income because we had more data to work with.
-
-In many cases, the most important use of a model is for prediction. We use them to make predictions about data which we have not yet seen.
-
-Recall our earlier conversation regarding the difference between confidence intervals. An argument could be made that, taking individual variation into account, prediction intervals would be more accurate indicators of uncertainty than confidence intervals. We can construct the above table using prediction intervals instead, generated using the `predict()` function:
-
-```{r}
-
-
-lm(data = trains, att_end ~ treatment) %>%
-predict(tibble(treatment = c("Treated", "Control")), 
-        interval = "prediction")
-
-```
-
-And we can reconstruct the table by filling in the unknowns with the predictions (note that these are unchanged) and their associated levels of uncertainty (which HAVE changed to accomodate for individual variation within the data):
-
-``` {r}
-
-trains.lm <- lm(data = trains, att_end ~ treatment)
-newdata <- tibble(treatment = c("Treated", "Control"))
-
-predict(trains.lm, newdata, interval = "prediction")
-
-```
-
-And we can reconstruct the table by filling in the unknowns with the predictions (note that these are unchanged) and their associated levels of uncertainty (which HAVE changed to accomodate for individual variation within the data):
-
-```{r, echo = FALSE}
-
-tibble(subject = c("7", "6,041", "67", "40,080", "758", "32", "8,809"),
-       Control = c("8.45 (2.9-14.0)", "8.45 (2.9-14.0)", "8.45 (2.9-14.0)", "8.45 (2.9-14.0)", "5", "8.45 (2.9-14.0)", "13"),
-       Treated = c("11", "10", "5", "11", "10 (4.4-15.6)", "13", "10 (4.4-15.6)")) %>% 
-  
-  gt() %>%
-  cols_label(subject = md("**Subject**"),
-                Control = md("**$$Y_c(u)$$**"),
-                Treated = md("**$$Y_t(u)$$**")) %>%
-  tab_style(cell_borders(sides = "right"),
-            location = cells_body(columns = vars(subject))) %>%
-  cols_align(align = "center", columns = TRUE) %>%
-  tab_header(title = "Ending Attitudes on Immigration of 7 Random Respondents")
-```
 
 
 
