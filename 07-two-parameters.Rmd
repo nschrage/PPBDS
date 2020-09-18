@@ -593,11 +593,23 @@ ch7_male <- nhanes %>%
   arrange(height) %>%
   na.omit()
 
-stan_glm(data = ch7_male, height ~ 1)
+mod.obj <- stan_glm(data = ch7_male, height ~ 1)
 ```
 
 
-Similarly to the bootstrap method we just went over, this model is taking serveral resamples of the data when anayzing the distribution of heights in our data to create a posterior distribution. More specifically, it is using sampling via the Markov chain Monte Carlo. While an in depth explanation of the functions algorithm is beyond the scope of the course, you can read up on it here https://mc-stan.org/rstanarm/reference/stan_glm.html if interested.
+Similarly to the bootstrap method we just went over, this model is taking serveral resamples of the data when anayzing the distribution of heights in our data to create a posterior distribution. Each resample or simulation is its own model of two parameters (an intercept and sigma). The best way to see this is to convert the model into a matrix with the `as.matrix()` function. As you can see below, the outputted matrix shows you the interept and sigma of each simulation
+
+```{r}
+sims <- as.matrix(mod.obj)
+```
+
+If you want to get into the specifics, the function is using sampling via the Markov chain Monte Carlo. While an in depth explanation of this sampling method is beyond the scope of the class, you can read up more on both the function and its algorithm here https://mc-stan.org/rstanarm/reference/stan_glm.html if interested.
+
+```{r}
+mod.obj
+```
+
+When you output the model by itself
 
 In essence, chains 1-4 of the output are sampling in a method similar to the bootstrap that we did  to give us the main parameters of the model: the intercept and the sigma. Because all of these cacuation lines are not necessary to understanding our model, you can include refresh=0 in the function and assign it to an object to have a much cleaner output like the one below 
 
@@ -608,20 +620,95 @@ mod.obj <- stan_glm(data = ch7_male, height ~ 1, refresh = 0)
 mod.obj
 ```
 
+
 Now that have a much cleaner output, we can more easily understand what this model spit out at us. The first few lines remind us that we performed a bayesian generalized linear model of 1 predictor, height, with a gaussian distribution on a dataset of 2370 people. It is useful to know that a Gaussian, or normal, distribution is a probability distribution that is symmetric about the mean, showing that data near the mean are more frequent than data far from it.
 
-Under that, we see the output for the two parameters of the model: intercept and sigma. For each parameter, ther is a calculated point estimate (medians computed through the simulation) and uncertainty estimates (standard deviations computed from the same simulations that are proportional to the median absolute deviation from the reported median)
+Under that, we see the output for the two parameters of the model: intercept and sigma. For each parameter, there is a calculated point estimate (medians computed through the simulation) and uncertainty estimates (standard deviations) of these point estimates. This is the case because we cannot be sure what the actual point estimate of the parameter is, but running many simulations through the model can give us an idea of how certain our calculated point estimate is. For a lot of Bayesian inferencing, our uncertainty estimate for each parameter will be calculated using MAD SD, the median absolute deviation.
 
-Since we are only using one predictor, height, the intercept of the model can be interpreted as the model's best estimate of the mean height in the dataset. Recall that the function took many different resamples and found the mean of each one. The most accurate estimate of what the true mean actually is the Baysesian point estimate, the median of these means which in this case happends to be 167.5. In addition to the point estimate for the intercept, this model also provides estimates of the standard deviation of the posterior distribution (which is computed by scaling the median absolute deviation from the posterior medians). In this case, the MAD_SD for the intercept is .4, meaning that the standard deviation of the posterior distribution of mean heights is .4. As a rule of thumb, the smaller the MAD_SD, the less variation ther are among mean heights in the samples generated, and thus the more robust our estimate is 
+## Diving into MAD_SD
 
-The second parameter, sigma, will be calculated for all bayesian models you compute (no matter how many predictors) and shows us the average error of  model, the deviation between the predicted value and the observed value. More specifically, sigma, the residual standard error, tells us that the mean height of males will be between plus or minus 21.8 of our prediction 68% of the time and plus or minus two times 21.8 the prediction about 95% of the time. Similar to with the intercept, the MAD_SD of the sigma reflects the standard deviation of the sigma value itself (since so many different samples were taken with each its own sigma)
+As previously mentioned, MAD SD is a measure of uncertainty, similar to standard error which has been previously mentioned in the book. In fact MAD SD is a more robust measure than standard error becaue standard error is calculated by squaring ditances from data points to the model, which means outliers will more strongly skew data.
 
+MAD SD is computed by scaling the median absolute deviation from the posterior medians, but what does this even mean? Let's dive deeper with an example
 
-<!-- Show model output on nice table (maybe stargazer) -->
+Here below, we have a vector of 9 numbers, which could represent anything, like the ages of children at a park.
 
 ```{r}
-#tidy(mod.obj)
-#tbl_regression(mod.obj)
+x <- c(3, 4, 1, 8, 2, 5, 2, 1,5)
+```
+
+The first step of calculating MAD SD is to calculate MAD, which can be seen with this equation.
+
+$$ MAD = median(|Yi – median(Yi|) $$
+
+The first step to doing this is first finding the median of the vector (which in this case is 3) and subtracting it from each value. This gives you a vector where each number is the distance from the original the the median of all the differences. Importantly, all of these distances should be the same sign, since we care about distance more than direction, thus we take the absolute value of them.
+
+```{r}
+medianx <- median(x)
+diffx <- abs(x - medianx)
+```
+
+At this point, we have a list of numbers which represent that difference between the original numbers and the median
+
+```{r}
+diffx
+```
+
+The last step in calculating MAD is to take the median of those differenes, which in this case gives us 2
+
+```{r}
+mediandiffx <- median(diffx)
+
+```
+
+Lastly, because it is very useful in data analysis to be able to compare things to standard deviations, we usually rescale the median absolute deviation by multiplying it by 1.483, which reproduces the standard error if the data is normally distributed and can be calculated with the `mad()` equation
+
+```{r}
+mediandiffx * 1.483
+mad(x) 
+
+```
+
+Thus, the full equation of MAD SD is
+
+$$ MADsd = 1.483 * median(|Yi – median(Yi|) $$
+
+Before moving on to the next section of this chapter, take a second to make sure you understand what MAD SD and how it is calculated - it will play a very big role in demonstrating the uncertainty of most of our future parameters in the book
+
+
+## Unpacking the first parameter: the intercept
+
+```{r}
+mod.obj
+```
+
+Now that we understand MAD SD, we can understand the rest of the output of our mean height model. Since we are trying to find a constant to predict mean height, the intercept of the model can be interpreted as the model's best estimate of the mean height in the dataset. Recall that the `stan_glm()` function took many different resamples and found the mean of each one. The most accurate estimate of what the true mean actually is the Baysesian point estimate, the median of these means which in this case happends to be 167.5. In this case, the MAD_SD for the intercept is .4, meaning that the standard deviation of the posterior distribution of mean heights is .4. As a rule of thumb, the smaller the MAD_SD, the less variation there is among mean heights in the samples generated, and thus the more robust our estimate is.
+
+```{r}
+plot(mod.obj, "hist", pars = "(Intercept)")
+#abline(v = 167.5)
+  
+```
+
+## Unpacking the second parameter: sigma
+
+The second parameter, sigma, will be outputted for all bayesian models you compute (no matter how many predictors) and shows us the average error of the model. Another way of conceptualizing this parameter is as the deviation between the predicted value and the observed value. More specifically, sigma, the residual standard error, tells us that the mean height of males will be between plus or minus 21.8 of our prediction 68% of the time and plus or minus two times 21.8 the prediction about 95% of the time. Similar to with the intercept, the MAD_SD of the sigma reflects the standard deviation of the sigma value itself (since so many different samples were taken with each its own sigma)
+
+```{r}
+plot(mod.obj, "hist", pars = "sigma")
+```
+
+
+## Comparing lm and stan_glm
+
+Both the `lm()` and `stan_glm()` functions can be used to to create linear models. The reason this textbook is focusing on `stan_glm()` is through running serveral simulations of the model, it can represent uncertainty ina much more accurate way. Additionally, by performing Bayesian inference, this function also leads to more stable estimates and predictions that can be based on priors. A discussion on priors and Bayesian inference in general is beyond the scope of the chapter, but in all essence a prior is some previous information that you bring to the table when creating a sort of model that can influence how you create the model.
+
+## Visualizing the results of the linear model
+
+While the output of the `stan_glm()` function is helpful, it is many times crucial to visualize our results. One way that we can do this is by taking the output of the model and putting it into a nice table. A great package to specifically visualize these tpye of Bayesian models is the stargazer package, which comes with the `stargazer()` function seen below
+
+```{r}
+#stargazer(mod.obj)
 ```
 
 The results of the bayesian linera model can also be seen with the posterior linpred function, which give a fitted model with a matrix of the estimates probabilites.
@@ -637,7 +724,10 @@ From this matrix, you can use the ggplot function to create a histogram showing 
 mod.obj_linpred[,3] %>% 
   as_tibble() %>% 
   ggplot(aes(value)) +
-    geom_histogram(binwidth = 0.002)
+    geom_histogram(binwidth = 0.002, color = "blue")
+
+## add median of model, try to add mad_sd to show the 68& and 95% rules
+#explain graph
 ```
 
 Another useful tool in the rstanarm package is posterior predict, which can make predictions on new data using our model. This becomes even more useful when working with more parameters, as you will see in Chapter 8.
@@ -648,7 +738,6 @@ mod.obj_predict[,3] %>%
   ggplot(aes(value)) +
     geom_histogram(binwidth = 0.002)
 ```
-
 
 
 ## Wisdom
