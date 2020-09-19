@@ -4,6 +4,8 @@ output_yaml:
 ---
 
 
+<!-- DK: There are way too many warnings in this chapter. A few are fine, all the better to explain what warnings are and how to think about them. But the rest should go!  -->
+
 <!-- Jake Berg: for chapters 1 and 2. Functions/other things to include in the textbook: -->
 <!-- - How to remove columns with the select() function (as opposed to keeping columns—i.e. using a minus sign) -->
 <!-- - n(), which counts total # of rows [in each group], especially alongside group_by() and summarize(). -->
@@ -1705,6 +1707,20 @@ weather %>%
             std_dev = sd(temp, na.rm = TRUE))
 ```
 
+<!-- DK: This whole section stinks. Please fix! -->
+
+Notice the warning. R is trying to save us from ourselves. The warning means that the tibble which issues forth from the end of the pipe has been ungrouped, meaning that it no longer has any group attribute. This is probably what we want to have happen, which is why it is the default behavior. But there are many cases in which we want to keep the group attribute, i.e., we want the resulting tibble to still be grouped by month. The warning is urging us to be sure what we want. The proper way to handle the situation, here and everywhere else that we use `group_by()` and `summarize()`, is to specify the `.groups` argument.
+
+```{r}
+weather %>% 
+  group_by(month) %>% 
+  summarize(mean = mean(temp, na.rm = TRUE), 
+            std_dev = sd(temp, na.rm = TRUE),
+            .groups = "drop")
+```
+
+This code does the same thing as the first version, but does not issue a warning, since we have made an affirmative decision to drop any grouping variables. See `?summarize` for a discussion of other possible values for `.groups`.
+
 This code is identical to the previous code that created `summary_temp`, but with an extra `group_by(month)` added before the `summarize()`. Grouping the `weather` dataset by `month` and then applying the `summarize()` functions yields a data frame that displays the mean and standard deviation temperature split by the 12 months of the year.
 
 It is important to note that the `group_by()` function doesn't change data frames by itself. Rather it changes the *meta-data*, or data about the data, specifically the grouping structure. It is only after we apply the `summarize()` function that the data frame changes. 
@@ -1731,7 +1747,9 @@ Let's revisit the `n()` counting summary function we briefly introduced previous
 ```{r, eval=TRUE}
 by_origin <- flights %>% 
   group_by(origin) %>% 
-  summarize(count = n())
+  summarize(count = n(), 
+            .groups = "drop")
+
 by_origin
 ```
 
@@ -1754,7 +1772,8 @@ You are not limited to grouping by one variable. Say you want to know the number
 ```{r}
 flights %>% 
   group_by(origin, month) %>% 
-  summarize(count = n())
+  summarize(count = n(),
+            .groups = "drop")
 ```
 
 Observe that there are 36 rows to `by_origin_monthly` because there are 12 months for 3 airports (`EWR`, `JFK`, and `LGA`). 
@@ -1765,7 +1784,8 @@ Why do we `group_by(origin, month)` and not `group_by(origin)` and then `group_b
 flights %>% 
   group_by(origin) %>% 
   group_by(month) %>% 
-  summarize(count = n())
+  summarize(count = n(),
+            .groups = "drop")
 ```
 
 What happened here is that the second `group_by(month)` overwrote the grouping structure meta-data of the earlier `group_by(origin)`, so that in the end we are only grouping by `month`. The lesson here is if you want to `group_by()` two or more variables, you should include all the variables at the same time in the same `group_by()` adding a comma between the variable names.
