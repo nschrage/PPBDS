@@ -176,12 +176,12 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <span class="header-section-number">Chapter 1</span> Visualization</h1>
 <p>This chapter focuses on <strong>ggplot2</strong>, one of the core packages in the <strong>tidyverse</strong>. To access the datasets, help pages, and functions that we will use in this chapter, load the tidyverse by running this code:</p>
 <div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="visualization.html#cb8-1"></a><span class="kw">library</span>(tidyverse)</span></code></pre></div>
-<pre><code>## ── Attaching packages ───────────────────── tidyverse 1.3.0 ──</code></pre>
+<pre><code>## ── Attaching packages ───────────────────────────── tidyverse 1.3.0 ──</code></pre>
 <pre><code>## ✓ ggplot2 3.3.2     ✓ purrr   0.3.4
 ## ✓ tibble  3.0.3     ✓ dplyr   1.0.2
 ## ✓ tidyr   1.1.2     ✓ stringr 1.4.0
 ## ✓ readr   1.3.1     ✓ forcats 0.5.0</code></pre>
-<pre><code>## ── Conflicts ──────────────────────── tidyverse_conflicts() ──
+<pre><code>## ── Conflicts ──────────────────────────────── tidyverse_conflicts() ──
 ## x readr::col_factor() masks scales::col_factor()
 ## x purrr::discard()    masks scales::discard()
 ## x dplyr::filter()     masks stats::filter()
@@ -1044,6 +1044,8 @@ FIGURE 1.8: Data Visualization with ggplot2 Cheat Sheet
 <span id="cb105-11"><a href="visualization.html#cb105-11"></a>       <span class="dt">caption =</span> <span class="st">"Source: Gapminder"</span>,</span>
 <span id="cb105-12"><a href="visualization.html#cb105-12"></a>       <span class="dt">color =</span> <span class="st">"Continent"</span>) </span></code></pre></div>
 <p><img src="book_temp_files/figure-html/unnamed-chunk-111-1.png" width="672"></p>
+<!-- DK: I never use the color argument in labs(). Worth keeping? -->
+<p>If a <code>title</code> or other <code>labs()</code> argument is too long, you can insert a newline character — a “” — in the middle, which will cause the <code>title</code> to take up two lines rather than one. This is the simplest way to deal with titles or axis labels which are too long.</p>
 <p>It is up to us, which or how many of the arguments in <code>labs()</code> we use. While most arguments are probably self-explanatory, it makes sense to have a look at the last one. It determines the title of the legend, and should always be named after the aesthetic to which the legend refers. Since the legend was created by the <em>color</em> argument in the density plot, we can refer to it with <code>color =</code>.</p>
 <p>We can also change labels within the plots. Wouldn’t it be great if we knew which country each point refers to? We can do this with the help of <code>geom_text()</code>:</p>
 <div class="sourceCode" id="cb106"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb106-1"><a href="visualization.html#cb106-1"></a><span class="kw">ggplot</span>(gapminder_<span class="dv">07</span>, </span>
@@ -1227,6 +1229,7 @@ FIGURE 1.9: Diagram of filter() rows operation.
 <div class="sourceCode" id="cb123"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb123-1"><a href="visualization.html#cb123-1"></a>many_airports &lt;-<span class="st"> </span>flights <span class="op">%&gt;%</span><span class="st"> </span></span>
 <span id="cb123-2"><a href="visualization.html#cb123-2"></a><span class="st">  </span><span class="kw">filter</span>(dest <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">"SEA"</span>, <span class="st">"SFO"</span>, <span class="st">"PDX"</span>, <span class="st">"BTV"</span>, <span class="st">"BDL"</span>))</span>
 <span id="cb123-3"><a href="visualization.html#cb123-3"></a><span class="kw">View</span>(many_airports)</span></code></pre></div>
+<p>One of the most common mistakes is to use <code>==</code> in this <code>filter()</code> rather than <code>%in%</code>. This is diabolical since it won’t fail and, in certain situations, it might not even issue a warning. Beware!</p>
 <p>What this code is doing is filtering <code>flights</code> for all flights where <code>dest</code> is in the vector of airports <code>c("BTV", "SEA", "PDX", "SFO", "BDL")</code>. Both outputs of <code>many_airports</code> are the same, but as you can see the latter takes much less energy to code. The <code>%in%</code> operator is useful for looking for matches commonly in one vector/variable compared to another.</p>
 <p>As a final note, we recommend that <code>filter()</code> should often be among the first verbs you consider applying to your data. This cleans your dataset to only those rows you care about, or put differently, it narrows down the scope of your data frame to just the observations you care about.</p>
 <!-- EF: Should we include something hear about NA values? -->
@@ -1633,10 +1636,33 @@ FIGURE 1.13: (ref:groupby)
 ## 10    10  60.1    8.85
 ## 11    11  45.0   10.4 
 ## 12    12  38.4    9.98</code></pre>
+<!-- DK: This whole section stinks. Please fix! -->
+<p>Notice the warning. R is trying to save us from ourselves. The warning means that the tibble which issues forth from the end of the pipe has been ungrouped, meaning that it no longer has any group attribute. This is probably what we want to have happen, which is why it is the default behavior. But there are many cases in which we want to keep the group attribute, i.e., we want the resulting tibble to still be grouped by month. The warning is urging us to be sure what we want. The proper way to handle the situation, here and everywhere else that we use <code>group_by()</code> and <code>summarize()</code>, is to specify the <code>.groups</code> argument.</p>
+<div class="sourceCode" id="cb174"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb174-1"><a href="visualization.html#cb174-1"></a>weather <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb174-2"><a href="visualization.html#cb174-2"></a><span class="st">  </span><span class="kw">group_by</span>(month) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb174-3"><a href="visualization.html#cb174-3"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">mean =</span> <span class="kw">mean</span>(temp, <span class="dt">na.rm =</span> <span class="ot">TRUE</span>), </span>
+<span id="cb174-4"><a href="visualization.html#cb174-4"></a>            <span class="dt">std_dev =</span> <span class="kw">sd</span>(temp, <span class="dt">na.rm =</span> <span class="ot">TRUE</span>),</span>
+<span id="cb174-5"><a href="visualization.html#cb174-5"></a>            <span class="dt">.groups =</span> <span class="st">"drop"</span>)</span></code></pre></div>
+<pre><code>## # A tibble: 12 x 3
+##    month  mean std_dev
+##    &lt;int&gt; &lt;dbl&gt;   &lt;dbl&gt;
+##  1     1  35.6   10.2 
+##  2     2  34.3    6.98
+##  3     3  39.9    6.25
+##  4     4  51.7    8.79
+##  5     5  61.8    9.68
+##  6     6  72.2    7.55
+##  7     7  80.1    7.12
+##  8     8  74.5    5.19
+##  9     9  67.4    8.47
+## 10    10  60.1    8.85
+## 11    11  45.0   10.4 
+## 12    12  38.4    9.98</code></pre>
+<p>This code does the same thing as the first version, but does not issue a warning, since we have made an affirmative decision to drop any grouping variables. See <code>?summarize</code> for a discussion of other possible values for <code>.groups</code>.</p>
 <p>This code is identical to the previous code that created <code>summary_temp</code>, but with an extra <code>group_by(month)</code> added before the <code>summarize()</code>. Grouping the <code>weather</code> dataset by <code>month</code> and then applying the <code>summarize()</code> functions yields a data frame that displays the mean and standard deviation temperature split by the 12 months of the year.</p>
 <p>It is important to note that the <code>group_by()</code> function doesn’t change data frames by itself. Rather it changes the <em>meta-data</em>, or data about the data, specifically the grouping structure. It is only after we apply the <code>summarize()</code> function that the data frame changes.</p>
 <p>Run this code (do not forget to load its package <code>nycflights13</code> in your console if you have not already):</p>
-<div class="sourceCode" id="cb174"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb174-1"><a href="visualization.html#cb174-1"></a>flights</span></code></pre></div>
+<div class="sourceCode" id="cb176"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb176-1"><a href="visualization.html#cb176-1"></a>flights</span></code></pre></div>
 <pre><code>## # A tibble: 336,776 x 22
 ##     year month   day dep_time sched_dep_time dep_delay arr_time sched_arr_time
 ##    &lt;int&gt; &lt;int&gt; &lt;int&gt;    &lt;int&gt;          &lt;int&gt;     &lt;dbl&gt;    &lt;int&gt;          &lt;int&gt;
@@ -1655,8 +1681,8 @@ FIGURE 1.13: (ref:groupby)
 ## #   air_time &lt;dbl&gt;, distance &lt;dbl&gt;, hour &lt;dbl&gt;, minute &lt;dbl&gt;, time_hour &lt;dttm&gt;,
 ## #   gain &lt;dbl&gt;, hours &lt;dbl&gt;, gain_per_hour &lt;dbl&gt;</code></pre>
 <p>Observe that the first line of the output reads <code># A tibble: 336,776 x 20</code>. This is an example of meta-data, in this case the number of observations/rows and variables/columns in <code>flights</code>. The actual data itself are the subsequent table of values. Now let’s pipe the <code>flights</code> data frame into <code>group_by(origin)</code>:</p>
-<div class="sourceCode" id="cb176"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb176-1"><a href="visualization.html#cb176-1"></a>flights <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb176-2"><a href="visualization.html#cb176-2"></a><span class="st">  </span><span class="kw">group_by</span>(origin)</span></code></pre></div>
+<div class="sourceCode" id="cb178"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb178-1"><a href="visualization.html#cb178-1"></a>flights <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb178-2"><a href="visualization.html#cb178-2"></a><span class="st">  </span><span class="kw">group_by</span>(origin)</span></code></pre></div>
 <pre><code>## # A tibble: 336,776 x 22
 ## # Groups:   origin [3]
 ##     year month   day dep_time sched_dep_time dep_delay arr_time sched_arr_time
@@ -1678,11 +1704,12 @@ FIGURE 1.13: (ref:groupby)
 <p>Observe that now there is additional meta-data: <code># Groups: origin [3]</code> indicating that the grouping structure meta-data has been set based on the 3 possible levels of the categorical variable <code>origin</code>: <code>"EWR"</code>, <code>"JFK"</code>, and <code>"LGA"</code>. On the other hand, observe that the data has not changed: it is still a table of 336,776 <span class="math inline">\(\times\)</span> 19 values.</p>
 <p>Only by combining a <code>group_by()</code> with another data wrangling operation, in this case <code>summarize()</code>, will the data actually be transformed.</p>
 <p>Let’s revisit the <code>n()</code> counting summary function we briefly introduced previously. Recall that the <code>n()</code> function counts rows. This is opposed to the <code>sum()</code> summary function that returns the sum of a numerical variable. For example, suppose we’d like to count how many flights departed each of the three airports in New York City:</p>
-<div class="sourceCode" id="cb178"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb178-1"><a href="visualization.html#cb178-1"></a>by_origin &lt;-<span class="st"> </span>flights <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb178-2"><a href="visualization.html#cb178-2"></a><span class="st">  </span><span class="kw">group_by</span>(origin) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb178-3"><a href="visualization.html#cb178-3"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">count =</span> <span class="kw">n</span>())</span></code></pre></div>
-<pre><code>## `summarise()` ungrouping output (override with `.groups` argument)</code></pre>
-<div class="sourceCode" id="cb180"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb180-1"><a href="visualization.html#cb180-1"></a>by_origin</span></code></pre></div>
+<div class="sourceCode" id="cb180"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb180-1"><a href="visualization.html#cb180-1"></a>by_origin &lt;-<span class="st"> </span>flights <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb180-2"><a href="visualization.html#cb180-2"></a><span class="st">  </span><span class="kw">group_by</span>(origin) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb180-3"><a href="visualization.html#cb180-3"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">count =</span> <span class="kw">n</span>(), </span>
+<span id="cb180-4"><a href="visualization.html#cb180-4"></a>            <span class="dt">.groups =</span> <span class="st">"drop"</span>)</span>
+<span id="cb180-5"><a href="visualization.html#cb180-5"></a></span>
+<span id="cb180-6"><a href="visualization.html#cb180-6"></a>by_origin</span></code></pre></div>
 <pre><code>## # A tibble: 3 x 2
 ##   origin  count
 ##   &lt;chr&gt;   &lt;int&gt;
@@ -1718,10 +1745,9 @@ FIGURE 1.13: (ref:groupby)
 <p>You are not limited to grouping by one variable. Say you want to know the number of flights leaving each of the three New York City airports <em>for each month</em>. We can also group by a second variable <code>month</code> using <code>group_by(origin, month)</code>:</p>
 <div class="sourceCode" id="cb184"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb184-1"><a href="visualization.html#cb184-1"></a>flights <span class="op">%&gt;%</span><span class="st"> </span></span>
 <span id="cb184-2"><a href="visualization.html#cb184-2"></a><span class="st">  </span><span class="kw">group_by</span>(origin, month) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb184-3"><a href="visualization.html#cb184-3"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">count =</span> <span class="kw">n</span>())</span></code></pre></div>
-<pre><code>## `summarise()` regrouping output by 'origin' (override with `.groups` argument)</code></pre>
+<span id="cb184-3"><a href="visualization.html#cb184-3"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">count =</span> <span class="kw">n</span>(),</span>
+<span id="cb184-4"><a href="visualization.html#cb184-4"></a>            <span class="dt">.groups =</span> <span class="st">"drop"</span>)</span></code></pre></div>
 <pre><code>## # A tibble: 36 x 3
-## # Groups:   origin [3]
 ##    origin month count
 ##    &lt;chr&gt;  &lt;int&gt; &lt;int&gt;
 ##  1 EWR        1  9893
@@ -1737,11 +1763,11 @@ FIGURE 1.13: (ref:groupby)
 ## # … with 26 more rows</code></pre>
 <p>Observe that there are 36 rows to <code>by_origin_monthly</code> because there are 12 months for 3 airports (<code>EWR</code>, <code>JFK</code>, and <code>LGA</code>).</p>
 <p>Why do we <code>group_by(origin, month)</code> and not <code>group_by(origin)</code> and then <code>group_by(month)</code>? Let’s investigate:</p>
-<div class="sourceCode" id="cb187"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb187-1"><a href="visualization.html#cb187-1"></a>flights <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb187-2"><a href="visualization.html#cb187-2"></a><span class="st">  </span><span class="kw">group_by</span>(origin) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb187-3"><a href="visualization.html#cb187-3"></a><span class="st">  </span><span class="kw">group_by</span>(month) <span class="op">%&gt;%</span><span class="st"> </span></span>
-<span id="cb187-4"><a href="visualization.html#cb187-4"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">count =</span> <span class="kw">n</span>())</span></code></pre></div>
-<pre><code>## `summarise()` ungrouping output (override with `.groups` argument)</code></pre>
+<div class="sourceCode" id="cb186"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb186-1"><a href="visualization.html#cb186-1"></a>flights <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb186-2"><a href="visualization.html#cb186-2"></a><span class="st">  </span><span class="kw">group_by</span>(origin) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb186-3"><a href="visualization.html#cb186-3"></a><span class="st">  </span><span class="kw">group_by</span>(month) <span class="op">%&gt;%</span><span class="st"> </span></span>
+<span id="cb186-4"><a href="visualization.html#cb186-4"></a><span class="st">  </span><span class="kw">summarize</span>(<span class="dt">count =</span> <span class="kw">n</span>(),</span>
+<span id="cb186-5"><a href="visualization.html#cb186-5"></a>            <span class="dt">.groups =</span> <span class="st">"drop"</span>)</span></code></pre></div>
 <pre><code>## # A tibble: 12 x 2
 ##    month count
 ##    &lt;int&gt; &lt;int&gt;
@@ -1767,23 +1793,23 @@ FIGURE 1.13: (ref:groupby)
 <p>Congratulations for making it to the end of the chapter. At this point you have already learned many different concepts and methods to visualize and manipulate data. In the first section we looked at basic concepts and terms we are dealing with when programming with R. In section two, we learned about the three basic components that make up each plot: Data, mapping, and one or multiple geoms. The ggplot package offers a wide range of geoms that we can use to create different types of plots. In the third section we looked at some additional elements that we can use to modify our plots. These include features such as axis scaling, labeling and themes, and although we can also create plots without them, they often determine how much information we can derive from our data. Finally, in the fourth section, we took a look at the “super package” tidyverse, which also includes ggplot. Besides tools for visualization, it offers features for importing and manipulating data, which is the main topic of the following chapters.</p>
 <p>Finally, it should be mentioned that we have only seen a small part of what R offers. Since R is an open source software, there are many independent developers who are constantly releasing new R packages with new features and functions. For example, we can use the <strong>gganimate</strong> package to bring our gapminder plot to life:</p>
 <!-- DK: This is a nice way to end the chapter. But . . . 1) We should provide the code for all these plots, given that we are going to show them at all. 2) We should make these plots more consistent with the series which we worked through above, and with each other. For example, we should use the same axis labels. 3) We should clean up the code. For example, there is no reason that the plotly code could not start with the gapminder data. Also, isn't there a way to go straight from a ggplot2 object into a plotly object? Seems unlikely that we should be exposing the students to a radically different syntax. 4) If we are going to show rayshader, maybe make it more impressive? -->
-<div class="sourceCode" id="cb190"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb190-1"><a href="visualization.html#cb190-1"></a><span class="kw">library</span>(gganimate)</span>
-<span id="cb190-2"><a href="visualization.html#cb190-2"></a></span>
-<span id="cb190-3"><a href="visualization.html#cb190-3"></a>gapminder <span class="op">%&gt;%</span></span>
-<span id="cb190-4"><a href="visualization.html#cb190-4"></a><span class="st">  </span><span class="kw">filter</span>(continent <span class="op">!=</span><span class="st"> "Oceania"</span>) <span class="op">%&gt;%</span></span>
-<span id="cb190-5"><a href="visualization.html#cb190-5"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(gdpPercap, lifeExp, <span class="dt">size =</span> pop, <span class="dt">color =</span> continent)) <span class="op">+</span></span>
-<span id="cb190-6"><a href="visualization.html#cb190-6"></a><span class="st">    </span><span class="kw">geom_point</span>(<span class="dt">show.legend =</span> <span class="ot">FALSE</span>, <span class="dt">alpha =</span> <span class="fl">0.7</span>) <span class="op">+</span></span>
-<span id="cb190-7"><a href="visualization.html#cb190-7"></a><span class="st">    </span><span class="kw">facet_wrap</span>(<span class="op">~</span>continent, <span class="dt">nrow =</span> <span class="dv">1</span>) <span class="op">+</span></span>
-<span id="cb190-8"><a href="visualization.html#cb190-8"></a><span class="st">    </span><span class="kw">scale_size</span>(<span class="dt">range =</span> <span class="kw">c</span>(<span class="dv">2</span>, <span class="dv">12</span>)) <span class="op">+</span></span>
-<span id="cb190-9"><a href="visualization.html#cb190-9"></a><span class="st">    </span><span class="kw">scale_x_log10</span>() <span class="op">+</span></span>
-<span id="cb190-10"><a href="visualization.html#cb190-10"></a><span class="st">    </span><span class="kw">labs</span>(<span class="dt">subtitle =</span> <span class="st">"Life Expectancy and GDP per Capita (1952-2007)"</span>,</span>
-<span id="cb190-11"><a href="visualization.html#cb190-11"></a>         <span class="dt">x =</span> <span class="st">"GDP per Capita, USD"</span>,</span>
-<span id="cb190-12"><a href="visualization.html#cb190-12"></a>         <span class="dt">y =</span> <span class="st">"Life Expectancy, Years"</span>) <span class="op">+</span></span>
-<span id="cb190-13"><a href="visualization.html#cb190-13"></a><span class="st">    </span><span class="kw">theme_linedraw</span>() <span class="op">+</span></span>
-<span id="cb190-14"><a href="visualization.html#cb190-14"></a><span class="st">    </span><span class="kw">transition_time</span>(year) <span class="op">+</span></span>
-<span id="cb190-15"><a href="visualization.html#cb190-15"></a><span class="st">    </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">"Year: {frame_time}"</span>) <span class="op">+</span></span>
-<span id="cb190-16"><a href="visualization.html#cb190-16"></a><span class="st">    </span><span class="kw">shadow_wake</span>(<span class="dt">wake_length =</span> <span class="fl">0.1</span>, <span class="dt">alpha =</span> <span class="ot">FALSE</span>)</span></code></pre></div>
-<p><img src="book_temp_files/figure-html/unnamed-chunk-164-1.gif"></p>
+<div class="sourceCode" id="cb188"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb188-1"><a href="visualization.html#cb188-1"></a><span class="kw">library</span>(gganimate)</span>
+<span id="cb188-2"><a href="visualization.html#cb188-2"></a></span>
+<span id="cb188-3"><a href="visualization.html#cb188-3"></a>gapminder <span class="op">%&gt;%</span></span>
+<span id="cb188-4"><a href="visualization.html#cb188-4"></a><span class="st">  </span><span class="kw">filter</span>(continent <span class="op">!=</span><span class="st"> "Oceania"</span>) <span class="op">%&gt;%</span></span>
+<span id="cb188-5"><a href="visualization.html#cb188-5"></a><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(gdpPercap, lifeExp, <span class="dt">size =</span> pop, <span class="dt">color =</span> continent)) <span class="op">+</span></span>
+<span id="cb188-6"><a href="visualization.html#cb188-6"></a><span class="st">    </span><span class="kw">geom_point</span>(<span class="dt">show.legend =</span> <span class="ot">FALSE</span>, <span class="dt">alpha =</span> <span class="fl">0.7</span>) <span class="op">+</span></span>
+<span id="cb188-7"><a href="visualization.html#cb188-7"></a><span class="st">    </span><span class="kw">facet_wrap</span>(<span class="op">~</span>continent, <span class="dt">nrow =</span> <span class="dv">1</span>) <span class="op">+</span></span>
+<span id="cb188-8"><a href="visualization.html#cb188-8"></a><span class="st">    </span><span class="kw">scale_size</span>(<span class="dt">range =</span> <span class="kw">c</span>(<span class="dv">2</span>, <span class="dv">12</span>)) <span class="op">+</span></span>
+<span id="cb188-9"><a href="visualization.html#cb188-9"></a><span class="st">    </span><span class="kw">scale_x_log10</span>() <span class="op">+</span></span>
+<span id="cb188-10"><a href="visualization.html#cb188-10"></a><span class="st">    </span><span class="kw">labs</span>(<span class="dt">subtitle =</span> <span class="st">"Life Expectancy and GDP per Capita (1952-2007)"</span>,</span>
+<span id="cb188-11"><a href="visualization.html#cb188-11"></a>         <span class="dt">x =</span> <span class="st">"GDP per Capita, USD"</span>,</span>
+<span id="cb188-12"><a href="visualization.html#cb188-12"></a>         <span class="dt">y =</span> <span class="st">"Life Expectancy, Years"</span>) <span class="op">+</span></span>
+<span id="cb188-13"><a href="visualization.html#cb188-13"></a><span class="st">    </span><span class="kw">theme_linedraw</span>() <span class="op">+</span></span>
+<span id="cb188-14"><a href="visualization.html#cb188-14"></a><span class="st">    </span><span class="kw">transition_time</span>(year) <span class="op">+</span></span>
+<span id="cb188-15"><a href="visualization.html#cb188-15"></a><span class="st">    </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">"Year: {frame_time}"</span>) <span class="op">+</span></span>
+<span id="cb188-16"><a href="visualization.html#cb188-16"></a><span class="st">    </span><span class="kw">shadow_wake</span>(<span class="dt">wake_length =</span> <span class="fl">0.1</span>, <span class="dt">alpha =</span> <span class="ot">FALSE</span>)</span></code></pre></div>
+<p><img src="book_temp_files/figure-html/unnamed-chunk-165-1.gif"></p>
 <!-- Or the **plotly** package to make it an interactive 3D plot. -->
 <!-- DK: There are two problems with the below code. First, it is absurdly hacky. We need an example to show students which is clean. Second, uncommenting out this mess causes all math formatting to fail. -->
 <p>Or the <strong>rayshader</strong> package that allows us to create beautiful landscapes and maps.</p>
@@ -1798,7 +1824,7 @@ FIGURE 1.13: (ref:groupby)
 <a href="wrangling.html"><button class="btn btn-default">Next</button></a>
 </p>
 <p class="build-date">Page built: 
-2020-09-18
+2020-09-19
 </p>
 </div>
 </div>
