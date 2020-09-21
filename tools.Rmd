@@ -51,7 +51,7 @@ The chapter will be broken into the following sections:
 * [Style guide](#style-guide)  
 * [How to use Rpubs](#how-to-use-rpubs)  
 * [How to get help](#how-to-get-help)
-
+* [How to make a table](#how-to-make-a-table)
 
 ## Working with the terminal {-}
 
@@ -573,5 +573,140 @@ And here is how you would post it to RStudio community.
 ```{r, echo=FALSE}
 knitr::include_graphics("other/images/reprex-5.gif")
 ```
+
+## How to make a table {-}
+
+**gt** is an R package for creating elegant tables. First, we'll create a **gt** summary table of some observations from the data. Second, we'll run a regression and display the outcome using **gtsummary**, a companion package to **gt** which specializes in presenting the results of statistical models.
+
+If you want to learn more about **gt** check [this](https://themockup.blog/posts/2020-05-16-gt-a-grammer-of-tables/) fantastic guide. Go [here](https://gt.rstudio.com) for the official **gt** package website. See [here](https://www.danieldsjoberg.com/gtsummary/articles/tbl_summary.html) for an extensive guide to **gtsummary**.
+
+Load the necessary libraries.
+
+```{r setup, message=FALSE}
+library(tidyverse)
+library(PPBDS.data)
+library(gt)
+```
+
+We set `message=FALSE` in the above code chunk to avoid showing all the ugly notes when these libraries are loaded.
+
+Let's pull some data which we will use in our table: 
+
+```{r}
+x <- trains %>%
+  select(gender, income, att_end) %>%
+  slice(1:5)
+x
+```
+
+Create the simplest table with `gt()`, the key command:
+
+```{r}
+x %>% 
+  gt()
+```
+
+Now let's make this more professional. **gt** offers a variety of functions to add features like these^[source: https://gt.rstudio.com]: 
+
+```{r, echo = FALSE}
+knitr::include_graphics("other/images/gt_features.png")
+```
+
+You can add a title and subtitle using `tab_header()`: 
+
+```{r}
+x %>% 
+  gt() %>%
+   tab_header(title = "Enos Data Observations", 
+              subtitle = "Gender, Income, and End Attitude from the Trains Data")
+```
+
+By default, titles and other text can not be formatted. If you want formatting, you must wrap the character string in a call to `md()`, where *md* stands for (M)ark(d)own. For example, here is a bolded title.
+
+```{r}
+x %>% 
+  gt()%>%
+   tab_header(title = md("**Enos Data Observations**"), 
+              subtitle = "Gender, Income, and End Attitude from the Trains Data")
+```
+
+You can change the column names using `cols_label()`:
+
+```{r}
+x %>% 
+  gt()%>%
+    tab_header(title = md("**Enos Data Observations**"), 
+               subtitle = "Gender, Income, and End Attitude from the Trains Data") %>%
+    cols_label(gender = "Gender",
+               income = "Income", 
+               att_end = "End Attitude")
+```
+
+Use `tab_source_note()` to cite the source of the data or to create a caption. This function is not exclusively for providing a source --- though it's a handy way to do so --- and can be used to display any text you'd like:
+
+```{r}
+x %>% 
+  gt()%>%
+   tab_header(title = md("**Enos Data Observations**"), 
+              subtitle = "Gender, Income, and End Attitude from the Trains Data") %>%
+  cols_label(gender = "Gender",
+             income = "Income", 
+             att_end = "End Attitude") %>% 
+  tab_source_note("Source: Ryan Enos")
+```
+
+Using `md()` again, we can italicize the name of the Enos study in the caption:
+
+```{r}
+x %>% 
+  gt()%>%
+   tab_header(title = md("**Enos Data Observations**"), 
+              subtitle = "Gender, Income, and End Attitude from the Trains Data") %>%
+  cols_label(gender = "Gender",
+             income = "Income", 
+             att_end = "End Attitude") %>% 
+  tab_source_note(md("Source: Ryan Enos, *Causal Effect of Intergroup Contact on Exclusionary Attitudes*"))
+```
+
+
+Now that the table structure looks good, we want to format the numbers themselves. Let's add some dollar signs to the income column using `fmt_currency()`. This function also adds commas (if you want commas without dollar signs use `fmt_number()`). The `vars()` within `fmt_currency()` denotes the variable being formatted as a currency:
+
+
+```{r}
+x %>% 
+  gt() %>%
+    tab_header(title = md("**Enos Data Observations**"), 
+               subtitle = "Gender, Income, and End Attitude from the Trains Data")%>%
+    cols_label(gender = "Gender",
+               income = "Income", 
+               att_end = "End Attitude") %>% 
+    tab_source_note(md("Source: Ryan Enos, *Causal Effect of Intergroup 
+                       Contact on Exclusionary Attitudes*")) %>%
+    fmt_currency(columns = vars(income), 
+                 decimals = 0) 
+```
+
+Note that the line return in the title between "Intergroup" and "Contact" does not effect or break up the title displayed by `md()`.
+
+### Regression tables {-}
+
+We can making a **gt** table with a `stan_glm()` regression object. Key to this is the **gtsummary** package and its `tbl_regression()` function.
+
+```{r, message=FALSE}
+library(rstanarm)
+library(broom.mixed)
+library(gtsummary)
+
+fit2 <- stan_glm(att_end ~ party, data = trains, refresh = 0)
+
+tbl_regression(fit2, intercept = TRUE) %>%
+  as_gt() %>%
+    tab_header(title = "Regression of Attitudes about Immigration", 
+               subtitle = "The Effect of Party on End Attitude") %>%
+    tab_source_note(md("Source: Ryan Enos, *Causal Effect of Intergroup 
+                        Contact on Exclusionary Attitudes*"))
+```
+
+
 
 
